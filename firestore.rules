@@ -1,0 +1,88 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Global helpers
+    function isSignedIn() { return request.auth != null; }
+    function getUserData() { 
+      // Note: get() is allowed in rules for verification
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; 
+    }
+    function isManager() { return isSignedIn() && getUserData().role == 'manager'; }
+    function isBarber() { return isSignedIn() && getUserData().role == 'barber'; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    function isValidId(id) { 
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      function isValidUser(data, id) {
+        return data.uid == id
+          && data.name is string && data.name.size() > 0 && data.name.size() < 100
+          && (data.email == request.auth.token.email || data.email == null || isManager())
+          && data.role in ['client', 'barber', 'manager']
+          && (data.phone == null || (data.phone is string && data.phone.size() < 20))
+          && (data.bio == null || (data.bio is string && data.bio.size() < 500))
+          && (data.photoUrl == null || data.photoUrl is string);
+      }
+
+      allow get: if isSignedIn() && (isOwner(userId) || isManager() || isBarber());
+      allow list: if isSignedIn() && isManager();
+      allow create: if isSignedIn() && isOwner(userId) && isValidUser(incoming(), userId);
+      allow update: if isSignedIn() && (isOwner(userId) || isManager()) && isValidUser(incoming(), userId)
+        && (isManager() || incoming().role == existing().role); 
+    }
+
+    // Services Collection
+    match /services/{serviceId} {
+      function isValidService(data) {
+        return data.name is string && data.name.size() > 0 && data.name.size() < 100
+          && data.price is number && data.price >= 0
+          && data.duration is number && data.duration > 0
+          && (data.active == null || data.active is bool);
+      }
+      allow read: if true; 
+      allow write: if isManager() && isValidService(incoming());
+    }
+
+    // Appointments Collection
+    match /appointments/{appointmentId} {
+      function isValidAppointment(data) {
+        return data.clientId == request.auth.uid
+          && isValidId(data.barberId)
+          && isValidId(data.serviceId)
+          && data.status in ['pending', 'confirmed', 'completed', 'cancelled']
+          && data.totalPrice is number;
+      }
+
+      allow get: if isSignedIn() && (
+        resource.data.clientId == request.auth.uid || 
+        resource.data.barberId == request.auth.uid || 
+        isManager()
+      );
+      
+      allow list: if isSignedIn() && (
+        resource.data.clientId == request.auth.uid || 
+        resource.data.barberId == request.auth.uid || 
+        isManager()
+      );
+
+      allow create: if isSignedIn() && isValidAppointment(incoming()) 
+        && incoming().status == 'pending';
+      
+      allow update: if isSignedIn() && (
+        (isOwner(existing().clientId) && incoming().diff(existing()).affectedKeys().hasOnly(['status']) && incoming().status == 'cancelled') ||
+        (isOwner(existing().barberId) && incoming().diff(existing()).affectedKeys().hasOnly(['status']) && incoming().status in ['confirmed', 'completed']) ||
+        isManager()
+      ) && isValidAppointment(incoming());
+    }
+  }
+}
