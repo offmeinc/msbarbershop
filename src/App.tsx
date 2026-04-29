@@ -440,7 +440,7 @@ function LoginScreen({ onLogin, setUserRole, setCurrentScreen }: { onLogin: (rol
       // Re-sign in after creation or if it existed
       await signInWithEmailAndPassword(auth, email, password);
       setUserRole("manager");
-      setCurrentScreen("home");
+      setCurrentScreen("dashboard");
     } catch (error) {
       console.error(error);
       alert("Erro ao entrar como gestor: " + (error as Error).message);
