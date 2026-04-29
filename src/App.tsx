@@ -751,15 +751,30 @@ function ConfirmationModal({ service, date, onConfirm }: { service: any, date: s
 
 function BookingScreen({ user, services, onBack }: { user: any, services: any[], onBack: () => void, key?: string }) {
   const [selectedService, setSelectedService] = useState<string | null>(null);
+  const [selectedBarber, setSelectedBarber] = useState<string | null>(null);
+  const [barbers, setBarbers] = useState<any[]>([]);
   const [bookingDate, setBookingDate] = useState("");
   const [isBooking, setIsBooking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
 
+  useEffect(() => {
+    const q = query(collection(db, "users"), where("role", "==", "barber"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const barberData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setBarbers(barberData);
+    });
+    return () => unsubscribe();
+  }, []);
+
   const handleConfirmBooking = async () => {
     setError(null);
     if (!selectedService) {
       setError("Selecione um serviço para continuar.");
+      return;
+    }
+    if (!selectedBarber) {
+      setError("Selecione um colaborador para continuar.");
       return;
     }
     if (!bookingDate) {
@@ -780,11 +795,13 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
     setIsBooking(true);
     try {
       const service = services.find(s => s.id === selectedService);
+      const barber = barbers.find(b => b.id === selectedBarber);
       const appointmentData = {
         clientId: user.uid,
         clientName: user.displayName,
         clientPhoto: user.photoURL,
-        barberId: "manager-main", // Default barber for now
+        barberId: selectedBarber,
+        barberName: barber?.name,
         serviceId: selectedService,
         serviceName: service?.name,
         date: Timestamp.fromDate(bookingDateTime),
@@ -854,7 +871,33 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
           </div>
 
           <div className={`bg-neutral-900/50 p-5 md:p-8 rounded-2xl md:rounded-[2rem] border border-white/5 transition-all ${!selectedService ? "opacity-30 pointer-events-none" : "opacity-100"}`}>
-            <h3 className="text-xs font-black uppercase tracking-widest mb-6 md:mb-8 text-neutral-400">2. Data e Horário</h3>
+            <h3 className="text-xs font-black uppercase tracking-widest mb-6 md:mb-8 text-neutral-400">2. Escolha o Colaborador</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {barbers.map((b) => (
+                <button
+                  key={b.id}
+                  onClick={() => {
+                    setSelectedBarber(b.id);
+                    setError(null);
+                  }}
+                  className={`p-5 md:p-6 rounded-2xl border text-left transition-all flex items-center gap-4 ${
+                    selectedBarber === b.id ? "border-amber-500 bg-amber-500/10 shadow-[0_0_20px_rgba(245,158,11,0.1)]" : "border-white/5 bg-black/20 hover:border-white/20"
+                  }`}
+                >
+                  <div className="w-12 h-12 rounded-full overflow-hidden border border-white/10">
+                    <img src={b.photoUrl || "https://ui-avatars.com/api/?name=" + b.name} alt={b.name} className="w-full h-full object-cover" />
+                  </div>
+                  <div>
+                    <p className={`font-black uppercase italic text-sm ${selectedBarber === b.id ? "text-white" : "text-neutral-500"}`}>{b.name}</p>
+                    <p className="text-[10px] text-neutral-500 uppercase mt-1">Colaborador</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className={`bg-neutral-900/50 p-5 md:p-8 rounded-2xl md:rounded-[2rem] border border-white/5 transition-all ${!selectedBarber ? "opacity-30 pointer-events-none" : "opacity-100"}`}>
+            <h3 className="text-xs font-black uppercase tracking-widest mb-6 md:mb-8 text-neutral-400">3. Data e Horário</h3>
             <input 
               type="datetime-local" 
               className={`w-full bg-black border p-4 md:p-5 rounded-2xl text-white outline-none transition-all cursor-pointer font-bold ${error && !bookingDate ? "border-red-500" : "border-white/10 focus:border-amber-500"}`}
