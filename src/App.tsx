@@ -183,7 +183,25 @@ export default function App() {
           });
           setUserRole(role);
         } else {
-          await signInWithEmailAndPassword(auth, email, password);
+          try {
+             await signInWithEmailAndPassword(auth, email, password);
+          } catch (error: any) {
+             if (error.code === 'auth/user-not-found' && role === 'manager') {
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                await updateProfile(userCredential.user, { displayName: "Gestor Marley" });
+                const userDocRef = doc(db, "users", userCredential.user.uid);
+                await setDoc(userDocRef, {
+                  uid: userCredential.user.uid,
+                  name: "Gestor Marley",
+                  email: email,
+                  role: role,
+                  createdAt: Timestamp.now(),
+                });
+                setUserRole(role);
+             } else {
+                throw error;
+             }
+          }
         }
       } else {
         const provider = new GoogleAuthProvider();
@@ -411,8 +429,18 @@ function LoginScreen({ onLogin }: { onLogin: (role: string, email?: string, pass
   const roles = [
     { id: "client", label: "Cliente", icon: <User className="w-4 h-4" />, desc: "Agende seus cortes e acumule pontos." },
     { id: "barber", label: "Colaborador", icon: <Scissors className="w-4 h-4" />, desc: "Veja sua agenda e gerencie atendimentos." },
-    { id: "manager", label: "Gestor", icon: <Settings className="w-4 h-4" />, desc: "Controle total da barbearia e relatórios." },
   ];
+
+  const handleManagerLogin = async () => {
+    setAuthLoading(true);
+    try {
+      await onLogin("manager", "marley@marley.com", "marley");
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setAuthLoading(false);
+    }
+  };
 
   const validate = () => {
     const newErrors: { email?: string; password?: string; name?: string } = {};
@@ -505,6 +533,13 @@ function LoginScreen({ onLogin }: { onLogin: (role: string, email?: string, pass
             </div>
 
             <div className="space-y-4">
+              <button 
+                onClick={handleManagerLogin}
+                className="w-full bg-neutral-900 border border-amber-500 text-amber-500 font-bold uppercase italic py-4 rounded-2xl hover:bg-neutral-800 transition-all text-xs"
+              >
+                Entrar como Gestor
+              </button>
+              
               <button 
                 onClick={() => onLogin(activeTab)}
                 className="w-full bg-white text-black font-black uppercase italic py-5 rounded-2xl flex items-center justify-center gap-3 hover:bg-neutral-200 transition-all group"
@@ -793,7 +828,7 @@ function DashboardScreen({ user, role, services, onBack }: { user: any, role: st
   const [editingBio, setEditingBio] = useState(false);
   const [bioInput, setBioInput] = useState("");
   const [userData, setUserData] = useState<any>(null);
-  const [dashboardView, setDashboardView] = useState<"list" | "calendar" | "services">("list");
+  const [dashboardView, setDashboardView] = useState<"list" | "calendar" | "services" | "hours">("list");
   const [calendarMode, setCalendarMode] = useState<"day" | "week" | "month">("month");
   const [currentDate, setCurrentDate] = useState(new Date());
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1035,6 +1070,14 @@ function DashboardScreen({ user, role, services, onBack }: { user: any, role: st
                   <Scissors className="w-3.5 h-3.5" /> Serviços
                 </button>
               )}
+              {role === 'manager' && (
+                <button 
+                  onClick={() => setDashboardView("hours")}
+                  className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase italic tracking-widest transition-all flex items-center gap-2 ${dashboardView === 'hours' ? 'bg-neutral-800 text-white shadow-lg' : 'text-neutral-500 hover:text-white'}`}
+                >
+                  <Clock className="w-3.5 h-3.5" /> Horários
+                </button>
+              )}
             </div>
 
             {dashboardView === "calendar" && (
@@ -1129,6 +1172,8 @@ function DashboardScreen({ user, role, services, onBack }: { user: any, role: st
             role={role}
             updateStatus={updateStatus}
           />
+        ) : dashboardView === "hours" ? (
+          <WorkingHoursManager />
         ) : (
           <ServicesManagement services={services} />
         )}
@@ -1137,6 +1182,93 @@ function DashboardScreen({ user, role, services, onBack }: { user: any, role: st
   );
 }
 
+function WorkingHoursManager() {
+  const [barbers, setBarbers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchBarbers = async () => {
+      const q = query(collection(db, "users"), where("role", "==", "barber"));
+      const querySnapshot = await getDocs(q);
+      const barbersData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setBarbers(barbersData);
+      setLoading(false);
+    };
+    fetchBarbers();
+  }, []);
+
+  if (loading) return <div className="p-8 text-neutral-500">Carregando barbeiros...</div>;
+
+  return (
+    <div className="space-y-6">
+      <h3 className="text-2xl font-black uppercase italic tracking-tighter">Horários dos <span className="text-amber-500">Barbeiros</span></h3>
+      {barbers.map(barber => (
+        <BarberHoursItem key={barber.id} barber={barber} />
+      ))}
+    </div>
+  );
+}
+
+function BarberHoursItem(props: { barber: any; key?: any }) {
+  const { barber } = props;
+  const [hours, setHours] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchHours = async () => {
+      const hoursCollection = collection(db, "users", barber.id, "workingHours");
+      const snapshot = await getDocs(hoursCollection);
+      setHours(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setLoading(false);
+    };
+    fetchHours();
+  }, [barber.id]);
+
+  const saveHours = async (dayOfWeek: number, startTime: string, endTime: string) => {
+    const hoursDocRef = doc(db, "users", barber.id, "workingHours", `day-${dayOfWeek}`);
+    await setDoc(hoursDocRef, { dayOfWeek, startTime, endTime, isActive: true });
+    setHours(prev => {
+        const index = prev.findIndex(h => h.dayOfWeek === dayOfWeek);
+        if (index > -1) {
+            const next = [...prev];
+            next[index] = { ...next[index], startTime, endTime, isActive: true };
+            return next;
+        }
+        return [...prev, { dayOfWeek, startTime, endTime, isActive: true }];
+    });
+  };
+
+  return (
+    <div className="bg-black/40 p-6 rounded-[2rem] border border-white/5">
+      <p className="font-black uppercase tracking-widest text-amber-500 mb-4">{barber.name}</p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {[0, 1, 2, 3, 4, 5, 6].map(day => {
+          const dayName = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"][day];
+          const workingDay = hours.find(h => h.dayOfWeek === day);
+          return (
+            <div key={day} className="bg-white/5 p-4 rounded-xl flex items-center justify-between">
+              <span className="text-sm font-bold">{dayName}</span>
+              <div className="flex gap-2">
+                <input 
+                  type="time" 
+                  defaultValue={workingDay?.startTime || "09:00"}
+                  onBlur={(e) => saveHours(day, e.target.value, workingDay?.endTime || "18:00")}
+                  className="bg-black/50 px-2 py-1 rounded"
+                />
+                <input 
+                  type="time" 
+                  defaultValue={workingDay?.endTime || "18:00"}
+                  onBlur={(e) => saveHours(day, workingDay?.startTime || "09:00", e.target.value)}
+                  className="bg-black/50 px-2 py-1 rounded"
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 function ServicesManagement({ services }: { services: any[] }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);

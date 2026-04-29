@@ -47,12 +47,28 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["clientId", "barberId", "serviceId", "date", "status"]
+    },
+    "WorkingHours": {
+      "title": "WorkingHours",
+      "description": "Definition of working hours for a barber.",
+      "type": "object",
+      "properties": {
+        "dayOfWeek": { "type": "number", "description": "0 = Sunday, 1 = Monday, ..., 6 = Saturday" },
+        "startTime": { "type": "string", "description": "HH:MM format" },
+        "endTime": { "type": "string", "description": "HH:MM format" },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["dayOfWeek", "startTime", "endTime"]
     }
   },
   "firestore": {
     "/users/{userId}": {
       "schema": "User",
       "description": "Storage for user profiles."
+    },
+    "/users/{userId}/workingHours/{workId}": {
+      "schema": "WorkingHours",
+      "description": "Working hours for the barber."
     },
     "/services/{serviceId}": {
       "schema": "Service",
