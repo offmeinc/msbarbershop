@@ -183,26 +183,7 @@ export default function App() {
           });
           setUserRole(role);
         } else {
-          try {
-             await signInWithEmailAndPassword(auth, email, password);
-          } catch (error: any) {
-             const isUserNotFound = error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential';
-             if (isUserNotFound && role === 'manager') {
-                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                await updateProfile(userCredential.user, { displayName: "Gestor Marley" });
-                const userDocRef = doc(db, "users", userCredential.user.uid);
-                await setDoc(userDocRef, {
-                  uid: userCredential.user.uid,
-                  name: "Gestor Marley",
-                  email: email,
-                  role: role,
-                  createdAt: Timestamp.now(),
-                });
-                setUserRole(role);
-             } else {
-                throw error;
-             }
-          }
+           await signInWithEmailAndPassword(auth, email, password);
         }
       } else {
         const provider = new GoogleAuthProvider();
@@ -319,7 +300,7 @@ export default function App() {
       <main className="pt-20">
         <AnimatePresence mode="wait">
           {currentScreen === "home" && <HomeScreen key="home" services={services} onStartBooking={() => user ? setCurrentScreen("booking") : setCurrentScreen("login")} />}
-          {currentScreen === "login" && <LoginScreen key="login" onLogin={handleLogin} />}
+          {currentScreen === "login" && <LoginScreen key="login" onLogin={handleLogin} setUserRole={setUserRole} setCurrentScreen={setCurrentScreen} />}
           {currentScreen === "booking" && <BookingScreen key="booking" user={user} services={services} onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "dashboard" && <DashboardScreen key="dashboard" user={user} role={userRole} services={services} onBack={() => setCurrentScreen("home")} />}
         </AnimatePresence>
@@ -417,7 +398,7 @@ function HomeScreen({ services, onStartBooking }: { services: any[], onStartBook
   );
 }
 
-function LoginScreen({ onLogin }: { onLogin: (role: string, email?: string, password?: string, isSignUp?: boolean, name?: string) => void, key?: string }) {
+function LoginScreen({ onLogin, setUserRole, setCurrentScreen }: { onLogin: (role: string, email?: string, password?: string, isSignUp?: boolean, name?: string) => void, setUserRole: (role: string) => void, setCurrentScreen: (screen: string) => void, key?: string }) {
   const [activeTab, setActiveTab] = useState<string>("client");
   const [authMode, setAuthMode] = useState<"choice" | "email">("choice");
   const [isSignUp, setIsSignUp] = useState(false);
@@ -435,9 +416,34 @@ function LoginScreen({ onLogin }: { onLogin: (role: string, email?: string, pass
   const handleManagerLogin = async () => {
     setAuthLoading(true);
     try {
-      await onLogin("manager", "marley@marley.com", "marley");
+      const email = "marley@marley.com";
+      const password = "marley";
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+      } catch (err: any) {
+        if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+            // Try sign up
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            await updateProfile(userCredential.user, { displayName: "Gestor Marley" });
+            const userDocRef = doc(db, "users", userCredential.user.uid);
+            await setDoc(userDocRef, {
+                uid: userCredential.user.uid,
+                name: "Gestor Marley",
+                email: email,
+                role: 'manager',
+                createdAt: Timestamp.now(),
+            });
+        } else {
+            throw err;
+        }
+      }
+      // Re-sign in after creation or if it existed
+      await signInWithEmailAndPassword(auth, email, password);
+      setUserRole("manager");
+      setCurrentScreen("home");
     } catch (error) {
       console.error(error);
+      alert("Erro ao entrar como gestor: " + (error as Error).message);
     } finally {
       setAuthLoading(false);
     }
