@@ -61,8 +61,6 @@ import {
 } from "./lib/firebase";
 import { uploadImage } from "./lib/uploadService";
 import { 
-  signInWithPopup, 
-  GoogleAuthProvider, 
   onAuthStateChanged,
   signOut,
   User as FirebaseUser,
@@ -167,7 +165,7 @@ export default function App() {
     };
   }, []);
 
-  const handleLogin = async (role: string = "client", email?: string, password?: string, isSignUp?: boolean, name?: string) => {
+  const handleLogin = async (role: string = "client", email?: string, password?: string, isSignUp?: boolean, name?: string, whatsapp?: string) => {
     setRequestedRole(role);
     
     try {
@@ -178,22 +176,21 @@ export default function App() {
             await updateProfile(userCredential.user, { displayName: name });
           }
           
-          // Explicitly create user doc for email signups to ensure name and role are correct
-          const userDocRef = doc(db, "users", userCredential.user.uid);
-          await setDoc(userDocRef, {
-            uid: userCredential.user.uid,
-            name: name || userCredential.user.displayName || "Usuário",
-            email: userCredential.user.email,
-            role: role,
-            createdAt: Timestamp.now(),
-          });
+          await setDoc(doc(db, "users", userCredential.user.uid), {
+             uid: userCredential.user.uid,
+             name: name || userCredential.user.displayName || "Usuário",
+             email: userCredential.user.email,
+             role: role,
+             whatsapp: whatsapp,
+             createdAt: Timestamp.now(),
+           });
+
           setUserRole(role);
         } else {
            await signInWithEmailAndPassword(auth, email, password);
         }
       } else {
-        const provider = new GoogleAuthProvider();
-        await signInWithPopup(auth, provider);
+        alert("E-mail e senha são obrigatórios.");
       }
       
       setCurrentScreen("home");
@@ -323,11 +320,37 @@ export default function App() {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20 }}
-            className="fixed inset-0 z-40 bg-black flex flex-col items-center justify-center gap-8 text-2xl font-black uppercase italic"
+            className="fixed inset-0 z-40 bg-black flex flex-col items-center justify-center gap-6 text-xl font-black uppercase italic"
           >
-            <a href="#inicio" onClick={() => setIsMenuOpen(false)}>Início</a>
-            <a href="#servicos" onClick={() => setIsMenuOpen(false)}>Serviços</a>
-            <button onClick={() => { setCurrentScreen("login"); setIsMenuOpen(false); }}>Portal</button>
+            <button onClick={() => { setCurrentScreen("home"); setIsMenuOpen(false); }}>Início</button>
+            
+            {user ? (
+              <>
+                {userRole === "manager" && (
+                  <button onClick={() => { setCurrentScreen("dashboard"); setIsMenuOpen(false); }}>Painel Gestor</button>
+                )}
+                {userRole === "barber" && (
+                  <button onClick={() => { setCurrentScreen("dashboard"); setIsMenuOpen(false); }}>Minha Agenda</button>
+                )}
+                {userRole === "client" && (
+                  <>
+                    <button onClick={() => { setCurrentScreen("booking"); setIsMenuOpen(false); }}>Agendar</button>
+                    <button onClick={() => { setCurrentScreen("dashboard"); setIsMenuOpen(false); }}>Meus Agendamentos</button>
+                  </>
+                )}
+                <button 
+                  onClick={() => { handleLogout(); setIsMenuOpen(false); }}
+                  className="text-red-500"
+                >
+                  Sair
+                </button>
+              </>
+            ) : (
+              <>
+                <a href="#servicos" onClick={() => setIsMenuOpen(false)}>Serviços</a>
+                <button onClick={() => { setCurrentScreen("login"); setIsMenuOpen(false); }}>Portal</button>
+              </>
+            )}
             <button onClick={() => setIsMenuOpen(false)} className="absolute top-24 right-6"><X /></button>
           </motion.div>
         )}
@@ -407,13 +430,14 @@ function HomeScreen({ services, onStartBooking }: { services: any[], onStartBook
   );
 }
 
-function LoginScreen({ onLogin, setUserRole, setCurrentScreen, setRequestedRole }: { onLogin: (role: string, email?: string, password?: string, isSignUp?: boolean, name?: string) => void, setUserRole: (role: string) => void, setCurrentScreen: (screen: string) => void, setRequestedRole: (role: string) => void, key?: string }) {
+function LoginScreen({ onLogin, setUserRole, setCurrentScreen, setRequestedRole }: { onLogin: (role: string, email?: string, password?: string, isSignUp?: boolean, name?: string, whatsapp?: string) => void, setUserRole: (role: string) => void, setCurrentScreen: (screen: string) => void, setRequestedRole: (role: string) => void, key?: string }) {
   const [activeTab, setActiveTab] = useState<string>("client");
   const [authMode, setAuthMode] = useState<"choice" | "email">("choice");
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string; name?: string }>({});
 
@@ -496,7 +520,7 @@ function LoginScreen({ onLogin, setUserRole, setCurrentScreen, setRequestedRole 
 
     setAuthLoading(true);
     try {
-      await onLogin(activeTab, email, password, isSignUp, name);
+      await onLogin(activeTab, email, password, isSignUp, name, whatsapp);
     } catch (error) {
       console.error(error);
     } finally {
@@ -558,14 +582,6 @@ function LoginScreen({ onLogin, setUserRole, setCurrentScreen, setRequestedRole 
               </button>
               
               <button 
-                onClick={() => onLogin(activeTab)}
-                className="w-full bg-white text-black font-black uppercase italic py-5 rounded-2xl flex items-center justify-center gap-3 hover:bg-neutral-200 transition-all group"
-              >
-                <img src="https://www.google.com/favicon.ico" className="w-5 h-5" alt="Google logo" />
-                Continuar com Google
-              </button>
-              
-              <button 
                 onClick={() => setAuthMode("email")}
                 className="w-full bg-neutral-800 text-white font-black uppercase italic py-5 rounded-2xl flex items-center justify-center gap-3 hover:bg-neutral-700 transition-all"
               >
@@ -585,6 +601,14 @@ function LoginScreen({ onLogin, setUserRole, setCurrentScreen, setRequestedRole 
                   className={`w-full bg-black border p-4 rounded-xl text-white outline-none transition-all ${errors.name ? "border-red-500" : "border-white/10 focus:border-amber-500"}`}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
+                />
+                <label className="text-[10px] font-black uppercase text-neutral-500 ml-4 mb-1 block tracking-widest mt-4">WhatsApp</label>
+                <input 
+                  type="text" 
+                  placeholder="(00) 00000-0000"
+                  className="w-full bg-black border p-4 rounded-xl text-white outline-none transition-all border-white/10 focus:border-amber-500"
+                  value={whatsapp}
+                  onChange={(e) => setWhatsapp(e.target.value)}
                 />
                 <AnimatePresence>
                   {errors.name && (
@@ -686,11 +710,51 @@ function LoginScreen({ onLogin, setUserRole, setCurrentScreen, setRequestedRole 
   );
 }
 
+
+function ConfirmationModal({ service, date, onConfirm }: { service: any, date: string, onConfirm: () => void }) {
+  return (
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-6 backdrop-blur-sm"
+    >
+      <motion.div 
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        className="bg-neutral-900 border border-amber-500/50 p-8 rounded-[2rem] max-w-sm w-full text-center"
+      >
+        <div className="w-16 h-16 bg-amber-500/20 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-6">
+          <CheckCircle2 className="w-8 h-8" />
+        </div>
+        <h3 className="text-2xl font-black uppercase italic mb-2">Agendado!</h3>
+        <p className="text-neutral-400 text-xs uppercase tracking-widest mb-8">Recebemos sua reserva.</p>
+        
+        <div className="text-left bg-black/30 p-4 rounded-xl mb-8 space-y-2">
+            <p className="text-[10px] uppercase text-neutral-500 font-bold">Serviço</p>
+            <p className="text-sm font-bold uppercase">{service?.name}</p>
+            <p className="text-[10px] uppercase text-neutral-500 font-bold mt-2">Data/Hora</p>
+            <p className="text-sm font-bold uppercase">{format(new Date(date), "dd 'de' MMM 'às' HH:mm", { locale: ptBR })}</p>
+        </div>
+
+        <button 
+          onClick={onConfirm}
+          className="w-full bg-amber-500 text-black font-black uppercase italic py-4 rounded-xl hover:bg-amber-400 transition-all shadow-lg"
+        >
+          Fechar
+        </button>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 function BookingScreen({ user, services, onBack }: { user: any, services: any[], onBack: () => void, key?: string }) {
   const [selectedService, setSelectedService] = useState<string | null>(null);
   const [bookingDate, setBookingDate] = useState("");
   const [isBooking, setIsBooking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
   const handleConfirmBooking = async () => {
     setError(null);
@@ -730,7 +794,7 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
       };
       
       await addDoc(collection(db, "appointments"), appointmentData);
-      onBack();
+      setShowConfirmation(true);
     } catch (error) {
       console.error(error);
       setError("Ocorreu um erro ao processar seu agendamento.");
@@ -740,12 +804,24 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
   };
 
   return (
+    <>
+    <AnimatePresence>
+      {showConfirmation && (
+        <ConfirmationModal 
+          service={services.find(s => s.id === selectedService)}
+          date={bookingDate}
+          onConfirm={onBack}
+        />
+      )}
+    </AnimatePresence>
+    
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       className="max-w-4xl mx-auto py-8 md:py-12 px-4 md:px-6"
     >
+
       <div className="flex items-center justify-between mb-8 md:mb-12">
         <h2 className="text-3xl md:text-4xl font-black italic uppercase tracking-tighter">Novo <span className="text-amber-500">Agendamento</span></h2>
         <button onClick={onBack} className="text-neutral-500 hover:text-white transition-colors flex items-center gap-2 uppercase text-xs font-bold tracking-widest">
@@ -757,7 +833,7 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
         <div className="md:col-span-2 space-y-6">
           <div className="bg-neutral-900/50 p-5 md:p-8 rounded-2xl md:rounded-[2rem] border border-white/5">
             <h3 className="text-xs font-black uppercase tracking-widest mb-6 md:mb-8 text-neutral-400">1. Escolha o Serviço</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {services.filter(s => s.active !== false).map((s) => (
                 <button
                   key={s.id}
@@ -836,6 +912,7 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
         </div>
       </div>
     </motion.div>
+    </>
   );
 }
 

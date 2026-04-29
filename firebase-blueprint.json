@@ -10,6 +10,7 @@
         "email": { "type": "string" },
         "role": { "type": "string", "enum": ["client", "barber", "manager"] },
         "phone": { "type": "string" },
+        "whatsapp": { "type": "string" },
         "bio": { "type": "string" },
         "photoUrl": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
