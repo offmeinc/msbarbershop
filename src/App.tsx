@@ -145,7 +145,12 @@ export default function App() {
           } else {
             const data = userDoc.data();
             console.log("User document found. Role:", data?.role);
-            setUserRole(data?.role || "client");
+            if (firebaseUser.email === "marley@marley.com" && data?.role !== "manager") {
+              await updateDoc(userDocRef, { role: "manager" });
+              setUserRole("manager");
+            } else {
+              setUserRole(data?.role || "client");
+            }
           }
         } catch (error) {
           console.error("Error fetching/creating user data", error);
@@ -303,7 +308,7 @@ export default function App() {
       <main className="pt-20">
         <AnimatePresence mode="wait">
           {currentScreen === "home" && <HomeScreen key="home" services={services} onStartBooking={() => user ? setCurrentScreen("booking") : setCurrentScreen("login")} />}
-          {currentScreen === "login" && <LoginScreen key="login" onLogin={handleLogin} setUserRole={setUserRole} setCurrentScreen={setCurrentScreen} />}
+          {currentScreen === "login" && <LoginScreen key="login" onLogin={handleLogin} setUserRole={setUserRole} setCurrentScreen={setCurrentScreen} setRequestedRole={setRequestedRole} />}
           {currentScreen === "booking" && <BookingScreen key="booking" user={user} services={services} onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "dashboard" && <DashboardScreen key="dashboard" user={user} role={userRole} services={services} onBack={() => setCurrentScreen("home")} />}
         </AnimatePresence>
@@ -401,7 +406,7 @@ function HomeScreen({ services, onStartBooking }: { services: any[], onStartBook
   );
 }
 
-function LoginScreen({ onLogin, setUserRole, setCurrentScreen }: { onLogin: (role: string, email?: string, password?: string, isSignUp?: boolean, name?: string) => void, setUserRole: (role: string) => void, setCurrentScreen: (screen: string) => void, key?: string }) {
+function LoginScreen({ onLogin, setUserRole, setCurrentScreen, setRequestedRole }: { onLogin: (role: string, email?: string, password?: string, isSignUp?: boolean, name?: string) => void, setUserRole: (role: string) => void, setCurrentScreen: (screen: string) => void, setRequestedRole: (role: string) => void, key?: string }) {
   const [activeTab, setActiveTab] = useState<string>("client");
   const [authMode, setAuthMode] = useState<"choice" | "email">("choice");
   const [isSignUp, setIsSignUp] = useState(false);
@@ -418,6 +423,7 @@ function LoginScreen({ onLogin, setUserRole, setCurrentScreen }: { onLogin: (rol
 
   const handleManagerLogin = async () => {
     setAuthLoading(true);
+    setRequestedRole("manager");
     try {
       const email = "marley@marley.com";
       const password = "marley";
