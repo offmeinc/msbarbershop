@@ -137,11 +137,11 @@ export default function App() {
               uid: firebaseUser.uid,
               name: firebaseUser.displayName || "Usuário",
               email: firebaseUser.email,
-              role: requestedRole,
+              role: "client", // Default to client
               createdAt: Timestamp.now(),
             };
             await setDoc(userDocRef, newUser);
-            setUserRole(requestedRole);
+            setUserRole("client");
           } else {
             const data = userDoc.data();
             console.log("User document found. Role:", data?.role);
@@ -157,6 +157,7 @@ export default function App() {
         }
       } else {
         console.log("Auth state changed: User logged out");
+        setUserRole("client");
       }
       setLoading(false);
     });
@@ -164,7 +165,7 @@ export default function App() {
       unsubscribeServices();
       unsubscribeAuth();
     };
-  }, [requestedRole]);
+  }, []);
 
   const handleLogin = async (role: string = "client", email?: string, password?: string, isSignUp?: boolean, name?: string) => {
     setRequestedRole(role);
