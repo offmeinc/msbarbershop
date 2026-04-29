@@ -240,6 +240,9 @@ export default function App() {
           </div>
 
           <div className="hidden md:flex items-center gap-8 text-sm font-medium uppercase tracking-widest text-neutral-400">
+            {currentScreen !== "home" && (
+              <button onClick={() => setCurrentScreen("home")} className="hover:text-amber-500 transition-colors">Início</button>
+            )}
             {currentScreen === "home" && (
               <>
                 <a href="#inicio" className="hover:text-amber-500 transition-colors">Início</a>
@@ -254,7 +257,7 @@ export default function App() {
                   onClick={() => setCurrentScreen("dashboard")}
                   className={`hover:text-white transition-colors flex items-center gap-2 ${currentScreen === "dashboard" ? "text-amber-500" : ""}`}
                 >
-                  Dashboard
+                  {userRole === "manager" ? "Painel Gestor" : "Dashboard"}
                 </button>
                 <div className="flex items-center gap-3 pl-6 border-l border-white/10">
                   <div className="text-right">
@@ -734,19 +737,19 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      className="max-w-4xl mx-auto py-12 px-6"
+      className="max-w-4xl mx-auto py-8 md:py-12 px-4 md:px-6"
     >
-      <div className="flex items-center justify-between mb-12">
-        <h2 className="text-4xl font-black italic uppercase tracking-tighter">Novo <span className="text-amber-500">Agendamento</span></h2>
+      <div className="flex items-center justify-between mb-8 md:mb-12">
+        <h2 className="text-3xl md:text-4xl font-black italic uppercase tracking-tighter">Novo <span className="text-amber-500">Agendamento</span></h2>
         <button onClick={onBack} className="text-neutral-500 hover:text-white transition-colors flex items-center gap-2 uppercase text-xs font-bold tracking-widest">
           <ChevronRight className="rotate-180 w-4 h-4" /> Cancelar
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
         <div className="md:col-span-2 space-y-6">
-          <div className="bg-neutral-900/50 p-8 rounded-[2rem] border border-white/5">
-            <h3 className="text-xs font-black uppercase tracking-widest mb-8 text-neutral-400">1. Escolha o Serviço</h3>
+          <div className="bg-neutral-900/50 p-5 md:p-8 rounded-2xl md:rounded-[2rem] border border-white/5">
+            <h3 className="text-xs font-black uppercase tracking-widest mb-6 md:mb-8 text-neutral-400">1. Escolha o Serviço</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {services.filter(s => s.active !== false).map((s) => (
                 <button
@@ -755,7 +758,7 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
                     setSelectedService(s.id);
                     setError(null);
                   }}
-                  className={`p-6 rounded-2xl border text-left transition-all ${
+                  className={`p-5 md:p-6 rounded-2xl border text-left transition-all ${
                     selectedService === s.id ? "border-amber-500 bg-amber-500/10 shadow-[0_0_20px_rgba(245,158,11,0.1)]" : "border-white/5 bg-black/20 hover:border-white/20"
                   }`}
                 >
@@ -767,11 +770,11 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
             </div>
           </div>
 
-          <div className={`bg-neutral-900/50 p-8 rounded-[2rem] border border-white/5 transition-all ${!selectedService ? "opacity-30 pointer-events-none" : "opacity-100"}`}>
-            <h3 className="text-xs font-black uppercase tracking-widest mb-8 text-neutral-400">2. Data e Horário</h3>
+          <div className={`bg-neutral-900/50 p-5 md:p-8 rounded-2xl md:rounded-[2rem] border border-white/5 transition-all ${!selectedService ? "opacity-30 pointer-events-none" : "opacity-100"}`}>
+            <h3 className="text-xs font-black uppercase tracking-widest mb-6 md:mb-8 text-neutral-400">2. Data e Horário</h3>
             <input 
               type="datetime-local" 
-              className={`w-full bg-black border p-5 rounded-2xl text-white outline-none transition-all cursor-pointer font-bold ${error && !bookingDate ? "border-red-500" : "border-white/10 focus:border-amber-500"}`}
+              className={`w-full bg-black border p-4 md:p-5 rounded-2xl text-white outline-none transition-all cursor-pointer font-bold ${error && !bookingDate ? "border-red-500" : "border-white/10 focus:border-amber-500"}`}
               value={bookingDate}
               onChange={(e) => {
                 setBookingDate(e.target.value);
@@ -782,7 +785,7 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
         </div>
 
         <div className="space-y-6">
-          <div className="bg-amber-600 p-8 rounded-[2.5rem] text-black shadow-2xl relative overflow-hidden group">
+          <div className="bg-amber-600 p-6 md:p-8 rounded-2xl md:rounded-[2.5rem] text-black shadow-2xl relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-4 opacity-10 rotate-12 group-hover:rotate-45 transition-transform">
               <Scissors className="w-20 h-20" />
             </div>
