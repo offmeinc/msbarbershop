@@ -86,6 +86,8 @@ import {
 
 type Screen = "home" | "booking" | "dashboard" | "login";
 
+
+
 function BrandLogo({ className = "w-10 h-10", iconSize = "w-6 h-6" }: { className?: string, iconSize?: string }) {
   return (
     <div className={`${className} bg-amber-500 rounded-xl flex items-center justify-center overflow-hidden shadow-[0_0_20px_rgba(245,158,11,0.2)]`}>
@@ -102,6 +104,34 @@ function BrandLogo({ className = "w-10 h-10", iconSize = "w-6 h-6" }: { classNam
           }
         }}
       />
+    </div>
+  );
+}
+
+function BottomNav({ userRole, currentScreen, setCurrentScreen, user }: { userRole: string, currentScreen: string, setCurrentScreen: (screen: Screen) => void, user: any }) {
+  const items = [];
+  
+  if (!user) {
+    items.push({ id: "home", label: "Início", icon: <Grid className="w-5 h-5" />, screen: "home"} );
+    items.push({ id: "login", label: "Portal", icon: <User className="w-5 h-5" />, screen: "login"} );
+  } else if (userRole === "client") {
+    items.push({ id: "home", label: "Início", icon: <Grid className="w-5 h-5" />, screen: "home"} );
+    items.push({ id: "booking", label: "Agendar", icon: <Plus className="w-5 h-5" />, screen: "booking"} );
+    items.push({ id: "dashboard", label: "Agendamentos", icon: <Calendar className="w-5 h-5" />, screen: "dashboard"} );
+  } else if (userRole === "barber") {
+    items.push({ id: "dashboard", label: "Minha Agenda", icon: <Calendar className="w-5 h-5" />, screen: "dashboard"} );
+  } else if (userRole === "manager") {
+    items.push({ id: "dashboard", label: "Painel Gestor", icon: <Grid className="w-5 h-5" />, screen: "dashboard"} );
+  }
+
+  return (
+    <div className="md:hidden fixed bottom-0 left-0 w-full bg-neutral-950/80 backdrop-blur-lg border-t border-white/10 p-3 flex justify-around z-40">
+      {items.map(item => (
+        <button key={item.id} onClick={() => setCurrentScreen(item.screen as any)} className={`flex flex-col items-center gap-1 ${currentScreen === item.screen ? "text-amber-500" : "text-neutral-500"}`}>
+            {item.icon}
+            <span className="text-[9px] font-bold uppercase tracking-widest">{item.label}</span>
+        </button>
+      ))}
     </div>
   );
 }
@@ -312,6 +342,7 @@ export default function App() {
         </AnimatePresence>
       </main>
 
+      <BottomNav userRole={userRole} currentScreen={currentScreen} setCurrentScreen={setCurrentScreen} user={user} />
 
       {/* Mobile Menu */}
       <AnimatePresence>
