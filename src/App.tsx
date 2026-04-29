@@ -108,7 +108,7 @@ function BrandLogo({ className = "w-10 h-10", iconSize = "w-6 h-6" }: { classNam
   );
 }
 
-function BottomNav({ userRole, currentScreen, setCurrentScreen, user }: { userRole: string, currentScreen: string, setCurrentScreen: (screen: Screen) => void, user: any }) {
+function BottomNav({ userRole, currentScreen, setCurrentScreen, setDashboardView, user }: { userRole: string, currentScreen: string, setCurrentScreen: (screen: Screen) => void, setDashboardView: (view: any) => void, user: any }) {
   const items = [];
   
   if (!user) {
@@ -117,17 +117,20 @@ function BottomNav({ userRole, currentScreen, setCurrentScreen, user }: { userRo
   } else if (userRole === "client") {
     items.push({ id: "home", label: "Início", icon: <Grid className="w-5 h-5" />, screen: "home"} );
     items.push({ id: "booking", label: "Agendar", icon: <Plus className="w-5 h-5" />, screen: "booking"} );
-    items.push({ id: "dashboard", label: "Agendamentos", icon: <Calendar className="w-5 h-5" />, screen: "dashboard"} );
+    items.push({ id: "dashboard", label: "Agendamentos", icon: <Calendar className="w-5 h-5" />, screen: "dashboard", view: "list"} );
   } else if (userRole === "barber") {
-    items.push({ id: "dashboard", label: "Minha Agenda", icon: <Calendar className="w-5 h-5" />, screen: "dashboard"} );
+    items.push({ id: "dashboard", label: "Minha Agenda", icon: <Calendar className="w-5 h-5" />, screen: "dashboard", view: "list"} );
   } else if (userRole === "manager") {
-    items.push({ id: "dashboard", label: "Painel Gestor", icon: <Grid className="w-5 h-5" />, screen: "dashboard"} );
+    items.push({ id: "dashboard", label: "Painel", icon: <Grid className="w-5 h-5" />, screen: "dashboard", view: "list"} );
+    items.push({ id: "agenda", label: "Agenda", icon: <Calendar className="w-5 h-5" />, screen: "dashboard", view: "calendar"} );
+    items.push({ id: "services", label: "Serviços", icon: <Scissors className="w-5 h-5" />, screen: "dashboard", view: "services"} );
+    items.push({ id: "hours", label: "Horários", icon: <Clock className="w-5 h-5" />, screen: "dashboard", view: "hours"} );
   }
 
   return (
     <div className="md:hidden fixed bottom-0 left-0 w-full bg-neutral-950/80 backdrop-blur-lg border-t border-white/10 p-3 flex justify-around z-40">
       {items.map(item => (
-        <button key={item.id} onClick={() => setCurrentScreen(item.screen as any)} className={`flex flex-col items-center gap-1 ${currentScreen === item.screen ? "text-amber-500" : "text-neutral-500"}`}>
+        <button key={item.id} onClick={() => { setCurrentScreen(item.screen as any); if (item.view) setDashboardView(item.view); }} className={`flex flex-col items-center gap-1 ${currentScreen === item.screen && (item.view ? true : true) ? "text-amber-500" : "text-neutral-500"}`}>
             {item.icon}
             <span className="text-[9px] font-bold uppercase tracking-widest">{item.label}</span>
         </button>
@@ -141,6 +144,7 @@ export default function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [userRole, setUserRole] = useState<string>("client");
   const [currentScreen, setCurrentScreen] = useState<Screen>("home");
+  const [dashboardView, setDashboardView] = useState<"list" | "calendar" | "services" | "hours">("list");
   const [requestedRole, setRequestedRole] = useState<string>("client");
   const [loading, setLoading] = useState(true);
   const [services, setServices] = useState<any[]>([]);
@@ -338,11 +342,11 @@ export default function App() {
           {currentScreen === "home" && <HomeScreen key="home" services={services} onStartBooking={() => user ? setCurrentScreen("booking") : setCurrentScreen("login")} />}
           {currentScreen === "login" && <LoginScreen key="login" onLogin={handleLogin} setUserRole={setUserRole} setCurrentScreen={setCurrentScreen} setRequestedRole={setRequestedRole} />}
           {currentScreen === "booking" && <BookingScreen key="booking" user={user} services={services} onBack={() => setCurrentScreen("home")} />}
-          {currentScreen === "dashboard" && <DashboardScreen key="dashboard" user={user} role={userRole} services={services} onBack={() => setCurrentScreen("home")} />}
+          {currentScreen === "dashboard" && <DashboardScreen key="dashboard" user={user} role={userRole} services={services} dashboardView={dashboardView} onBack={() => setCurrentScreen("home")} />}
         </AnimatePresence>
       </main>
 
-      <BottomNav userRole={userRole} currentScreen={currentScreen} setCurrentScreen={setCurrentScreen} user={user} />
+      <BottomNav userRole={userRole} currentScreen={currentScreen} setCurrentScreen={setCurrentScreen} setDashboardView={setDashboardView} user={user} />
 
       {/* Mobile Menu */}
       <AnimatePresence>
@@ -358,15 +362,15 @@ export default function App() {
             {user ? (
               <>
                 {userRole === "manager" && (
-                  <button onClick={() => { setCurrentScreen("dashboard"); setIsMenuOpen(false); }}>Painel Gestor</button>
+                  <button onClick={() => { setCurrentScreen("dashboard"); setDashboardView("list"); setIsMenuOpen(false); }}>Painel Gestor</button>
                 )}
                 {userRole === "barber" && (
-                  <button onClick={() => { setCurrentScreen("dashboard"); setIsMenuOpen(false); }}>Minha Agenda</button>
+                  <button onClick={() => { setCurrentScreen("dashboard"); setDashboardView("list"); setIsMenuOpen(false); }}>Minha Agenda</button>
                 )}
                 {userRole === "client" && (
                   <>
                     <button onClick={() => { setCurrentScreen("booking"); setIsMenuOpen(false); }}>Agendar</button>
-                    <button onClick={() => { setCurrentScreen("dashboard"); setIsMenuOpen(false); }}>Meus Agendamentos</button>
+                    <button onClick={() => { setCurrentScreen("dashboard"); setDashboardView("list"); setIsMenuOpen(false); }}>Meus Agendamentos</button>
                   </>
                 )}
                 <button 
@@ -990,13 +994,19 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
   );
 }
 
-function DashboardScreen({ user, role, services, onBack }: { user: any, role: string, services: any[], onBack: () => void, key?: string }) {
+function DashboardScreen({ user, role, services, dashboardView, onBack }: { user: any, role: string, services: any[], dashboardView?: "list" | "calendar" | "services" | "hours", onBack: () => void, key?: string }) {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [uploading, setUploading] = useState(false);
   const [editingBio, setEditingBio] = useState(false);
   const [bioInput, setBioInput] = useState("");
   const [userData, setUserData] = useState<any>(null);
-  const [dashboardView, setDashboardView] = useState<"list" | "calendar" | "services" | "hours">("list");
+  const [currentView, setCurrentView] = useState<"list" | "calendar" | "services" | "hours">(dashboardView || "list");
+
+  useEffect(() => {
+    if (dashboardView) {
+      setCurrentView(dashboardView);
+    }
+  }, [dashboardView]);
   const [calendarMode, setCalendarMode] = useState<"day" | "week" | "month">("month");
   const [currentDate, setCurrentDate] = useState(new Date());
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1219,36 +1229,36 @@ function DashboardScreen({ user, role, services, onBack }: { user: any, role: st
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2 bg-black p-1 rounded-2xl border border-white/5">
               <button 
-                onClick={() => setDashboardView("list")}
-                className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase italic tracking-widest transition-all flex items-center gap-2 ${dashboardView === 'list' ? 'bg-neutral-800 text-white shadow-lg' : 'text-neutral-500 hover:text-white'}`}
+                onClick={() => setCurrentView("list")}
+                className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase italic tracking-widest transition-all flex items-center gap-2 ${currentView === 'list' ? 'bg-neutral-800 text-white shadow-lg' : 'text-neutral-500 hover:text-white'}`}
               >
                 <ListIcon className="w-3.5 h-3.5" /> Lista
               </button>
               <button 
-                onClick={() => setDashboardView("calendar")}
-                className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase italic tracking-widest transition-all flex items-center gap-2 ${dashboardView === 'calendar' ? 'bg-neutral-800 text-white shadow-lg' : 'text-neutral-500 hover:text-white'}`}
+                onClick={() => setCurrentView("calendar")}
+                className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase italic tracking-widest transition-all flex items-center gap-2 ${currentView === 'calendar' ? 'bg-neutral-800 text-white shadow-lg' : 'text-neutral-500 hover:text-white'}`}
               >
                 <Grid className="w-3.5 h-3.5" /> Calendário
               </button>
               {role === 'manager' && (
                 <button 
-                  onClick={() => setDashboardView("services")}
-                  className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase italic tracking-widest transition-all flex items-center gap-2 ${dashboardView === 'services' ? 'bg-neutral-800 text-white shadow-lg' : 'text-neutral-500 hover:text-white'}`}
+                  onClick={() => setCurrentView("services")}
+                  className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase italic tracking-widest transition-all flex items-center gap-2 ${currentView === 'services' ? 'bg-neutral-800 text-white shadow-lg' : 'text-neutral-500 hover:text-white'}`}
                 >
                   <Scissors className="w-3.5 h-3.5" /> Serviços
                 </button>
               )}
               {role === 'manager' && (
                 <button 
-                  onClick={() => setDashboardView("hours")}
-                  className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase italic tracking-widest transition-all flex items-center gap-2 ${dashboardView === 'hours' ? 'bg-neutral-800 text-white shadow-lg' : 'text-neutral-500 hover:text-white'}`}
+                  onClick={() => setCurrentView("hours")}
+                  className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase italic tracking-widest transition-all flex items-center gap-2 ${currentView === 'hours' ? 'bg-neutral-800 text-white shadow-lg' : 'text-neutral-500 hover:text-white'}`}
                 >
                   <Clock className="w-3.5 h-3.5" /> Horários
                 </button>
               )}
             </div>
 
-            {dashboardView === "calendar" && (
+            {currentView === "calendar" && (
               <div className="flex items-center gap-2 bg-black p-1 rounded-2xl border border-white/5">
                 <button 
                   onClick={() => setCalendarMode("day")}
@@ -1267,7 +1277,7 @@ function DashboardScreen({ user, role, services, onBack }: { user: any, role: st
           </div>
         </div>
         
-        {dashboardView === "list" ? (
+        {currentView === "list" ? (
           appointments.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-80 opacity-20">
               <BrandLogo className="w-20 h-20 grayscale mb-6" />
@@ -1330,7 +1340,7 @@ function DashboardScreen({ user, role, services, onBack }: { user: any, role: st
               ))}
             </div>
           )
-        ) : dashboardView === "calendar" ? (
+        ) : currentView === "calendar" ? (
           <CalendarWidget 
             appointments={appointments} 
             mode={calendarMode} 
