@@ -186,7 +186,8 @@ export default function App() {
           try {
              await signInWithEmailAndPassword(auth, email, password);
           } catch (error: any) {
-             if (error.code === 'auth/user-not-found' && role === 'manager') {
+             const isUserNotFound = error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential';
+             if (isUserNotFound && role === 'manager') {
                 const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                 await updateProfile(userCredential.user, { displayName: "Gestor Marley" });
                 const userDocRef = doc(db, "users", userCredential.user.uid);
