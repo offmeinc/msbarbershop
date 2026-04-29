@@ -126,11 +126,13 @@ export default function App() {
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
       if (firebaseUser) {
+        console.log("Auth state changed: User logged in", firebaseUser.uid);
         try {
           const userDocRef = doc(db, "users", firebaseUser.uid);
           const userDoc = await getDoc(userDocRef);
           
           if (!userDoc.exists()) {
+            console.log("Creating initial user document for:", firebaseUser.email);
             const newUser = {
               uid: firebaseUser.uid,
               name: firebaseUser.displayName || "Usuário",
@@ -141,11 +143,15 @@ export default function App() {
             await setDoc(userDocRef, newUser);
             setUserRole(requestedRole);
           } else {
-            setUserRole(userDoc.data()?.role || "client");
+            const data = userDoc.data();
+            console.log("User document found. Role:", data?.role);
+            setUserRole(data?.role || "client");
           }
         } catch (error) {
-          console.error("Error fetching user data", error);
+          console.error("Error fetching/creating user data", error);
         }
+      } else {
+        console.log("Auth state changed: User logged out");
       }
       setLoading(false);
     });
@@ -155,13 +161,27 @@ export default function App() {
     };
   }, [requestedRole]);
 
-  const handleLogin = async (role: string = "client", email?: string, password?: string, isSignUp?: boolean) => {
+  const handleLogin = async (role: string = "client", email?: string, password?: string, isSignUp?: boolean, name?: string) => {
     setRequestedRole(role);
     
     try {
       if (email && password) {
         if (isSignUp) {
-          await createUserWithEmailAndPassword(auth, email, password);
+          const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+          if (name) {
+            await updateProfile(userCredential.user, { displayName: name });
+          }
+          
+          // Explicitly create user doc for email signups to ensure name and role are correct
+          const userDocRef = doc(db, "users", userCredential.user.uid);
+          await setDoc(userDocRef, {
+            uid: userCredential.user.uid,
+            name: name || userCredential.user.displayName || "Usuário",
+            email: userCredential.user.email,
+            role: role,
+            createdAt: Timestamp.now(),
+          });
+          setUserRole(role);
         } else {
           await signInWithEmailAndPassword(auth, email, password);
         }
@@ -173,13 +193,13 @@ export default function App() {
       setCurrentScreen("home");
     } catch (error: any) {
       console.error("Login failed", error);
-      if (error.code === 'auth/email-already-in-use') {
-        alert("Este e-mail já está em uso.");
-      } else if (error.code === 'auth/wrong-password') {
-        alert("Senha incorreta.");
-      } else {
-        alert("Erro na autenticação: " + error.message);
-      }
+      let message = "Erro na autenticação. Tente novamente.";
+      if (error.code === 'auth/email-already-in-use') message = "Este e-mail já está em uso.";
+      if (error.code === 'auth/wrong-password') message = "Senha incorreta.";
+      if (error.code === 'auth/user-not-found') message = "Usuário não encontrado.";
+      if (error.code === 'auth/invalid-email') message = "E-mail inválido.";
+      if (error.code === 'auth/weak-password') message = "A senha deve ter pelo menos 6 caracteres.";
+      alert(message);
     }
   };
 
@@ -378,7 +398,7 @@ function HomeScreen({ services, onStartBooking }: { services: any[], onStartBook
   );
 }
 
-function LoginScreen({ onLogin }: { onLogin: (role: string, email?: string, password?: string, isSignUp?: boolean) => void, key?: string }) {
+function LoginScreen({ onLogin }: { onLogin: (role: string, email?: string, password?: string, isSignUp?: boolean, name?: string) => void, key?: string }) {
   const [activeTab, setActiveTab] = useState<string>("client");
   const [authMode, setAuthMode] = useState<"choice" | "email">("choice");
   const [isSignUp, setIsSignUp] = useState(false);
@@ -431,7 +451,7 @@ function LoginScreen({ onLogin }: { onLogin: (role: string, email?: string, pass
 
     setAuthLoading(true);
     try {
-      await onLogin(activeTab, email, password, isSignUp);
+      await onLogin(activeTab, email, password, isSignUp, name);
     } catch (error) {
       console.error(error);
     } finally {
@@ -590,7 +610,7 @@ function LoginScreen({ onLogin }: { onLogin: (role: string, email?: string, pass
                 }}
                 className="text-xs font-bold text-amber-500 uppercase tracking-widest hover:text-amber-400"
               >
-                {isSignUp ? "Já tenho uma conta" : "Não tenho conta comercial"}
+                {isSignUp ? "Já tenho uma conta" : "Não tenho uma conta"}
               </button>
               <button 
                 type="button"
