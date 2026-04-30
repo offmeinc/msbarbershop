@@ -15,6 +15,9 @@ const seedServices = async () => {
       { name: "Degradê Moderno", price: 50, duration: 40, active: true },
       { name: "Barba e Toalha Quente", price: 40, duration: 30, active: true },
       { name: "Combo (Corte + Barba)", price: 80, duration: 75, active: true },
+      { name: "Corte Infantil", price: 45, duration: 30, active: true },
+      { name: "Sobrancelha (Navalha)", price: 15, duration: 10, active: true },
+      { name: "Pigmentação de Barba", price: 20, duration: 15, active: true },
     ];
     
     console.log("Seeding services...");
