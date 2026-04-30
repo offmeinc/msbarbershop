@@ -97,7 +97,7 @@ import {
   orderBy
 } from "firebase/firestore";
 
-type Screen = "home" | "booking" | "agenda" | "clients" | "more" | "login";
+type Screen = "home" | "booking" | "agenda" | "clients" | "more" | "login" | "collaborators";
 
 function BrandLogo({ className = "w-10 h-10", iconSize = "w-6 h-6" }: { className?: string, iconSize?: string }) {
   return (
@@ -244,6 +244,9 @@ function BottomNav({ userRole, currentScreen, setCurrentScreen, user }: { userRo
     
     if (userRole === "manager" || userRole === "barber") {
       items.push({ id: "agenda", label: "Agenda", icon: <Calendar className="w-5 h-5" />, screen: "agenda"} );
+      if (userRole === "manager") {
+        items.push({ id: "collaborators", label: "Time", icon: <Scissors className="w-5 h-5" />, screen: "collaborators"} );
+      }
       items.push({ id: "clients", label: "Clientes", icon: <User className="w-5 h-5" />, screen: "clients"} );
     } else {
       items.push({ id: "booking", label: "Agendar", icon: <Plus className="w-5 h-5" />, screen: "booking"} );
@@ -425,6 +428,14 @@ export default function App() {
                 >
                   {userRole === "manager" ? "Agenda" : "Dashboard"}
                 </button>
+                {userRole === "manager" && (
+                  <button 
+                    onClick={() => setCurrentScreen("collaborators")}
+                    className={`hover:text-white transition-colors flex items-center gap-2 ${currentScreen === "collaborators" ? "text-amber-500" : ""}`}
+                  >
+                    Equipe
+                  </button>
+                )}
                 <div className="flex items-center gap-3 pl-6 border-l border-white/10">
                   <div className="text-right">
                     <p className="text-white text-xs font-bold leading-none">{user.displayName}</p>
@@ -472,6 +483,7 @@ export default function App() {
           {currentScreen === "login" && <LoginScreen key="login" onLogin={handleLogin} setUserRole={setUserRole} setCurrentScreen={setCurrentScreen} setRequestedRole={setRequestedRole} />}
           {currentScreen === "booking" && <BookingScreen key="booking" user={user} services={services} onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "agenda" && <DashboardScreen key="agenda" user={user} role={userRole} services={services} dashboardView={dashboardView || "list"} onBack={() => setCurrentScreen("home")} />}
+          {currentScreen === "collaborators" && <DashboardScreen key="collaborators" user={user} role={userRole} services={services} dashboardView="collaborators" onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "clients" && <ClientsScreen key="clients" onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "more" && <MoreOptionsScreen key="more" user={user} role={userRole} onLogout={handleLogout} onBack={() => setCurrentScreen("home")} />}
         </AnimatePresence>
@@ -493,15 +505,18 @@ export default function App() {
             {user ? (
               <>
                 {userRole === "manager" && (
-                  <button onClick={() => { setCurrentScreen("dashboard"); setDashboardView("list"); setIsMenuOpen(false); }}>Painel Gestor</button>
+                  <>
+                    <button onClick={() => { setCurrentScreen("agenda"); setIsMenuOpen(false); }}>Painel Gestor</button>
+                    <button onClick={() => { setCurrentScreen("collaborators"); setIsMenuOpen(false); }}>Time/Equipe</button>
+                  </>
                 )}
                 {userRole === "barber" && (
-                  <button onClick={() => { setCurrentScreen("dashboard"); setDashboardView("list"); setIsMenuOpen(false); }}>Minha Agenda</button>
+                  <button onClick={() => { setCurrentScreen("agenda"); setIsMenuOpen(false); }}>Minha Agenda</button>
                 )}
                 {userRole === "client" && (
                   <>
                     <button onClick={() => { setCurrentScreen("booking"); setIsMenuOpen(false); }}>Agendar</button>
-                    <button onClick={() => { setCurrentScreen("dashboard"); setDashboardView("list"); setIsMenuOpen(false); }}>Meus Agendamentos</button>
+                    <button onClick={() => { setCurrentScreen("agenda"); setIsMenuOpen(false); }}>Meus Agendamentos</button>
                   </>
                 )}
                 <button 
@@ -1400,6 +1415,17 @@ function CollaboratorsManager() {
     }
   };
 
+  const handleDeleteBarber = async (id: string) => {
+    if (!window.confirm("Deseja realmente remover este colaborador da listagem? (Isso não exclui a conta de acesso, apenas remove o perfil)")) return;
+    try {
+      await updateDoc(doc(db, "users", id), { role: 'inactive_barber' });
+      alert("Colaborador removido com sucesso!");
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao remover colaborador.");
+    }
+  };
+
   return (
     <div className="space-y-8 max-w-2xl mx-auto pb-20">
       <form onSubmit={handleAddBarber} className="bg-neutral-900 p-8 rounded-[2rem] border border-white/5 shadow-2xl space-y-4">
@@ -1433,7 +1459,10 @@ function CollaboratorsManager() {
                       <p className="text-[10px] text-neutral-500 uppercase font-black tracking-tight">{barber.email}</p>
                   </div>
                 </div>
-                <button className="p-2 text-neutral-700 hover:text-red-500 transition-colors">
+                <button 
+                  onClick={() => handleDeleteBarber(barber.id)}
+                  className="p-2 text-neutral-700 hover:text-red-500 transition-colors"
+                >
                     <Trash2 className="w-5 h-5" />
                 </button>
               </div>
