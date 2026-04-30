@@ -119,7 +119,7 @@ function BrandLogo({ className = "w-10 h-10", iconSize = "w-6 h-6" }: { classNam
   );
 }
 
-function MoreOptionsScreen({ user, role, onLogout, onBack }: { user: any, role: string, onLogout: () => void, onBack: () => void }) {
+function MoreOptionsScreen({ user, role, onLogout, onBack }: { user: any, role: string, onLogout: () => void, onBack: () => void, key?: any }) {
   const menuItems = [
     { id: 'notif', label: 'Notificações', icon: <Bell className="w-6 h-6" />, badge: '99+' },
     { id: 'block', label: 'Bloqueios', icon: <Lock className="w-6 h-6" /> },
@@ -142,20 +142,20 @@ function MoreOptionsScreen({ user, role, onLogout, onBack }: { user: any, role: 
       exit={{ opacity: 0, y: 20 }}
       className="max-w-md mx-auto py-8 px-6"
     >
-      <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-neutral-200/50">
-        <h2 className="text-xl font-bold text-center mb-8">Mais opções</h2>
+      <div className="bg-neutral-900 rounded-[2.5rem] p-8 shadow-2xl border border-white/5">
+        <h2 className="text-xl font-bold text-center mb-8 text-white">Mais opções</h2>
         <div className="grid grid-cols-3 gap-y-8 gap-x-4">
           {menuItems.map((item) => (
             <button key={item.id} className="flex flex-col items-center gap-2 group">
-              <div className="w-16 h-16 bg-neutral-50 rounded-2xl flex items-center justify-center relative group-active:scale-95 transition-transform text-neutral-500 border border-neutral-100">
+              <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center relative group-active:scale-95 transition-transform text-neutral-400 border border-white/5">
                 {item.icon}
                 {item.badge && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full border-2 border-white">
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full border-2 border-neutral-900">
                     {item.badge}
                   </span>
                 )}
               </div>
-              <span className="text-[10px] font-medium text-neutral-500 leading-tight text-center px-1">
+              <span className="text-[10px] font-medium text-neutral-400 leading-tight text-center px-1">
                 {item.label}
               </span>
             </button>
@@ -164,7 +164,7 @@ function MoreOptionsScreen({ user, role, onLogout, onBack }: { user: any, role: 
             onClick={onLogout}
             className="flex flex-col items-center gap-2 group"
           >
-            <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center group-active:scale-95 transition-transform text-red-500 border border-red-100">
+            <div className="w-16 h-16 bg-red-500/10 rounded-2xl flex items-center justify-center group-active:scale-95 transition-transform text-red-500 border border-red-500/20">
               <LogOut className="w-6 h-6" />
             </div>
             <span className="text-[10px] font-medium text-red-500 leading-tight text-center">
@@ -177,7 +177,7 @@ function MoreOptionsScreen({ user, role, onLogout, onBack }: { user: any, role: 
   );
 }
 
-function ClientsScreen({ onBack }: { onBack: () => void }) {
+function ClientsScreen({ onBack }: { onBack: () => void, key?: any }) {
   const [clients, setClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -198,35 +198,35 @@ function ClientsScreen({ onBack }: { onBack: () => void }) {
       className="max-w-2xl mx-auto py-8 px-4"
     >
       <div className="flex items-center justify-between mb-8">
-        <h2 className="text-2xl font-black italic uppercase">Clientes</h2>
+        <h2 className="text-2xl font-black italic uppercase text-white">Clientes</h2>
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
           <input 
             type="text" 
             placeholder="Buscar cliente..." 
-            className="bg-white border border-neutral-200 rounded-full pl-10 pr-4 py-2 text-sm outline-none focus:border-emerald-500 transition-all"
+            className="bg-neutral-900 border border-white/10 rounded-full pl-10 pr-4 py-2 text-sm text-white outline-none focus:border-amber-500 transition-all"
           />
         </div>
       </div>
 
       {loading ? (
         <div className="flex justify-center py-20">
-          <Loader2 className="animate-spin text-emerald-500 w-8 h-8" />
+          <Loader2 className="animate-spin text-amber-500 w-8 h-8" />
         </div>
       ) : (
         <div className="space-y-3">
           {clients.map(client => (
-            <div key={client.id} className="bg-white p-4 rounded-3xl border border-neutral-200/50 flex items-center justify-between hover:bg-neutral-50 transition-all">
+            <div key={client.id} className="bg-neutral-900 p-4 rounded-3xl border border-white/5 flex items-center justify-between hover:border-white/10 transition-all">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-neutral-100 flex items-center justify-center text-neutral-400 font-bold overflow-hidden border border-neutral-200">
+                <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-neutral-500 font-bold overflow-hidden border border-white/10">
                   {client.photoURL ? <img src={client.photoURL} alt={client.name} className="w-full h-full object-cover" /> : client.name?.[0]}
                 </div>
                 <div>
-                  <h4 className="font-bold text-neutral-900">{client.name}</h4>
-                  <p className="text-xs text-neutral-400 uppercase font-medium">{client.whatsapp || client.email}</p>
+                  <h4 className="font-bold text-white">{client.name}</h4>
+                  <p className="text-xs text-neutral-500 uppercase font-medium">{client.whatsapp || client.email}</p>
                 </div>
               </div>
-              <button className="p-2 text-neutral-400 hover:text-emerald-500 transition-colors">
+              <button className="p-2 text-neutral-500 hover:text-amber-500 transition-colors">
                 <ChevronRight className="w-5 h-5" />
               </button>
             </div>
@@ -237,12 +237,10 @@ function ClientsScreen({ onBack }: { onBack: () => void }) {
   );
 }
 function BottomNav({ userRole, currentScreen, setCurrentScreen, user }: { userRole: string, currentScreen: string, setCurrentScreen: (s: any) => void, user: any }) {
+  if (!user) return null;
+
   const items = [];
-  if (!user) {
-    items.push({ id: "home", label: "Início", icon: <Grid className="w-5 h-5" />, screen: "home"} );
-    items.push({ id: "login", label: "Portal", icon: <User className="w-5 h-5" />, screen: "login"} );
-  } else {
-    items.push({ id: "home", label: "Início", icon: <Grid className="w-5 h-5" />, screen: "home"} );
+  items.push({ id: "home", label: "Início", icon: <Grid className="w-5 h-5" />, screen: "home"} );
     
     if (userRole === "manager" || userRole === "barber") {
       items.push({ id: "agenda", label: "Agenda", icon: <Calendar className="w-5 h-5" />, screen: "agenda"} );
@@ -253,15 +251,15 @@ function BottomNav({ userRole, currentScreen, setCurrentScreen, user }: { userRo
     }
     
     items.push({ id: "more", label: "Mais", icon: <motion.div animate={{ rotate: currentScreen === 'more' ? 90 : 0 }}><Grip className="w-5 h-5" /></motion.div>, screen: "more"} );
-  }
+
 
   return (
-    <div className="md:hidden fixed bottom-4 left-4 right-4 bg-white/90 backdrop-blur-xl border border-neutral-200/50 p-2 flex justify-around items-center z-40 rounded-3xl shadow-xl shadow-neutral-200/50">
+    <div className="md:hidden fixed bottom-4 left-4 right-4 bg-black/90 backdrop-blur-xl border border-white/10 p-2 flex justify-around items-center z-40 rounded-3xl shadow-xl shadow-amber-500/10">
       {items.map(item => (
         <button 
           key={item.id} 
           onClick={() => setCurrentScreen(item.screen as any)} 
-          className={`flex flex-col items-center gap-1 py-1 px-4 rounded-2xl transition-all ${currentScreen === item.screen ? "text-emerald-500 bg-emerald-50" : "text-neutral-400"}`}
+          className={`flex flex-col items-center gap-1 py-1 px-4 rounded-2xl transition-all ${currentScreen === item.screen ? "text-amber-500 bg-white/5" : "text-neutral-500"}`}
         >
             {item.icon}
             <span className="text-[10px] font-bold uppercase tracking-tight">{item.label}</span>
@@ -391,32 +389,31 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50 text-neutral-900 font-sans selection:bg-emerald-500/30 pb-24 md:pb-0">
-      {/* Navigation */}
-      <nav className="fixed top-0 w-full z-50 border-b border-neutral-200/50 bg-white/80 backdrop-blur-xl">
+    <div className="min-h-screen bg-black text-white font-sans selection:bg-amber-500/30 pb-24 md:pb-0">
+      <nav className="fixed top-0 w-full z-50 border-b border-white/5 bg-black/80 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <div 
             className="flex items-center gap-4 cursor-pointer group"
             onClick={() => setCurrentScreen("home")}
           >
-            <BrandLogo className="w-12 h-12 bg-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.2)] group-hover:scale-105 transition-transform" />
+            <BrandLogo className="w-12 h-12 bg-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.2)] group-hover:scale-105 transition-transform" />
             <div className="hidden sm:block text-left">
               <span className="text-xl font-black tracking-tighter uppercase italic block leading-none">
                 Marley Souza
               </span>
-              <span className="text-[10px] text-emerald-500 uppercase tracking-[0.3em] font-bold">Barber Shop</span>
+              <span className="text-[10px] text-amber-500 uppercase tracking-[0.3em] font-bold">Barber Shop</span>
             </div>
           </div>
 
           <div className="hidden md:flex items-center gap-8 text-sm font-medium uppercase tracking-widest text-neutral-400">
             {currentScreen !== "home" && (
-              <button onClick={() => setCurrentScreen("home")} className="hover:text-emerald-500 transition-colors">Início</button>
+              <button onClick={() => setCurrentScreen("home")} className="hover:text-amber-500 transition-colors">Início</button>
             )}
             {currentScreen === "home" && (
               <>
-                <a href="#inicio" className="hover:text-emerald-500 transition-colors">Início</a>
-                <a href="#servicos" className="hover:text-emerald-500 transition-colors">Serviços</a>
-                <a href="#unidades" className="hover:text-emerald-500 transition-colors">Local</a>
+                <a href="#inicio" className="hover:text-amber-500 transition-colors">Início</a>
+                <a href="#servicos" className="hover:text-amber-500 transition-colors">Serviços</a>
+                <a href="#unidades" className="hover:text-amber-500 transition-colors">Local</a>
               </>
             )}
             
@@ -424,30 +421,30 @@ export default function App() {
               <div className="flex items-center gap-6">
                 <button 
                   onClick={() => setCurrentScreen("agenda")}
-                  className={`hover:text-neutral-900 transition-colors flex items-center gap-2 ${currentScreen === "agenda" ? "text-emerald-500" : ""}`}
+                  className={`hover:text-white transition-colors flex items-center gap-2 ${currentScreen === "agenda" ? "text-amber-500" : ""}`}
                 >
                   {userRole === "manager" ? "Agenda" : "Dashboard"}
                 </button>
-                <div className="flex items-center gap-3 pl-6 border-l border-neutral-200">
+                <div className="flex items-center gap-3 pl-6 border-l border-white/10">
                   <div className="text-right">
-                    <p className="text-neutral-900 text-xs font-bold leading-none">{user.displayName}</p>
-                    <p className="text-[10px] text-emerald-500 capitalize font-black">{userRole}</p>
+                    <p className="text-white text-xs font-bold leading-none">{user.displayName}</p>
+                    <p className="text-[10px] text-amber-500 capitalize font-black">{userRole}</p>
                   </div>
                   <div className="relative">
                     {user.photoURL ? (
                       <img 
                         src={user.photoURL} 
-                        className="w-10 h-10 rounded-xl border border-emerald-500/50 object-cover" 
+                        className="w-10 h-10 rounded-xl border border-amber-500/50 object-cover" 
                         referrerPolicy="no-referrer"
                         alt={user.displayName || "User avatar"}
                       />
                     ) : (
-                      <div className="w-10 h-10 rounded-xl border border-neutral-200 bg-neutral-100 flex items-center justify-center">
-                        <User className="w-5 h-5 text-neutral-400" />
+                      <div className="w-10 h-10 rounded-xl border border-white/10 bg-white/5 flex items-center justify-center">
+                        <User className="w-5 h-5 text-neutral-500" />
                       </div>
                     )}
                   </div>
-                  <button onClick={() => setCurrentScreen("more")} className="p-2 bg-neutral-100 hover:bg-emerald-50 hover:text-emerald-500 rounded-lg transition-all">
+                  <button onClick={() => setCurrentScreen("more")} className="p-2 bg-white/5 hover:bg-amber-500/20 hover:text-amber-500 rounded-lg transition-all">
                     <Settings className="w-4 h-4" />
                   </button>
                 </div>
@@ -455,7 +452,7 @@ export default function App() {
             ) : (
               <button 
                 onClick={() => setCurrentScreen("login")}
-                className="bg-emerald-500 text-white px-6 py-2 rounded-full font-bold hover:bg-emerald-600 transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(16,185,129,0.2)]"
+                className="bg-amber-500 text-black px-6 py-2 rounded-full font-bold hover:bg-amber-400 transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(245,158,11,0.2)]"
               >
                 <User className="w-4 h-4" />
                 ACESSAR PORTAL
@@ -463,7 +460,7 @@ export default function App() {
             )}
           </div>
 
-          <button className="md:hidden text-neutral-900" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+          <button className="md:hidden text-white" onClick={() => setIsMenuOpen(!isMenuOpen)}>
             {isMenuOpen ? <X /> : <Menu />}
           </button>
         </div>
@@ -594,6 +591,17 @@ function HomeScreen({ services, onStartBooking }: { services: any[], onStartBook
             </div>
           ))}
         </div>
+      </section>
+
+      {/* Footer / Login Link */}
+      <section className="py-12 border-t border-white/5 flex flex-col items-center gap-4 bg-neutral-900/50">
+        <p className="text-neutral-500 text-xs font-bold uppercase tracking-widest">© 2024 Marley Souza Barber Shop</p>
+        <button 
+          onClick={() => onStartBooking()} 
+          className="text-amber-500 text-xs font-black uppercase tracking-widest hover:underline"
+        >
+          Acessar Portal do Cliente
+        </button>
       </section>
     </motion.div>
   );
@@ -1009,15 +1017,15 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
     >
 
       <div className="flex items-center justify-between mb-8 md:mb-12">
-        <h2 className="text-3xl md:text-4xl font-black italic uppercase tracking-tighter">Novo <span className="text-amber-500">Agendamento</span></h2>
+        <h2 className="text-3xl md:text-4xl font-black italic uppercase tracking-tighter text-white">Novo <span className="text-amber-500">Agendamento</span></h2>
         <button onClick={onBack} className="text-neutral-500 hover:text-white transition-colors flex items-center gap-2 uppercase text-xs font-bold tracking-widest">
           <ChevronRight className="rotate-180 w-4 h-4" /> Cancelar
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 overflow-y-auto max-h-[80vh] md:max-h-none no-scrollbar pb-32">
         <div className="md:col-span-2 space-y-6">
-          <div className="bg-neutral-900/50 p-5 md:p-8 rounded-2xl md:rounded-[2rem] border border-white/5">
+          <div className="bg-neutral-900 border border-white/5 p-5 md:p-8 rounded-2xl md:rounded-[2rem] shadow-2xl">
             <h3 className="text-xs font-black uppercase tracking-widest mb-6 md:mb-8 text-neutral-400">1. Escolha o Serviço</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {services.filter(s => s.active !== false).map((s) => (
@@ -1039,7 +1047,7 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
             </div>
           </div>
 
-          <div className={`bg-neutral-900/50 p-5 md:p-8 rounded-2xl md:rounded-[2rem] border border-white/5 transition-all ${!selectedService ? "opacity-30 pointer-events-none" : "opacity-100"}`}>
+          <div className={`bg-neutral-900 border border-white/5 p-5 md:p-8 rounded-2xl md:rounded-[2rem] shadow-2xl transition-all ${!selectedService ? "opacity-30 pointer-events-none" : "opacity-100"}`}>
             <h3 className="text-xs font-black uppercase tracking-widest mb-6 md:mb-8 text-neutral-400">2. Escolha o Colaborador</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {barbers.map((b) => (
@@ -1054,7 +1062,12 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
                   }`}
                 >
                   <div className="w-12 h-12 rounded-full overflow-hidden border border-white/10">
-                    <img src={b.photoUrl || "https://ui-avatars.com/api/?name=" + b.name} alt={b.name} className="w-full h-full object-cover" />
+                    <img 
+                      src={b.photoURL || "https://ui-avatars.com/api/?name=" + b.name} 
+                      alt={b.name} 
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
                   </div>
                   <div>
                     <p className={`font-black uppercase italic text-sm ${selectedBarber === b.id ? "text-white" : "text-neutral-500"}`}>{b.name}</p>
@@ -1065,7 +1078,7 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
             </div>
           </div>
 
-          <div className={`bg-neutral-900/50 p-5 md:p-8 rounded-2xl md:rounded-[2rem] border border-white/5 transition-all ${!selectedBarber ? "opacity-30 pointer-events-none" : "opacity-100"}`}>
+          <div className={`bg-neutral-900 border border-white/5 p-5 md:p-8 rounded-2xl md:rounded-[2rem] shadow-2xl transition-all ${!selectedBarber ? "opacity-30 pointer-events-none" : "opacity-100"}`}>
             <h3 className="text-xs font-black uppercase tracking-widest mb-6 md:mb-8 text-neutral-400">3. Data e Horário</h3>
             <input 
               type="datetime-local" 
@@ -1080,7 +1093,7 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
         </div>
 
         <div className="space-y-6">
-          <div className="bg-amber-600 p-6 md:p-8 rounded-2xl md:rounded-[2.5rem] text-black shadow-2xl relative overflow-hidden group">
+          <div className="bg-amber-500 p-6 md:p-8 rounded-2xl md:rounded-[2.5rem] text-black shadow-2xl relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-4 opacity-10 rotate-12 group-hover:rotate-45 transition-transform">
               <Scissors className="w-20 h-20" />
             </div>
@@ -1196,24 +1209,24 @@ function DashboardScreen({ user, role, services, dashboardView, onBack }: { user
   }, [appointments, currentDate, selectedBarberId]);
 
   return (
-    <div className="min-h-screen bg-neutral-50 px-4 md:px-6 pt-16 md:pt-6 relative pb-28">
+    <div className="min-h-screen bg-black px-4 md:px-6 pt-16 md:pt-6 relative pb-28">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
-           <h1 className="text-2xl font-black text-neutral-900 capitalize">{format(currentDate, "MMMM", { locale: ptBR })}</h1>
-           <span className="text-neutral-400 font-medium">{format(currentDate, "yyyy")}</span>
-           <ChevronDown className="w-4 h-4 text-neutral-400" />
+           <h1 className="text-2xl font-black text-white capitalize">{format(currentDate, "MMMM", { locale: ptBR })}</h1>
+           <span className="text-neutral-600 font-medium">{format(currentDate, "yyyy")}</span>
+           <ChevronDown className="w-4 h-4 text-neutral-600" />
         </div>
-        <div className="flex items-center gap-4 text-neutral-400">
-           <Search className="w-5 h-5 cursor-pointer hover:text-emerald-500 transition-colors" />
-           <RefreshCw className="w-5 h-5 cursor-pointer hover:text-emerald-500 transition-colors" />
-           <Calendar className="w-5 h-5 cursor-pointer hover:text-emerald-500 transition-colors" />
+        <div className="flex items-center gap-4 text-neutral-500">
+           <Search className="w-5 h-5 cursor-pointer hover:text-amber-500 transition-colors" />
+           <RefreshCw className="w-5 h-5 cursor-pointer hover:text-amber-500 transition-colors" />
+           <Calendar className="w-5 h-5 cursor-pointer hover:text-amber-500 transition-colors" />
         </div>
       </div>
 
       {/* Week Selector */}
       <div className="flex justify-between items-center mb-8">
-        <button onClick={() => setCurrentDate(addDays(currentDate, -7))}><ChevronLeft className="w-5 h-5 text-neutral-300" /></button>
+        <button onClick={() => setCurrentDate(addDays(currentDate, -7))}><ChevronLeft className="w-5 h-5 text-neutral-700" /></button>
         <div className="flex gap-2 overflow-x-auto no-scrollbar py-2">
             {weekDays.map((day, i) => {
                 const active = isSameDay(day, currentDate);
@@ -1222,17 +1235,17 @@ function DashboardScreen({ user, role, services, dashboardView, onBack }: { user
                     <button 
                         key={i} 
                         onClick={() => setCurrentDate(day)}
-                        className={`flex flex-col items-center min-w-[50px] p-2 rounded-2xl transition-all ${active ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "text-neutral-400"}`}
+                        className={`flex flex-col items-center min-w-[50px] p-2 rounded-2xl transition-all ${active ? "bg-amber-500 text-black shadow-lg shadow-amber-500/20" : "text-neutral-500"}`}
                     >
                         <span className="text-[10px] font-bold uppercase mb-1">{format(day, "EEE", { locale: ptBR })}</span>
-                        <span className={`text-sm font-black ${active ? "text-white" : "text-neutral-600"}`}>{format(day, "d")}</span>
-                        {isTodayDate && !active && <div className="w-1 h-1 bg-emerald-500 rounded-full mt-1" />}
-                        {active && <div className="w-1 h-1 bg-white rounded-full mt-1" />}
+                        <span className={`text-sm font-black ${active ? "text-black" : "text-neutral-300"}`}>{format(day, "d")}</span>
+                        {isTodayDate && !active && <div className="w-1 h-1 bg-amber-500 rounded-full mt-1" />}
+                        {active && <div className="w-1 h-1 bg-black rounded-full mt-1" />}
                     </button>
                 );
             })}
         </div>
-        <button onClick={() => setCurrentDate(addDays(currentDate, 7))}><ChevronRight className="w-5 h-5 text-neutral-300" /></button>
+        <button onClick={() => setCurrentDate(addDays(currentDate, 7))}><ChevronRight className="w-5 h-5 text-neutral-700" /></button>
       </div>
 
       {/* Barber Filter */}
@@ -1242,10 +1255,10 @@ function DashboardScreen({ user, role, services, dashboardView, onBack }: { user
                 onClick={() => setSelectedBarberId("all")}
                 className="flex flex-col items-center gap-2 min-w-[64px]"
               >
-                  <div className={`w-14 h-14 rounded-full border-2 flex items-center justify-center transition-all ${selectedBarberId === 'all' ? 'border-emerald-500 bg-emerald-50' : 'border-neutral-200'}`}>
-                      <Grip className="w-6 h-6 text-emerald-500" />
+                  <div className={`w-14 h-14 rounded-full border-2 flex items-center justify-center transition-all ${selectedBarberId === 'all' ? 'border-amber-500 bg-amber-500/10' : 'border-white/10 bg-white/5'}`}>
+                      <Grip className="w-6 h-6 text-amber-500" />
                   </div>
-                  <span className={`text-[10px] font-bold uppercase ${selectedBarberId === 'all' ? 'text-emerald-500' : 'text-neutral-400'}`}>Todos</span>
+                  <span className={`text-[10px] font-bold uppercase ${selectedBarberId === 'all' ? 'text-amber-500' : 'text-neutral-500'}`}>Todos</span>
               </button>
               {barbers.map(barber => (
                   <button 
@@ -1253,10 +1266,10 @@ function DashboardScreen({ user, role, services, dashboardView, onBack }: { user
                     onClick={() => setSelectedBarberId(barber.id)}
                     className="flex flex-col items-center gap-2 min-w-[64px]"
                   >
-                      <div className={`w-14 h-14 rounded-full border-2 overflow-hidden transition-all relative ${selectedBarberId === barber.id ? 'border-emerald-500 ring-4 ring-emerald-500/10' : 'border-neutral-200 opacity-60'}`}>
+                      <div className={`w-14 h-14 rounded-full border-2 overflow-hidden transition-all relative ${selectedBarberId === barber.id ? 'border-amber-500 ring-4 ring-amber-500/10' : 'border-white/10 opacity-40'}`}>
                           <img src={barber.photoURL || `https://ui-avatars.com/api/?name=${barber.name}`} alt={barber.name} className="w-full h-full object-cover" />
                       </div>
-                      <span className={`text-[10px] font-bold uppercase truncate w-14 text-center ${selectedBarberId === barber.id ? 'text-emerald-500' : 'text-neutral-400'}`}>{barber.name.split(' ')[0]}</span>
+                      <span className={`text-[10px] font-bold uppercase truncate w-14 text-center ${selectedBarberId === barber.id ? 'text-amber-500' : 'text-neutral-500'}`}>{barber.name.split(' ')[0]}</span>
                   </button>
               ))}
           </div>
@@ -1265,13 +1278,13 @@ function DashboardScreen({ user, role, services, dashboardView, onBack }: { user
       {/* Agenda Main View */}
       {currentView === 'agenda' ? (
         <>
-            <div className="flex items-center justify-between mb-4 border-t border-neutral-200/50 pt-4">
-                <div className="flex items-center gap-2 text-neutral-900">
+            <div className="flex items-center justify-between mb-4 border-t border-white/5 pt-4">
+                <div className="flex items-center gap-2 text-white">
                     <span className="font-bold">Hoje</span>
-                    <span className="text-neutral-400 text-sm">{format(currentDate, "dd/MM")}</span>
+                    <span className="text-neutral-500 text-sm">{format(currentDate, "dd/MM")}</span>
                 </div>
-                <div className="flex items-center gap-4 text-xs font-bold text-neutral-900 border-l border-neutral-200 pl-4 py-1">
-                    <div className="flex items-center gap-1"><Clock className="w-3 h-3 text-emerald-500" /> 30min</div>
+                <div className="flex items-center gap-4 text-xs font-bold text-white border-l border-white/10 pl-4 py-1">
+                    <div className="flex items-center gap-1"><Clock className="w-3 h-3 text-amber-500" /> 30min</div>
                     <div>{filteredAppointments.length} agendamentos</div>
                 </div>
             </div>
@@ -1279,21 +1292,21 @@ function DashboardScreen({ user, role, services, dashboardView, onBack }: { user
             <div className="space-y-0 relative">
                 {hoursSlots.map((hour, idx) => (
                     <div key={hour} className="flex gap-4 min-h-[60px] group">
-                        <div className="w-12 text-right text-[11px] font-bold text-neutral-400 pt-1 group-hover:text-emerald-500 transition-colors">
+                        <div className="w-12 text-right text-[11px] font-bold text-neutral-600 pt-1 group-hover:text-amber-500 transition-colors">
                             {hour}
                         </div>
-                        <div className="flex-1 border-t border-neutral-100 relative h-full min-h-[60px] group-hover:border-emerald-100 transition-colors">
+                        <div className="flex-1 border-t border-white/5 relative h-full min-h-[60px] group-hover:border-amber-500/20 transition-colors">
                             {filteredAppointments.filter(app => {
                                 const appDate = app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date);
                                 const timeStr = `${String(appDate.getHours()).padStart(2, '0')}:${String(appDate.getMinutes()).padStart(2, '0')}`;
                                 return timeStr === hour;
                             }).map(app => (
-                                <div key={app.id} className="absolute left-2 top-2 right-2 bg-indigo-50 border border-indigo-100 rounded-2xl p-4 shadow-sm z-10 flex justify-between items-center group/card animate-in fade-in slide-in-from-left-2 duration-300">
+                                <div key={app.id} className="absolute left-2 top-2 right-2 bg-neutral-900 border border-white/5 rounded-2xl p-4 shadow-xl z-10 flex justify-between items-center group/card animate-in fade-in slide-in-from-left-2 duration-300">
                                     <div>
-                                        <h4 className="text-base font-black text-indigo-900">{app.clientName}</h4>
-                                        <p className="text-[11px] text-indigo-400 uppercase font-bold tracking-tight">{app.serviceName} • 30min</p>
+                                        <h4 className="text-base font-black text-white">{app.clientName}</h4>
+                                        <p className="text-[11px] text-amber-500 uppercase font-bold tracking-tight">{app.serviceName} • 30min</p>
                                     </div>
-                                    <div className="w-8 h-8 rounded-full bg-white border border-emerald-500 flex items-center justify-center text-emerald-500 group-hover/card:bg-emerald-500 group-hover/card:text-white transition-all">
+                                    <div className="w-8 h-8 rounded-full bg-white/5 border border-amber-500 flex items-center justify-center text-amber-500 group-hover/card:bg-amber-500 group-hover/card:text-black transition-all">
                                         <CheckCircle2 className="w-5 h-5" />
                                     </div>
                                 </div>
@@ -1306,7 +1319,7 @@ function DashboardScreen({ user, role, services, dashboardView, onBack }: { user
             {/* FAB */}
             <button 
                 onClick={() => onBack()}
-                className="fixed bottom-24 right-6 w-16 h-16 bg-emerald-500 text-white rounded-full flex items-center justify-center shadow-2xl shadow-emerald-500/40 z-30 active:scale-95 transition-transform"
+                className="fixed bottom-24 right-6 w-16 h-16 bg-amber-500 text-black rounded-full flex items-center justify-center shadow-2xl shadow-amber-500/40 z-30 active:scale-95 transition-transform"
             >
                 <Plus className="w-8 h-8" />
             </button>
@@ -1315,23 +1328,23 @@ function DashboardScreen({ user, role, services, dashboardView, onBack }: { user
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
               {currentView === 'list' && (
                   <div className="space-y-6">
-                      <h2 className="text-xl font-black uppercase italic tracking-tight underline decoration-emerald-500/30 decoration-4 underline-offset-4">Meus Atendimentos</h2>
-                      {loading ? <div className="p-20 flex justify-center"><Loader2 className="animate-spin text-emerald-500" /></div> : appointments.length === 0 ? (
-                          <div className="p-12 text-center text-neutral-400">Nenhum agendamento encontrado</div>
+                      <h2 className="text-xl font-black uppercase italic tracking-tight underline decoration-amber-500/30 decoration-4 underline-offset-4 text-white">Meus Atendimentos</h2>
+                      {loading ? <div className="p-20 flex justify-center"><Loader2 className="animate-spin text-amber-500" /></div> : appointments.length === 0 ? (
+                          <div className="p-12 text-center text-neutral-600 font-bold uppercase text-xs tracking-widest">Nenhum agendamento encontrado</div>
                       ) : (
                           <div className="space-y-3">
                               {appointments.map(app => (
-                                  <div key={app.id} className="bg-white p-5 rounded-3xl border border-neutral-200">
+                                  <div key={app.id} className="bg-neutral-900 p-5 rounded-3xl border border-white/5 shadow-lg">
                                       <div className="flex justify-between items-start mb-3">
                                           <div>
-                                              <p className="text-[10px] text-emerald-500 uppercase font-black mb-1">{format(app.date instanceof Timestamp ? app.date.toDate() : parseISO(app.date), "PPP", { locale: ptBR })}</p>
-                                              <h4 className="font-bold text-lg">{app.serviceName}</h4>
+                                              <p className="text-[10px] text-amber-500 uppercase font-black mb-1">{format(app.date instanceof Timestamp ? app.date.toDate() : parseISO(app.date), "PPP", { locale: ptBR })}</p>
+                                              <h4 className="font-bold text-lg text-white">{app.serviceName}</h4>
                                           </div>
-                                          <div className={`px-2 py-1 rounded text-[8px] font-black uppercase ${app.status === 'confirmed' ? 'bg-emerald-100 text-emerald-600' : 'bg-neutral-100 text-neutral-500'}`}>
+                                          <div className={`px-2 py-1 rounded text-[8px] font-black uppercase ${app.status === 'confirmed' ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 'bg-white/5 text-neutral-500'}`}>
                                               {app.status || 'Pendente'}
                                           </div>
                                       </div>
-                                      <p className="text-sm text-neutral-600">{app.clientName} • {app.barberName}</p>
+                                      <p className="text-sm text-neutral-400 font-medium">{app.clientName} • {app.barberName}</p>
                                   </div>
                               ))}
                           </div>
@@ -1388,39 +1401,39 @@ function CollaboratorsManager() {
   };
 
   return (
-    <div className="space-y-8 max-w-2xl mx-auto">
-      <form onSubmit={handleAddBarber} className="bg-white p-8 rounded-[2rem] border border-neutral-200/50 shadow-sm space-y-4">
+    <div className="space-y-8 max-w-2xl mx-auto pb-20">
+      <form onSubmit={handleAddBarber} className="bg-neutral-900 p-8 rounded-[2rem] border border-white/5 shadow-2xl space-y-4">
         <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center text-white">
+            <div className="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center text-black shadow-[0_0_20px_rgba(245,158,11,0.2)]">
                 <User className="w-5 h-5" />
             </div>
-            <h4 className="text-xl font-bold text-neutral-900">Novo Colaborador</h4>
+            <h4 className="text-xl font-bold text-white">Novo Colaborador</h4>
         </div>
         <div className="space-y-3">
-            <input type="text" placeholder="Nome completo" className="w-full bg-neutral-50 border border-neutral-200 p-4 rounded-2xl text-neutral-900 outline-none focus:border-emerald-500 transition-all" value={name} onChange={(e) => setName(e.target.value)} required />
-            <input type="email" placeholder="E-mail profissional" className="w-full bg-neutral-50 border border-neutral-200 p-4 rounded-2xl text-neutral-900 outline-none focus:border-emerald-500 transition-all" value={email} onChange={(e) => setEmail(e.target.value)} required />
-            <input type="password" placeholder="Senha de acesso" className="w-full bg-neutral-50 border border-neutral-200 p-4 rounded-2xl text-neutral-900 outline-none focus:border-emerald-500 transition-all" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            <input type="text" placeholder="Nome completo" className="w-full bg-black border border-white/10 p-4 rounded-2xl text-white outline-none focus:border-amber-500 transition-all font-bold" value={name} onChange={(e) => setName(e.target.value)} required />
+            <input type="email" placeholder="E-mail profissional" className="w-full bg-black border border-white/10 p-4 rounded-2xl text-white outline-none focus:border-amber-500 transition-all font-bold" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            <input type="password" placeholder="Senha de acesso" className="w-full bg-black border border-white/10 p-4 rounded-2xl text-white outline-none focus:border-amber-500 transition-all font-bold" value={password} onChange={(e) => setPassword(e.target.value)} required />
         </div>
-        <button type="submit" className="w-full bg-emerald-500 text-white py-4 rounded-2xl font-bold uppercase tracking-widest shadow-lg shadow-emerald-500/20 active:scale-[0.98] transition-transform" disabled={loading}>
-          {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : "Cadastrar Colaborador"}
+        <button type="submit" className="w-full bg-amber-500 text-black py-4 rounded-2xl font-black uppercase italic tracking-widest shadow-xl shadow-amber-500/20 active:scale-[0.98] transition-transform" disabled={loading}>
+          {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto text-black" /> : "CADASTRAR COLABORADOR"}
         </button>
       </form>
 
       <div className="space-y-4 px-4">
-        <h4 className="text-xs font-black uppercase tracking-widest text-neutral-400">Time de Especialistas</h4>
+        <h4 className="text-xs font-black uppercase tracking-widest text-neutral-500">Time de Especialistas</h4>
         <div className="grid grid-cols-1 gap-3">
             {barbers.map(barber => (
-              <div key={barber.id} className="bg-white p-4 rounded-3xl border border-neutral-200/50 flex items-center justify-between shadow-sm">
+              <div key={barber.id} className="bg-neutral-900 p-4 rounded-3xl border border-white/5 flex items-center justify-between shadow-lg">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-neutral-100 flex items-center justify-center text-neutral-400 border border-neutral-200 overflow-hidden">
+                  <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-neutral-500 border border-white/5 overflow-hidden">
                     {barber.photoURL ? <img src={barber.photoURL} alt={barber.name} className="w-full h-full object-cover" /> : <User className="w-6 h-6" />}
                   </div>
                   <div>
-                      <p className="font-bold text-neutral-900 leading-none mb-1">{barber.name}</p>
-                      <p className="text-[10px] text-neutral-400 uppercase font-black tracking-tight">{barber.email}</p>
+                      <p className="font-bold text-white leading-none mb-1">{barber.name}</p>
+                      <p className="text-[10px] text-neutral-500 uppercase font-black tracking-tight">{barber.email}</p>
                   </div>
                 </div>
-                <button className="p-2 text-neutral-300 hover:text-red-500 transition-colors">
+                <button className="p-2 text-neutral-700 hover:text-red-500 transition-colors">
                     <Trash2 className="w-5 h-5" />
                 </button>
               </div>
@@ -1446,16 +1459,19 @@ function WorkingHoursManager() {
     fetchBarbers();
   }, []);
 
-  if (loading) return <div className="p-8 text-neutral-400 flex justify-center"><Loader2 className="animate-spin text-emerald-500" /></div>;
+  if (loading) return <div className="p-12 text-center flex flex-col items-center justify-center gap-4">
+    <Loader2 className="animate-spin text-amber-500 w-8 h-8" />
+    <span className="text-[10px] font-black uppercase text-neutral-500 tracking-widest">Carregando profissionais...</span>
+  </div>;
 
   return (
     <div className="space-y-8 max-w-4xl mx-auto pb-20">
-      <div className="flex flex-col gap-2 px-4 shadow-none">
-        <h3 className="text-2xl font-black uppercase italic tracking-tighter">Horários <span className="text-emerald-500">Operacionais</span></h3>
-        <p className="text-[10px] text-neutral-400 uppercase tracking-widest font-bold">Configure a disponibilidade dos profissionais</p>
+      <div className="flex flex-col gap-2 px-4">
+        <h3 className="text-2xl font-black uppercase italic tracking-tighter text-white">Horários <span className="text-amber-500">Operacionais</span></h3>
+        <p className="text-[10px] text-neutral-500 uppercase tracking-widest font-bold">Configure a disponibilidade dos profissionais</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 px-4 md:px-0">
         {barbers.map(barber => (
           <BarberHoursItem key={barber.id} barber={barber} />
         ))}
@@ -1464,7 +1480,7 @@ function WorkingHoursManager() {
   );
 }
 
-function BarberHoursItem({ barber }: { barber: any }) {
+function BarberHoursItem({ barber }: { barber: any, key?: any }) {
   const [hours, setHours] = useState<any[]>([]);
   
   useEffect(() => {
@@ -1494,14 +1510,14 @@ function BarberHoursItem({ barber }: { barber: any }) {
   };
 
   return (
-    <div className="bg-white p-6 rounded-[2.5rem] border border-neutral-200/50 shadow-sm space-y-6">
-      <div className="flex items-center gap-4 border-b border-neutral-100 pb-4">
-        <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center">
+    <div className="bg-neutral-900 p-6 rounded-[2.5rem] border border-white/5 shadow-2xl space-y-6">
+      <div className="flex items-center gap-4 border-b border-white/5 pb-4">
+        <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
             <Clock className="w-6 h-6" />
         </div>
         <div>
-            <h4 className="font-bold text-neutral-900 leading-none mb-1">{barber.name}</h4>
-            <p className="text-[10px] text-neutral-400 font-black uppercase">Jornada de Trabalho</p>
+            <h4 className="font-bold text-white leading-none mb-1">{barber.name}</h4>
+            <p className="text-[10px] text-neutral-500 font-black uppercase tracking-widest">Jornada de Trabalho</p>
         </div>
       </div>
 
@@ -1510,21 +1526,21 @@ function BarberHoursItem({ barber }: { barber: any }) {
           const dayName = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"][day];
           const workingDay = hours.find(h => h.dayOfWeek === day);
           return (
-            <div key={day} className="bg-neutral-50 p-4 rounded-2xl flex items-center justify-between border border-neutral-100/50">
-              <span className="text-xs font-black uppercase text-neutral-400 w-10">{dayName}</span>
+            <div key={day} className="bg-black/40 p-4 rounded-2xl flex items-center justify-between border border-white/5 group hover:border-amber-500/20 transition-all">
+              <span className="text-xs font-black uppercase text-neutral-500 w-10">{dayName}</span>
               <div className="flex gap-4 items-center">
                 <input 
                   type="time" 
                   defaultValue={workingDay?.startTime || "09:00"}
                   onBlur={(e) => saveHours(day, e.target.value, workingDay?.endTime || "18:00")}
-                  className="bg-transparent text-sm font-bold text-neutral-700 outline-none focus:text-emerald-500 transition-colors"
+                  className="bg-transparent text-sm font-bold text-neutral-300 outline-none focus:text-amber-500 transition-colors"
                 />
-                <span className="text-neutral-300">|</span>
+                <span className="text-neutral-800">|</span>
                 <input 
                   type="time" 
                   defaultValue={workingDay?.endTime || "18:00"}
                   onBlur={(e) => saveHours(day, workingDay?.startTime || "09:00", e.target.value)}
-                  className="bg-transparent text-sm font-bold text-neutral-700 outline-none focus:text-emerald-500 transition-colors"
+                  className="bg-transparent text-sm font-bold text-neutral-300 outline-none focus:text-amber-500 transition-colors"
                 />
               </div>
             </div>
@@ -1593,13 +1609,13 @@ function ServicesManagement({ services }: { services: any[] }) {
     <div className="space-y-8 max-w-5xl mx-auto px-4 pb-20">
       <div className="flex items-center justify-between">
         <div className="flex flex-col gap-1">
-          <h4 className="text-2xl font-black uppercase italic tracking-tighter">Catálogo de <span className="text-emerald-500">Serviços</span></h4>
-          <p className="text-[10px] text-neutral-400 uppercase tracking-widest font-bold">Gerencie os serviços oferecidos</p>
+          <h4 className="text-2xl font-black uppercase italic tracking-tighter text-white">Catálogo de <span className="text-amber-500">Serviços</span></h4>
+          <p className="text-[10px] text-neutral-500 uppercase tracking-widest font-bold">Gerencie os serviços oferecidos</p>
         </div>
         {!isAdding && !editingId && (
           <button 
             onClick={() => setIsAdding(true)}
-            className="bg-emerald-500 text-white px-6 py-2 rounded-2xl font-black uppercase text-[10px] flex items-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-lg shadow-emerald-500/20"
+            className="bg-amber-500 text-black px-6 py-2 rounded-2xl font-black uppercase text-[10px] flex items-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-lg shadow-amber-500/20"
           >
             <Plus className="w-4 h-4" /> Novo Serviço
           </button>
@@ -1614,39 +1630,39 @@ function ServicesManagement({ services }: { services: any[] }) {
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden"
           >
-            <form onSubmit={handleSubmit} className="bg-white border border-neutral-200/50 p-8 rounded-[2.5rem] shadow-sm space-y-6">
+            <form onSubmit={handleSubmit} className="bg-neutral-900 border border-white/5 p-8 rounded-[2.5rem] shadow-2xl space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-neutral-400 ml-2 tracking-widest">Nome do Serviço</label>
+                  <label className="text-[10px] font-black uppercase text-neutral-500 ml-2 tracking-widest">Nome do Serviço</label>
                   <input 
                     type="text"
                     required
                     placeholder="Ex: Corte e Barba"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full bg-neutral-50 border border-neutral-200 p-4 rounded-2xl text-neutral-900 outline-none focus:border-emerald-500 transition-all text-sm"
+                    className="w-full bg-black border border-white/10 p-4 rounded-2xl text-white outline-none focus:border-amber-500 transition-all text-sm"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-neutral-400 ml-2 tracking-widest">Preço (R$)</label>
+                  <label className="text-[10px] font-black uppercase text-neutral-500 ml-2 tracking-widest">Preço (R$)</label>
                   <input 
                     type="number"
                     required
                     placeholder="0.00"
                     value={formData.price}
                     onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
-                    className="w-full bg-neutral-50 border border-neutral-200 p-4 rounded-2xl text-neutral-900 outline-none focus:border-emerald-500 transition-all text-sm"
+                    className="w-full bg-black border border-white/10 p-4 rounded-2xl text-white outline-none focus:border-amber-500 transition-all text-sm"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-neutral-400 ml-2 tracking-widest">Duração (min)</label>
+                  <label className="text-[10px] font-black uppercase text-neutral-500 ml-2 tracking-widest">Duração (min)</label>
                   <input 
                     type="number"
                     required
                     placeholder="Ex: 30"
                     value={formData.duration}
                     onChange={(e) => setFormData({ ...formData, duration: Number(e.target.value) })}
-                    className="w-full bg-neutral-50 border border-neutral-200 p-4 rounded-2xl text-neutral-900 outline-none focus:border-emerald-500 transition-all text-sm"
+                    className="w-full bg-black border border-white/10 p-4 rounded-2xl text-white outline-none focus:border-amber-500 transition-all text-sm"
                   />
                 </div>
                 <div className="flex flex-col pt-6">
@@ -1654,7 +1670,7 @@ function ServicesManagement({ services }: { services: any[] }) {
                     type="button"
                     onClick={() => setFormData({ ...formData, active: !formData.active })}
                     className={`flex-1 flex items-center justify-center gap-2 rounded-2xl font-black uppercase text-[10px] transition-all border ${
-                      formData.active ? "bg-emerald-50 border-emerald-200 text-emerald-600" : "bg-red-50 border-red-200 text-red-600"
+                      formData.active ? "bg-amber-500/10 border-amber-500/50 text-amber-500" : "bg-red-500/10 border-red-500/50 text-red-500"
                     }`}
                   >
                     {formData.active ? <><CheckCircle2 className="w-4 h-4" /> Ativo</> : <><XCircle className="w-4 h-4" /> Inativo</>}
@@ -1662,18 +1678,18 @@ function ServicesManagement({ services }: { services: any[] }) {
                 </div>
               </div>
 
-              <div className="flex gap-4 pt-4 border-t border-neutral-100">
+              <div className="flex gap-4 pt-4 border-t border-white/5">
                 <button 
                   type="submit"
                   disabled={loading}
-                  className="bg-emerald-500 text-white px-10 py-4 rounded-2xl font-black uppercase text-xs flex items-center gap-2 hover:bg-emerald-600 transition-all disabled:opacity-50"
+                  className="bg-amber-500 text-black px-10 py-4 rounded-2xl font-black uppercase text-xs flex items-center gap-2 hover:bg-amber-400 transition-all disabled:opacity-50"
                 >
                   {loading ? <Loader2 className="animate-spin w-4 h-4" /> : <><Save className="w-4 h-4" /> {editingId ? "Atualizar" : "Confirmar"}</>}
                 </button>
                 <button 
                   type="button"
                   onClick={resetForm}
-                  className="bg-neutral-100 text-neutral-600 px-10 py-4 rounded-2xl font-black uppercase text-xs hover:bg-neutral-200 transition-all"
+                  className="bg-white/5 text-neutral-400 px-10 py-4 rounded-2xl font-black uppercase text-xs hover:bg-white/10 transition-all"
                 >
                   Cancelar
                 </button>
@@ -1685,28 +1701,28 @@ function ServicesManagement({ services }: { services: any[] }) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-20">
         {services.length === 0 ? (
-          <div className="col-span-full py-20 flex flex-col items-center justify-center opacity-30 border-2 border-dashed border-neutral-200 rounded-[3rem]">
-            <Scissors className="w-16 h-16 mb-4 text-emerald-500" />
+          <div className="col-span-full py-20 flex flex-col items-center justify-center opacity-30 border-2 border-dashed border-white/10 rounded-[3rem]">
+            <Scissors className="w-16 h-16 mb-4 text-amber-500" />
             <p className="font-black uppercase tracking-[0.2em] text-[10px] text-neutral-400">Nenhum serviço catalogado</p>
           </div>
         ) : (
           services.map((service) => (
             <div 
               key={service.id} 
-              className={`bg-white p-8 rounded-[2.5rem] border transition-all relative group shadow-sm flex flex-col ${
-                service.active === false ? "opacity-50 grayscale border-neutral-200" : "border-neutral-100 hover:border-emerald-200 hover:shadow-md"
+              className={`bg-neutral-900 p-8 rounded-[2.5rem] border transition-all relative group shadow-2xl flex flex-col ${
+                service.active === false ? "opacity-50 grayscale border-white/5" : "border-white/5 hover:border-amber-500/30"
               }`}
             >
               <div className="flex justify-between items-start mb-6">
                 <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors ${
-                  service.active === false ? "bg-neutral-100 text-neutral-400" : "bg-emerald-50 text-emerald-500"
+                  service.active === false ? "bg-black text-neutral-600" : "bg-amber-500/10 text-amber-500"
                 }`}>
                   <Scissors className="w-7 h-7" />
                 </div>
                 <div className="flex gap-2">
                   <button 
                     onClick={() => handleEdit(service)}
-                    className="w-10 h-10 bg-neutral-50 hover:bg-emerald-500 hover:text-white text-neutral-400 rounded-xl transition-all flex items-center justify-center"
+                    className="w-10 h-10 bg-white/5 hover:bg-amber-500 hover:text-black text-neutral-500 rounded-xl transition-all flex items-center justify-center"
                     title="Editar"
                   >
                     <Pencil className="w-4 h-4" />
@@ -1714,7 +1730,7 @@ function ServicesManagement({ services }: { services: any[] }) {
                   <button 
                     onClick={() => toggleActive(service)}
                     className={`w-10 h-10 rounded-xl transition-all flex items-center justify-center ${
-                      service.active === false ? "bg-green-50 text-green-500 hover:bg-green-500 hover:text-white" : "bg-red-50 text-red-500 hover:bg-red-500 hover:text-white"
+                      service.active === false ? "bg-amber-500/10 text-amber-500 hover:bg-amber-500 hover:text-black" : "bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white"
                     }`}
                     title={service.active === false ? "Ativar" : "Desativar"}
                   >
@@ -1723,17 +1739,17 @@ function ServicesManagement({ services }: { services: any[] }) {
                 </div>
               </div>
 
-              <h5 className="text-xl font-bold text-neutral-900 mb-1 leading-tight">{service.name}</h5>
+              <h5 className="text-xl font-bold text-white mb-1 leading-tight">{service.name}</h5>
               <div className="space-y-1 mb-8 flex-1">
-                <p className="text-emerald-500 font-black text-3xl">R${service.price}</p>
-                <div className="flex items-center gap-2 text-[10px] text-neutral-400 uppercase font-bold tracking-widest">
+                <p className="text-amber-500 font-black text-3xl">R${service.price}</p>
+                <div className="flex items-center gap-2 text-[10px] text-neutral-500 uppercase font-bold tracking-widest">
                   <Clock className="w-3.5 h-3.5" /> {service.duration} min
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 border-t border-neutral-50 pt-4 mt-auto">
-                <div className={`w-2 h-2 rounded-full ${service.active === false ? "bg-red-400" : "bg-emerald-500"}`} />
-                <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+              <div className="flex items-center gap-2 border-t border-white/5 pt-4 mt-auto">
+                <div className={`w-2 h-2 rounded-full ${service.active === false ? "bg-red-500" : "bg-amber-500"}`} />
+                <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">
                   {service.active === false ? "Oculto" : "Disponível"}
                 </span>
               </div>
@@ -1805,32 +1821,32 @@ function CalendarWidget({
         days.push(
           <div
             key={day.toString()}
-            className={`min-h-[100px] p-2 border-r border-b border-neutral-100 transition-all cursor-pointer hover:bg-neutral-50 flex flex-col gap-1 ${
-              !isCurrentMonth ? "bg-neutral-50/50 opacity-40" : "bg-white"
-            } ${isSelected ? "ring-2 ring-inset ring-emerald-500 z-10" : ""}`}
+            className={`min-h-[100px] p-2 border-r border-b border-white/5 transition-all cursor-pointer hover:bg-white/5 flex flex-col gap-1 ${
+              !isCurrentMonth ? "bg-black opacity-20" : "bg-neutral-900"
+            } ${isSelected ? "ring-2 ring-inset ring-amber-500 z-10" : ""}`}
             onClick={() => handleDaySelect(cloneDay)}
           >
             <div className={`flex items-center justify-between`}>
               <span className={`text-xs font-bold ${
-                isTodayDate ? "w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center" : 
-                isCurrentMonth ? "text-neutral-900" : "text-neutral-400"
+                isTodayDate ? "w-6 h-6 bg-amber-500 text-black rounded-full flex items-center justify-center shadow-[0_0_10px_rgba(245,158,11,0.3)]" : 
+                isCurrentMonth ? "text-white" : "text-neutral-600"
               }`}>
                 {formattedDate}
               </span>
               {dayAppointments.length > 0 && (
-                <span className="text-[10px] font-black text-emerald-500 bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-100">
+                <span className="text-[10px] font-black text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded-full border border-amber-500/20">
                   {dayAppointments.length}
                 </span>
               )}
             </div>
             <div className="space-y-1 mt-1 overflow-hidden">
                {dayAppointments.slice(0, 3).map((app, idx) => (
-                 <div key={idx} className="text-[8px] bg-neutral-100 text-neutral-600 px-1.5 py-0.5 rounded truncate font-medium border border-neutral-200">
+                 <div key={idx} className="text-[8px] bg-white/5 text-neutral-400 px-1.5 py-0.5 rounded truncate font-medium border border-white/5">
                    {app.clientName?.split(' ')[0] || "Cliente"}
                  </div>
                ))}
                {dayAppointments.length > 3 && (
-                 <div className="text-[8px] text-neutral-400 font-bold pl-1 uppercase">+{dayAppointments.length - 3} mais</div>
+                 <div className="text-[8px] text-neutral-600 font-bold pl-1 uppercase">+{dayAppointments.length - 3} mais</div>
                )}
             </div>
           </div>
@@ -1846,10 +1862,10 @@ function CalendarWidget({
     }
 
     return (
-      <div className="bg-white rounded-[2rem] border border-neutral-200/50 shadow-sm overflow-hidden mt-4">
-        <div className="grid grid-cols-7 bg-neutral-50 border-b border-neutral-100">
+      <div className="bg-neutral-900 rounded-[2rem] border border-white/5 shadow-2xl overflow-hidden mt-4">
+        <div className="grid grid-cols-7 bg-black border-b border-white/5">
           {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((d) => (
-            <div key={d} className="py-3 text-center text-[10px] font-black uppercase tracking-widest text-neutral-400">
+            <div key={d} className="py-3 text-center text-[10px] font-black uppercase tracking-widest text-neutral-600">
               {d}
             </div>
           ))}
@@ -1872,26 +1888,26 @@ function CalendarWidget({
           return (
             <div key={idx} className="flex flex-col gap-3">
                <div className={`p-4 rounded-2xl flex flex-col items-center transition-all ${
-                 isTodayDate ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "bg-white border border-neutral-200/50 text-neutral-900"
+                 isTodayDate ? "bg-amber-500 text-black shadow-lg shadow-amber-500/20" : "bg-neutral-900 border border-white/5 text-white"
                }`}>
-                 <span className={`text-[10px] font-black uppercase tracking-widest ${isTodayDate ? "text-emerald-100" : "text-neutral-400"}`}>
+                 <span className={`text-[10px] font-black uppercase tracking-widest ${isTodayDate ? "text-black/50" : "text-neutral-500"}`}>
                    {format(day, 'eee', { locale: ptBR })}
                  </span>
                  <span className="text-2xl font-black italic">{format(day, 'd')}</span>
                </div>
                <div className="space-y-2">
                  {dayApps.map((app, appIdx) => (
-                   <div key={appIdx} className="bg-white p-3 rounded-2xl border border-neutral-200/50 shadow-sm flex flex-col gap-1 group hover:border-emerald-200 transition-all">
+                   <div key={appIdx} className="bg-neutral-900 p-3 rounded-2xl border border-white/5 shadow-lg flex flex-col gap-1 group hover:border-amber-500/30 transition-all">
                       <div className="flex items-center justify-between">
-                         <span className="text-[10px] font-black text-emerald-500 uppercase">{app.time}</span>
-                         <div className={`w-2 h-2 rounded-full ${app.status === 'completed' ? 'bg-emerald-500' : 'bg-amber-400'}`} />
+                         <span className="text-[10px] font-black text-amber-500 uppercase">{app.time}</span>
+                         <div className={`w-2 h-2 rounded-full ${app.status === 'completed' ? 'bg-amber-500' : 'bg-red-500'}`} />
                       </div>
-                      <p className="text-xs font-bold text-neutral-900 truncate">{app.clientName}</p>
-                      <p className="text-[9px] text-neutral-400 uppercase font-black">{app.serviceName}</p>
+                      <p className="text-xs font-bold text-white truncate">{app.clientName}</p>
+                      <p className="text-[9px] text-neutral-500 uppercase font-black">{app.serviceName}</p>
                    </div>
                  ))}
                  {dayApps.length === 0 && (
-                   <div className="py-8 flex flex-col items-center justify-center opacity-20 bg-neutral-100 rounded-2xl border-2 border-dashed border-neutral-200">
+                   <div className="py-8 flex flex-col items-center justify-center opacity-10 bg-white/5 rounded-2xl border-2 border-dashed border-white/10">
                      <Clock className="w-4 h-4 mb-1 text-neutral-400" />
                    </div>
                  )}
@@ -1909,20 +1925,20 @@ function CalendarWidget({
 
     return (
       <div className="max-w-3xl mx-auto mt-8 space-y-4">
-        <div className="bg-white p-6 rounded-[2.5rem] border border-neutral-200/50 shadow-sm">
-           <div className="flex items-center justify-between mb-8 pb-4 border-b border-neutral-100">
+        <div className="bg-neutral-900 p-6 rounded-[2.5rem] border border-white/5 shadow-2xl">
+           <div className="flex items-center justify-between mb-8 pb-4 border-b border-white/5">
               <div className="flex items-center gap-3">
-                 <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center">
+                 <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
                     <Calendar className="w-6 h-6" />
                  </div>
                  <div>
-                    <h3 className="text-xl font-bold text-neutral-900 leading-none mb-1">{format(currentDate, "eeee, d 'de' MMMM", { locale: ptBR })}</h3>
-                    <p className="text-[10px] text-neutral-400 font-black uppercase tracking-widest">{dayApps.length} Agendamentos</p>
+                    <h3 className="text-xl font-bold text-white leading-none mb-1">{format(currentDate, "eeee, d 'de' MMMM", { locale: ptBR })}</h3>
+                    <p className="text-[10px] text-neutral-500 font-black uppercase tracking-widest">{dayApps.length} Agendamentos</p>
                  </div>
               </div>
-              <div className="flex bg-neutral-50 p-1 rounded-xl border border-neutral-200">
-                 <button onClick={() => navigate(-1)} className="p-2 hover:bg-white rounded-lg transition-all text-neutral-400 hover:text-emerald-500 shadow-sm"><ChevronLeft className="w-4 h-4" /></button>
-                 <button onClick={() => navigate(1)} className="p-2 hover:bg-white rounded-lg transition-all text-neutral-400 hover:text-emerald-500 shadow-sm"><ChevronRight className="w-4 h-4" /></button>
+              <div className="flex bg-black p-1 rounded-xl border border-white/5">
+                 <button onClick={() => navigate(-1)} className="p-2 hover:bg-white/5 rounded-lg transition-all text-neutral-500 hover:text-amber-500 shadow-sm"><ChevronLeft className="w-4 h-4" /></button>
+                 <button onClick={() => navigate(1)} className="p-2 hover:bg-white/5 rounded-lg transition-all text-neutral-500 hover:text-amber-500 shadow-sm"><ChevronRight className="w-4 h-4" /></button>
               </div>
            </div>
 
@@ -1934,26 +1950,26 @@ function CalendarWidget({
                 return (
                   <div key={hour} className="group flex gap-4 min-h-[60px]">
                     <div className="w-12 pt-1 text-right">
-                       <span className="text-[10px] font-black text-neutral-300 group-hover:text-emerald-500 transition-colors uppercase tracking-tight">{timeStr}</span>
+                       <span className="text-[10px] font-black text-neutral-700 group-hover:text-amber-500 transition-colors uppercase tracking-tight">{timeStr}</span>
                     </div>
                     <div className="flex-1 flex flex-col gap-2 relative">
-                       <div className="absolute left-0 right-0 top-3 h-[1px] bg-neutral-100 group-hover:bg-emerald-100 transition-colors" />
+                       <div className="absolute left-0 right-0 top-3 h-[1px] bg-white/5 group-hover:bg-amber-500/10 transition-colors" />
                        <div className="relative z-10 pl-2">
                           {hourApps.map((app, idx) => (
                             <motion.div 
                               key={idx}
                               initial={{ opacity: 0, x: -10 }}
                               animate={{ opacity: 1, x: 0 }}
-                              className="bg-white border border-neutral-200/50 p-4 rounded-2xl shadow-sm flex items-center justify-between mb-2 hover:border-emerald-200 hover:shadow-md transition-all group/card"
+                              className="bg-black border border-white/5 p-4 rounded-2xl shadow-xl flex items-center justify-between mb-2 hover:border-amber-500/30 hover:shadow-amber-500/5 transition-all group/card"
                             >
                               <div className="flex items-center gap-4">
                                 <div className={`w-2 h-10 rounded-full transition-colors ${
-                                  app.status === 'completed' ? 'bg-emerald-500' : 
-                                  app.status === 'confirmed' ? 'bg-indigo-500' : 'bg-amber-400'
+                                  app.status === 'completed' ? 'bg-amber-500' : 
+                                  app.status === 'confirmed' ? 'bg-amber-500' : 'bg-red-500'
                                 }`} />
                                 <div>
-                                  <p className="font-bold text-neutral-900 group-hover/card:text-emerald-500 transition-colors">{app.clientName}</p>
-                                  <p className="text-[10px] text-neutral-400 font-black uppercase tracking-widest">{app.serviceName} • {app.time}</p>
+                                  <p className="font-bold text-white group-hover/card:text-amber-500 transition-colors">{app.clientName}</p>
+                                  <p className="text-[10px] text-neutral-500 font-black uppercase tracking-widest">{app.serviceName} • {app.time}</p>
                                 </div>
                               </div>
                               <div className="flex gap-2">
@@ -1961,19 +1977,19 @@ function CalendarWidget({
                                    <div className="flex gap-1">
                                       <button 
                                         onClick={() => updateStatus(app.id, 'confirmed')}
-                                        className="bg-emerald-500 text-white p-2 rounded-xl"
+                                        className="bg-amber-500 text-black p-2 rounded-xl hover:bg-amber-400 transition-colors"
                                       >
                                         <CheckCircle2 className="w-4 h-4" />
                                       </button>
                                        <button 
                                         onClick={() => updateStatus(app.id, 'cancelled')}
-                                        className="bg-red-50 text-red-500 p-2 rounded-xl"
+                                        className="bg-red-500/10 text-red-500 p-2 rounded-xl hover:bg-red-500/20 transition-colors"
                                       >
                                         <XCircle className="w-4 h-4" />
                                       </button>
                                    </div>
                                  )}
-                                 <button className="bg-neutral-50 text-neutral-400 p-2 rounded-xl hover:bg-neutral-100">
+                                 <button className="bg-white/5 text-neutral-500 p-2 rounded-xl hover:bg-white/10">
                                    <MoreHorizontal className="w-4 h-4" />
                                  </button>
                               </div>
@@ -1994,12 +2010,12 @@ function CalendarWidget({
     <div className="w-full pb-20">
       <div className="flex flex-col sm:flex-row items-center justify-between mb-8 px-4 gap-4">
          <div className="flex items-center gap-4">
-            <h2 className="text-3xl font-black italic uppercase tracking-tighter leading-none">
-               Meu <span className="text-emerald-500">Fluxo</span>
+            <h2 className="text-3xl font-black italic uppercase tracking-tighter leading-none text-white">
+               Meu <span className="text-amber-500">Fluxo</span>
             </h2>
-            <p className="hidden sm:block text-[10px] text-neutral-400 uppercase tracking-widest font-black pt-1">Calendário de Atendimentos</p>
+            <p className="hidden sm:block text-[10px] text-neutral-500 uppercase tracking-widest font-black pt-1">Calendário de Atendimentos</p>
          </div>
-         <div className="flex bg-white/50 backdrop-blur-md p-1 rounded-2xl border border-neutral-200 shadow-sm overflow-x-auto max-w-full">
+         <div className="flex bg-neutral-900 p-1 rounded-2xl border border-white/5 shadow-xl overflow-x-auto max-w-full">
            {[
              { id: 'day', label: 'Dia' },
              { id: 'week', label: 'Semana' },
@@ -2009,7 +2025,7 @@ function CalendarWidget({
                key={m.id}
                onClick={() => onModeChange && onModeChange(m.id as any)}
                className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
-                 mode === m.id ? "bg-white text-emerald-500 shadow-sm border border-emerald-100" : "text-neutral-400 hover:text-neutral-600"
+                 mode === m.id ? "bg-amber-500 text-black shadow-lg" : "text-neutral-500 hover:text-white"
                }`}
              >
                {m.label}
@@ -2018,15 +2034,15 @@ function CalendarWidget({
          </div>
       </div>
 
-      <div className="flex items-center justify-center gap-6 mb-8 bg-white py-4 rounded-[2rem] border border-neutral-200/50 shadow-sm max-w-md mx-auto">
-        <button onClick={() => navigate(-1)} className="p-2 bg-neutral-50 hover:bg-emerald-500 hover:text-white rounded-xl transition-all shadow-sm active:scale-95"><ChevronLeft className="w-5 h-5 text-neutral-400 group-hover:text-white" /></button>
+      <div className="flex items-center justify-center gap-6 mb-8 bg-neutral-900 py-4 rounded-[2rem] border border-white/5 shadow-2xl max-w-md mx-auto">
+        <button onClick={() => navigate(-1)} className="p-2 bg-white/5 hover:bg-amber-500 hover:text-black rounded-xl transition-all shadow-sm active:scale-95"><ChevronLeft className="w-5 h-5 text-neutral-500 group-hover:text-black" /></button>
         <div className="text-center min-w-[160px]">
-          <h3 className="text-lg font-bold text-neutral-900 leading-none mb-1">
+          <h3 className="text-lg font-bold text-white leading-none mb-1">
             {format(currentDate, mode === 'month' ? 'MMMM yyyy' : mode === 'week' ? "MMM d" : "d 'de' MMMM", { locale: ptBR })}
           </h3>
-          <p className="text-[10px] text-emerald-500 uppercase font-black tracking-widest">Navegação</p>
+          <p className="text-[10px] text-amber-500 uppercase font-black tracking-widest">Navegação</p>
         </div>
-        <button onClick={() => navigate(1)} className="p-2 bg-neutral-50 hover:bg-emerald-500 hover:text-white rounded-xl transition-all shadow-sm active:scale-95"><ChevronRight className="w-5 h-5 text-neutral-400 group-hover:text-white" /></button>
+        <button onClick={() => navigate(1)} className="p-2 bg-white/5 hover:bg-amber-500 hover:text-black rounded-xl transition-all shadow-sm active:scale-95"><ChevronRight className="w-5 h-5 text-neutral-500 group-hover:text-black" /></button>
       </div>
 
       <AnimatePresence mode="wait">
