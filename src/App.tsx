@@ -30,7 +30,20 @@ import {
   Pencil,
   Save,
   CheckCircle2,
-  XCircle
+  XCircle,
+  Grip,
+  Search,
+  RefreshCw,
+  MoreHorizontal,
+  ChevronDown,
+  Info,
+  ExternalLink,
+  Wallet,
+  Lock,
+  MessageCircle,
+  Moon,
+  HelpCircle,
+  Smartphone
 } from "lucide-react";
 import { useState, useEffect, useRef, useMemo, ChangeEvent, FormEvent } from "react";
 import { 
@@ -84,13 +97,11 @@ import {
   orderBy
 } from "firebase/firestore";
 
-type Screen = "home" | "booking" | "dashboard" | "login";
-
-
+type Screen = "home" | "booking" | "agenda" | "clients" | "more" | "login";
 
 function BrandLogo({ className = "w-10 h-10", iconSize = "w-6 h-6" }: { className?: string, iconSize?: string }) {
   return (
-    <div className={`${className} bg-amber-500 rounded-xl flex items-center justify-center overflow-hidden shadow-[0_0_20px_rgba(245,158,11,0.2)]`}>
+    <div className={`${className} rounded-xl flex items-center justify-center overflow-hidden transition-all`}>
       <img 
         src="/logo.png" 
         alt="MS Logo" 
@@ -108,31 +119,152 @@ function BrandLogo({ className = "w-10 h-10", iconSize = "w-6 h-6" }: { classNam
   );
 }
 
-function BottomNav({ userRole, currentScreen, setCurrentScreen, setDashboardView, user }: { userRole: string, currentScreen: string, setCurrentScreen: (screen: Screen) => void, setDashboardView: (view: any) => void, user: any }) {
+function MoreOptionsScreen({ user, role, onLogout, onBack }: { user: any, role: string, onLogout: () => void, onBack: () => void }) {
+  const menuItems = [
+    { id: 'notif', label: 'Notificações', icon: <Bell className="w-6 h-6" />, badge: '99+' },
+    { id: 'block', label: 'Bloqueios', icon: <Lock className="w-6 h-6" /> },
+    { id: 'help', label: 'Central de Ajuda', icon: <HelpCircle className="w-6 h-6" /> },
+    { id: 'share', label: 'Divulgar Horários', icon: <Smartphone className="w-6 h-6" /> },
+    { id: 'link', label: 'Link Público', icon: <ExternalLink className="w-6 h-6" /> },
+    { id: 'profile', label: 'Meu Perfil', icon: <User className="w-6 h-6" /> },
+    { id: 'earnings', label: 'Meus Ganhos', icon: <Wallet className="w-6 h-6" /> },
+    { id: 'week', label: 'Minha Semana', icon: <Calendar className="w-5 h-5" /> },
+    { id: 'recon', label: 'Reconciliação', icon: <CheckCircle2 className="w-6 h-6" /> },
+    { id: 'recurrence', label: 'Recorrências', icon: <RefreshCw className="w-6 h-6" /> },
+    { id: 'support', label: 'Suporte', icon: <MessageCircle className="w-6 h-6" /> },
+    { id: 'dark', label: 'Escuro', icon: <Moon className="w-6 h-6" /> },
+  ];
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 20 }}
+      className="max-w-md mx-auto py-8 px-6"
+    >
+      <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-neutral-200/50">
+        <h2 className="text-xl font-bold text-center mb-8">Mais opções</h2>
+        <div className="grid grid-cols-3 gap-y-8 gap-x-4">
+          {menuItems.map((item) => (
+            <button key={item.id} className="flex flex-col items-center gap-2 group">
+              <div className="w-16 h-16 bg-neutral-50 rounded-2xl flex items-center justify-center relative group-active:scale-95 transition-transform text-neutral-500 border border-neutral-100">
+                {item.icon}
+                {item.badge && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full border-2 border-white">
+                    {item.badge}
+                  </span>
+                )}
+              </div>
+              <span className="text-[10px] font-medium text-neutral-500 leading-tight text-center px-1">
+                {item.label}
+              </span>
+            </button>
+          ))}
+          <button 
+            onClick={onLogout}
+            className="flex flex-col items-center gap-2 group"
+          >
+            <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center group-active:scale-95 transition-transform text-red-500 border border-red-100">
+              <LogOut className="w-6 h-6" />
+            </div>
+            <span className="text-[10px] font-medium text-red-500 leading-tight text-center">
+              Sair
+            </span>
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function ClientsScreen({ onBack }: { onBack: () => void }) {
+  const [clients, setClients] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const q = query(collection(db, "users"), where("role", "==", "client"), limit(50));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setClients(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 20 }}
+      className="max-w-2xl mx-auto py-8 px-4"
+    >
+      <div className="flex items-center justify-between mb-8">
+        <h2 className="text-2xl font-black italic uppercase">Clientes</h2>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+          <input 
+            type="text" 
+            placeholder="Buscar cliente..." 
+            className="bg-white border border-neutral-200 rounded-full pl-10 pr-4 py-2 text-sm outline-none focus:border-emerald-500 transition-all"
+          />
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-20">
+          <Loader2 className="animate-spin text-emerald-500 w-8 h-8" />
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {clients.map(client => (
+            <div key={client.id} className="bg-white p-4 rounded-3xl border border-neutral-200/50 flex items-center justify-between hover:bg-neutral-50 transition-all">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-neutral-100 flex items-center justify-center text-neutral-400 font-bold overflow-hidden border border-neutral-200">
+                  {client.photoURL ? <img src={client.photoURL} alt={client.name} className="w-full h-full object-cover" /> : client.name?.[0]}
+                </div>
+                <div>
+                  <h4 className="font-bold text-neutral-900">{client.name}</h4>
+                  <p className="text-xs text-neutral-400 uppercase font-medium">{client.whatsapp || client.email}</p>
+                </div>
+              </div>
+              <button className="p-2 text-neutral-400 hover:text-emerald-500 transition-colors">
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </motion.div>
+  );
+}
+function BottomNav({ userRole, currentScreen, setCurrentScreen, user }: { userRole: string, currentScreen: string, setCurrentScreen: (s: any) => void, user: any }) {
   const items = [];
-  
   if (!user) {
     items.push({ id: "home", label: "Início", icon: <Grid className="w-5 h-5" />, screen: "home"} );
     items.push({ id: "login", label: "Portal", icon: <User className="w-5 h-5" />, screen: "login"} );
-  } else if (userRole === "client") {
+  } else {
     items.push({ id: "home", label: "Início", icon: <Grid className="w-5 h-5" />, screen: "home"} );
-    items.push({ id: "booking", label: "Agendar", icon: <Plus className="w-5 h-5" />, screen: "booking"} );
-    items.push({ id: "dashboard", label: "Agendamentos", icon: <Calendar className="w-5 h-5" />, screen: "dashboard", view: "list"} );
-  } else if (userRole === "barber") {
-    items.push({ id: "dashboard", label: "Minha Agenda", icon: <Calendar className="w-5 h-5" />, screen: "dashboard", view: "list"} );
-  } else if (userRole === "manager") {
-    items.push({ id: "dashboard", label: "Painel", icon: <Grid className="w-5 h-5" />, screen: "dashboard", view: "list"} );
-    items.push({ id: "agenda", label: "Agenda", icon: <Calendar className="w-5 h-5" />, screen: "dashboard", view: "calendar"} );
-    items.push({ id: "services", label: "Serviços", icon: <Scissors className="w-5 h-5" />, screen: "dashboard", view: "services"} );
-    items.push({ id: "hours", label: "Horários", icon: <Clock className="w-5 h-5" />, screen: "dashboard", view: "hours"} );
+    
+    if (userRole === "manager" || userRole === "barber") {
+      items.push({ id: "agenda", label: "Agenda", icon: <Calendar className="w-5 h-5" />, screen: "agenda"} );
+      items.push({ id: "clients", label: "Clientes", icon: <User className="w-5 h-5" />, screen: "clients"} );
+    } else {
+      items.push({ id: "booking", label: "Agendar", icon: <Plus className="w-5 h-5" />, screen: "booking"} );
+      items.push({ id: "agenda", label: "Meus Cortes", icon: <Calendar className="w-5 h-5" />, screen: "agenda"} );
+    }
+    
+    items.push({ id: "more", label: "Mais", icon: <motion.div animate={{ rotate: currentScreen === 'more' ? 90 : 0 }}><Grip className="w-5 h-5" /></motion.div>, screen: "more"} );
   }
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 w-full bg-neutral-950/80 backdrop-blur-lg border-t border-white/10 p-3 flex justify-around z-40">
+    <div className="md:hidden fixed bottom-4 left-4 right-4 bg-white/90 backdrop-blur-xl border border-neutral-200/50 p-2 flex justify-around items-center z-40 rounded-3xl shadow-xl shadow-neutral-200/50">
       {items.map(item => (
-        <button key={item.id} onClick={() => { setCurrentScreen(item.screen as any); if (item.view) setDashboardView(item.view); }} className={`flex flex-col items-center gap-1 ${currentScreen === item.screen && (item.view ? true : true) ? "text-amber-500" : "text-neutral-500"}`}>
+        <button 
+          key={item.id} 
+          onClick={() => setCurrentScreen(item.screen as any)} 
+          className={`flex flex-col items-center gap-1 py-1 px-4 rounded-2xl transition-all ${currentScreen === item.screen ? "text-emerald-500 bg-emerald-50" : "text-neutral-400"}`}
+        >
             {item.icon}
-            <span className="text-[9px] font-bold uppercase tracking-widest">{item.label}</span>
+            <span className="text-[10px] font-bold uppercase tracking-tight">{item.label}</span>
         </button>
       ))}
     </div>
@@ -144,7 +276,7 @@ export default function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [userRole, setUserRole] = useState<string>("client");
   const [currentScreen, setCurrentScreen] = useState<Screen>("home");
-  const [dashboardView, setDashboardView] = useState<"list" | "calendar" | "services" | "hours">("list");
+  const [dashboardView, setDashboardView] = useState<"list" | "calendar" | "services" | "hours" | "collaborators">("list");
   const [requestedRole, setRequestedRole] = useState<string>("client");
   const [loading, setLoading] = useState(true);
   const [services, setServices] = useState<any[]>([]);
@@ -259,71 +391,71 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100 font-sans selection:bg-amber-500/30">
+    <div className="min-h-screen bg-neutral-50 text-neutral-900 font-sans selection:bg-emerald-500/30 pb-24 md:pb-0">
       {/* Navigation */}
-      <nav className="fixed top-0 w-full z-50 border-b border-white/5 bg-black/50 backdrop-blur-xl">
+      <nav className="fixed top-0 w-full z-50 border-b border-neutral-200/50 bg-white/80 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <div 
             className="flex items-center gap-4 cursor-pointer group"
             onClick={() => setCurrentScreen("home")}
           >
-            <BrandLogo className="w-12 h-12 group-hover:scale-105 transition-transform" />
+            <BrandLogo className="w-12 h-12 bg-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.2)] group-hover:scale-105 transition-transform" />
             <div className="hidden sm:block text-left">
               <span className="text-xl font-black tracking-tighter uppercase italic block leading-none">
                 Marley Souza
               </span>
-              <span className="text-[10px] text-amber-500 uppercase tracking-[0.3em] font-bold">Barber Shop</span>
+              <span className="text-[10px] text-emerald-500 uppercase tracking-[0.3em] font-bold">Barber Shop</span>
             </div>
           </div>
 
           <div className="hidden md:flex items-center gap-8 text-sm font-medium uppercase tracking-widest text-neutral-400">
             {currentScreen !== "home" && (
-              <button onClick={() => setCurrentScreen("home")} className="hover:text-amber-500 transition-colors">Início</button>
+              <button onClick={() => setCurrentScreen("home")} className="hover:text-emerald-500 transition-colors">Início</button>
             )}
             {currentScreen === "home" && (
               <>
-                <a href="#inicio" className="hover:text-amber-500 transition-colors">Início</a>
-                <a href="#servicos" className="hover:text-amber-500 transition-colors">Serviços</a>
-                <a href="#unidades" className="hover:text-amber-500 transition-colors">Local</a>
+                <a href="#inicio" className="hover:text-emerald-500 transition-colors">Início</a>
+                <a href="#servicos" className="hover:text-emerald-500 transition-colors">Serviços</a>
+                <a href="#unidades" className="hover:text-emerald-500 transition-colors">Local</a>
               </>
             )}
             
             {user ? (
               <div className="flex items-center gap-6">
                 <button 
-                  onClick={() => setCurrentScreen("dashboard")}
-                  className={`hover:text-white transition-colors flex items-center gap-2 ${currentScreen === "dashboard" ? "text-amber-500" : ""}`}
+                  onClick={() => setCurrentScreen("agenda")}
+                  className={`hover:text-neutral-900 transition-colors flex items-center gap-2 ${currentScreen === "agenda" ? "text-emerald-500" : ""}`}
                 >
-                  {userRole === "manager" ? "Painel Gestor" : "Dashboard"}
+                  {userRole === "manager" ? "Agenda" : "Dashboard"}
                 </button>
-                <div className="flex items-center gap-3 pl-6 border-l border-white/10">
+                <div className="flex items-center gap-3 pl-6 border-l border-neutral-200">
                   <div className="text-right">
-                    <p className="text-white text-xs font-bold leading-none">{user.displayName}</p>
-                    <p className="text-[10px] text-amber-500 capitalize font-black">{userRole}</p>
+                    <p className="text-neutral-900 text-xs font-bold leading-none">{user.displayName}</p>
+                    <p className="text-[10px] text-emerald-500 capitalize font-black">{userRole}</p>
                   </div>
                   <div className="relative">
                     {user.photoURL ? (
                       <img 
                         src={user.photoURL} 
-                        className="w-10 h-10 rounded-xl border border-amber-500/50 object-cover" 
+                        className="w-10 h-10 rounded-xl border border-emerald-500/50 object-cover" 
                         referrerPolicy="no-referrer"
                         alt={user.displayName || "User avatar"}
                       />
                     ) : (
-                      <div className="w-10 h-10 rounded-xl border border-white/20 bg-neutral-900 flex items-center justify-center">
-                        <User className="w-5 h-5" />
+                      <div className="w-10 h-10 rounded-xl border border-neutral-200 bg-neutral-100 flex items-center justify-center">
+                        <User className="w-5 h-5 text-neutral-400" />
                       </div>
                     )}
                   </div>
-                  <button onClick={handleLogout} className="p-2 bg-white/5 hover:bg-red-500/10 hover:text-red-500 rounded-lg transition-all">
-                    <LogOut className="w-4 h-4" />
+                  <button onClick={() => setCurrentScreen("more")} className="p-2 bg-neutral-100 hover:bg-emerald-50 hover:text-emerald-500 rounded-lg transition-all">
+                    <Settings className="w-4 h-4" />
                   </button>
                 </div>
               </div>
             ) : (
               <button 
                 onClick={() => setCurrentScreen("login")}
-                className="bg-amber-500 text-black px-6 py-2 rounded-full font-bold hover:bg-amber-400 transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(245,158,11,0.2)]"
+                className="bg-emerald-500 text-white px-6 py-2 rounded-full font-bold hover:bg-emerald-600 transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(16,185,129,0.2)]"
               >
                 <User className="w-4 h-4" />
                 ACESSAR PORTAL
@@ -331,7 +463,7 @@ export default function App() {
             )}
           </div>
 
-          <button className="md:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+          <button className="md:hidden text-neutral-900" onClick={() => setIsMenuOpen(!isMenuOpen)}>
             {isMenuOpen ? <X /> : <Menu />}
           </button>
         </div>
@@ -342,11 +474,13 @@ export default function App() {
           {currentScreen === "home" && <HomeScreen key="home" services={services} onStartBooking={() => user ? setCurrentScreen("booking") : setCurrentScreen("login")} />}
           {currentScreen === "login" && <LoginScreen key="login" onLogin={handleLogin} setUserRole={setUserRole} setCurrentScreen={setCurrentScreen} setRequestedRole={setRequestedRole} />}
           {currentScreen === "booking" && <BookingScreen key="booking" user={user} services={services} onBack={() => setCurrentScreen("home")} />}
-          {currentScreen === "dashboard" && <DashboardScreen key="dashboard" user={user} role={userRole} services={services} dashboardView={dashboardView} onBack={() => setCurrentScreen("home")} />}
+          {currentScreen === "agenda" && <DashboardScreen key="agenda" user={user} role={userRole} services={services} dashboardView={dashboardView || "list"} onBack={() => setCurrentScreen("home")} />}
+          {currentScreen === "clients" && <ClientsScreen key="clients" onBack={() => setCurrentScreen("home")} />}
+          {currentScreen === "more" && <MoreOptionsScreen key="more" user={user} role={userRole} onLogout={handleLogout} onBack={() => setCurrentScreen("home")} />}
         </AnimatePresence>
       </main>
 
-      <BottomNav userRole={userRole} currentScreen={currentScreen} setCurrentScreen={setCurrentScreen} setDashboardView={setDashboardView} user={user} />
+      <BottomNav userRole={userRole} currentScreen={currentScreen} setCurrentScreen={setCurrentScreen} user={user} />
 
       {/* Mobile Menu */}
       <AnimatePresence>
@@ -994,379 +1128,222 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
   );
 }
 
-function DashboardScreen({ user, role, services, dashboardView, onBack }: { user: any, role: string, services: any[], dashboardView?: "list" | "calendar" | "services" | "hours", onBack: () => void, key?: string }) {
+function DashboardScreen({ user, role, services, dashboardView, onBack }: { user: any, role: string, services: any[], dashboardView?: "list" | "calendar" | "services" | "hours" | "collaborators", onBack: () => void, key?: string }) {
   const [appointments, setAppointments] = useState<any[]>([]);
-  const [uploading, setUploading] = useState(false);
-  const [editingBio, setEditingBio] = useState(false);
-  const [bioInput, setBioInput] = useState("");
-  const [userData, setUserData] = useState<any>(null);
-  const [currentView, setCurrentView] = useState<"list" | "calendar" | "services" | "hours" | "collaborators">(dashboardView || "list");
+  const [barbers, setBarbers] = useState<any[]>([]);
+  const [selectedBarberId, setSelectedBarberId] = useState<string>("all");
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentView, setCurrentView] = useState<"agenda" | "list" | "services" | "hours" | "collaborators">(role === 'client' ? 'list' : 'agenda');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (dashboardView) {
-      setCurrentView(dashboardView as any);
-    }
+    if (dashboardView === 'calendar') setCurrentView('agenda');
+    else if (dashboardView === 'list') setCurrentView('list');
+    else if (dashboardView === 'services') setCurrentView('services');
+    else if (dashboardView === 'hours') setCurrentView('hours');
+    else if (dashboardView === 'collaborators') setCurrentView('collaborators');
   }, [dashboardView]);
-  const [calendarMode, setCalendarMode] = useState<"day" | "week" | "month">("month");
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!user) return;
-    
-    // Fetch user data: if manager/barber fetch own, if client fetch manager's profile
-    const fetchUserData = async () => {
-      if (role === 'client') {
-        const q = query(collection(db, "users"), where("role", "==", "manager"), limit(1));
-        const querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty) {
-          setUserData(querySnapshot.docs[0].data());
-        }
-      } else {
-        const docSnap = await getDoc(doc(db, "users", user.uid));
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          setUserData(data);
-          setBioInput(data.bio || "");
-        }
-      }
-    };
-    fetchUserData();
-
-    const appointmentsRef = collection(db, "appointments");
     let q;
-    
-    if (role === "manager") {
-      q = query(appointmentsRef, orderBy("date", "desc"), limit(50));
-    } else if (role === "barber") {
-      q = query(appointmentsRef, where("barberId", "==", user.uid), orderBy("date", "desc"));
+    if (role === 'manager') {
+      q = query(collection(db, "appointments"), orderBy("date", "asc"));
+    } else if (role === 'barber') {
+      q = query(collection(db, "appointments"), where("barberId", "==", user.uid), orderBy("date", "asc"));
     } else {
-      q = query(appointmentsRef, where("clientId", "==", user.uid), orderBy("date", "desc"));
+      q = query(collection(db, "appointments"), where("clientId", "==", user.uid), orderBy("date", "asc"));
     }
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setAppointments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    }, (error) => {
-      console.error("Dashboard error:", error);
+      setLoading(false);
     });
 
-    return () => unsubscribe();
-  }, [user, role]);
+    const qBarbers = query(collection(db, "users"), where("role", "==", "barber"));
+    const unsubscribeBarbers = onSnapshot(qBarbers, (sn) => {
+        setBarbers(sn.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
 
-  const updateStatus = async (id: string, newStatus: string) => {
-    try {
-      await updateDoc(doc(db, "appointments", id), { status: newStatus });
-    } catch (error) {
-      console.error(error);
-    }
-  };
+    return () => {
+        unsubscribe();
+        unsubscribeBarbers();
+    };
+  }, [user?.uid, role]);
 
-  const handlePhotoUpload = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !user) return;
-    setUploading(true);
-    try {
-      const result = await uploadImage(file);
-      await updateProfile(user, { photoURL: result.data.url });
-      await updateDoc(doc(db, "users", user.uid), { photoUrl: result.data.url });
-      window.location.reload();
-    } catch (error) {
-      console.error(error);
-      alert("Erro ao enviar imagem.");
-    } finally {
-      setUploading(false);
-    }
-  };
+  const weekDays = useMemo(() => {
+    const start = startOfWeek(currentDate, { weekStartsOn: 0 });
+    return Array.from({ length: 7 }).map((_, i) => addDays(start, i));
+  }, [currentDate]);
 
-  const handleUpdateBio = async () => {
-    if (!user) return;
-    try {
-      await updateDoc(doc(db, "users", user.uid), { bio: bioInput });
-      setUserData({ ...userData, bio: bioInput });
-      setEditingBio(false);
-    } catch (error) {
-      console.error(error);
-      alert("Erro ao atualizar bio.");
-    }
-  };
+  const hoursSlots = useMemo(() => {
+    return Array.from({ length: 24 }).flatMap((_, i) => [
+        `${String(i).padStart(2, '0')}:00`,
+        `${String(i).padStart(2, '0')}:30`
+    ]).filter(h => {
+        const hour = parseInt(h.split(':')[0]);
+        return hour >= 8 && hour <= 21;
+    });
+  }, []);
 
-  const totalRevenue = appointments.filter(a => a.status === 'confirmed').reduce((acc, curr) => acc + (curr.totalPrice || 0), 0);
+  const filteredAppointments = useMemo(() => {
+    return appointments.filter(app => {
+        const appDate = app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date);
+        const sameDay = isSameDay(appDate, currentDate);
+        const sameBarber = selectedBarberId === 'all' || app.barberId === selectedBarberId;
+        return sameDay && sameBarber;
+    });
+  }, [appointments, currentDate, selectedBarberId]);
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 20 }}
-      className="max-w-7xl mx-auto py-12 px-6"
-    >
-      <div className="flex flex-col md:flex-row items-center md:items-end gap-8 mb-16">
-        <div className="relative group">
-          <div className="w-28 h-28 rounded-3xl border-2 border-amber-500 overflow-hidden bg-neutral-900 shadow-2xl">
-            {user.photoURL ? (
-              <img src={user.photoURL} className="w-full h-full object-cover" referrerPolicy="no-referrer" alt="Profile" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-neutral-700">
-                <User className="w-12 h-12" />
-              </div>
-            )}
-            {uploading && (
-              <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                <Loader2 className="w-8 h-8 text-amber-500 animate-spin" />
-              </div>
-            )}
-          </div>
-          <button 
-            onClick={() => fileInputRef.current?.click()}
-            className="absolute -bottom-2 -right-2 w-10 h-10 bg-white text-black rounded-xl flex items-center justify-center shadow-lg hover:bg-amber-500 transition-all"
-          >
-            <Camera className="w-5 h-5" />
-          </button>
-          <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handlePhotoUpload} />
+    <div className="min-h-screen bg-neutral-50 px-4 md:px-6 pt-16 md:pt-6 relative pb-28">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-2">
+           <h1 className="text-2xl font-black text-neutral-900 capitalize">{format(currentDate, "MMMM", { locale: ptBR })}</h1>
+           <span className="text-neutral-400 font-medium">{format(currentDate, "yyyy")}</span>
+           <ChevronDown className="w-4 h-4 text-neutral-400" />
         </div>
-        
-        <div className="flex-1 text-center md:text-left">
-          <span className="text-amber-500 font-mono tracking-[0.3em] uppercase text-[10px] font-black italic mb-3 block">Ambiente do {role === 'manager' ? 'Gestor' : role === 'barber' ? 'Colaborador' : 'Cliente'}</span>
-          <h2 className="text-5xl font-black italic uppercase leading-none tracking-tighter">{user.displayName}</h2>
-          <p className="text-neutral-500 uppercase tracking-widest text-[9px] font-bold mt-2">{user.email}</p>
+        <div className="flex items-center gap-4 text-neutral-400">
+           <Search className="w-5 h-5 cursor-pointer hover:text-emerald-500 transition-colors" />
+           <RefreshCw className="w-5 h-5 cursor-pointer hover:text-emerald-500 transition-colors" />
+           <Calendar className="w-5 h-5 cursor-pointer hover:text-emerald-500 transition-colors" />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
-        <div className="bg-neutral-900/50 p-8 rounded-[2rem] border border-white/5">
-          <p className="text-neutral-500 text-[10px] uppercase font-black tracking-widest mb-2">Total de Atendimentos</p>
-          <p className="text-4xl font-black italic uppercase">{appointments.length}</p>
+      {/* Week Selector */}
+      <div className="flex justify-between items-center mb-8">
+        <button onClick={() => setCurrentDate(addDays(currentDate, -7))}><ChevronLeft className="w-5 h-5 text-neutral-300" /></button>
+        <div className="flex gap-2 overflow-x-auto no-scrollbar py-2">
+            {weekDays.map((day, i) => {
+                const active = isSameDay(day, currentDate);
+                const isTodayDate = isToday(day);
+                return (
+                    <button 
+                        key={i} 
+                        onClick={() => setCurrentDate(day)}
+                        className={`flex flex-col items-center min-w-[50px] p-2 rounded-2xl transition-all ${active ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "text-neutral-400"}`}
+                    >
+                        <span className="text-[10px] font-bold uppercase mb-1">{format(day, "EEE", { locale: ptBR })}</span>
+                        <span className={`text-sm font-black ${active ? "text-white" : "text-neutral-600"}`}>{format(day, "d")}</span>
+                        {isTodayDate && !active && <div className="w-1 h-1 bg-emerald-500 rounded-full mt-1" />}
+                        {active && <div className="w-1 h-1 bg-white rounded-full mt-1" />}
+                    </button>
+                );
+            })}
         </div>
-        
-        {role === 'manager' ? (
-          <div className="bg-neutral-900/50 p-8 rounded-[2rem] border border-white/5">
-            <p className="text-neutral-500 text-[10px] uppercase font-black tracking-widest mb-2">Faturamento Confirmado</p>
-            <p className="text-4xl font-black italic uppercase text-amber-500">R${totalRevenue}</p>
-          </div>
-        ) : (
-          <div className="bg-neutral-900/50 p-8 rounded-[2rem] border border-white/5">
-             <p className="text-neutral-500 text-[10px] uppercase font-black tracking-widest mb-2">Pontos Fidelidade</p>
-             <p className="text-4xl font-black italic uppercase text-amber-500">{appointments.filter(a => a.status === 'confirmed').length * 10}</p>
-          </div>
-        )}
-        
-        <div className="md:col-span-2 bg-amber-500 p-8 rounded-[2rem] flex items-center justify-between shadow-xl text-black">
-          <div>
-            <p className="text-black/60 text-[10px] uppercase font-black tracking-widest mb-2">Próximo na Fila</p>
-            <p className="text-2xl font-black italic uppercase leading-tight">
-              {appointments.find(a => a.status === 'confirmed')?.clientName || "Nenhum confirmado"}
-            </p>
-            <p className="text-[10px] font-bold uppercase opacity-60 mt-1">
-              {appointments.find(a => a.status === 'confirmed')?.serviceName || "---"}
-            </p>
-          </div>
-          <Calendar className="w-12 h-12 opacity-30" />
-        </div>
+        <button onClick={() => setCurrentDate(addDays(currentDate, 7))}><ChevronRight className="w-5 h-5 text-neutral-300" /></button>
       </div>
 
-      {/* Barber Profile Section */}
-      <div className="bg-neutral-900/50 p-8 md:p-12 rounded-[3rem] border border-white/5 mb-12 relative overflow-hidden group">
-        <div className="flex flex-col md:flex-row gap-10 items-start">
-           <div className="w-40 h-40 rounded-[2.5rem] bg-black border-2 border-amber-500 overflow-hidden shadow-2xl shrink-0">
-             {userData?.photoUrl || userData?.photoURL ? (
-               <img src={userData?.photoUrl || userData?.photoURL} alt="Barber" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-             ) : (
-               <div className="w-full h-full flex items-center justify-center bg-neutral-900 text-neutral-700">
-                  <User className="w-12 h-12" />
-               </div>
-             )}
-           </div>
-           <div className="flex-1">
-             <div className="flex items-center justify-between mb-4">
-               <div>
-                 <p className="text-amber-500 font-black uppercase text-[10px] tracking-[0.2em] mb-1">Destaque da Casa</p>
-                 <h3 className="text-3xl font-black italic uppercase tracking-tighter">{userData?.name || "Marley Souza"}</h3>
-               </div>
-               {role === 'manager' && !editingBio && (
-                 <button 
-                   onClick={() => setEditingBio(true)}
-                   className="text-[10px] font-black uppercase tracking-widest text-amber-500 hover:text-white transition-colors"
-                 >
-                   Editar Bio
-                 </button>
-               )}
-             </div>
-             
-             {editingBio ? (
-               <div className="space-y-4">
-                 <textarea
-                   className="w-full bg-black/50 border border-white/10 rounded-2xl p-6 text-sm text-neutral-300 outline-none focus:border-amber-500 min-h-[120px] transition-all"
-                   value={bioInput}
-                   onChange={(e) => setBioInput(e.target.value)}
-                   placeholder="Escreva sobre sua experiência e estilo de corte..."
-                 />
-                 <div className="flex gap-3">
-                   <button 
-                     onClick={handleUpdateBio}
-                     className="px-6 py-2 bg-amber-500 text-black text-[10px] font-black uppercase tracking-widest rounded-full hover:scale-105 transition-transform"
-                   >Salvar</button>
-                   <button 
-                     onClick={() => { setEditingBio(false); setBioInput(userData?.bio || ""); }}
-                     className="px-6 py-2 bg-white/5 text-white text-[10px] font-black uppercase tracking-widest rounded-full hover:bg-white/10 transition-colors"
-                   >Cancelar</button>
-                 </div>
-               </div>
-             ) : (
-               <p className="text-neutral-400 text-sm leading-relaxed max-w-2xl font-medium">
-                 {userData?.bio || "Especialista em visagismo e cortes modernos. Transformando estilos e elevando a autoestima em cada atendimento."}
-               </p>
-             )}
-           </div>
-        </div>
-      </div>
-
-      <div className="bg-neutral-900/50 p-8 md:p-12 rounded-[3.5rem] border border-white/5 min-h-[500px]">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
-          <div className="flex flex-col gap-2">
-            <h3 className="text-2xl font-black uppercase italic tracking-tighter">Fluxo de <span className="text-amber-500">Agendamentos</span></h3>
-            <p className="text-[10px] text-neutral-500 uppercase tracking-widest font-bold">Gerencie sua agenda em tempo real</p>
-          </div>
-          
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2 bg-black p-1 rounded-2xl border border-white/5">
+      {/* Barber Filter */}
+      {(role === 'manager' || role === 'barber') && (
+          <div className="flex gap-4 overflow-x-auto no-scrollbar mb-8 pb-2">
               <button 
-                onClick={() => setCurrentView("list")}
-                className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase italic tracking-widest transition-all flex items-center gap-2 ${currentView === 'list' ? 'bg-neutral-800 text-white shadow-lg' : 'text-neutral-500 hover:text-white'}`}
+                onClick={() => setSelectedBarberId("all")}
+                className="flex flex-col items-center gap-2 min-w-[64px]"
               >
-                <ListIcon className="w-3.5 h-3.5" /> Lista
+                  <div className={`w-14 h-14 rounded-full border-2 flex items-center justify-center transition-all ${selectedBarberId === 'all' ? 'border-emerald-500 bg-emerald-50' : 'border-neutral-200'}`}>
+                      <Grip className="w-6 h-6 text-emerald-500" />
+                  </div>
+                  <span className={`text-[10px] font-bold uppercase ${selectedBarberId === 'all' ? 'text-emerald-500' : 'text-neutral-400'}`}>Todos</span>
               </button>
-              <button 
-                onClick={() => setCurrentView("calendar")}
-                className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase italic tracking-widest transition-all flex items-center gap-2 ${currentView === 'calendar' ? 'bg-neutral-800 text-white shadow-lg' : 'text-neutral-500 hover:text-white'}`}
-              >
-                <Grid className="w-3.5 h-3.5" /> Calendário
-              </button>
-              {role === 'manager' && (
-                <button 
-                  onClick={() => setCurrentView("services")}
-                  className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase italic tracking-widest transition-all flex items-center gap-2 ${currentView === 'services' ? 'bg-neutral-800 text-white shadow-lg' : 'text-neutral-500 hover:text-white'}`}
-                >
-                  <Scissors className="w-3.5 h-3.5" /> Serviços
-                </button>
-              )}
-              {role === 'manager' && (
-                <button 
-                  onClick={() => setCurrentView("collaborators")}
-                  className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase italic tracking-widest transition-all flex items-center gap-2 ${currentView === 'collaborators' ? 'bg-neutral-800 text-white shadow-lg' : 'text-neutral-500 hover:text-white'}`}
-                >
-                  <User className="w-3.5 h-3.5" /> Colaboradores
-                </button>
-              )}
-              {role === 'manager' && (
-                <button 
-                  onClick={() => setCurrentView("hours")}
-                  className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase italic tracking-widest transition-all flex items-center gap-2 ${currentView === 'hours' ? 'bg-neutral-800 text-white shadow-lg' : 'text-neutral-500 hover:text-white'}`}
-                >
-                  <Clock className="w-3.5 h-3.5" /> Horários
-                </button>
-              )}
-            </div>
-
-            {currentView === "calendar" && (
-              <div className="flex items-center gap-2 bg-black p-1 rounded-2xl border border-white/5">
-                <button 
-                  onClick={() => setCalendarMode("day")}
-                  className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${calendarMode === 'day' ? 'bg-amber-500 text-black' : 'text-neutral-500 hover:text-white'}`}
-                >Dia</button>
-                <button 
-                  onClick={() => setCalendarMode("week")}
-                  className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${calendarMode === 'week' ? 'bg-amber-500 text-black' : 'text-neutral-500 hover:text-white'}`}
-                >Semana</button>
-                <button 
-                  onClick={() => setCalendarMode("month")}
-                  className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${calendarMode === 'month' ? 'bg-amber-500 text-black' : 'text-neutral-500 hover:text-white'}`}
-                >Mês</button>
-              </div>
-            )}
-          </div>
-        </div>
-        
-        {currentView === "list" ? (
-          appointments.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-80 opacity-20">
-              <BrandLogo className="w-20 h-20 grayscale mb-6" />
-              <p className="uppercase text-[10px] font-black tracking-widest">Nenhuma atividade registrada</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {appointments.map((app) => (
-                <div key={app.id} className="bg-black/40 p-6 rounded-[2rem] border border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-6 hover:border-amber-500/20 transition-all group">
-                  <div className="flex items-center gap-6">
-                    <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center text-amber-500 overflow-hidden relative">
-                      {app.clientPhoto ? (
-                        <img src={app.clientPhoto} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                      ) : (
-                        <Scissors className="w-6 h-6" />
-                      )}
-                      {app.status === 'pending' && (
-                        <div className="absolute top-0 right-0 w-3 h-3 bg-amber-500 rounded-full border-2 border-black animate-pulse" />
-                      )}
-                    </div>
-                    <div>
-                      <p className="font-black uppercase italic text-lg leading-none mb-1 group-hover:text-amber-500 transition-colors">
-                        {role === 'client' ? app.serviceName : app.clientName}
-                      </p>
-                      <div className="flex items-center gap-2 text-[10px] text-neutral-500 uppercase tracking-widest font-bold">
-                        <Clock className="w-3 h-3" />
-                        {app.date instanceof Timestamp ? app.date.toDate().toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : "---"}
-                        {role !== 'client' && <span className="text-amber-500/50">• {app.serviceName}</span>}
+              {barbers.map(barber => (
+                  <button 
+                    key={barber.id}
+                    onClick={() => setSelectedBarberId(barber.id)}
+                    className="flex flex-col items-center gap-2 min-w-[64px]"
+                  >
+                      <div className={`w-14 h-14 rounded-full border-2 overflow-hidden transition-all relative ${selectedBarberId === barber.id ? 'border-emerald-500 ring-4 ring-emerald-500/10' : 'border-neutral-200 opacity-60'}`}>
+                          <img src={barber.photoURL || `https://ui-avatars.com/api/?name=${barber.name}`} alt={barber.name} className="w-full h-full object-cover" />
                       </div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-6">
-                    <p className="text-2xl font-black italic tracking-tighter">R${app.totalPrice}</p>
-                    
-                    <div className="flex items-center gap-3">
-                      <span className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border ${
-                        app.status === 'confirmed' ? 'bg-green-500/10 border-green-500/20 text-green-500' : 
-                        app.status === 'pending' ? 'bg-amber-500/10 border-amber-500/20 text-amber-500' : 
-                        'bg-red-500/10 border-red-500/20 text-red-500'
-                      }`}>
-                        {app.status}
-                      </span>
-                      
-                      {(role === 'manager' || role === 'barber') && app.status === 'pending' && (
-                        <div className="flex gap-2">
-                          <button 
-                            onClick={() => updateStatus(app.id, 'confirmed')}
-                            className="w-10 h-10 bg-green-500 text-black rounded-lg flex items-center justify-center hover:scale-110 transition-all font-bold"
-                          >✓</button>
-                          <button 
-                            onClick={() => updateStatus(app.id, 'cancelled')}
-                            className="w-10 h-10 bg-red-500 text-white rounded-lg flex items-center justify-center hover:scale-110 transition-all font-bold"
-                          >✕</button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                      <span className={`text-[10px] font-bold uppercase truncate w-14 text-center ${selectedBarberId === barber.id ? 'text-emerald-500' : 'text-neutral-400'}`}>{barber.name.split(' ')[0]}</span>
+                  </button>
               ))}
+          </div>
+      )}
+
+      {/* Agenda Main View */}
+      {currentView === 'agenda' ? (
+        <>
+            <div className="flex items-center justify-between mb-4 border-t border-neutral-200/50 pt-4">
+                <div className="flex items-center gap-2 text-neutral-900">
+                    <span className="font-bold">Hoje</span>
+                    <span className="text-neutral-400 text-sm">{format(currentDate, "dd/MM")}</span>
+                </div>
+                <div className="flex items-center gap-4 text-xs font-bold text-neutral-900 border-l border-neutral-200 pl-4 py-1">
+                    <div className="flex items-center gap-1"><Clock className="w-3 h-3 text-emerald-500" /> 30min</div>
+                    <div>{filteredAppointments.length} agendamentos</div>
+                </div>
             </div>
-          )
-        ) : currentView === "calendar" ? (
-          <CalendarWidget 
-            appointments={appointments} 
-            mode={calendarMode} 
-            onModeChange={setCalendarMode}
-            currentDate={currentDate} 
-            onDateChange={setCurrentDate}
-            role={role}
-            updateStatus={updateStatus}
-          />
-        ) : currentView === "hours" ? (
-          <WorkingHoursManager />
-        ) : currentView === "collaborators" ? (
-          <CollaboratorsManager />
-        ) : (
-          <ServicesManagement services={services} />
-        )}
-      </div>
-    </motion.div>
+
+            <div className="space-y-0 relative">
+                {hoursSlots.map((hour, idx) => (
+                    <div key={hour} className="flex gap-4 min-h-[60px] group">
+                        <div className="w-12 text-right text-[11px] font-bold text-neutral-400 pt-1 group-hover:text-emerald-500 transition-colors">
+                            {hour}
+                        </div>
+                        <div className="flex-1 border-t border-neutral-100 relative h-full min-h-[60px] group-hover:border-emerald-100 transition-colors">
+                            {filteredAppointments.filter(app => {
+                                const appDate = app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date);
+                                const timeStr = `${String(appDate.getHours()).padStart(2, '0')}:${String(appDate.getMinutes()).padStart(2, '0')}`;
+                                return timeStr === hour;
+                            }).map(app => (
+                                <div key={app.id} className="absolute left-2 top-2 right-2 bg-indigo-50 border border-indigo-100 rounded-2xl p-4 shadow-sm z-10 flex justify-between items-center group/card animate-in fade-in slide-in-from-left-2 duration-300">
+                                    <div>
+                                        <h4 className="text-base font-black text-indigo-900">{app.clientName}</h4>
+                                        <p className="text-[11px] text-indigo-400 uppercase font-bold tracking-tight">{app.serviceName} • 30min</p>
+                                    </div>
+                                    <div className="w-8 h-8 rounded-full bg-white border border-emerald-500 flex items-center justify-center text-emerald-500 group-hover/card:bg-emerald-500 group-hover/card:text-white transition-all">
+                                        <CheckCircle2 className="w-5 h-5" />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* FAB */}
+            <button 
+                onClick={() => onBack()}
+                className="fixed bottom-24 right-6 w-16 h-16 bg-emerald-500 text-white rounded-full flex items-center justify-center shadow-2xl shadow-emerald-500/40 z-30 active:scale-95 transition-transform"
+            >
+                <Plus className="w-8 h-8" />
+            </button>
+        </>
+      ) : (
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
+              {currentView === 'list' && (
+                  <div className="space-y-6">
+                      <h2 className="text-xl font-black uppercase italic tracking-tight underline decoration-emerald-500/30 decoration-4 underline-offset-4">Meus Atendimentos</h2>
+                      {loading ? <div className="p-20 flex justify-center"><Loader2 className="animate-spin text-emerald-500" /></div> : appointments.length === 0 ? (
+                          <div className="p-12 text-center text-neutral-400">Nenhum agendamento encontrado</div>
+                      ) : (
+                          <div className="space-y-3">
+                              {appointments.map(app => (
+                                  <div key={app.id} className="bg-white p-5 rounded-3xl border border-neutral-200">
+                                      <div className="flex justify-between items-start mb-3">
+                                          <div>
+                                              <p className="text-[10px] text-emerald-500 uppercase font-black mb-1">{format(app.date instanceof Timestamp ? app.date.toDate() : parseISO(app.date), "PPP", { locale: ptBR })}</p>
+                                              <h4 className="font-bold text-lg">{app.serviceName}</h4>
+                                          </div>
+                                          <div className={`px-2 py-1 rounded text-[8px] font-black uppercase ${app.status === 'confirmed' ? 'bg-emerald-100 text-emerald-600' : 'bg-neutral-100 text-neutral-500'}`}>
+                                              {app.status || 'Pendente'}
+                                          </div>
+                                      </div>
+                                      <p className="text-sm text-neutral-600">{app.clientName} • {app.barberName}</p>
+                                  </div>
+                              ))}
+                          </div>
+                      )}
+                  </div>
+              )}
+              {currentView === 'services' && <ServicesManagement services={services} />}
+              {currentView === 'collaborators' && <CollaboratorsManager />}
+              {currentView === 'hours' && <WorkingHoursManager />}
+          </div>
+      )}
+    </div>
   );
 }
 
@@ -1411,29 +1388,44 @@ function CollaboratorsManager() {
   };
 
   return (
-    <div className="space-y-8">
-      <form onSubmit={handleAddBarber} className="bg-neutral-900 p-6 rounded-2xl border border-white/5 space-y-4">
-        <h4 className="text-sm font-black uppercase italic tracking-widest text-white">Adicionar Colaborador</h4>
-        <input type="text" placeholder="Nome" className="w-full bg-black border border-white/10 p-3 rounded-lg text-white" value={name} onChange={(e) => setName(e.target.value)} required />
-        <input type="email" placeholder="E-mail" className="w-full bg-black border border-white/10 p-3 rounded-lg text-white" value={email} onChange={(e) => setEmail(e.target.value)} required />
-        <input type="password" placeholder="Senha" className="w-full bg-black border border-white/10 p-3 rounded-lg text-white" value={password} onChange={(e) => setPassword(e.target.value)} required />
-        <button type="submit" className="w-full bg-amber-500 text-black py-3 rounded-lg font-bold uppercase italic tracking-widest" disabled={loading}>
-          {loading ? "Criando..." : "Adicionar"}
+    <div className="space-y-8 max-w-2xl mx-auto">
+      <form onSubmit={handleAddBarber} className="bg-white p-8 rounded-[2rem] border border-neutral-200/50 shadow-sm space-y-4">
+        <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center text-white">
+                <User className="w-5 h-5" />
+            </div>
+            <h4 className="text-xl font-bold text-neutral-900">Novo Colaborador</h4>
+        </div>
+        <div className="space-y-3">
+            <input type="text" placeholder="Nome completo" className="w-full bg-neutral-50 border border-neutral-200 p-4 rounded-2xl text-neutral-900 outline-none focus:border-emerald-500 transition-all" value={name} onChange={(e) => setName(e.target.value)} required />
+            <input type="email" placeholder="E-mail profissional" className="w-full bg-neutral-50 border border-neutral-200 p-4 rounded-2xl text-neutral-900 outline-none focus:border-emerald-500 transition-all" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            <input type="password" placeholder="Senha de acesso" className="w-full bg-neutral-50 border border-neutral-200 p-4 rounded-2xl text-neutral-900 outline-none focus:border-emerald-500 transition-all" value={password} onChange={(e) => setPassword(e.target.value)} required />
+        </div>
+        <button type="submit" className="w-full bg-emerald-500 text-white py-4 rounded-2xl font-bold uppercase tracking-widest shadow-lg shadow-emerald-500/20 active:scale-[0.98] transition-transform" disabled={loading}>
+          {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : "Cadastrar Colaborador"}
         </button>
       </form>
 
-      <div className="space-y-4">
-        <h4 className="text-sm font-black uppercase italic tracking-widest text-neutral-400">Colaboradores Atuais</h4>
-        {barbers.map(barber => (
-          <div key={barber.id} className="bg-neutral-900/50 p-4 rounded-xl border border-white/5 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
-                <Scissors className="w-4 h-4 text-amber-500" />
+      <div className="space-y-4 px-4">
+        <h4 className="text-xs font-black uppercase tracking-widest text-neutral-400">Time de Especialistas</h4>
+        <div className="grid grid-cols-1 gap-3">
+            {barbers.map(barber => (
+              <div key={barber.id} className="bg-white p-4 rounded-3xl border border-neutral-200/50 flex items-center justify-between shadow-sm">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-neutral-100 flex items-center justify-center text-neutral-400 border border-neutral-200 overflow-hidden">
+                    {barber.photoURL ? <img src={barber.photoURL} alt={barber.name} className="w-full h-full object-cover" /> : <User className="w-6 h-6" />}
+                  </div>
+                  <div>
+                      <p className="font-bold text-neutral-900 leading-none mb-1">{barber.name}</p>
+                      <p className="text-[10px] text-neutral-400 uppercase font-black tracking-tight">{barber.email}</p>
+                  </div>
+                </div>
+                <button className="p-2 text-neutral-300 hover:text-red-500 transition-colors">
+                    <Trash2 className="w-5 h-5" />
+                </button>
               </div>
-              <p className="font-bold">{barber.name}</p>
-            </div>
-          </div>
-        ))}
+            ))}
+        </div>
       </div>
     </div>
   );
@@ -1454,69 +1446,85 @@ function WorkingHoursManager() {
     fetchBarbers();
   }, []);
 
-  if (loading) return <div className="p-8 text-neutral-500">Carregando barbeiros...</div>;
+  if (loading) return <div className="p-8 text-neutral-400 flex justify-center"><Loader2 className="animate-spin text-emerald-500" /></div>;
 
   return (
-    <div className="space-y-6">
-      <h3 className="text-2xl font-black uppercase italic tracking-tighter">Horários dos <span className="text-amber-500">Barbeiros</span></h3>
-      {barbers.map(barber => (
-        <BarberHoursItem key={barber.id} barber={barber} />
-      ))}
+    <div className="space-y-8 max-w-4xl mx-auto pb-20">
+      <div className="flex flex-col gap-2 px-4 shadow-none">
+        <h3 className="text-2xl font-black uppercase italic tracking-tighter">Horários <span className="text-emerald-500">Operacionais</span></h3>
+        <p className="text-[10px] text-neutral-400 uppercase tracking-widest font-bold">Configure a disponibilidade dos profissionais</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {barbers.map(barber => (
+          <BarberHoursItem key={barber.id} barber={barber} />
+        ))}
+      </div>
     </div>
   );
 }
 
-function BarberHoursItem(props: { barber: any; key?: any }) {
-  const { barber } = props;
+function BarberHoursItem({ barber }: { barber: any }) {
   const [hours, setHours] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
+  
   useEffect(() => {
-    const fetchHours = async () => {
-      const hoursCollection = collection(db, "users", barber.id, "workingHours");
-      const snapshot = await getDocs(hoursCollection);
+    const q = query(collection(db, "workingHours"), where("barberId", "==", barber.id));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
       setHours(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      setLoading(false);
-    };
-    fetchHours();
+    });
+    return () => unsubscribe();
   }, [barber.id]);
 
   const saveHours = async (dayOfWeek: number, startTime: string, endTime: string) => {
-    const hoursDocRef = doc(db, "users", barber.id, "workingHours", `day-${dayOfWeek}`);
-    await setDoc(hoursDocRef, { dayOfWeek, startTime, endTime, isActive: true });
-    setHours(prev => {
-        const index = prev.findIndex(h => h.dayOfWeek === dayOfWeek);
-        if (index > -1) {
-            const next = [...prev];
-            next[index] = { ...next[index], startTime, endTime, isActive: true };
-            return next;
-        }
-        return [...prev, { dayOfWeek, startTime, endTime, isActive: true }];
-    });
+    try {
+      const existing = hours.find(h => h.dayOfWeek === dayOfWeek);
+      if (existing) {
+        await updateDoc(doc(db, "workingHours", existing.id), { startTime, endTime });
+      } else {
+        await addDoc(collection(db, "workingHours"), {
+          barberId: barber.id,
+          dayOfWeek,
+          startTime,
+          endTime,
+        });
+      }
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   return (
-    <div className="bg-black/40 p-6 rounded-[2rem] border border-white/5">
-      <p className="font-black uppercase tracking-widest text-amber-500 mb-4">{barber.name}</p>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {[0, 1, 2, 3, 4, 5, 6].map(day => {
+    <div className="bg-white p-6 rounded-[2.5rem] border border-neutral-200/50 shadow-sm space-y-6">
+      <div className="flex items-center gap-4 border-b border-neutral-100 pb-4">
+        <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center">
+            <Clock className="w-6 h-6" />
+        </div>
+        <div>
+            <h4 className="font-bold text-neutral-900 leading-none mb-1">{barber.name}</h4>
+            <p className="text-[10px] text-neutral-400 font-black uppercase">Jornada de Trabalho</p>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        {[1, 2, 3, 4, 5, 6, 0].map(day => {
           const dayName = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"][day];
           const workingDay = hours.find(h => h.dayOfWeek === day);
           return (
-            <div key={day} className="bg-white/5 p-4 rounded-xl flex items-center justify-between">
-              <span className="text-sm font-bold">{dayName}</span>
-              <div className="flex gap-2">
+            <div key={day} className="bg-neutral-50 p-4 rounded-2xl flex items-center justify-between border border-neutral-100/50">
+              <span className="text-xs font-black uppercase text-neutral-400 w-10">{dayName}</span>
+              <div className="flex gap-4 items-center">
                 <input 
                   type="time" 
                   defaultValue={workingDay?.startTime || "09:00"}
                   onBlur={(e) => saveHours(day, e.target.value, workingDay?.endTime || "18:00")}
-                  className="bg-black/50 px-2 py-1 rounded"
+                  className="bg-transparent text-sm font-bold text-neutral-700 outline-none focus:text-emerald-500 transition-colors"
                 />
+                <span className="text-neutral-300">|</span>
                 <input 
                   type="time" 
                   defaultValue={workingDay?.endTime || "18:00"}
                   onBlur={(e) => saveHours(day, workingDay?.startTime || "09:00", e.target.value)}
-                  className="bg-black/50 px-2 py-1 rounded"
+                  className="bg-transparent text-sm font-bold text-neutral-700 outline-none focus:text-emerald-500 transition-colors"
                 />
               </div>
             </div>
@@ -1526,27 +1534,33 @@ function BarberHoursItem(props: { barber: any; key?: any }) {
     </div>
   );
 }
-function ServicesManagement({ services }: { services: any[] }) {
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [isAdding, setIsAdding] = useState(false);
-  const [formData, setFormData] = useState({ name: "", price: 0, duration: 0, active: true });
-  const [loading, setLoading] = useState(false);
 
-  const resetForm = () => {
-    setFormData({ name: "", price: 0, duration: 0, active: true });
-    setEditingId(null);
+function ServicesManagement({ services }: { services: any[] }) {
+  const [isAdding, setIsAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    price: 0,
+    duration: 30,
+    active: true
+  });
+
+  const handleEdit = (service: any) => {
+    setEditingId(service.id);
+    setFormData({
+      name: service.name,
+      price: service.price,
+      duration: service.duration,
+      active: service.active !== false
+    });
     setIsAdding(false);
   };
 
-  const handleEdit = (service: any) => {
-    setFormData({ 
-      name: service.name, 
-      price: service.price, 
-      duration: service.duration, 
-      active: service.active !== false 
-    });
-    setEditingId(service.id);
+  const resetForm = () => {
     setIsAdding(false);
+    setEditingId(null);
+    setFormData({ name: "", price: 0, duration: 30, active: true });
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -1556,11 +1570,11 @@ function ServicesManagement({ services }: { services: any[] }) {
       if (editingId) {
         await updateDoc(doc(db, "services", editingId), formData);
       } else {
-        await addDoc(collection(db, "services"), formData);
+        await addDoc(collection(db, "services"), { ...formData, createdAt: Timestamp.now() });
       }
       resetForm();
     } catch (error) {
-      console.error("Error saving service:", error);
+      console.error(error);
       alert("Erro ao salvar serviço.");
     } finally {
       setLoading(false);
@@ -1576,16 +1590,16 @@ function ServicesManagement({ services }: { services: any[] }) {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-5xl mx-auto px-4 pb-20">
       <div className="flex items-center justify-between">
-        <div className="flex flex-col gap-2">
-          <h4 className="text-2xl font-black uppercase italic tracking-tighter">Catálogo de <span className="text-amber-500">Serviços</span></h4>
-          <p className="text-[10px] text-neutral-500 uppercase tracking-widest font-bold">Gerencie os serviços oferecidos aos clientes</p>
+        <div className="flex flex-col gap-1">
+          <h4 className="text-2xl font-black uppercase italic tracking-tighter">Catálogo de <span className="text-emerald-500">Serviços</span></h4>
+          <p className="text-[10px] text-neutral-400 uppercase tracking-widest font-bold">Gerencie os serviços oferecidos</p>
         </div>
         {!isAdding && !editingId && (
           <button 
             onClick={() => setIsAdding(true)}
-            className="bg-amber-500 text-black px-6 py-2 rounded-xl font-black uppercase italic text-[10px] flex items-center gap-2 hover:scale-105 transition-all shadow-lg"
+            className="bg-emerald-500 text-white px-6 py-2 rounded-2xl font-black uppercase text-[10px] flex items-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-lg shadow-emerald-500/20"
           >
             <Plus className="w-4 h-4" /> Novo Serviço
           </button>
@@ -1600,48 +1614,47 @@ function ServicesManagement({ services }: { services: any[] }) {
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden"
           >
-            <form onSubmit={handleSubmit} className="bg-white/5 border border-amber-500/30 p-8 rounded-[2rem] space-y-6">
+            <form onSubmit={handleSubmit} className="bg-white border border-neutral-200/50 p-8 rounded-[2.5rem] shadow-sm space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div>
-                  <label className="text-[10px] font-black uppercase text-neutral-500 ml-4 mb-2 block tracking-widest">Nome do Serviço</label>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-neutral-400 ml-2 tracking-widest">Nome do Serviço</label>
                   <input 
                     type="text"
                     required
                     placeholder="Ex: Corte e Barba"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full bg-black border border-white/10 p-4 rounded-xl text-white outline-none focus:border-amber-500 transition-all text-sm"
+                    className="w-full bg-neutral-50 border border-neutral-200 p-4 rounded-2xl text-neutral-900 outline-none focus:border-emerald-500 transition-all text-sm"
                   />
                 </div>
-                <div>
-                  <label className="text-[10px] font-black uppercase text-neutral-500 ml-4 mb-2 block tracking-widest">Preço (R$)</label>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-neutral-400 ml-2 tracking-widest">Preço (R$)</label>
                   <input 
                     type="number"
                     required
                     placeholder="0.00"
                     value={formData.price}
                     onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
-                    className="w-full bg-black border border-white/10 p-4 rounded-xl text-white outline-none focus:border-amber-500 transition-all text-sm"
+                    className="w-full bg-neutral-50 border border-neutral-200 p-4 rounded-2xl text-neutral-900 outline-none focus:border-emerald-500 transition-all text-sm"
                   />
                 </div>
-                <div>
-                  <label className="text-[10px] font-black uppercase text-neutral-500 ml-4 mb-2 block tracking-widest">Duração (min)</label>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-neutral-400 ml-2 tracking-widest">Duração (min)</label>
                   <input 
                     type="number"
                     required
                     placeholder="Ex: 30"
                     value={formData.duration}
                     onChange={(e) => setFormData({ ...formData, duration: Number(e.target.value) })}
-                    className="w-full bg-black border border-white/10 p-4 rounded-xl text-white outline-none focus:border-amber-500 transition-all text-sm"
+                    className="w-full bg-neutral-50 border border-neutral-200 p-4 rounded-2xl text-neutral-900 outline-none focus:border-emerald-500 transition-all text-sm"
                   />
                 </div>
-                <div className="flex flex-col">
-                  <label className="text-[10px] font-black uppercase text-neutral-500 ml-4 mb-2 block tracking-widest">Status Inicial</label>
+                <div className="flex flex-col pt-6">
                   <button
                     type="button"
                     onClick={() => setFormData({ ...formData, active: !formData.active })}
-                    className={`flex-1 flex items-center justify-center gap-2 rounded-xl font-black uppercase italic text-[10px] transition-all border ${
-                      formData.active ? "bg-green-500/10 border-green-500/30 text-green-500" : "bg-red-500/10 border-red-500/30 text-red-500"
+                    className={`flex-1 flex items-center justify-center gap-2 rounded-2xl font-black uppercase text-[10px] transition-all border ${
+                      formData.active ? "bg-emerald-50 border-emerald-200 text-emerald-600" : "bg-red-50 border-red-200 text-red-600"
                     }`}
                   >
                     {formData.active ? <><CheckCircle2 className="w-4 h-4" /> Ativo</> : <><XCircle className="w-4 h-4" /> Inativo</>}
@@ -1649,18 +1662,18 @@ function ServicesManagement({ services }: { services: any[] }) {
                 </div>
               </div>
 
-              <div className="flex gap-4 pt-4">
+              <div className="flex gap-4 pt-4 border-t border-neutral-100">
                 <button 
                   type="submit"
                   disabled={loading}
-                  className="bg-amber-500 text-black px-10 py-4 rounded-xl font-black uppercase italic text-xs flex items-center gap-2 hover:bg-amber-400 transition-all disabled:opacity-50"
+                  className="bg-emerald-500 text-white px-10 py-4 rounded-2xl font-black uppercase text-xs flex items-center gap-2 hover:bg-emerald-600 transition-all disabled:opacity-50"
                 >
-                  {loading ? <Loader2 className="animate-spin w-4 h-4" /> : <><Save className="w-4 h-4" /> {editingId ? "Atualizar" : "Salvar"}</>}
+                  {loading ? <Loader2 className="animate-spin w-4 h-4" /> : <><Save className="w-4 h-4" /> {editingId ? "Atualizar" : "Confirmar"}</>}
                 </button>
                 <button 
                   type="button"
                   onClick={resetForm}
-                  className="bg-white/5 text-white px-10 py-4 rounded-xl font-black uppercase italic text-xs hover:bg-white/10 transition-all"
+                  className="bg-neutral-100 text-neutral-600 px-10 py-4 rounded-2xl font-black uppercase text-xs hover:bg-neutral-200 transition-all"
                 >
                   Cancelar
                 </button>
@@ -1670,38 +1683,38 @@ function ServicesManagement({ services }: { services: any[] }) {
         )}
       </AnimatePresence>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-20">
         {services.length === 0 ? (
-          <div className="col-span-full py-20 flex flex-col items-center justify-center opacity-20 border-2 border-dashed border-white/10 rounded-[3rem]">
-            <Scissors className="w-16 h-16 mb-4" />
-            <p className="font-black uppercase tracking-[0.2em] text-[10px]">Nenhum serviço cadastrado no sistema</p>
+          <div className="col-span-full py-20 flex flex-col items-center justify-center opacity-30 border-2 border-dashed border-neutral-200 rounded-[3rem]">
+            <Scissors className="w-16 h-16 mb-4 text-emerald-500" />
+            <p className="font-black uppercase tracking-[0.2em] text-[10px] text-neutral-400">Nenhum serviço catalogado</p>
           </div>
         ) : (
           services.map((service) => (
             <div 
               key={service.id} 
-              className={`bg-black/40 p-8 rounded-[2rem] border transition-all relative group ${
-                service.active === false ? "opacity-50 grayscale border-white/5" : "border-white/5 hover:border-amber-500/20"
+              className={`bg-white p-8 rounded-[2.5rem] border transition-all relative group shadow-sm flex flex-col ${
+                service.active === false ? "opacity-50 grayscale border-neutral-200" : "border-neutral-100 hover:border-emerald-200 hover:shadow-md"
               }`}
             >
               <div className="flex justify-between items-start mb-6">
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${
-                  service.active === false ? "bg-white/5 text-neutral-500" : "bg-amber-500/10 text-amber-500"
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors ${
+                  service.active === false ? "bg-neutral-100 text-neutral-400" : "bg-emerald-50 text-emerald-500"
                 }`}>
-                  <Scissors className="w-6 h-6" />
+                  <Scissors className="w-7 h-7" />
                 </div>
                 <div className="flex gap-2">
                   <button 
                     onClick={() => handleEdit(service)}
-                    className="p-3 bg-white/5 hover:bg-amber-500 hover:text-black rounded-xl transition-all"
+                    className="w-10 h-10 bg-neutral-50 hover:bg-emerald-500 hover:text-white text-neutral-400 rounded-xl transition-all flex items-center justify-center"
                     title="Editar"
                   >
                     <Pencil className="w-4 h-4" />
                   </button>
                   <button 
                     onClick={() => toggleActive(service)}
-                    className={`p-3 rounded-xl transition-all ${
-                      service.active === false ? "bg-green-500/10 text-green-500 hover:bg-green-500 hover:text-black" : "bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white"
+                    className={`w-10 h-10 rounded-xl transition-all flex items-center justify-center ${
+                      service.active === false ? "bg-green-50 text-green-500 hover:bg-green-500 hover:text-white" : "bg-red-50 text-red-500 hover:bg-red-500 hover:text-white"
                     }`}
                     title={service.active === false ? "Ativar" : "Desativar"}
                   >
@@ -1710,18 +1723,18 @@ function ServicesManagement({ services }: { services: any[] }) {
                 </div>
               </div>
 
-              <h5 className="text-xl font-black italic uppercase mb-2 tracking-tighter">{service.name}</h5>
-              <div className="space-y-1 mb-6">
-                <p className="text-amber-500 font-black italic text-2xl">R${service.price}</p>
-                <p className="text-[10px] text-neutral-500 uppercase font-black tracking-widest flex items-center gap-2">
-                  <Clock className="w-3 h-3" /> {service.duration} min
-                </p>
+              <h5 className="text-xl font-bold text-neutral-900 mb-1 leading-tight">{service.name}</h5>
+              <div className="space-y-1 mb-8 flex-1">
+                <p className="text-emerald-500 font-black text-3xl">R${service.price}</p>
+                <div className="flex items-center gap-2 text-[10px] text-neutral-400 uppercase font-bold tracking-widest">
+                  <Clock className="w-3.5 h-3.5" /> {service.duration} min
+                </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <span className={`w-2 h-2 rounded-full ${service.active === false ? "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]" : "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]"}`} />
-                <span className="text-[10px] font-black uppercase tracking-widest text-neutral-500">
-                  {service.active === false ? "Oculto para Clientes" : "Visível no Catálogo"}
+              <div className="flex items-center gap-2 border-t border-neutral-50 pt-4 mt-auto">
+                <div className={`w-2 h-2 rounded-full ${service.active === false ? "bg-red-400" : "bg-emerald-500"}`} />
+                <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+                  {service.active === false ? "Oculto" : "Disponível"}
                 </span>
               </div>
             </div>
@@ -1780,49 +1793,45 @@ function CalendarWidget({
     let day = startDate;
     let formattedDate = "";
 
-    const dayLabels = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
-
     while (day <= endDate) {
       for (let i = 0; i < 7; i++) {
         formattedDate = format(day, dateFormat);
+        const cloneDay = day;
         const dayAppointments = getAppointmentsForDay(day);
+        const isSelected = isSameDay(day, currentDate);
+        const isCurrentMonth = isSameMonth(day, monthStart);
+        const isTodayDate = isToday(day);
 
         days.push(
           <div
             key={day.toString()}
-            onClick={() => handleDaySelect(new Date(day))}
-            className={`min-h-[120px] p-2 border transition-all cursor-pointer relative group/day ${
-              !isSameMonth(day, monthStart) ? "bg-black/40 opacity-20" : "bg-black/20 hover:bg-neutral-800"
-            } ${isToday(day) ? "ring-2 ring-inset ring-amber-500/50" : "border-white/5"} ${
-              dayAppointments.length > 0 && isSameMonth(day, monthStart) ? "border-amber-500/20 bg-amber-500/5" : ""
-            }`}
+            className={`min-h-[100px] p-2 border-r border-b border-neutral-100 transition-all cursor-pointer hover:bg-neutral-50 flex flex-col gap-1 ${
+              !isCurrentMonth ? "bg-neutral-50/50 opacity-40" : "bg-white"
+            } ${isSelected ? "ring-2 ring-inset ring-emerald-500 z-10" : ""}`}
+            onClick={() => handleDaySelect(cloneDay)}
           >
-            <div className="flex items-center justify-between">
-              <span className={`text-[10px] font-black uppercase tracking-tighter ${isToday(day) ? "text-amber-500" : "text-neutral-500"}`}>
+            <div className={`flex items-center justify-between`}>
+              <span className={`text-xs font-bold ${
+                isTodayDate ? "w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center" : 
+                isCurrentMonth ? "text-neutral-900" : "text-neutral-400"
+              }`}>
                 {formattedDate}
               </span>
-              {dayAppointments.length > 0 && isSameMonth(day, monthStart) && (
-                <div className="w-1.5 h-1.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.8)]" />
+              {dayAppointments.length > 0 && (
+                <span className="text-[10px] font-black text-emerald-500 bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-100">
+                  {dayAppointments.length}
+                </span>
               )}
             </div>
-            <div className="mt-2 space-y-1">
-              {dayAppointments.slice(0, 3).map((app) => (
-                <div 
-                  key={app.id} 
-                  className={`text-[8px] p-1.5 rounded-lg truncate font-black border transition-all ${
-                    app.status === 'confirmed' ? 'bg-green-500/20 border-green-500/30 text-green-500' : 
-                    app.status === 'pending' ? 'bg-amber-500/20 border-amber-500/30 text-amber-500' : 
-                    'bg-red-500/20 border-red-500/30 text-red-500'
-                  }`}
-                >
-                  {format(app.date.toDate(), "HH:mm")} • {app.clientName?.split(' ')[0]}
-                </div>
-              ))}
-              {dayAppointments.length > 3 && (
-                <div className="text-[7px] text-center text-neutral-500 font-bold uppercase py-1 group-hover/day:text-amber-500">
-                  + {dayAppointments.length - 3} mais
-                </div>
-              )}
+            <div className="space-y-1 mt-1 overflow-hidden">
+               {dayAppointments.slice(0, 3).map((app, idx) => (
+                 <div key={idx} className="text-[8px] bg-neutral-100 text-neutral-600 px-1.5 py-0.5 rounded truncate font-medium border border-neutral-200">
+                   {app.clientName?.split(' ')[0] || "Cliente"}
+                 </div>
+               ))}
+               {dayAppointments.length > 3 && (
+                 <div className="text-[8px] text-neutral-400 font-bold pl-1 uppercase">+{dayAppointments.length - 3} mais</div>
+               )}
             </div>
           </div>
         );
@@ -1837,15 +1846,15 @@ function CalendarWidget({
     }
 
     return (
-      <div className="rounded-[2rem] overflow-hidden border border-white/5">
-        <div className="grid grid-cols-7 bg-black/60 border-b border-white/5">
-          {dayLabels.map((label, i) => (
-            <div key={i} className="p-4 text-center text-[10px] font-black uppercase tracking-widest text-neutral-500">
-              {label}
+      <div className="bg-white rounded-[2rem] border border-neutral-200/50 shadow-sm overflow-hidden mt-4">
+        <div className="grid grid-cols-7 bg-neutral-50 border-b border-neutral-100">
+          {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((d) => (
+            <div key={d} className="py-3 text-center text-[10px] font-black uppercase tracking-widest text-neutral-400">
+              {d}
             </div>
           ))}
         </div>
-        {rows}
+        <div>{rows}</div>
       </div>
     );
   };
@@ -1856,42 +1865,37 @@ function CalendarWidget({
     const days = eachDayOfInterval({ start: startDate, end: endDate });
 
     return (
-      <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
-        {days.map((day) => {
-          const dayAppointments = getAppointmentsForDay(day);
+      <div className="grid grid-cols-1 md:grid-cols-7 gap-4 mt-8">
+        {days.map((day, idx) => {
+          const dayApps = getAppointmentsForDay(day);
+          const isTodayDate = isToday(day);
           return (
-            <div 
-              key={day.toString()} 
-              onClick={() => handleDaySelect(day)}
-              className={`rounded-[2.5rem] border p-6 min-h-[400px] cursor-pointer transition-all ${
-                isToday(day) ? "bg-neutral-800/50 border-amber-500/30 ring-1 ring-amber-500/20" : "bg-black/30 border-white/5 hover:bg-black/50 hover:border-white/20"
-              } ${dayAppointments.length > 0 ? "shadow-[0_10px_30px_rgba(0,0,0,0.3)]" : ""}`}
-            >
-              <div className="text-center mb-6">
-                <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500 mb-1">{format(day, "EEEE", { locale: ptBR })}</p>
-                <div className={`w-10 h-10 mx-auto rounded-xl flex items-center justify-center text-xl font-black italic ${isToday(day) ? "bg-amber-500 text-black shadow-lg shadow-amber-500/20" : "bg-white/5"}`}>
-                  {format(day, "d")}
-                </div>
-              </div>
-              <div className="space-y-4">
-                {dayAppointments.length === 0 ? (
-                  <p className="text-[8px] text-center text-neutral-700 uppercase font-bold mt-12">Sem cortes</p>
-                ) : (
-                  dayAppointments.map((app) => (
-                    <div key={app.id} className="p-4 bg-black/40 rounded-2xl border border-white/5 relative group">
-                      <p className="text-amber-500 font-black text-xs italic mb-1">{format(app.date.toDate(), "HH:mm")}</p>
-                      <p className="text-[10px] font-bold text-white uppercase truncate mb-2">{app.clientName}</p>
-                      <span className={`text-[7px] px-2 py-1 rounded-md border font-black uppercase ${
-                         app.status === 'confirmed' ? 'bg-green-500/10 border-green-500/20 text-green-500' : 
-                         app.status === 'pending' ? 'bg-amber-500/10 border-amber-500/20 text-amber-500' : 
-                         'bg-red-500/10 border-red-500/20 text-red-500'
-                      }`}>
-                        {app.status}
-                      </span>
-                    </div>
-                  ))
-                )}
-              </div>
+            <div key={idx} className="flex flex-col gap-3">
+               <div className={`p-4 rounded-2xl flex flex-col items-center transition-all ${
+                 isTodayDate ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "bg-white border border-neutral-200/50 text-neutral-900"
+               }`}>
+                 <span className={`text-[10px] font-black uppercase tracking-widest ${isTodayDate ? "text-emerald-100" : "text-neutral-400"}`}>
+                   {format(day, 'eee', { locale: ptBR })}
+                 </span>
+                 <span className="text-2xl font-black italic">{format(day, 'd')}</span>
+               </div>
+               <div className="space-y-2">
+                 {dayApps.map((app, appIdx) => (
+                   <div key={appIdx} className="bg-white p-3 rounded-2xl border border-neutral-200/50 shadow-sm flex flex-col gap-1 group hover:border-emerald-200 transition-all">
+                      <div className="flex items-center justify-between">
+                         <span className="text-[10px] font-black text-emerald-500 uppercase">{app.time}</span>
+                         <div className={`w-2 h-2 rounded-full ${app.status === 'completed' ? 'bg-emerald-500' : 'bg-amber-400'}`} />
+                      </div>
+                      <p className="text-xs font-bold text-neutral-900 truncate">{app.clientName}</p>
+                      <p className="text-[9px] text-neutral-400 uppercase font-black">{app.serviceName}</p>
+                   </div>
+                 ))}
+                 {dayApps.length === 0 && (
+                   <div className="py-8 flex flex-col items-center justify-center opacity-20 bg-neutral-100 rounded-2xl border-2 border-dashed border-neutral-200">
+                     <Clock className="w-4 h-4 mb-1 text-neutral-400" />
+                   </div>
+                 )}
+               </div>
             </div>
           );
         })}
@@ -1900,108 +1904,134 @@ function CalendarWidget({
   };
 
   const renderDayView = () => {
-    const dayAppointments = getAppointmentsForDay(currentDate).sort((a, b) => a.date.toDate().getTime() - b.date.toDate().getTime());
-    
-    return (
-      <div className="max-w-3xl mx-auto space-y-6">
-        <div className="bg-amber-500 p-8 rounded-[3rem] text-black shadow-2xl flex items-center justify-between">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-widest mb-1 opacity-60">{format(currentDate, "EEEE, d 'de' MMMM", { locale: ptBR })}</p>
-            <h4 className="text-3xl font-black italic uppercase tracking-tighter">Agenda de Hoje</h4>
-          </div>
-          <div className="text-right">
-            <p className="text-4xl font-black italic leading-none">{dayAppointments.length}</p>
-            <p className="text-[10px] font-black uppercase tracking-widest leading-none mt-1">Sessões</p>
-          </div>
-        </div>
+    const dayApps = getAppointmentsForDay(currentDate);
+    const hours = Array.from({ length: 14 }, (_, i) => i + 8); // 8 AM to 9 PM
 
-        <div className="space-y-4 relative before:absolute before:left-[19px] before:top-4 before:bottom-4 before:w-px before:bg-white/10">
-          {dayAppointments.length === 0 ? (
-            <div className="p-12 text-center bg-black/20 rounded-[2.5rem] border border-dashed border-white/10 opacity-30">
-              <Calendar className="w-12 h-12 mx-auto mb-4" />
-              <p className="text-xs font-bold uppercase tracking-widest">Nenhum agendamento para este dia</p>
-            </div>
-          ) : (
-            dayAppointments.map((app) => (
-              <div key={app.id} className="relative pl-12 group">
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-neutral-900 border-2 border-amber-500/50 flex items-center justify-center z-10 group-hover:bg-amber-500 group-hover:text-black transition-colors">
-                  <Clock className="w-4 h-4" />
-                </div>
-                <div className="bg-neutral-900/50 p-6 rounded-[2rem] border border-white/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-white/5 rounded-xl overflow-hidden shrink-0 border border-white/10">
-                      {app.clientPhoto ? (
-                         <img src={app.clientPhoto} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-neutral-700">
-                          <User className="w-6 h-6" />
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-amber-500 font-black text-xs italic">{format(app.date.toDate(), "HH:mm")}</p>
-                      <p className="text-lg font-black uppercase italic leading-none my-1">{app.clientName}</p>
-                      <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">{app.serviceName}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4 self-end md:self-center">
-                    <span className={`text-[9px] px-4 py-2 rounded-xl border font-black uppercase ${
-                       app.status === 'confirmed' ? 'bg-green-500/10 border-green-500/20 text-green-500' : 
-                       app.status === 'pending' ? 'bg-amber-500/10 border-amber-500/20 text-amber-500' : 
-                       'bg-red-500/10 border-red-500/20 text-red-500'
-                    }`}>
-                      {app.status}
-                    </span>
-                    {(role === 'manager' || role === 'barber') && app.status === 'pending' && (
-                      <div className="flex gap-2">
-                         <button onClick={() => updateStatus(app.id, 'confirmed')} className="w-10 h-10 bg-green-500 text-black rounded-lg flex items-center justify-center hover:scale-110 active:scale-95 transition-all text-xs font-black italic">✓</button>
-                         <button onClick={() => updateStatus(app.id, 'cancelled')} className="w-10 h-10 bg-red-500 text-white rounded-lg flex items-center justify-center hover:scale-110 active:scale-95 transition-all text-xs font-black italic">✕</button>
-                      </div>
-                    )}
-                  </div>
-                </div>
+    return (
+      <div className="max-w-3xl mx-auto mt-8 space-y-4">
+        <div className="bg-white p-6 rounded-[2.5rem] border border-neutral-200/50 shadow-sm">
+           <div className="flex items-center justify-between mb-8 pb-4 border-b border-neutral-100">
+              <div className="flex items-center gap-3">
+                 <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center">
+                    <Calendar className="w-6 h-6" />
+                 </div>
+                 <div>
+                    <h3 className="text-xl font-bold text-neutral-900 leading-none mb-1">{format(currentDate, "eeee, d 'de' MMMM", { locale: ptBR })}</h3>
+                    <p className="text-[10px] text-neutral-400 font-black uppercase tracking-widest">{dayApps.length} Agendamentos</p>
+                 </div>
               </div>
-            ))
-          )}
+              <div className="flex bg-neutral-50 p-1 rounded-xl border border-neutral-200">
+                 <button onClick={() => navigate(-1)} className="p-2 hover:bg-white rounded-lg transition-all text-neutral-400 hover:text-emerald-500 shadow-sm"><ChevronLeft className="w-4 h-4" /></button>
+                 <button onClick={() => navigate(1)} className="p-2 hover:bg-white rounded-lg transition-all text-neutral-400 hover:text-emerald-500 shadow-sm"><ChevronRight className="w-4 h-4" /></button>
+              </div>
+           </div>
+
+           <div className="space-y-2">
+              {hours.map(hour => {
+                const timeStr = `${hour.toString().padStart(2, '0')}:00`;
+                const hourApps = dayApps.filter(a => a.time.startsWith(hour.toString().padStart(2, '0')));
+                
+                return (
+                  <div key={hour} className="group flex gap-4 min-h-[60px]">
+                    <div className="w-12 pt-1 text-right">
+                       <span className="text-[10px] font-black text-neutral-300 group-hover:text-emerald-500 transition-colors uppercase tracking-tight">{timeStr}</span>
+                    </div>
+                    <div className="flex-1 flex flex-col gap-2 relative">
+                       <div className="absolute left-0 right-0 top-3 h-[1px] bg-neutral-100 group-hover:bg-emerald-100 transition-colors" />
+                       <div className="relative z-10 pl-2">
+                          {hourApps.map((app, idx) => (
+                            <motion.div 
+                              key={idx}
+                              initial={{ opacity: 0, x: -10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              className="bg-white border border-neutral-200/50 p-4 rounded-2xl shadow-sm flex items-center justify-between mb-2 hover:border-emerald-200 hover:shadow-md transition-all group/card"
+                            >
+                              <div className="flex items-center gap-4">
+                                <div className={`w-2 h-10 rounded-full transition-colors ${
+                                  app.status === 'completed' ? 'bg-emerald-500' : 
+                                  app.status === 'confirmed' ? 'bg-indigo-500' : 'bg-amber-400'
+                                }`} />
+                                <div>
+                                  <p className="font-bold text-neutral-900 group-hover/card:text-emerald-500 transition-colors">{app.clientName}</p>
+                                  <p className="text-[10px] text-neutral-400 font-black uppercase tracking-widest">{app.serviceName} • {app.time}</p>
+                                </div>
+                              </div>
+                              <div className="flex gap-2">
+                                 {(role === 'manager' || role === 'barber') && app.status === 'pending' && (
+                                   <div className="flex gap-1">
+                                      <button 
+                                        onClick={() => updateStatus(app.id, 'confirmed')}
+                                        className="bg-emerald-500 text-white p-2 rounded-xl"
+                                      >
+                                        <CheckCircle2 className="w-4 h-4" />
+                                      </button>
+                                       <button 
+                                        onClick={() => updateStatus(app.id, 'cancelled')}
+                                        className="bg-red-50 text-red-500 p-2 rounded-xl"
+                                      >
+                                        <XCircle className="w-4 h-4" />
+                                      </button>
+                                   </div>
+                                 )}
+                                 <button className="bg-neutral-50 text-neutral-400 p-2 rounded-xl hover:bg-neutral-100">
+                                   <MoreHorizontal className="w-4 h-4" />
+                                 </button>
+                              </div>
+                            </motion.div>
+                          ))}
+                       </div>
+                    </div>
+                  </div>
+                );
+              })}
+           </div>
         </div>
       </div>
     );
   };
 
   return (
-    <div className="space-y-12">
-      <div className="flex items-center justify-between px-2">
-        <div className="flex flex-col">
-          <h5 className="text-[10px] text-amber-500 font-black uppercase tracking-[0.4em] mb-1">Período Selecionado</h5>
-          <h4 className="text-4xl font-black italic uppercase tracking-tighter">
-            {mode === 'day' ? format(currentDate, "d 'de' MMMM", { locale: ptBR }) : 
-             mode === 'week' ? `Semana de ${format(startOfWeek(currentDate), "d 'de' MMM", { locale: ptBR })}` :
-             format(currentDate, "MMMM 'de' yyyy", { locale: ptBR })}
-          </h4>
+    <div className="w-full pb-20">
+      <div className="flex flex-col sm:flex-row items-center justify-between mb-8 px-4 gap-4">
+         <div className="flex items-center gap-4">
+            <h2 className="text-3xl font-black italic uppercase tracking-tighter leading-none">
+               Meu <span className="text-emerald-500">Fluxo</span>
+            </h2>
+            <p className="hidden sm:block text-[10px] text-neutral-400 uppercase tracking-widest font-black pt-1">Calendário de Atendimentos</p>
+         </div>
+         <div className="flex bg-white/50 backdrop-blur-md p-1 rounded-2xl border border-neutral-200 shadow-sm overflow-x-auto max-w-full">
+           {[
+             { id: 'day', label: 'Dia' },
+             { id: 'week', label: 'Semana' },
+             { id: 'month', label: 'Mês' }
+           ].map((m) => (
+             <button
+               key={m.id}
+               onClick={() => onModeChange && onModeChange(m.id as any)}
+               className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+                 mode === m.id ? "bg-white text-emerald-500 shadow-sm border border-emerald-100" : "text-neutral-400 hover:text-neutral-600"
+               }`}
+             >
+               {m.label}
+             </button>
+           ))}
+         </div>
+      </div>
+
+      <div className="flex items-center justify-center gap-6 mb-8 bg-white py-4 rounded-[2rem] border border-neutral-200/50 shadow-sm max-w-md mx-auto">
+        <button onClick={() => navigate(-1)} className="p-2 bg-neutral-50 hover:bg-emerald-500 hover:text-white rounded-xl transition-all shadow-sm active:scale-95"><ChevronLeft className="w-5 h-5 text-neutral-400 group-hover:text-white" /></button>
+        <div className="text-center min-w-[160px]">
+          <h3 className="text-lg font-bold text-neutral-900 leading-none mb-1">
+            {format(currentDate, mode === 'month' ? 'MMMM yyyy' : mode === 'week' ? "MMM d" : "d 'de' MMMM", { locale: ptBR })}
+          </h3>
+          <p className="text-[10px] text-emerald-500 uppercase font-black tracking-widest">Navegação</p>
         </div>
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={() => navigate(-1)}
-            className="w-12 h-12 rounded-2xl bg-black border border-white/5 flex items-center justify-center hover:bg-neutral-800 transition-colors"
-          >
-            <ChevronLeft className="w-6 h-6 border-none" />
-          </button>
-          <button 
-            onClick={() => onDateChange(new Date())}
-            className="px-6 h-12 rounded-2xl bg-black border border-white/5 text-[10px] font-black uppercase tracking-widest hover:text-amber-500 transition-colors"
-          >Hoje</button>
-          <button 
-            onClick={() => navigate(1)}
-            className="w-12 h-12 rounded-2xl bg-black border border-white/5 flex items-center justify-center hover:bg-neutral-800 transition-colors"
-          >
-            <ChevronRight className="w-6 h-6" />
-          </button>
-        </div>
+        <button onClick={() => navigate(1)} className="p-2 bg-neutral-50 hover:bg-emerald-500 hover:text-white rounded-xl transition-all shadow-sm active:scale-95"><ChevronRight className="w-5 h-5 text-neutral-400 group-hover:text-white" /></button>
       </div>
 
       <AnimatePresence mode="wait">
         <motion.div
-          key={`${mode}-${currentDate.getTime()}`}
+          key={mode}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
