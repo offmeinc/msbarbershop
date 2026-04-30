@@ -1000,11 +1000,11 @@ function DashboardScreen({ user, role, services, dashboardView, onBack }: { user
   const [editingBio, setEditingBio] = useState(false);
   const [bioInput, setBioInput] = useState("");
   const [userData, setUserData] = useState<any>(null);
-  const [currentView, setCurrentView] = useState<"list" | "calendar" | "services" | "hours">(dashboardView || "list");
+  const [currentView, setCurrentView] = useState<"list" | "calendar" | "services" | "hours" | "collaborators">(dashboardView || "list");
 
   useEffect(() => {
     if (dashboardView) {
-      setCurrentView(dashboardView);
+      setCurrentView(dashboardView as any);
     }
   }, [dashboardView]);
   const [calendarMode, setCalendarMode] = useState<"day" | "week" | "month">("month");
@@ -1250,6 +1250,14 @@ function DashboardScreen({ user, role, services, dashboardView, onBack }: { user
               )}
               {role === 'manager' && (
                 <button 
+                  onClick={() => setCurrentView("collaborators")}
+                  className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase italic tracking-widest transition-all flex items-center gap-2 ${currentView === 'collaborators' ? 'bg-neutral-800 text-white shadow-lg' : 'text-neutral-500 hover:text-white'}`}
+                >
+                  <User className="w-3.5 h-3.5" /> Colaboradores
+                </button>
+              )}
+              {role === 'manager' && (
+                <button 
                   onClick={() => setCurrentView("hours")}
                   className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase italic tracking-widest transition-all flex items-center gap-2 ${currentView === 'hours' ? 'bg-neutral-800 text-white shadow-lg' : 'text-neutral-500 hover:text-white'}`}
                 >
@@ -1350,13 +1358,84 @@ function DashboardScreen({ user, role, services, dashboardView, onBack }: { user
             role={role}
             updateStatus={updateStatus}
           />
-        ) : dashboardView === "hours" ? (
+        ) : currentView === "hours" ? (
           <WorkingHoursManager />
+        ) : currentView === "collaborators" ? (
+          <CollaboratorsManager />
         ) : (
           <ServicesManagement services={services} />
         )}
       </div>
     </motion.div>
+  );
+}
+
+function CollaboratorsManager() {
+  const [barbers, setBarbers] = useState<any[]>([]);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const q = query(collection(db, "users"), where("role", "==", "barber"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setBarbers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleAddBarber = async (e: FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      await updateProfile(userCredential.user, { displayName: name });
+      await setDoc(doc(db, "users", userCredential.user.uid), {
+        uid: userCredential.user.uid,
+        name: name,
+        email: email,
+        role: 'barber',
+        createdAt: Timestamp.now(),
+      });
+      setName("");
+      setEmail("");
+      setPassword("");
+      alert("Colaborador criado com sucesso!");
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao criar colaborador.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-8">
+      <form onSubmit={handleAddBarber} className="bg-neutral-900 p-6 rounded-2xl border border-white/5 space-y-4">
+        <h4 className="text-sm font-black uppercase italic tracking-widest text-white">Adicionar Colaborador</h4>
+        <input type="text" placeholder="Nome" className="w-full bg-black border border-white/10 p-3 rounded-lg text-white" value={name} onChange={(e) => setName(e.target.value)} required />
+        <input type="email" placeholder="E-mail" className="w-full bg-black border border-white/10 p-3 rounded-lg text-white" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        <input type="password" placeholder="Senha" className="w-full bg-black border border-white/10 p-3 rounded-lg text-white" value={password} onChange={(e) => setPassword(e.target.value)} required />
+        <button type="submit" className="w-full bg-amber-500 text-black py-3 rounded-lg font-bold uppercase italic tracking-widest" disabled={loading}>
+          {loading ? "Criando..." : "Adicionar"}
+        </button>
+      </form>
+
+      <div className="space-y-4">
+        <h4 className="text-sm font-black uppercase italic tracking-widest text-neutral-400">Colaboradores Atuais</h4>
+        {barbers.map(barber => (
+          <div key={barber.id} className="bg-neutral-900/50 p-4 rounded-xl border border-white/5 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
+                <Scissors className="w-4 h-4 text-amber-500" />
+              </div>
+              <p className="font-bold">{barber.name}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
