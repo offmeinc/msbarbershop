@@ -97,7 +97,7 @@ import {
   orderBy
 } from "firebase/firestore";
 
-type Screen = "home" | "booking" | "agenda" | "clients" | "more" | "login" | "collaborators";
+type Screen = "home" | "booking" | "agenda" | "clients" | "more" | "login" | "collaborators" | "services";
 
 function BrandLogo({ className = "w-10 h-10", iconSize = "w-6 h-6" }: { className?: string, iconSize?: string }) {
   return (
@@ -119,21 +119,92 @@ function BrandLogo({ className = "w-10 h-10", iconSize = "w-6 h-6" }: { classNam
   );
 }
 
+function ProfileEditScreen({ user, onBack }: { user: any, onBack: () => void }) {
+  const [name, setName] = useState(user?.displayName || "");
+  const [loading, setLoading] = useState(false);
+
+  const handleUpdate = async (e: FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await updateProfile(user, { displayName: name });
+      await updateDoc(doc(db, "users", user.uid), { displayName: name });
+      alert("Perfil atualizado!");
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao atualizar.");
+    }
+    setLoading(false);
+  };
+  
+  return (
+    <div className="max-w-md mx-auto py-8 px-6">
+      <div className="bg-neutral-900 rounded-[2.5rem] p-8 shadow-2xl border border-white/5 space-y-6">
+        <button onClick={onBack} className="text-neutral-500 mb-4 flex items-center gap-2 hover:text-amber-500">
+           {"<"} Voltar
+        </button>
+        <h2 className="text-xl font-bold text-center text-white">Editar Perfil</h2>
+        
+        <form onSubmit={handleUpdate} className="space-y-4">
+          <div>
+            <label className="block text-xs font-bold text-neutral-500 uppercase mb-1">Nome</label>
+            <input 
+              type="text" 
+              value={name} 
+              onChange={(e) => setName(e.target.value)}
+              className="w-full bg-black border border-white/10 rounded-xl p-3 text-white"
+            />
+          </div>
+          <button 
+            type="submit"
+            disabled={loading}
+            className="w-full bg-amber-500 text-black py-3 rounded-xl font-bold hover:bg-amber-400 transition-colors"
+          >
+            {loading ? "Salvando..." : "Salvar"}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function MoreOptionsScreen({ user, role, onLogout, onBack }: { user: any, role: string, onLogout: () => void, onBack: () => void, key?: any }) {
+  const [activeSubScreen, setActiveSubScreen] = useState<
+    'main' | 'profile' | 'notif' | 'block' | 'help' | 'share' | 'link' | 'earnings' | 'week' | 'recon' | 'recurrence' | 'support' | 'dark'
+  >('main');
+
   const menuItems = [
-    { id: 'notif', label: 'Notificações', icon: <Bell className="w-6 h-6" />, badge: '99+' },
-    { id: 'block', label: 'Bloqueios', icon: <Lock className="w-6 h-6" /> },
-    { id: 'help', label: 'Central de Ajuda', icon: <HelpCircle className="w-6 h-6" /> },
-    { id: 'share', label: 'Divulgar Horários', icon: <Smartphone className="w-6 h-6" /> },
-    { id: 'link', label: 'Link Público', icon: <ExternalLink className="w-6 h-6" /> },
-    { id: 'profile', label: 'Meu Perfil', icon: <User className="w-6 h-6" /> },
-    { id: 'earnings', label: 'Meus Ganhos', icon: <Wallet className="w-6 h-6" /> },
-    { id: 'week', label: 'Minha Semana', icon: <Calendar className="w-5 h-5" /> },
-    { id: 'recon', label: 'Reconciliação', icon: <CheckCircle2 className="w-6 h-6" /> },
-    { id: 'recurrence', label: 'Recorrências', icon: <RefreshCw className="w-6 h-6" /> },
-    { id: 'support', label: 'Suporte', icon: <MessageCircle className="w-6 h-6" /> },
-    { id: 'dark', label: 'Escuro', icon: <Moon className="w-6 h-6" /> },
+    { id: 'notif', label: 'Notificações', icon: <Bell className="w-6 h-6" />, badge: '99+', onClick: () => setActiveSubScreen('notif') },
+    { id: 'block', label: 'Bloqueios', icon: <Lock className="w-6 h-6" />, onClick: () => setActiveSubScreen('block') },
+    { id: 'help', label: 'Central de Ajuda', icon: <HelpCircle className="w-6 h-6" />, onClick: () => setActiveSubScreen('help') },
+    { id: 'share', label: 'Divulgar Horários', icon: <Smartphone className="w-6 h-6" />, onClick: () => setActiveSubScreen('share') },
+    { id: 'link', label: 'Link Público', icon: <ExternalLink className="w-6 h-6" />, onClick: () => setActiveSubScreen('link') },
+    { id: 'profile', label: 'Meu Perfil', icon: <User className="w-6 h-6" />, onClick: () => setActiveSubScreen('profile') },
+    { id: 'earnings', label: 'Meus Ganhos', icon: <Wallet className="w-6 h-6" />, onClick: () => setActiveSubScreen('earnings') },
+    { id: 'week', label: 'Minha Semana', icon: <Calendar className="w-5 h-5" />, onClick: () => setActiveSubScreen('week') },
+    { id: 'recon', label: 'Reconciliação', icon: <CheckCircle2 className="w-6 h-6" />, onClick: () => setActiveSubScreen('recon') },
+    { id: 'recurrence', label: 'Recorrências', icon: <RefreshCw className="w-6 h-6" />, onClick: () => setActiveSubScreen('recurrence') },
+    { id: 'support', label: 'Suporte', icon: <MessageCircle className="w-6 h-6" />, onClick: () => setActiveSubScreen('support') },
+    { id: 'dark', label: 'Escuro', icon: <Moon className="w-6 h-6" />, onClick: () => setActiveSubScreen('dark') },
   ];
+
+  if (activeSubScreen === 'profile') {
+    return <ProfileEditScreen user={user} onBack={() => setActiveSubScreen('main')} />;
+  }
+
+  if (activeSubScreen !== 'main') {
+    return (
+      <div className="max-w-md mx-auto py-8 px-6">
+        <button onClick={() => setActiveSubScreen('main')} className="text-neutral-500 mb-4 flex items-center gap-2 hover:text-amber-500">
+           {"<"} Voltar
+        </button>
+        <div className="bg-neutral-900 rounded-[2.5rem] p-8 shadow-2xl border border-white/5 space-y-6">
+          <h2 className="text-xl font-bold text-center text-white capitalize">{activeSubScreen}</h2>
+          <p className="text-neutral-500 text-center">Tela de {activeSubScreen} em desenvolvimento.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <motion.div 
@@ -146,7 +217,7 @@ function MoreOptionsScreen({ user, role, onLogout, onBack }: { user: any, role: 
         <h2 className="text-xl font-bold text-center mb-8 text-white">Mais opções</h2>
         <div className="grid grid-cols-3 gap-y-8 gap-x-4">
           {menuItems.map((item) => (
-            <button key={item.id} className="flex flex-col items-center gap-2 group">
+            <button key={item.id} onClick={item.onClick} className="flex flex-col items-center gap-2 group">
               <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center relative group-active:scale-95 transition-transform text-neutral-400 border border-white/5">
                 {item.icon}
                 {item.badge && (
@@ -429,12 +500,20 @@ export default function App() {
                   {userRole === "manager" ? "Agenda" : "Dashboard"}
                 </button>
                 {userRole === "manager" && (
-                  <button 
-                    onClick={() => setCurrentScreen("collaborators")}
-                    className={`hover:text-white transition-colors flex items-center gap-2 ${currentScreen === "collaborators" ? "text-amber-500" : ""}`}
-                  >
-                    Equipe
-                  </button>
+                  <>
+                    <button 
+                      onClick={() => setCurrentScreen("collaborators")}
+                      className={`hover:text-white transition-colors flex items-center gap-2 ${currentScreen === "collaborators" ? "text-amber-500" : ""}`}
+                    >
+                      Equipe
+                    </button>
+                    <button 
+                      onClick={() => setCurrentScreen("services")}
+                      className={`hover:text-white transition-colors flex items-center gap-2 ${currentScreen === "services" ? "text-amber-500" : ""}`}
+                    >
+                      Serviços
+                    </button>
+                  </>
                 )}
                 <div className="flex items-center gap-3 pl-6 border-l border-white/10">
                   <div className="text-right">
@@ -484,6 +563,7 @@ export default function App() {
           {currentScreen === "booking" && <BookingScreen key="booking" user={user} services={services} onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "agenda" && <DashboardScreen key="agenda" user={user} role={userRole} services={services} dashboardView={dashboardView || "list"} onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "collaborators" && <DashboardScreen key="collaborators" user={user} role={userRole} services={services} dashboardView="collaborators" onBack={() => setCurrentScreen("home")} />}
+          {currentScreen === "services" && <DashboardScreen key="services" user={user} role={userRole} services={services} dashboardView="services" onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "clients" && <ClientsScreen key="clients" onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "more" && <MoreOptionsScreen key="more" user={user} role={userRole} onLogout={handleLogout} onBack={() => setCurrentScreen("home")} />}
         </AnimatePresence>
@@ -508,6 +588,7 @@ export default function App() {
                   <>
                     <button onClick={() => { setCurrentScreen("agenda"); setIsMenuOpen(false); }}>Painel Gestor</button>
                     <button onClick={() => { setCurrentScreen("collaborators"); setIsMenuOpen(false); }}>Time/Equipe</button>
+                    <button onClick={() => { setCurrentScreen("services"); setIsMenuOpen(false); }}>Serviços</button>
                   </>
                 )}
                 {userRole === "barber" && (
