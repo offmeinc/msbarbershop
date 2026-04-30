@@ -689,15 +689,9 @@ function HomeScreen({ services, onStartBooking }: { services: any[], onStartBook
         </div>
       </section>
 
-      {/* Footer / Login Link */}
+      {/* Footer */}
       <section className="py-12 border-t border-white/5 flex flex-col items-center gap-4 bg-neutral-900/50">
         <p className="text-neutral-500 text-xs font-bold uppercase tracking-widest">© 2024 Marley Souza Barber Shop</p>
-        <button 
-          onClick={() => onStartBooking()} 
-          className="text-amber-500 text-xs font-black uppercase tracking-widest hover:underline"
-        >
-          Acessar Portal do Cliente
-        </button>
       </section>
     </motion.div>
   );
@@ -820,11 +814,11 @@ function LoginScreen({ onLogin, setUserRole, setCurrentScreen, setRequestedRole 
         
         {authMode === "choice" ? (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10 text-left">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10 text-left">
               {roles.map((role) => (
                 <button
                   key={role.id}
-                  onClick={() => setActiveTab(role.id)}
+                  onClick={() => { setActiveTab(role.id); setAuthMode("email"); }}
                   className={`p-6 rounded-2xl border transition-all relative overflow-hidden group ${
                     activeTab === role.id 
                     ? "border-amber-500 bg-amber-500/5" 
@@ -845,26 +839,13 @@ function LoginScreen({ onLogin, setUserRole, setCurrentScreen, setRequestedRole 
                 </button>
               ))}
             </div>
-
-            <div className="space-y-4">
-              <button 
-                onClick={handleManagerLogin}
-                className="w-full bg-neutral-900 border border-amber-500 text-amber-500 font-bold uppercase italic py-4 rounded-2xl hover:bg-neutral-800 transition-all text-xs"
-              >
-                Entrar como Gestor
-              </button>
-              
-              <button 
-                onClick={() => setAuthMode("email")}
-                className="w-full bg-neutral-800 text-white font-black uppercase italic py-5 rounded-2xl flex items-center justify-center gap-3 hover:bg-neutral-700 transition-all"
-              >
-                <Calendar className="w-5 h-5" />
-                Entrar com E-mail
-              </button>
-            </div>
           </>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-4 text-left max-w-sm mx-auto">
+          <>
+            <button onClick={() => setAuthMode("choice")} className="text-neutral-500 text-xs uppercase tracking-widest font-bold mb-6 hover:text-white flex items-center gap-2">
+               {"<"} Voltar
+            </button>
+            <form onSubmit={handleSubmit} className="space-y-4 text-left max-w-sm mx-auto">
             {isSignUp && (
               <div>
                 <label className="text-[10px] font-black uppercase text-neutral-500 ml-4 mb-1 block tracking-widest">Nome Completo</label>
@@ -973,6 +954,7 @@ function LoginScreen({ onLogin, setUserRole, setCurrentScreen, setRequestedRole 
               </button>
             </div>
           </form>
+          </>
         )}
         
         <p className="text-[10px] text-neutral-600 uppercase tracking-[0.2em] mt-12 font-bold leading-relaxed">
@@ -1258,6 +1240,55 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
   );
 }
 
+function ReviewModal({ appointment, onClose }: { appointment: any, onClose: () => void }) {
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async () => {
+    setLoading(true);
+    try {
+      await addDoc(collection(db, "reviews"), {
+        appointmentId: appointment.id,
+        clientId: appointment.clientId,
+        barberId: appointment.barberId,
+        rating,
+        comment,
+        createdAt: Timestamp.now()
+      });
+      onClose();
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao enviar avaliação.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-6">
+      <div className="bg-neutral-900 border border-white/10 rounded-3xl p-6 w-full max-w-sm">
+        <h2 className="text-xl font-bold text-white mb-4">Avaliar atendimento</h2>
+        <div className="flex gap-2 justify-center mb-6">
+          {[1,2,3,4,5].map(r => (
+            <button key={r} onClick={() => setRating(r)} className={`text-3xl ${r <= rating ? 'text-amber-500' : 'text-neutral-700'}`}>★</button>
+          ))}
+        </div>
+        <textarea 
+          placeholder="Deixe um comentário (opcional)..." 
+          value={comment} 
+          onChange={(e) => setComment(e.target.value)} 
+          className="w-full bg-neutral-800 rounded-xl p-4 text-white mb-6"
+        />
+        <div className="flex gap-4">
+          <button onClick={onClose} className="flex-1 text-neutral-500 font-bold">Cancelar</button>
+          <button onClick={handleSubmit} className="flex-1 bg-amber-500 text-black py-3 rounded-xl font-bold">Enviar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function DashboardScreen({ user, role, services, dashboardView, onBack }: { user: any, role: string, services: any[], dashboardView?: "list" | "calendar" | "services" | "hours" | "collaborators", onBack: () => void, key?: string }) {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [barbers, setBarbers] = useState<any[]>([]);
@@ -1265,6 +1296,7 @@ function DashboardScreen({ user, role, services, dashboardView, onBack }: { user
   const [currentDate, setCurrentDate] = useState(new Date());
   const [currentView, setCurrentView] = useState<"agenda" | "list" | "services" | "hours" | "collaborators">(role === 'client' ? 'list' : 'agenda');
   const [loading, setLoading] = useState(true);
+  const [reviewAppointment, setReviewAppointment] = useState<any>(null);
 
   useEffect(() => {
     if (dashboardView === 'calendar') setCurrentView('agenda');
@@ -1462,6 +1494,10 @@ function DashboardScreen({ user, role, services, dashboardView, onBack }: { user
                                           </div>
                                       </div>
                                       <p className="text-sm text-neutral-400 font-medium">{app.clientName} • {app.barberName}</p>
+                                       {role === 'client' && app.status === 'completed' && (
+                                            <button onClick={() => setReviewAppointment(app)} className="w-full bg-neutral-800 text-white font-bold py-2 rounded-xl">Avaliar</button>
+                                       )}
+
                                   </div>
                               ))}
                           </div>
@@ -1471,6 +1507,7 @@ function DashboardScreen({ user, role, services, dashboardView, onBack }: { user
               {currentView === 'services' && <ServicesManagement services={services} />}
               {currentView === 'collaborators' && <CollaboratorsManager />}
               {currentView === 'hours' && <WorkingHoursManager />}
+              {reviewAppointment && <ReviewModal appointment={reviewAppointment} onClose={() => setReviewAppointment(null)} />}
           </div>
       )}
     </div>

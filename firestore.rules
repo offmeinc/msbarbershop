@@ -84,5 +84,19 @@ service cloud.firestore {
         isManager()
       ) && isValidAppointment(incoming());
     }
+
+    // Reviews Collection
+    match /reviews/{reviewId} {
+      function isValidReview(data) {
+        return data.clientId == request.auth.uid
+          && isValidId(data.appointmentId)
+          && isValidId(data.barberId)
+          && data.rating is number && data.rating >= 1 && data.rating <= 5
+          && (data.comment == null || (data.comment is string && data.comment.size() < 500));
+      }
+
+      allow read: if true;
+      allow create: if isSignedIn() && isValidReview(incoming());
+    }
   }
 }

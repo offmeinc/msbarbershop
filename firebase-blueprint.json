@@ -60,6 +60,20 @@
         "isActive": { "type": "boolean" }
       },
       "required": ["dayOfWeek", "startTime", "endTime"]
+    },
+    "Review": {
+      "title": "Review",
+      "description": "Reviews and ratings for completed appointments.",
+      "type": "object",
+      "properties": {
+        "appointmentId": { "type": "string" },
+        "clientId": { "type": "string" },
+        "barberId": { "type": "string" },
+        "rating": { "type": "integer" },
+        "comment": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["appointmentId", "clientId", "barberId", "rating"]
     }
   },
   "firestore": {
@@ -78,6 +92,10 @@
     "/appointments/{appointmentId}": {
       "schema": "Appointment",
       "description": "Appointments scheduled by clients."
+    },
+    "/reviews/{reviewId}": {
+      "schema": "Review",
+      "description": "Reviews and ratings."
     }
   }
 }
