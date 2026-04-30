@@ -1123,7 +1123,7 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
         <div className="md:col-span-2 space-y-6">
           <div className="bg-neutral-900 border border-white/5 p-5 md:p-8 rounded-2xl md:rounded-[2rem] shadow-2xl">
             <h3 className="text-xs font-black uppercase tracking-widest mb-6 md:mb-8 text-neutral-400">1. Escolha o Serviço</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
               {services.filter(s => s.active !== false).map((s) => (
                 <button
                   key={s.id}
@@ -1141,6 +1141,27 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
                 </button>
               ))}
             </div>
+
+            {selectedService && (
+              <div className="pt-6 border-t border-white/5">
+                <p className="text-xs font-bold text-neutral-500 uppercase mb-4">Barbeiros disponíveis:</p>
+                <div className="flex gap-3 overflow-x-auto pb-2">
+                  {barbers.map((b) => (
+                    <div key={b.id} className="flex flex-col items-center gap-2 min-w-[70px]">
+                      <div className="w-14 h-14 rounded-full overflow-hidden border border-white/10">
+                        <img 
+                          src={b.photoURL || "https://ui-avatars.com/api/?name=" + b.name} 
+                          alt={b.name} 
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                      </div>
+                      <p className="text-[10px] text-neutral-400 text-center truncate w-full">{b.name.split(' ')[0]}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className={`bg-neutral-900 border border-white/5 p-5 md:p-8 rounded-2xl md:rounded-[2rem] shadow-2xl transition-all ${!selectedService ? "opacity-30 pointer-events-none" : "opacity-100"}`}>
@@ -1700,8 +1721,7 @@ function ServicesManagement({ services }: { services: any[] }) {
       }
       resetForm();
     } catch (error) {
-      console.error(error);
-      alert("Erro ao salvar serviço.");
+      handleFirestoreError(error, editingId ? OperationType.UPDATE : OperationType.CREATE, editingId ? `services/${editingId}` : 'services');
     } finally {
       setLoading(false);
     }
@@ -1711,7 +1731,7 @@ function ServicesManagement({ services }: { services: any[] }) {
     try {
       await updateDoc(doc(db, "services", service.id), { active: service.active === false });
     } catch (error) {
-      console.error("Error toggling service status:", error);
+      handleFirestoreError(error, OperationType.UPDATE, `services/${service.id}`);
     }
   };
 
