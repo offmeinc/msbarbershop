@@ -169,6 +169,47 @@ function ProfileEditScreen({ user, onBack }: { user: any, onBack: () => void }) 
   );
 }
 
+function ChatScreen({ user, onBack }: { user: any, onBack: () => void }) {
+  const [messages, setMessages] = useState<any[]>([]);
+  const [newMessage, setNewMessage] = useState("");
+
+  useEffect(() => {
+    if (!user) return;
+    const q = query(
+      collection(db, "chats", user.uid, "messages"),
+      orderBy("createdAt", "asc")
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setMessages(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+    return unsubscribe;
+  }, [user]);
+
+  const sendMessage = async () => {
+    if (!newMessage.trim() || !user) return;
+    await addDoc(collection(db, "chats", user.uid, "messages"), {
+      text: newMessage,
+      createdAt: Timestamp.now(),
+      userId: user.uid,
+      sender: 'client'
+    });
+    setNewMessage("");
+  };
+
+  return (
+    <div className="max-w-md mx-auto py-8 px-6 flex flex-col h-[600px]">
+        <button onClick={onBack} className="mb-6 flex items-center gap-2 text-neutral-500 hover:text-white uppercase text-xs font-bold tracking-widest"><ChevronLeft className="w-4 h-4" /> Voltar</button>
+        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2 bg-neutral-900 rounded-3xl mb-4 border border-white/5">
+            {messages.map(m => <div key={m.id} className={`p-3 rounded-xl max-w-[80%] ${m.sender === 'client' ? 'self-end bg-amber-500 text-black' : 'self-start bg-neutral-800 text-white'}`}>{m.text}</div>)}
+        </div>
+        <div className="flex gap-2">
+            <input value={newMessage} onChange={e => setNewMessage(e.target.value)} className="flex-1 bg-neutral-900 border border-white/5 rounded-xl p-4 text-white outline-none" placeholder="Digite sua mensagem..."/>
+            <button onClick={sendMessage} className="bg-amber-500 p-4 rounded-xl text-black font-bold">Enviar</button>
+        </div>
+    </div>
+  );
+}
+
 function MoreOptionsScreen({ user, role, onLogout, onBack }: { user: any, role: string, onLogout: () => void, onBack: () => void, key?: any }) {
   const [activeSubScreen, setActiveSubScreen] = useState<
     'main' | 'profile' | 'notif' | 'block' | 'help' | 'share' | 'link' | 'earnings' | 'week' | 'recon' | 'recurrence' | 'support' | 'dark'
@@ -181,16 +222,26 @@ function MoreOptionsScreen({ user, role, onLogout, onBack }: { user: any, role: 
     { id: 'share', label: 'Divulgar Horários', icon: <Smartphone className="w-6 h-6" />, onClick: () => setActiveSubScreen('share') },
     { id: 'link', label: 'Link Público', icon: <ExternalLink className="w-6 h-6" />, onClick: () => setActiveSubScreen('link') },
     { id: 'profile', label: 'Meu Perfil', icon: <User className="w-6 h-6" />, onClick: () => setActiveSubScreen('profile') },
-    { id: 'earnings', label: 'Meus Ganhos', icon: <Wallet className="w-6 h-6" />, onClick: () => setActiveSubScreen('earnings') },
+  ];
+
+  if (role === 'client') {
+       menuItems.push({ id: 'earnings', label: 'Meus Ganhos', icon: <Wallet className="w-6 h-6" />, onClick: () => setActiveSubScreen('earnings') });
+  }
+
+  menuItems.push(
     { id: 'week', label: 'Minha Semana', icon: <Calendar className="w-5 h-5" />, onClick: () => setActiveSubScreen('week') },
     { id: 'recon', label: 'Reconciliação', icon: <CheckCircle2 className="w-6 h-6" />, onClick: () => setActiveSubScreen('recon') },
     { id: 'recurrence', label: 'Recorrências', icon: <RefreshCw className="w-6 h-6" />, onClick: () => setActiveSubScreen('recurrence') },
     { id: 'support', label: 'Suporte', icon: <MessageCircle className="w-6 h-6" />, onClick: () => setActiveSubScreen('support') },
-    { id: 'dark', label: 'Escuro', icon: <Moon className="w-6 h-6" />, onClick: () => setActiveSubScreen('dark') },
-  ];
+    { id: 'dark', label: 'Escuro', icon: <Moon className="w-6 h-6" />, onClick: () => setActiveSubScreen('dark') }
+  );
 
   if (activeSubScreen === 'profile') {
     return <ProfileEditScreen user={user} onBack={() => setActiveSubScreen('main')} />;
+  }
+
+  if (activeSubScreen === 'support') {
+    return <ChatScreen user={user} onBack={() => setActiveSubScreen('main')} />;
   }
 
   if (activeSubScreen !== 'main') {
@@ -406,15 +457,19 @@ export default function App() {
 
   const handleLogin = async (role: string = "client", email?: string, password?: string, isSignUp?: boolean, name?: string, whatsapp?: string) => {
     setRequestedRole(role);
+    console.log("HandleLogin: Attempting to create user with email:", email, "role:", role, "isSignUp:", isSignUp, "name:", name, "whatsapp:", whatsapp);
     
     try {
       if (email && password) {
         if (isSignUp) {
+          console.log("HandleLogin: Creating user with email:", email);
           const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+          console.log("HandleLogin: User created with UID:", userCredential.user.uid);
           if (name) {
             await updateProfile(userCredential.user, { displayName: name });
           }
           
+          console.log("HandleLogin: Setting user document in Firestore");
           await setDoc(doc(db, "users", userCredential.user.uid), {
              uid: userCredential.user.uid,
              name: name || userCredential.user.displayName || "Usuário",
@@ -423,6 +478,7 @@ export default function App() {
              whatsapp: whatsapp,
              createdAt: Timestamp.now(),
            });
+          console.log("HandleLogin: User document set successfully");
 
           setUserRole(role);
         } else {

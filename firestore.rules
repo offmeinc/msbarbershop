@@ -29,7 +29,7 @@ service cloud.firestore {
           && data.name is string && data.name.size() > 0 && data.name.size() < 100
           && (data.email == request.auth.token.email || data.email == null || isManager())
           && data.role in ['client', 'barber', 'manager']
-          && (data.phone == null || (data.phone is string && data.phone.size() < 20))
+          && (data.whatsapp == null || (data.whatsapp is string && data.whatsapp.size() < 20))
           && (data.bio == null || (data.bio is string && data.bio.size() < 500))
           && (data.photoUrl == null || data.photoUrl is string);
       }
