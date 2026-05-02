@@ -18,6 +18,7 @@ import {
   CreditCard,
   LogOut,
   Settings,
+  Sparkles,
   Bell,
   Camera,
   Loader2,
@@ -1935,12 +1936,31 @@ function ServicesManagement({ services }: { services: any[] }) {
           <p className="text-[10px] text-neutral-500 uppercase tracking-widest font-bold">Gerencie os serviços oferecidos</p>
         </div>
         {!isAdding && !editingId && (
-          <button 
-            onClick={() => setIsAdding(true)}
-            className="bg-amber-500 text-black px-6 py-2 rounded-2xl font-black uppercase text-[10px] flex items-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-lg shadow-amber-500/20"
-          >
-            <Plus className="w-4 h-4" /> Novo Serviço
-          </button>
+          <div className="flex gap-2">
+            <button 
+              onClick={async () => {
+                const popularServices = [
+                    { name: "Degradê", price: 50, duration: 40, active: true, createdAt: Timestamp.now() },
+                    { name: "Barba", price: 30, duration: 20, active: true, createdAt: Timestamp.now() },
+                    { name: "Corte Completo", price: 70, duration: 60, active: true, createdAt: Timestamp.now() }
+                ];
+                setLoading(true);
+                try {
+                  await Promise.all(popularServices.map(s => addDoc(collection(db, "services"), s)));
+                } catch(e) { console.error(e); }
+                setLoading(false);
+              }}
+              className="bg-neutral-800 text-white px-6 py-2 rounded-2xl font-black uppercase text-[10px] flex items-center gap-2 hover:bg-neutral-700 transition-all"
+            >
+              <Sparkles className="w-4 h-4" /> Importar Sugeridos
+            </button>
+            <button 
+              onClick={() => setIsAdding(true)}
+              className="bg-amber-500 text-black px-6 py-2 rounded-2xl font-black uppercase text-[10px] flex items-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-lg shadow-amber-500/20"
+            >
+              <Plus className="w-4 h-4" /> Novo Serviço
+            </button>
+          </div>
         )}
       </div>
 
