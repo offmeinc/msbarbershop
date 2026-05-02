@@ -169,6 +169,49 @@ function ProfileEditScreen({ user, onBack }: { user: any, onBack: () => void }) 
   );
 }
 
+function StaffChatScreen({ user, onBack }: { user: any, onBack: () => void }) {
+  const [messages, setMessages] = useState<any[]>([]);
+  const [newMessage, setNewMessage] = useState("");
+
+  useEffect(() => {
+    const q = query(
+      collection(db, "internal_chats"),
+      orderBy("createdAt", "asc")
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setMessages(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+    return unsubscribe;
+  }, []);
+
+  const sendMessage = async () => {
+    if (!newMessage.trim() || !user) return;
+    await addDoc(collection(db, "internal_chats"), {
+      text: newMessage,
+      createdAt: Timestamp.now(),
+      senderName: user.displayName || "Staff",
+      senderId: user.uid
+    });
+    setNewMessage("");
+  };
+
+  return (
+    <div className="max-w-md mx-auto py-8 px-6 flex flex-col h-[600px]">
+        <button onClick={onBack} className="mb-6 flex items-center gap-2 text-neutral-500 hover:text-white uppercase text-xs font-bold tracking-widest"><ChevronLeft className="w-4 h-4" /> Voltar</button>
+        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2 bg-neutral-900 rounded-3xl mb-4 border border-white/5">
+            {messages.map(m => <div key={m.id} className={`p-3 rounded-xl max-w-[80%] ${m.senderId === user.uid ? 'self-end bg-amber-500 text-black' : 'self-start bg-neutral-800 text-white'}`}>
+                <p className="text-[10px] opacity-70 mb-1">{m.senderName}</p>
+                <p>{m.text}</p>
+            </div>)}
+        </div>
+        <div className="flex gap-2">
+            <input value={newMessage} onChange={e => setNewMessage(e.target.value)} className="flex-1 bg-neutral-900 border border-white/5 rounded-xl p-4 text-white outline-none" placeholder="Digite sua mensagem..."/>
+            <button onClick={sendMessage} className="bg-amber-500 p-4 rounded-xl text-black font-bold">Enviar</button>
+        </div>
+    </div>
+  );
+}
+
 function ChatScreen({ user, onBack }: { user: any, onBack: () => void }) {
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState("");
@@ -212,7 +255,7 @@ function ChatScreen({ user, onBack }: { user: any, onBack: () => void }) {
 
 function MoreOptionsScreen({ user, role, onLogout, onBack }: { user: any, role: string, onLogout: () => void, onBack: () => void, key?: any }) {
   const [activeSubScreen, setActiveSubScreen] = useState<
-    'main' | 'profile' | 'notif' | 'block' | 'help' | 'share' | 'link' | 'earnings' | 'week' | 'recon' | 'recurrence' | 'support' | 'dark'
+    'main' | 'profile' | 'notif' | 'block' | 'help' | 'share' | 'link' | 'earnings' | 'week' | 'recon' | 'recurrence' | 'support' | 'staff-chat' | 'dark'
   >('main');
 
   const menuItems = [
@@ -228,6 +271,10 @@ function MoreOptionsScreen({ user, role, onLogout, onBack }: { user: any, role: 
        menuItems.push({ id: 'earnings', label: 'Meus Ganhos', icon: <Wallet className="w-6 h-6" />, onClick: () => setActiveSubScreen('earnings') });
   }
 
+  if (['barber', 'manager'].includes(role)) {
+    menuItems.push({ id: 'staff-chat', label: 'Chat Interno', icon: <MessageSquare className="w-6 h-6" />, onClick: () => setActiveSubScreen('staff-chat') });
+  }
+
   menuItems.push(
     { id: 'week', label: 'Minha Semana', icon: <Calendar className="w-5 h-5" />, onClick: () => setActiveSubScreen('week') },
     { id: 'recon', label: 'Reconciliação', icon: <CheckCircle2 className="w-6 h-6" />, onClick: () => setActiveSubScreen('recon') },
@@ -238,6 +285,10 @@ function MoreOptionsScreen({ user, role, onLogout, onBack }: { user: any, role: 
 
   if (activeSubScreen === 'profile') {
     return <ProfileEditScreen user={user} onBack={() => setActiveSubScreen('main')} />;
+  }
+
+  if (activeSubScreen === 'staff-chat') {
+    return <StaffChatScreen user={user} onBack={() => setActiveSubScreen('main')} />;
   }
 
   if (activeSubScreen === 'support') {
@@ -1088,6 +1139,7 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
   const [selectedBarber, setSelectedBarber] = useState<string | null>(null);
   const [barbers, setBarbers] = useState<any[]>([]);
   const [bookingDate, setBookingDate] = useState("");
+  const [recurrence, setRecurrence] = useState<'none' | 'weekly' | 'biweekly' | 'monthly'>('none');
   const [isBooking, setIsBooking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -1111,7 +1163,7 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
     try {
       const service = services.find(s => s.id === selectedService);
       const barber = barbers.find(b => b.id === selectedBarber);
-      const appointmentData = {
+      const baseData = {
         clientId: user.uid,
         clientName: user.displayName,
         clientPhoto: user.photoURL,
@@ -1119,13 +1171,33 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
         barberName: barber?.name,
         serviceId: selectedService,
         serviceName: service?.name,
-        date: Timestamp.fromDate(new Date(bookingDate)),
         status: "pending",
         totalPrice: service?.price,
         createdAt: Timestamp.now()
       };
       
-      await addDoc(collection(db, "appointments"), appointmentData);
+      const appointmentsToCreate = [];
+      const baseDate = new Date(bookingDate);
+      
+      if (recurrence === 'none') {
+        appointmentsToCreate.push({ ...baseData, date: Timestamp.fromDate(baseDate) });
+      } else {
+        const num = recurrence === 'monthly' ? 3 : 4;
+        const intervalDays = recurrence === 'weekly' ? 7 : recurrence === 'biweekly' ? 14 : 30;
+        
+        for (let i = 0; i < num; i++) {
+           let date = new Date(baseDate);
+           if (recurrence === 'monthly') {
+               date.setMonth(date.getMonth() + i);
+           } else {
+               date.setDate(date.getDate() + i * intervalDays);
+           }
+           appointmentsToCreate.push({ ...baseData, date: Timestamp.fromDate(date) });
+        }
+      }
+
+      await Promise.all(appointmentsToCreate.map(app => addDoc(collection(db, "appointments"), app)));
+      
       setShowConfirmation(true);
     } catch (error) {
       console.error(error);
@@ -1163,10 +1235,12 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
                 <h2 className="text-3xl font-black uppercase italic mb-8">Escolha o serviço</h2>
                 <div className="grid gap-4">
                   {services.map(s => (
-                    <button key={s.id} onClick={() => { setSelectedService(s.id); setStep(2); }} className={`p-6 rounded-3xl border ${selectedService === s.id ? 'border-amber-500 bg-neutral-900' : 'border-neutral-800'}`}>
+                    <button key={s.id} onClick={() => { setSelectedService(s.id); setStep(2); }} className={`p-6 rounded-3xl border transition-all ${selectedService === s.id ? 'border-amber-500 bg-neutral-900 shadow-lg shadow-amber-500/10' : 'border-neutral-800 bg-neutral-900/50 hover:border-neutral-700'}`}>
                         <div className="flex justify-between items-center">
-                            <span className="font-bold">{s.name}</span>
-                            <span className="text-amber-500 font-black">R${s.price}</span>
+                            <span className="font-bold text-lg">{s.name}</span>
+                            <div className="bg-amber-500/10 px-3 py-1 rounded-full">
+                                <span className="text-amber-500 font-black text-sm">R${s.price}</span>
+                            </div>
                         </div>
                     </button>
                   ))}
@@ -1178,9 +1252,9 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
                 <h2 className="text-3xl font-black uppercase italic mb-8">Escolha o barbeiro</h2>
                 <div className="grid gap-4">
                     {barbers.map(b => (
-                        <button key={b.id} onClick={() => { setSelectedBarber(b.id); setStep(3); }} className={`p-6 rounded-3xl border flex items-center gap-4 ${selectedBarber === b.id ? 'border-amber-500 bg-neutral-900' : 'border-neutral-800'}`}>
-                            <img src={b.photoURL || `https://ui-avatars.com/api/?name=${b.name}`} className="w-12 h-12 rounded-full" />
-                            <span className="font-bold">{b.name}</span>
+                        <button key={b.id} onClick={() => { setSelectedBarber(b.id); setStep(3); }} className={`p-4 rounded-3xl border flex items-center gap-4 transition-all ${selectedBarber === b.id ? 'border-amber-500 bg-neutral-900 shadow-lg shadow-amber-500/10' : 'border-neutral-800 bg-neutral-900/50 hover:border-neutral-700'}`}>
+                            <img src={b.photoURL || `https://ui-avatars.com/api/?name=${b.name}`} className="w-16 h-16 rounded-full border-2 border-neutral-800" />
+                            <span className="font-bold text-lg">{b.name}</span>
                         </button>
                     ))}
                 </div>
@@ -1188,21 +1262,46 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
         )}
         {step === 3 && (
             <motion.div key="step3" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }}>
-                <h2 className="text-3xl font-black uppercase italic mb-8">Escolha a data</h2>
-                <input type="datetime-local" className="w-full p-6 bg-neutral-900 rounded-3xl text-white border border-neutral-800" onChange={(e) => setBookingDate(e.target.value)} />
-                <button onClick={() => setStep(4)} className="w-full mt-6 bg-amber-500 text-black py-4 rounded-xl font-bold uppercase">Continuar</button>
+                <h2 className="text-3xl font-black uppercase italic mb-8">Data e recorrência</h2>
+                <label className="block text-xs font-bold uppercase text-neutral-500 mb-2">Selecione o dia e hora</label>
+                <input type="datetime-local" className="w-full p-4 bg-neutral-900 rounded-3xl text-white border border-neutral-800 outline-none focus:border-amber-500" onChange={(e) => setBookingDate(e.target.value)} />
+                <label className="block text-xs font-bold uppercase text-neutral-500 mb-2 mt-6">Recorrência</label>
+                <select
+                  className="w-full p-4 bg-neutral-900 rounded-3xl text-white border border-neutral-800 outline-none focus:border-amber-500"
+                  value={recurrence}
+                  onChange={(e) => setRecurrence(e.target.value as any)}
+                >
+                  <option value="none">Sem recorrência</option>
+                  <option value="weekly">Semanalmente</option>
+                  <option value="biweekly">Quinzenalmente</option>
+                  <option value="monthly">Mensalmente</option>
+                </select>
+                <button onClick={() => setStep(4)} className="w-full mt-8 bg-amber-500 text-black py-4 rounded-xl font-black uppercase italic hover:bg-amber-400 transition-all">Continuar</button>
             </motion.div>
         )}
         {step === 4 && (
             <motion.div key="step4" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }}>
                 <h2 className="text-3xl font-black uppercase italic mb-8">Resumo</h2>
-                <div className="bg-neutral-900 p-6 rounded-3xl border border-neutral-800 mb-6 space-y-4">
-                   <p>Serviço: {services.find(s => s.id === selectedService)?.name}</p>
-                   <p>Barbeiro: {barbers.find(b => b.id === selectedBarber)?.name}</p>
-                   <p>Data: {bookingDate}</p>
+                <div className="bg-neutral-900 p-8 rounded-3xl border border-neutral-800 mb-8 space-y-4">
+                   <div className="flex justify-between">
+                       <span className="text-neutral-500 font-bold uppercase text-xs">Serviço</span>
+                       <span className="font-bold">{services.find(s => s.id === selectedService)?.name}</span>
+                   </div>
+                   <div className="flex justify-between">
+                       <span className="text-neutral-500 font-bold uppercase text-xs">Barbeiro</span>
+                       <span className="font-bold">{barbers.find(b => b.id === selectedBarber)?.name}</span>
+                   </div>
+                   <div className="flex justify-between">
+                       <span className="text-neutral-500 font-bold uppercase text-xs">Data</span>
+                       <span className="font-bold">{bookingDate ? format(new Date(bookingDate), "dd MMM, HH:mm", { locale: ptBR }) : '-'}</span>
+                   </div>
+                   <div className="flex justify-between">
+                       <span className="text-neutral-500 font-bold uppercase text-xs">Recorrência</span>
+                       <span className="font-bold">{recurrence === 'none' ? 'Nenhuma' : recurrence === 'weekly' ? 'Semanal' : recurrence === 'biweekly' ? 'Quinzenal' : 'Mensal'}</span>
+                   </div>
                 </div>
-                <button disabled={isBooking} onClick={handleConfirmBooking} className="w-full bg-amber-500 text-black py-4 rounded-xl font-bold uppercase">
-                    {isBooking ? 'Agendando...' : 'Confirmar'}
+                <button disabled={isBooking} onClick={handleConfirmBooking} className="w-full bg-amber-500 text-black py-4 rounded-xl font-black uppercase italic hover:bg-amber-400 transition-all shadow-lg active:scale-95 disabled:opacity-50">
+                    {isBooking ? 'Agendando...' : 'Confirmar agendamento'}
                 </button>
             </motion.div>
         )}
@@ -1323,7 +1422,16 @@ function DashboardScreen
   const [currentDate, setCurrentDate] = useState(new Date());
   const [currentView, setCurrentView] = useState<"agenda" | "list" | "services" | "hours" | "collaborators" | "earnings">(role === 'client' ? 'list' : 'agenda');
   const [loading, setLoading] = useState(true);
+  const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "confirmed" | "completed" | "cancelled">("all");
   const [reviewAppointment, setReviewAppointment] = useState<any>(null);
+
+  const filteredAppointmentsList = useMemo(() => {
+	  return appointments.filter(app => {
+		  if (filterStatus === 'all') return true;
+		  if (filterStatus === 'pending') return !app.status || app.status === 'pending';
+		  return app.status === filterStatus;
+	  });
+  }, [appointments, filterStatus]);
 
   useEffect(() => {
     if (dashboardView === 'calendar') setCurrentView('agenda');
@@ -1511,11 +1619,25 @@ function DashboardScreen
               {currentView === 'list' && (
                   <div className="space-y-6">
                       <h2 className="text-xl font-black uppercase italic tracking-tight underline decoration-amber-500/30 decoration-4 underline-offset-4 text-white">Meus Atendimentos</h2>
-                      {loading ? <div className="p-20 flex justify-center"><Loader2 className="animate-spin text-amber-500" /></div> : appointments.length === 0 ? (
+                      
+                      {/* Filter Buttons */}
+                      <div className="flex gap-2 pb-2 overflow-x-auto no-scrollbar">
+                        {['all', 'pending', 'confirmed', 'completed', 'cancelled'].map((status) => (
+                          <button
+                            key={status}
+                            onClick={() => setFilterStatus(status as any)}
+                            className={`px-4 py-2 rounded-full text-xs font-bold uppercase ${filterStatus === status ? 'bg-amber-500 text-black' : 'bg-neutral-900 border border-white/5 text-neutral-500'}`}
+                          >
+                            {status === 'all' ? 'Todos' : status === 'pending' ? 'Pendente' : status === 'confirmed' ? 'Confirmado' : status === 'completed' ? 'Concluído' : 'Cancelado'}
+                          </button>
+                        ))}
+                      </div>
+
+                      {loading ? <div className="p-20 flex justify-center"><Loader2 className="animate-spin text-amber-500" /></div> : filteredAppointmentsList.length === 0 ? (
                           <div className="p-12 text-center text-neutral-600 font-bold uppercase text-xs tracking-widest">Nenhum agendamento encontrado</div>
                       ) : (
                           <div className="space-y-3">
-                              {appointments.map(app => (
+                              {filteredAppointmentsList.map(app => (
                                   <div key={app.id} className="bg-neutral-900 p-5 rounded-3xl border border-white/5 shadow-lg">
                                       <div className="flex justify-between items-start mb-3">
                                           <div>

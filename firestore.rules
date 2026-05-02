@@ -98,5 +98,15 @@ service cloud.firestore {
       allow read: if true;
       allow create: if isSignedIn() && isValidReview(incoming());
     }
+
+    // Internal Chats Collection
+    match /internal_chats/{messageId} {
+      function isValidMessage(data) {
+        return data.text is string && data.text.size() > 0 && data.text.size() < 1000
+          && data.senderId is string && data.senderName is string
+          && data.createdAt is timestamp;
+      }
+      allow read, write: if isSignedIn() && (isManager() || isBarber());
+    }
   }
 }
