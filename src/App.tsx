@@ -46,6 +46,7 @@ import {
   Smartphone
 } from "lucide-react";
 import { useState, useEffect, useRef, useMemo, ChangeEvent, FormEvent } from "react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { 
   format, 
   addMonths, 
@@ -647,7 +648,7 @@ function HomeScreen({ services, onStartBooking }: { services: any[], onStartBook
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
           >
-            <span className="text-amber-500 font-mono tracking-widest uppercase mb-4 block">Marley Souza Barber Shop</span>
+            <span className="text-amber-500 font-mono tracking-widest uppercase mb-4 block">MS Barber Shop</span>
             <h1 className="text-6xl md:text-8xl font-black italic tracking-tighter uppercase leading-[0.9] mb-8">
               A Arte do Corte <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-500 to-amber-200">
@@ -689,9 +690,30 @@ function HomeScreen({ services, onStartBooking }: { services: any[], onStartBook
         </div>
       </section>
 
+      {/* Opening Hours */}
+      <section className="py-24 bg-neutral-900 border-t border-white/5">
+        <div className="max-w-7xl mx-auto px-6 text-center">
+            <h2 className="text-4xl font-black italic uppercase mb-12">Horários de Funcionamento</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-neutral-400">
+                <div>
+                  <h4 className="font-bold text-white uppercase italic">Segunda - Sexta</h4>
+                  <p className="text-xl font-black text-amber-500">09:00 - 20:00</p>
+                </div>
+                <div>
+                  <h4 className="font-bold text-white uppercase italic">Sábado</h4>
+                  <p className="text-xl font-black text-amber-500">09:00 - 18:00</p>
+                </div>
+                <div>
+                  <h4 className="font-bold text-white uppercase italic">Domingo</h4>
+                  <p className="text-xl font-black text-neutral-600">Fechado</p>
+                </div>
+            </div>
+        </div>
+      </section>
+
       {/* Footer */}
       <section className="py-12 border-t border-white/5 flex flex-col items-center gap-4 bg-neutral-900/50">
-        <p className="text-neutral-500 text-xs font-bold uppercase tracking-widest">© 2024 Marley Souza Barber Shop</p>
+        <p className="text-neutral-500 text-xs font-bold uppercase tracking-widest">© 2024 MS Barber Shop</p>
       </section>
     </motion.div>
   );
@@ -1289,12 +1311,67 @@ function ReviewModal({ appointment, onClose }: { appointment: any, onClose: () =
   );
 }
 
-function DashboardScreen({ user, role, services, dashboardView, onBack }: { user: any, role: string, services: any[], dashboardView?: "list" | "calendar" | "services" | "hours" | "collaborators", onBack: () => void, key?: string }) {
+function EarningsDashboard({ appointments, services }: { appointments: any[], services: any[] }) {
+  const [filter, setFilter] = useState<'week' | 'month' | 'year'>('month');
+  
+  const processedData = useMemo(() => {
+    const now = new Date();
+    let startDate = startOfMonth(now);
+    if (filter === 'week') startDate = startOfWeek(now);
+    
+    return appointments
+        .filter(app => (app.status === 'confirmed' || app.status === 'completed') &&
+            (app.date instanceof Timestamp ? app.date.toDate() : parseISO(app.date)) >= startDate)
+        .map(app => ({
+            ...app,
+            date: app.date instanceof Timestamp ? app.date.toDate() : parseISO(app.date),
+            price: services.find(s => s.name === app.serviceName)?.price || 0
+        }))
+        .reduce((acc, curr) => {
+            const dateStr = format(curr.date, 'dd/MM');
+            acc[dateStr] = (acc[dateStr] || 0) + curr.price;
+            return acc;
+        }, {} as Record<string, number>);
+  }, [appointments, services, filter]);
+
+  const chartData = Object.entries(processedData).map(([date, earnings]) => ({ date, earnings }));
+
+  return (
+    <div className="space-y-6">
+        <h2 className="text-xl font-black uppercase italic text-white flex items-center gap-2">
+            <Wallet className="w-6 h-6 text-amber-500" /> Dashboard de Ganhos
+        </h2>
+        
+        <div className="flex gap-2">
+            {(['week', 'month', 'year'] as const).map(f => (
+                <button key={f} onClick={() => setFilter(f)} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest ${filter === f ? 'bg-amber-500 text-black' : 'bg-neutral-800 text-neutral-400'}`}>
+                    {f === 'week' ? 'Semana' : f === 'month' ? 'Mês' : 'Ano'}
+                </button>
+            ))}
+        </div>
+
+        <div className="bg-neutral-900 p-6 rounded-3xl border border-white/5 h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                    <XAxis dataKey="date" stroke="#666" fontSize={10} />
+                    <YAxis stroke="#666" fontSize={10} />
+                    <Tooltip contentStyle={{ backgroundColor: '#000', borderColor: '#333' }} />
+                    <Bar dataKey="earnings" fill="#f59e0b" />
+                </BarChart>
+            </ResponsiveContainer>
+        </div>
+    </div>
+  );
+}
+
+function DashboardScreen
+({ user, role, services, dashboardView, onBack }: { user: any, role: string, services: any[], dashboardView?: "list" | "calendar" | "services" | "hours" | "collaborators", onBack: () => void, key?: string }) {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [barbers, setBarbers] = useState<any[]>([]);
   const [selectedBarberId, setSelectedBarberId] = useState<string>("all");
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [currentView, setCurrentView] = useState<"agenda" | "list" | "services" | "hours" | "collaborators">(role === 'client' ? 'list' : 'agenda');
+  const [currentView, setCurrentView] = useState<"agenda" | "list" | "services" | "hours" | "collaborators" | "earnings">(role === 'client' ? 'list' : 'agenda');
   const [loading, setLoading] = useState(true);
   const [reviewAppointment, setReviewAppointment] = useState<any>(null);
 
@@ -1304,6 +1381,7 @@ function DashboardScreen({ user, role, services, dashboardView, onBack }: { user
     else if (dashboardView === 'services') setCurrentView('services');
     else if (dashboardView === 'hours') setCurrentView('hours');
     else if (dashboardView === 'collaborators') setCurrentView('collaborators');
+    else if (dashboardView === 'earnings') setCurrentView('earnings');
   }, [dashboardView]);
 
   useEffect(() => {
@@ -1424,6 +1502,11 @@ function DashboardScreen({ user, role, services, dashboardView, onBack }: { user
           </div>
       )}
 
+      {/* Views */}
+      {role === 'manager' && (
+         <button onClick={() => setCurrentView('earnings')} className="mb-4 px-4 py-2 bg-amber-500 rounded-lg text-black font-bold">Ver Finanças</button>
+      )}
+      {currentView === 'earnings' && <EarningsDashboard appointments={appointments} services={services} />}
       {/* Agenda Main View */}
       {currentView === 'agenda' ? (
         <>
