@@ -1027,6 +1027,7 @@ function ConfirmationModal({ service, date, onConfirm }: { service: any, date: s
 }
 
 function BookingScreen({ user, services, onBack }: { user: any, services: any[], onBack: () => void, key?: string }) {
+  const [step, setStep] = useState(1);
   const [selectedService, setSelectedService] = useState<string | null>(null);
   const [selectedBarber, setSelectedBarber] = useState<string | null>(null);
   const [barbers, setBarbers] = useState<any[]>([]);
@@ -1045,30 +1046,11 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
   }, []);
 
   const handleConfirmBooking = async () => {
+    if (!selectedService || !selectedBarber || !bookingDate) {
+        setError("Todos os campos são obrigatórios.");
+        return;
+    }
     setError(null);
-    if (!selectedService) {
-      setError("Selecione um serviço para continuar.");
-      return;
-    }
-    if (!selectedBarber) {
-      setError("Selecione um colaborador para continuar.");
-      return;
-    }
-    if (!bookingDate) {
-      setError("Selecione uma data e horário.");
-      return;
-    }
-    if (!user) {
-      setError("Você precisa estar logado para agendar.");
-      return;
-    }
-    
-    const bookingDateTime = new Date(bookingDate);
-    if (bookingDateTime < new Date()) {
-      setError("A data e hora devem ser no futuro.");
-      return;
-    }
-
     setIsBooking(true);
     try {
       const service = services.find(s => s.id === selectedService);
@@ -1081,7 +1063,7 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
         barberName: barber?.name,
         serviceId: selectedService,
         serviceName: service?.name,
-        date: Timestamp.fromDate(bookingDateTime),
+        date: Timestamp.fromDate(new Date(bookingDate)),
         status: "pending",
         totalPrice: service?.price,
         createdAt: Timestamp.now()
@@ -1110,153 +1092,65 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
     </AnimatePresence>
     
     <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      className="max-w-4xl mx-auto py-8 md:py-12 px-4 md:px-6"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="max-w-xl mx-auto py-8 px-6"
     >
-
-      <div className="flex items-center justify-between mb-8 md:mb-12">
-        <h2 className="text-3xl md:text-4xl font-black italic uppercase tracking-tighter text-white">Novo <span className="text-amber-500">Agendamento</span></h2>
-        <button onClick={onBack} className="text-neutral-500 hover:text-white transition-colors flex items-center gap-2 uppercase text-xs font-bold tracking-widest">
-          <ChevronRight className="rotate-180 w-4 h-4" /> Cancelar
-        </button>
+      <div className="flex justify-between items-center mb-8">
+        <button onClick={onBack} className="text-neutral-500">Voltar</button>
+        <span className="text-neutral-400 font-bold uppercase tracking-widest text-xs">Passo {step} de 4</span>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 overflow-y-auto max-h-[80vh] md:max-h-none no-scrollbar pb-32">
-        <div className="md:col-span-2 space-y-6">
-          <div className="bg-neutral-900 border border-white/5 p-5 md:p-8 rounded-2xl md:rounded-[2rem] shadow-2xl">
-            <h3 className="text-xs font-black uppercase tracking-widest mb-6 md:mb-8 text-neutral-400">1. Escolha o Serviço</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
-              {services.filter(s => s.active !== false).map((s) => (
-                <button
-                  key={s.id}
-                  onClick={() => {
-                    setSelectedService(s.id);
-                    setError(null);
-                  }}
-                  className={`p-5 md:p-6 rounded-2xl border text-left transition-all ${
-                    selectedService === s.id ? "border-amber-500 bg-amber-500/10 shadow-[0_0_20px_rgba(245,158,11,0.1)]" : "border-white/5 bg-black/20 hover:border-white/20"
-                  }`}
-                >
-                  <p className={`font-black uppercase italic text-sm mb-1 ${selectedService === s.id ? "text-white" : "text-neutral-500"}`}>{s.name}</p>
-                  <p className="text-amber-500 font-black italic">R${s.price}</p>
-                  <p className="text-[10px] text-neutral-500 uppercase mt-2">{s.duration} min</p>
-                </button>
-              ))}
-            </div>
-
-            {selectedService && (
-              <div className="pt-6 border-t border-white/5">
-                <p className="text-xs font-bold text-neutral-500 uppercase mb-4">Barbeiros disponíveis:</p>
-                <div className="flex gap-3 overflow-x-auto pb-2">
-                  {barbers.map((b) => (
-                    <div key={b.id} className="flex flex-col items-center gap-2 min-w-[70px]">
-                      <div className="w-14 h-14 rounded-full overflow-hidden border border-white/10">
-                        <img 
-                          src={b.photoURL || "https://ui-avatars.com/api/?name=" + b.name} 
-                          alt={b.name} 
-                          className="w-full h-full object-cover"
-                          referrerPolicy="no-referrer"
-                        />
-                      </div>
-                      <p className="text-[10px] text-neutral-400 text-center truncate w-full">{b.name.split(' ')[0]}</p>
-                    </div>
+      <AnimatePresence mode="wait">
+        {step === 1 && (
+            <motion.div key="step1" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }}>
+                <h2 className="text-3xl font-black uppercase italic mb-8">Escolha o serviço</h2>
+                <div className="grid gap-4">
+                  {services.map(s => (
+                    <button key={s.id} onClick={() => { setSelectedService(s.id); setStep(2); }} className={`p-6 rounded-3xl border ${selectedService === s.id ? 'border-amber-500 bg-neutral-900' : 'border-neutral-800'}`}>
+                        <div className="flex justify-between items-center">
+                            <span className="font-bold">{s.name}</span>
+                            <span className="text-amber-500 font-black">R${s.price}</span>
+                        </div>
+                    </button>
                   ))}
                 </div>
-              </div>
-            )}
-          </div>
-
-          <div className={`bg-neutral-900 border border-white/5 p-5 md:p-8 rounded-2xl md:rounded-[2rem] shadow-2xl transition-all ${!selectedService ? "opacity-30 pointer-events-none" : "opacity-100"}`}>
-            <h3 className="text-xs font-black uppercase tracking-widest mb-6 md:mb-8 text-neutral-400">2. Escolha o Colaborador</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {barbers.map((b) => (
-                <button
-                  key={b.id}
-                  onClick={() => {
-                    setSelectedBarber(b.id);
-                    setError(null);
-                  }}
-                  className={`p-5 md:p-6 rounded-2xl border text-left transition-all flex items-center gap-4 ${
-                    selectedBarber === b.id ? "border-amber-500 bg-amber-500/10 shadow-[0_0_20px_rgba(245,158,11,0.1)]" : "border-white/5 bg-black/20 hover:border-white/20"
-                  }`}
-                >
-                  <div className="w-12 h-12 rounded-full overflow-hidden border border-white/10">
-                    <img 
-                      src={b.photoURL || "https://ui-avatars.com/api/?name=" + b.name} 
-                      alt={b.name} 
-                      className="w-full h-full object-cover"
-                      referrerPolicy="no-referrer"
-                    />
-                  </div>
-                  <div>
-                    <p className={`font-black uppercase italic text-sm ${selectedBarber === b.id ? "text-white" : "text-neutral-500"}`}>{b.name}</p>
-                    <p className="text-[10px] text-neutral-500 uppercase mt-1">Colaborador</p>
-                  </div>
+            </motion.div>
+        )}
+        {step === 2 && (
+            <motion.div key="step2" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }}>
+                <h2 className="text-3xl font-black uppercase italic mb-8">Escolha o barbeiro</h2>
+                <div className="grid gap-4">
+                    {barbers.map(b => (
+                        <button key={b.id} onClick={() => { setSelectedBarber(b.id); setStep(3); }} className={`p-6 rounded-3xl border flex items-center gap-4 ${selectedBarber === b.id ? 'border-amber-500 bg-neutral-900' : 'border-neutral-800'}`}>
+                            <img src={b.photoURL || `https://ui-avatars.com/api/?name=${b.name}`} className="w-12 h-12 rounded-full" />
+                            <span className="font-bold">{b.name}</span>
+                        </button>
+                    ))}
+                </div>
+            </motion.div>
+        )}
+        {step === 3 && (
+            <motion.div key="step3" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }}>
+                <h2 className="text-3xl font-black uppercase italic mb-8">Escolha a data</h2>
+                <input type="datetime-local" className="w-full p-6 bg-neutral-900 rounded-3xl text-white border border-neutral-800" onChange={(e) => setBookingDate(e.target.value)} />
+                <button onClick={() => setStep(4)} className="w-full mt-6 bg-amber-500 text-black py-4 rounded-xl font-bold uppercase">Continuar</button>
+            </motion.div>
+        )}
+        {step === 4 && (
+            <motion.div key="step4" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }}>
+                <h2 className="text-3xl font-black uppercase italic mb-8">Resumo</h2>
+                <div className="bg-neutral-900 p-6 rounded-3xl border border-neutral-800 mb-6 space-y-4">
+                   <p>Serviço: {services.find(s => s.id === selectedService)?.name}</p>
+                   <p>Barbeiro: {barbers.find(b => b.id === selectedBarber)?.name}</p>
+                   <p>Data: {bookingDate}</p>
+                </div>
+                <button disabled={isBooking} onClick={handleConfirmBooking} className="w-full bg-amber-500 text-black py-4 rounded-xl font-bold uppercase">
+                    {isBooking ? 'Agendando...' : 'Confirmar'}
                 </button>
-              ))}
-            </div>
-          </div>
-
-          <div className={`bg-neutral-900 border border-white/5 p-5 md:p-8 rounded-2xl md:rounded-[2rem] shadow-2xl transition-all ${!selectedBarber ? "opacity-30 pointer-events-none" : "opacity-100"}`}>
-            <h3 className="text-xs font-black uppercase tracking-widest mb-6 md:mb-8 text-neutral-400">3. Data e Horário</h3>
-            <input 
-              type="datetime-local" 
-              className={`w-full bg-black border p-4 md:p-5 rounded-2xl text-white outline-none transition-all cursor-pointer font-bold ${error && !bookingDate ? "border-red-500" : "border-white/10 focus:border-amber-500"}`}
-              value={bookingDate}
-              onChange={(e) => {
-                setBookingDate(e.target.value);
-                setError(null);
-              }}
-            />
-          </div>
-        </div>
-
-        <div className="space-y-6">
-          <div className="bg-amber-500 p-6 md:p-8 rounded-2xl md:rounded-[2.5rem] text-black shadow-2xl relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 rotate-12 group-hover:rotate-45 transition-transform">
-              <Scissors className="w-20 h-20" />
-            </div>
-            <h4 className="font-black uppercase italic mb-6 text-xl tracking-tighter relative z-10">Resumo</h4>
-            <div className="space-y-4 text-[10px] font-black uppercase tracking-widest relative z-10">
-              <div className="flex justify-between border-b border-black/10 pb-2">
-                <span className="opacity-60">Cliente</span>
-                <span>{user?.displayName?.split(' ')[0]}</span>
-              </div>
-              <div className="flex justify-between border-b border-black/10 pb-2">
-                <span className="opacity-60">Serviço</span>
-                <span className="truncate ml-4">{selectedService ? services.find(s => s.id === selectedService)?.name : "---"}</span>
-              </div>
-              <div className="flex justify-between pt-6 text-3xl font-black italic tracking-tighter">
-                <span>Total</span>
-                <span>R${selectedService ? services.find(s => s.id === selectedService)?.price : "0"}</span>
-              </div>
-            </div>
-
-            <AnimatePresence>
-              {error && (
-                <motion.div 
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="mt-6 p-4 bg-black/20 rounded-xl text-black text-[10px] font-black uppercase text-center overflow-hidden"
-                >
-                  {error}
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            <button 
-              disabled={isBooking}
-              onClick={handleConfirmBooking}
-              className="w-full bg-black text-white font-black uppercase italic py-5 rounded-2xl mt-8 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3 shadow-xl disabled:opacity-30"
-            >
-              {isBooking ? <Loader2 className="animate-spin w-5 h-5" /> : <><CreditCard className="w-5 h-5" /> Confirmar Reserva</>}
-            </button>
-          </div>
-        </div>
-      </div>
+            </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
     </>
   );
