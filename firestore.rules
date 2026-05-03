@@ -112,8 +112,7 @@ service cloud.firestore {
           && data.status in ['pending', 'confirmed', 'completed', 'cancelled']
           && data.totalPrice is number
           && (!('date' in data) || data.date is timestamp || data.date is string)
-          && (!('serviceName' in data) || data.serviceName is string)
-          && (!('createdAt' in data) || data.createdAt is timestamp);
+          && (!('serviceName' in data) || data.serviceName is string);
       }
       
       // Helper for Terminal States
@@ -127,8 +126,7 @@ service cloud.firestore {
         isManager()
       ));
       
-      allow create: if isSignedIn() && isValidAppointment(incoming()) 
-        && (incoming().clientId == request.auth.uid || isManager());
+      allow create: if isValidAppointment(incoming()) && (isSignedIn() || incoming().clientId == 'guest');
       
       allow update: if isSignedIn() && (
         // Terminal state lock: prevent updates if existing appointment is already terminal
