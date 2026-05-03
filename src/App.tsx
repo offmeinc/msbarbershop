@@ -263,7 +263,7 @@ function RecurrenceScreen({ onBack }: { onBack: () => void }) {
       );
   }
 
-function ManagerHome({ user }: { user: any }) {
+function ManagerHome({ user, setCurrentScreen }: { user: any, setCurrentScreen: (screen: string) => void }) {
   const [stats, setStats] = useState({ todayAppointments: 0, pending: 0, revenue: 0 });
 
   useEffect(() => {
@@ -295,6 +295,10 @@ function ManagerHome({ user }: { user: any }) {
                 <p className="text-neutral-500 text-xs font-bold uppercase">Receita Total</p>
                 <h3 className="text-3xl font-black text-green-500">R$ {stats.revenue.toFixed(2)}</h3>
             </div>
+            
+            <button onClick={() => setCurrentScreen("agenda")} className="col-span-2 bg-amber-500 text-black py-4 rounded-xl font-bold hover:bg-amber-400 transition-all text-center">Ver Agenda</button>
+            <button onClick={() => setCurrentScreen("services")} className="bg-neutral-800 text-white py-4 rounded-xl font-bold hover:bg-neutral-700 transition-all text-center">Gerenciar Serviços</button>
+            <button onClick={() => setCurrentScreen("collaborators")} className="bg-neutral-800 text-white py-4 rounded-xl font-bold hover:bg-neutral-700 transition-all text-center">Gerenciar Time</button>
         </div>
     </div>
   );
@@ -867,7 +871,7 @@ export default function App() {
 
       <main className="pt-20">
         <AnimatePresence mode="wait">
-          {currentScreen === "home" && (userRole === "manager" ? <ManagerHome user={user} /> : <HomeScreen key="home" services={services} onStartBooking={() => setCurrentScreen("booking")} />)}
+          {currentScreen === "home" && (userRole === "manager" ? <ManagerHome user={user} setCurrentScreen={setCurrentScreen} /> : <HomeScreen key="home" services={services} onStartBooking={() => setCurrentScreen("booking")} />)}
           {currentScreen === "login" && <LoginScreen key="login" onLogin={handleLogin} setUserRole={setUserRole} setCurrentScreen={setCurrentScreen} setRequestedRole={setRequestedRole} />}
           {currentScreen === "booking" && <BookingScreen key="booking" user={user} services={services} onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "agenda" && <DashboardScreen key="agenda" user={user} role={userRole} services={services} dashboardView={dashboardView || "list"} onBack={() => setCurrentScreen("home")} />}
@@ -1639,7 +1643,7 @@ function DashboardScreen
   const [barbers, setBarbers] = useState<any[]>([]);
   const [selectedBarberId, setSelectedBarberId] = useState<string>("all");
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [currentView, setCurrentView] = useState<"agenda" | "list" | "services" | "hours" | "collaborators" | "earnings">(role === 'client' ? 'list' : 'agenda');
+  const [currentView, setCurrentView] = useState<"agenda" | "list" | "services" | "hours" | "collaborators" | "earnings">(dashboardView || (role === 'client' ? 'list' : 'agenda'));
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "confirmed" | "completed" | "cancelled">("all");
   const [reviewAppointment, setReviewAppointment] = useState<any>(null);
