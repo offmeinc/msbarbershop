@@ -121,6 +121,147 @@ function BrandLogo({ className = "w-10 h-10", iconSize = "w-6 h-6" }: { classNam
   );
 }
 
+function BlockScreen({ onBack }: { onBack: () => void }) {
+  const [date, setDate] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleBlock = async () => {
+    if (!date) return;
+    setLoading(true);
+    try {
+      await addDoc(collection(db, "blocked_times"), {
+        date: Timestamp.fromDate(new Date(date)),
+        createdAt: Timestamp.now()
+      });
+      alert("Período bloqueado!");
+      setDate("");
+    } catch(e) { console.error(e); alert("Erro ao bloquear."); }
+    setLoading(false);
+  }
+
+  return (
+    <div className="max-w-md mx-auto py-8 px-6">
+        <button onClick={onBack} className="text-neutral-500 mb-4 flex items-center gap-2 hover:text-amber-500">
+           {"<"} Voltar
+        </button>
+        <div className="bg-neutral-900 rounded-[2.5rem] p-8 shadow-2xl border border-white/5 space-y-6">
+            <h2 className="text-xl font-bold text-center text-white">Gerenciamento de Bloqueios</h2>
+            <p className="text-neutral-500 text-sm text-center">Defina períodos em que a agenda estará indisponível.</p>
+            <input type="datetime-local" value={date} onChange={e => setDate(e.target.value)} className="w-full bg-black border border-white/10 rounded-xl p-3 text-white" />
+            <button onClick={handleBlock} disabled={loading} className="w-full bg-amber-500 text-black py-3 rounded-xl font-bold">{loading ? "Bloqueando..." : "Bloquear Horário"}</button>
+        </div>
+    </div>
+  );
+}
+
+function HelpScreen({ onBack }: { onBack: () => void }) {
+  return (
+    <div className="max-w-md mx-auto py-8 px-6">
+        <button onClick={onBack} className="text-neutral-500 mb-4 flex items-center gap-2 hover:text-amber-500">
+           {"<"} Voltar
+        </button>
+        <div className="bg-neutral-900 rounded-[2.5rem] p-8 shadow-2xl border border-white/5 space-y-6 text-center">
+            <h2 className="text-xl font-bold text-white">Central de Ajuda</h2>
+            <p className="text-neutral-500">Dúvidas? Entre em contato com nosso suporte.</p>
+        </div>
+    </div>
+  );
+}
+
+function ShareScreen({ onBack }: { onBack: () => void }) {
+  return (
+      <div className="max-w-md mx-auto py-8 px-6">
+          <button onClick={onBack} className="text-neutral-500 mb-4 flex items-center gap-2 hover:text-amber-500">
+             {"<"} Voltar
+          </button>
+          <div className="bg-neutral-900 rounded-[2.5rem] p-8 shadow-2xl border border-white/5 space-y-6 text-center">
+              <h2 className="text-xl font-bold text-white">Divulgar Horários</h2>
+              <p className="text-neutral-500">Compartilhe sua agenda nas redes sociais.</p>
+          </div>
+      </div>
+  );
+}
+
+function LinkScreen({ onBack }: { onBack: () => void }) {
+    return (
+        <div className="max-w-md mx-auto py-8 px-6">
+            <button onClick={onBack} className="text-neutral-500 mb-4 flex items-center gap-2 hover:text-amber-500">
+               {"<"} Voltar
+            </button>
+            <div className="bg-neutral-900 rounded-[2.5rem] p-8 shadow-2xl border border-white/5 space-y-6 text-center">
+                <h2 className="text-xl font-bold text-white">Link Público</h2>
+                <p className="text-neutral-500">Seu perfil público: barber.app/seu-perfil</p>
+            </div>
+        </div>
+    );
+}
+
+function ReconScreen({ onBack }: { onBack: () => void }) {
+  const [earnings, setEarnings] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const q = query(
+      collection(db, "appointments"),
+      where("status", "==", "completed")
+    );
+    getDocs(q).then(snapshot => {
+      let total = 0;
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.price) total += parseFloat(data.price);
+      });
+      setEarnings(total);
+      setLoading(false);
+    });
+  }, []);
+
+  return (
+    <div className="max-w-md mx-auto py-8 px-6">
+        <button onClick={onBack} className="text-neutral-500 mb-4 flex items-center gap-2 hover:text-amber-500">
+           {"<"} Voltar
+        </button>
+        <div className="bg-neutral-900 rounded-[2.5rem] p-8 shadow-2xl border border-white/5 space-y-6 text-center">
+            <h2 className="text-xl font-bold text-white">Reconciliação</h2>
+            {loading ? <Loader2 className="animate-spin w-8 h-8 text-amber-500 mx-auto" /> : (
+                <div className="p-6 bg-black/20 rounded-2xl border border-white/5">
+                    <p className="text-neutral-500 text-xs font-bold uppercase">Total Arrecadado (Concluídos)</p>
+                    <h3 className="text-4xl font-black text-amber-500 mt-2">R$ {earnings.toFixed(2)}</h3>
+                </div>
+            )}
+        </div>
+    </div>
+  );
+}
+
+function RecurrenceScreen({ onBack }: { onBack: () => void }) {
+      return (
+          <div className="max-w-md mx-auto py-8 px-6">
+              <button onClick={onBack} className="text-neutral-500 mb-4 flex items-center gap-2 hover:text-amber-500">
+                 {"<"} Voltar
+              </button>
+              <div className="bg-neutral-900 rounded-[2.5rem] p-8 shadow-2xl border border-white/5 space-y-6 text-center">
+                  <h2 className="text-xl font-bold text-white">Configurações de Recorrência</h2>
+                  <p className="text-neutral-500">Gerencie regras de agendamentos recorrentes.</p>
+              </div>
+          </div>
+      );
+  }
+
+function DarkScreen({ onBack }: { onBack: () => void }) {
+    return (
+        <div className="max-w-md mx-auto py-8 px-6 text-center">
+            <button onClick={onBack} className="text-neutral-500 mb-4 flex items-center gap-2 hover:text-amber-500">
+               {"<"} Voltar
+            </button>
+            <div className="bg-neutral-900 rounded-[2.5rem] p-8 shadow-2xl border border-white/5 space-y-6 text-center">
+                <h2 className="text-xl font-bold text-white">Tema Escuro</h2>
+                <p className="text-neutral-500">O modo escuro está ativado por padrão para uma melhor experiência.</p>
+            </div>
+        </div>
+    );
+}
+
 function ProfileEditScreen({ user, onBack }: { user: any, onBack: () => void }) {
   const [name, setName] = useState(user?.displayName || "");
   const [loading, setLoading] = useState(false);
@@ -284,8 +425,28 @@ function MoreOptionsScreen({ user, role, onLogout, onBack }: { user: any, role: 
     { id: 'dark', label: 'Escuro', icon: <Moon className="w-6 h-6" />, onClick: () => setActiveSubScreen('dark') }
   );
 
+  if (activeSubScreen === 'block') return <BlockScreen onBack={() => setActiveSubScreen('main')} />;
+  if (activeSubScreen === 'help') return <HelpScreen onBack={() => setActiveSubScreen('main')} />;
+  if (activeSubScreen === 'share') return <ShareScreen onBack={() => setActiveSubScreen('main')} />;
+  if (activeSubScreen === 'link') return <LinkScreen onBack={() => setActiveSubScreen('main')} />;
+  if (activeSubScreen === 'recon') return <ReconScreen onBack={() => setActiveSubScreen('main')} />;
+  if (activeSubScreen === 'recurrence') return <RecurrenceScreen onBack={() => setActiveSubScreen('main')} />;
+  if (activeSubScreen === 'dark') return <DarkScreen onBack={() => setActiveSubScreen('main')} />;
+
   if (activeSubScreen === 'profile') {
     return <ProfileEditScreen user={user} onBack={() => setActiveSubScreen('main')} />;
+  }
+
+  if (activeSubScreen === 'notif') {
+    return <NotificationsScreen onBack={() => setActiveSubScreen('main')} />;
+  }
+
+  if (activeSubScreen === 'earnings') {
+    return <EarningsScreen onBack={() => setActiveSubScreen('main')} />;
+  }
+
+  if (activeSubScreen === 'week') {
+    return <MyWeekScreen user={user} onBack={() => setActiveSubScreen('main')} />;
   }
 
   if (activeSubScreen === 'staff-chat') {
