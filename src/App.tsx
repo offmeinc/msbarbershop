@@ -1470,11 +1470,11 @@ function LoginScreen({ onLogin, setUserRole, setCurrentScreen, setRequestedRole 
         if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
             // Try sign up
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            await updateProfile(userCredential.user, { displayName: "Gestor Marley" });
+            await updateProfile(userCredential.user, { displayName: "Marley Souza" });
             const userDocRef = doc(db, "users", userCredential.user.uid);
             await setDoc(userDocRef, {
                 uid: userCredential.user.uid,
-                name: "Gestor Marley",
+                name: "Marley Souza",
                 email: email,
                 role: 'manager',
                 createdAt: Timestamp.now(),
@@ -2308,7 +2308,7 @@ function DashboardScreen
       setLoading(false);
     });
 
-    const qBarbers = query(collection(db, "users"), where("role", "==", "barber"));
+    const qBarbers = query(collection(db, "users"), where("role", "in", ["barber", "manager"]));
     const unsubscribeBarbers = onSnapshot(qBarbers, (sn) => {
         setBarbers(sn.docs.map(d => ({ id: d.id, ...d.data() })));
     });
@@ -2568,7 +2568,7 @@ function CollaboratorsManager() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const q = query(collection(db, "users"), where("role", "==", "barber"));
+    const q = query(collection(db, "users"), where("role", "in", ["barber", "manager"]));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setBarbers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
@@ -2664,7 +2664,7 @@ function WorkingHoursManager() {
 
   useEffect(() => {
     const fetchBarbers = async () => {
-      const q = query(collection(db, "users"), where("role", "==", "barber"));
+      const q = query(collection(db, "users"), where("role", "in", ["barber", "manager"]));
       const querySnapshot = await getDocs(q);
       const barbersData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setBarbers(barbersData);
