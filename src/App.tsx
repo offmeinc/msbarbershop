@@ -957,8 +957,8 @@ function HomeScreen({ services, onStartBooking }: { services: any[], onStartBook
           >
             <span className="text-amber-500 font-mono tracking-widest uppercase mb-4 block">MS Barber Shop</span>
             <h1 className="text-6xl md:text-8xl font-black italic tracking-tighter uppercase leading-[0.9] mb-8">
-              A Arte do Corte <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-500 to-amber-200">
+              Sua autoestima em <br />
+              primeiro lugar <br />              <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-500 to-amber-200">
                 Impecável
               </span>
             </h1>
