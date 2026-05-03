@@ -115,6 +115,11 @@ service cloud.firestore {
           && (!('serviceName' in data) || data.serviceName is string)
           && (!('createdAt' in data) || data.createdAt is timestamp);
       }
+      
+      // Helper for Terminal States
+      function isTerminal(data) {
+        return data.status in ['completed', 'cancelled'];
+      }
 
       allow read: if (resource.data.status in ['pending', 'confirmed', 'completed']) || (isSignedIn() && (
         resource.data.clientId == request.auth.uid || 
@@ -123,13 +128,19 @@ service cloud.firestore {
       ));
       
       allow create: if isSignedIn() && isValidAppointment(incoming()) 
+        && incoming().createdAt == request.time
         && (incoming().clientId == request.auth.uid || isManager());
       
       allow update: if isSignedIn() && (
-        (isOwner(existing().clientId) && incoming().diff(existing()).affectedKeys().hasOnly(['status']) && incoming().status == 'cancelled') ||
-        (isOwner(existing().barberId) && (incoming().diff(existing()).affectedKeys().hasOnly(['status']) || incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])) && incoming().status in ['confirmed', 'completed']) ||
-        isManager()
-      ) && isValidAppointment(incoming());
+        // Terminal state lock: prevent updates if existing appointment is already terminal
+        !isTerminal(existing()) && (
+            (isOwner(existing().clientId) && incoming().diff(existing()).affectedKeys().hasOnly(['status']) && incoming().status == 'cancelled') ||
+            (isOwner(existing().barberId) && (incoming().diff(existing()).affectedKeys().hasOnly(['status']) || incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])) && incoming().status in ['confirmed', 'completed']) ||
+            isManager()
+        )
+      ) && isValidAppointment(incoming())
+        // Immutable system fields
+        && incoming().createdAt == existing().createdAt;
       
       allow delete: if isManager();
     }
