@@ -45,7 +45,9 @@ import {
   MessageCircle,
   Moon,
   HelpCircle,
-  Smartphone
+  Smartphone,
+  TrendingUp,
+  DollarSign
 } from "lucide-react";
 import { useState, useEffect, useRef, useMemo, ChangeEvent, FormEvent } from "react";
 
@@ -270,43 +272,257 @@ function RecurrenceScreen({ onBack }: { onBack: () => void }) {
       );
   }
 
-function ManagerHome({ user, setCurrentScreen }: { user: any, setCurrentScreen: (screen: string) => void }) {
-  const [stats, setStats] = useState({ todayAppointments: 0, pending: 0, revenue: 0 });
+function ProfessionalHome({ user, role, setCurrentScreen }: { user: any, role: string, setCurrentScreen: (screen: string) => void, key?: string }) {
+  const [appointments, setAppointments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(collection(db, "appointments"));
+    if (!user) return;
+    const q = role === 'manager' 
+      ? query(collection(db, "appointments"), orderBy("date", "asc"))
+      : query(collection(db, "appointments"), where("barberId", "==", user.uid), orderBy("date", "asc"));
+
     const unsubscribe = onSnapshot(q, (snapshot) => {
-        const apps = snapshot.docs.map(d => d.data());
-        const today = new Date().toDateString();
-        const tApps = apps.filter(a => new Date(a.date.toDate()).toDateString() === today);
-        const pApps = apps.filter(a => a.status === 'pending');
-        const revenue = apps.filter(a => a.status === 'completed').reduce((acc, a) => acc + (a.price || 0), 0);
-        setStats({ todayAppointments: tApps.length, pending: pApps.length, revenue });
+      setAppointments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setLoading(false);
     });
-    return unsubscribe;
-  }, []);
+    return () => unsubscribe();
+  }, [user?.uid, role]);
+
+  const stats = useMemo(() => {
+    const today = new Date();
+    const todayApps = appointments.filter(app => {
+      const d = app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date);
+      return isSameDay(d, today);
+    });
+
+    const completedToday = todayApps.filter(a => a.status === 'completed');
+    const confirmedToday = todayApps.filter(a => a.status === 'confirmed');
+    const pendingToday = todayApps.filter(a => a.status === 'pending');
+    
+    const earnings = completedToday.reduce((acc, a) => acc + (a.totalPrice || 0), 0);
+    const uniqueClients = new Set(todayApps.map(a => a.clientId)).size;
+    
+    // Attendance rate
+    const totalConsidered = completedToday.length + todayApps.filter(a => a.status === 'cancelled').length;
+    const attendanceRate = totalConsidered > 0 ? Math.round((completedToday.length / totalConsidered) * 100) : 100;
+
+    const pendingReconciliation = appointments.filter(a => {
+      const d = a.date instanceof Timestamp ? a.date.toDate() : (typeof a.date === 'string' ? parseISO(a.date) : a.date);
+      return d < today && (a.status === 'pending' || a.status === 'confirmed');
+    });
+
+    const upcoming = appointments.filter(a => {
+      const d = a.date instanceof Timestamp ? a.date.toDate() : (typeof a.date === 'string' ? parseISO(a.date) : a.date);
+      return d >= today && a.status !== 'cancelled' && a.status !== 'completed';
+    }).slice(0, 5);
+
+    return {
+      earnings,
+      appointmentsCount: todayApps.length,
+      attendanceRate,
+      uniqueClients,
+      pendingReconciliationCount: pendingReconciliation.length,
+      upcoming,
+      todayApps
+    };
+  }, [appointments]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="animate-spin text-amber-500 w-8 h-8" />
+      </div>
+    );
+  }
+
+  const getTimeGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Bom dia";
+    if (hour < 18) return "Boa tarde";
+    return "Boa noite";
+  };
 
   return (
-    <div className="max-w-2xl mx-auto py-8 px-6">
-        <h1 className="text-3xl font-black italic uppercase mb-8">Bem-vindo, {user?.displayName || "Gestor"}!</h1>
-        <div className="grid grid-cols-2 gap-4">
-            <div className="bg-neutral-900 p-6 rounded-3xl border border-white/5">
-                <p className="text-neutral-500 text-xs font-bold uppercase">Hoje</p>
-                <h3 className="text-3xl font-black text-white">{stats.todayAppointments}</h3>
-            </div>
-            <div className="bg-neutral-900 p-6 rounded-3xl border border-white/5">
-                <p className="text-neutral-500 text-xs font-bold uppercase">Pendente</p>
-                <h3 className="text-3xl font-black text-amber-500">{stats.pending}</h3>
-            </div>
-            <div className="col-span-2 bg-neutral-900 p-6 rounded-3xl border border-white/5">
-                <p className="text-neutral-500 text-xs font-bold uppercase">Receita Total</p>
-                <h3 className="text-3xl font-black text-green-500">R$ {stats.revenue.toFixed(2)}</h3>
-            </div>
-            
-            <button onClick={() => setCurrentScreen("agenda")} className="col-span-2 bg-amber-500 text-black py-4 rounded-xl font-bold hover:bg-amber-400 transition-all text-center">Ver Agenda</button>
-            <button onClick={() => setCurrentScreen("services")} className="bg-neutral-800 text-white py-4 rounded-xl font-bold hover:bg-neutral-700 transition-all text-center">Gerenciar Serviços</button>
-            <button onClick={() => setCurrentScreen("collaborators")} className="bg-neutral-800 text-white py-4 rounded-xl font-bold hover:bg-neutral-700 transition-all text-center">Gerenciar Time</button>
+    <div className="max-w-xl mx-auto py-8 px-6 space-y-8 animate-in fade-in duration-500">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-black text-white">{getTimeGreeting()}, {user?.displayName?.split(' ')[0] || "Profissional"}! 👋</h1>
+          <p className="text-neutral-500 text-sm flex items-center gap-1 font-medium mt-1">
+            <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Seu desempenho de hoje
+          </p>
         </div>
+        <div className="bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full">
+          <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest leading-none">
+            {role === 'manager' ? 'Gestor' : 'Profissional'}
+          </span>
+        </div>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 gap-4">
+        {/* Earnings */}
+        <div className="bg-neutral-900 p-5 rounded-[2rem] border border-white/5 space-y-3 relative overflow-hidden group">
+          <div className="flex justify-between items-start">
+            <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">Ganhos Hoje</p>
+            <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-500">
+              <DollarSign className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-2xl font-black text-white">R$ {stats.earnings.toFixed(2)}</h3>
+            <p className="text-[10px] text-amber-500 font-bold flex items-center gap-1">
+              <TrendingUp className="w-3 h-3" /> {stats.earnings > 0 ? "em alta" : "estável"}
+            </p>
+          </div>
+        </div>
+
+        {/* Appointments */}
+        <div className="bg-neutral-900 p-5 rounded-[2rem] border border-white/5 space-y-3">
+          <div className="flex justify-between items-start">
+            <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">Agendamentos</p>
+            <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-500">
+              <Calendar className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-2xl font-black text-white">{stats.appointmentsCount}</h3>
+            <p className="text-[10px] text-amber-500 font-bold flex items-center gap-1">
+              <TrendingUp className="w-3 h-3" /> hoje
+            </p>
+          </div>
+        </div>
+
+        {/* Attendance */}
+        <div className="bg-neutral-900 p-5 rounded-[2rem] border border-white/5 space-y-3">
+          <div className="flex justify-between items-start">
+            <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">Comparecimento</p>
+            <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-500">
+              <TrendingUp className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-2xl font-black text-white">{stats.attendanceRate}%</h3>
+            <p className="text-[10px] text-amber-500 font-bold flex items-center gap-1">
+              <TrendingUp className="w-3 h-3" /> hoje
+            </p>
+          </div>
+        </div>
+
+        {/* Unique Clients */}
+        <div className="bg-neutral-900 p-5 rounded-[2rem] border border-white/5 space-y-3">
+          <div className="flex justify-between items-start">
+            <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">Clientes Únicos</p>
+            <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-500">
+              <User className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-2xl font-black text-white">{stats.uniqueClients}</h3>
+            <p className="text-[10px] text-amber-500 font-bold flex items-center gap-1">
+              <TrendingUp className="w-3 h-3" /> hoje
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Average Time Row */}
+      <div className="flex items-center gap-2 text-neutral-500 font-bold text-xs">
+        <Clock className="w-4 h-4" /> Tempo médio: <span className="text-white">36 min</span>
+      </div>
+
+      {/* Pending Banner */}
+      {stats.pendingReconciliationCount > 0 && (
+        <div className="bg-amber-500/10 border border-amber-500/20 p-6 rounded-[2rem] flex items-center justify-between group cursor-pointer hover:bg-amber-500/20 transition-all" onClick={() => setCurrentScreen("agenda")}>
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-500">
+              <Info className="w-6 h-6" />
+            </div>
+            <div>
+              <h4 className="font-bold text-white text-base leading-tight">
+                {stats.pendingReconciliationCount} agendamentos pendentes
+              </h4>
+              <p className="text-[11px] text-neutral-500 uppercase font-black tracking-widest mt-1">Aguardando reconciliação de presença</p>
+            </div>
+          </div>
+          <button className="bg-white text-black px-4 py-2 rounded-xl text-xs font-black uppercase tracking-tight flex items-center gap-1 hover:bg-neutral-200 transition-colors">
+            Resolver <ChevronRight className="w-3 h-3" />
+          </button>
+        </div>
+      )}
+
+      {/* Quick Actions (For Managers/Barbers) */}
+      <div className="space-y-3">
+        <h3 className="text-xs font-black uppercase tracking-widest text-neutral-500">Ações Rápidas</h3>
+        <div className="grid grid-cols-2 gap-3">
+          <button onClick={() => setCurrentScreen("agenda")} className="bg-neutral-900 border border-white/5 p-4 rounded-2xl flex items-center gap-3 hover:bg-neutral-800 transition-all">
+            <Calendar className="w-5 h-5 text-amber-500" />
+            <span className="text-sm font-bold text-white">Agenda</span>
+          </button>
+          <button onClick={() => setCurrentScreen("clients")} className="bg-neutral-900 border border-white/5 p-4 rounded-2xl flex items-center gap-3 hover:bg-neutral-800 transition-all">
+            <User className="w-5 h-5 text-amber-500" />
+            <span className="text-sm font-bold text-white">Clientes</span>
+          </button>
+          {role === 'manager' && (
+            <>
+              <button onClick={() => setCurrentScreen("collaborators")} className="bg-neutral-900 border border-white/5 p-4 rounded-2xl flex items-center gap-3 hover:bg-neutral-800 transition-all">
+                <Scissors className="w-5 h-5 text-amber-500" />
+                <span className="text-sm font-bold text-white">Equipe</span>
+              </button>
+              <button onClick={() => setCurrentScreen("services")} className="bg-neutral-900 border border-white/5 p-4 rounded-2xl flex items-center gap-3 hover:bg-neutral-800 transition-all">
+                <Sparkles className="w-5 h-5 text-amber-500" />
+                <span className="text-sm font-bold text-white">Serviços</span>
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Upcoming Appointments */}
+      <div className="space-y-4 pb-12">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-xl font-black text-white">Próximos Agendamentos</h3>
+            <p className="text-[10px] text-neutral-500 font-black uppercase tracking-widest mt-1">
+              {format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR })}
+            </p>
+          </div>
+          <button onClick={() => setCurrentScreen("agenda")} className="text-neutral-500 text-xs font-bold flex items-center gap-1 hover:text-white transition-colors">
+            Ver todos <ChevronRight className="w-3 h-3" />
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          {stats.upcoming.length === 0 ? (
+            <div className="p-8 text-center text-neutral-600 font-bold uppercase text-xs border border-dashed border-white/5 rounded-3xl">
+              Nenhum agendamento futuro
+            </div>
+          ) : (
+            stats.upcoming.map((app) => (
+              <div key={app.id} className="bg-neutral-900/50 p-4 rounded-3xl border border-white/5 flex items-center justify-between hover:border-amber-500/20 transition-all group">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-neutral-500">
+                    <Clock className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-white text-sm">{app.clientName}</h4>
+                    <p className="text-[10px] text-neutral-500 uppercase font-black tracking-widest">{app.serviceName}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-black text-white">
+                    {format(app.date instanceof Timestamp ? app.date.toDate() : parseISO(app.date), "HH:mm")}
+                  </span>
+                  <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-neutral-700 group-hover:border-amber-500 group-hover:text-amber-500 transition-all">
+                    <CheckCircle2 className="w-5 h-5" />
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -629,17 +845,25 @@ function BottomNav({ userRole, currentScreen, setCurrentScreen, user }: { userRo
     
     if (userRole === "manager" || userRole === "barber") {
       items.push({ id: "agenda", label: "Agenda", icon: <Calendar className="w-5 h-5" />, screen: "agenda"} );
-      if (userRole === "manager") {
-        items.push({ id: "collaborators", label: "Time", icon: <Scissors className="w-5 h-5" />, screen: "collaborators"} );
-        items.push({ id: "services", label: "Serviços", icon: <Sparkles className="w-5 h-5" />, screen: "services"} );
-      }
       items.push({ id: "clients", label: "Clientes", icon: <User className="w-5 h-5" />, screen: "clients"} );
     } else {
       items.push({ id: "booking", label: "Agendar", icon: <Plus className="w-5 h-5" />, screen: "booking"} );
       items.push({ id: "agenda", label: "Meus Cortes", icon: <Calendar className="w-5 h-5" />, screen: "agenda"} );
     }
     
-    items.push({ id: "more", label: "Mais", icon: <motion.div animate={{ rotate: currentScreen === 'more' ? 90 : 0 }}><Grip className="w-5 h-5" /></motion.div>, screen: "more"} );
+    items.push({ 
+      id: "more", 
+      label: "Mais", 
+      icon: (
+        <div className="relative">
+          <motion.div animate={{ rotate: currentScreen === 'more' ? 90 : 0 }}>
+            <Grip className="w-5 h-5" />
+          </motion.div>
+          <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full border border-black shadow-[0_0_5px_rgba(239,68,68,0.5)]" />
+        </div>
+      ), 
+      screen: "more"
+    });
 
 
   return (
@@ -887,7 +1111,11 @@ export default function App() {
 
       <main className="pt-20">
         <AnimatePresence mode="wait">
-          {currentScreen === "home" && (userRole === "manager" ? <DashboardScreen key="agenda-home" user={user} role={userRole} services={services} dashboardView="list" onBack={() => setCurrentScreen("home")} /> : <HomeScreen key="home" services={services} onStartBooking={() => setCurrentScreen("booking")} />)}
+          {currentScreen === "home" && (
+            (['manager', 'barber'].includes(userRole)) 
+            ? <ProfessionalHome key="pro-home" user={user} role={userRole} setCurrentScreen={setCurrentScreen} /> 
+            : <HomeScreen key="home" services={services} onStartBooking={() => setCurrentScreen("booking")} />
+          )}
           {currentScreen === "login" && <LoginScreen key="login" onLogin={handleLogin} setUserRole={setUserRole} setCurrentScreen={setCurrentScreen} setRequestedRole={setRequestedRole} />}
           {currentScreen === "booking" && <BookingScreen key="booking" user={user} services={services} onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "agenda" && <DashboardScreen key="agenda" user={user} role={userRole} services={services} dashboardView={dashboardView || "list"} onBack={() => setCurrentScreen("home")} />}
@@ -1733,112 +1961,153 @@ function DashboardScreen
   }, [appointments, currentDate, selectedBarberId]);
 
   return (
-    <div className="min-h-screen bg-black px-4 md:px-6 pt-16 md:pt-6 relative pb-28">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2">
-           <h1 className="text-2xl font-black text-white capitalize">{format(currentDate, "MMMM", { locale: ptBR })}</h1>
-           <span className="text-neutral-600 font-medium">{format(currentDate, "yyyy")}</span>
-           <ChevronDown className="w-4 h-4 text-neutral-600" />
+    <div className="min-h-screen bg-black px-4 pt-16 relative pb-28">
+      {/* Revised Header */}
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-black text-white capitalize">{format(currentDate, "MMMM", { locale: ptBR })} <span className="text-neutral-600 font-medium ml-1">{format(currentDate, "yyyy")}</span></h1>
+          <div className="bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full flex items-center gap-1.5">
+            <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest leading-none">Filtros</span>
+          </div>
         </div>
-        <div className="flex items-center gap-4 text-neutral-500">
+        <div className="flex items-center gap-3 text-neutral-500">
+           <Scissors className="w-5 h-5 cursor-pointer hover:text-amber-500 transition-colors" />
+           <Lock className="w-5 h-5 cursor-pointer hover:text-amber-500 transition-colors" />
            <Search className="w-5 h-5 cursor-pointer hover:text-amber-500 transition-colors" />
            <RefreshCw className="w-5 h-5 cursor-pointer hover:text-amber-500 transition-colors" />
            <Calendar className="w-5 h-5 cursor-pointer hover:text-amber-500 transition-colors" />
         </div>
       </div>
 
-      {/* Week Selector */}
-      <div className="flex justify-between items-center mb-8">
-        <button onClick={() => setCurrentDate(addDays(currentDate, -7))}><ChevronLeft className="w-5 h-5 text-neutral-700" /></button>
-        <div className="flex gap-2 overflow-x-auto no-scrollbar py-2">
-            {weekDays.map((day, i) => {
+      {/* Modern Date Selector */}
+      <div className="flex items-center gap-2 mb-8">
+        <button onClick={() => setCurrentDate(addDays(currentDate, -1))} className="text-neutral-700 hover:text-amber-500 transition-colors"><ChevronLeft className="w-6 h-6" /></button>
+        <div className="flex-1 overflow-x-auto no-scrollbar flex gap-1 justify-between">
+            {Array.from({ length: 7 }).map((_, i) => {
+                const day = addDays(startOfWeek(currentDate, { weekStartsOn: 0 }), i);
                 const active = isSameDay(day, currentDate);
-                const isTodayDate = isToday(day);
+                
+                // Check if there are appointments on this day
+                const hasAppointments = appointments.some(app => {
+                  const appDate = app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date);
+                  return isSameDay(appDate, day);
+                });
+
                 return (
                     <button 
                         key={i} 
                         onClick={() => setCurrentDate(day)}
-                        className={`flex flex-col items-center min-w-[50px] p-2 rounded-2xl transition-all ${active ? "bg-amber-500 text-black shadow-lg shadow-amber-500/20" : "text-neutral-500"}`}
+                        className={`flex flex-col items-center flex-1 min-w-[45px] py-3 rounded-2xl transition-all relative ${active ? "bg-amber-500 text-black shadow-[0_10px_20px_rgba(245,158,11,0.2)]" : "text-neutral-500 hover:text-neutral-300"}`}
                     >
-                        <span className="text-[10px] font-bold uppercase mb-1">{format(day, "EEE", { locale: ptBR })}</span>
-                        <span className={`text-sm font-black ${active ? "text-black" : "text-neutral-300"}`}>{format(day, "d")}</span>
-                        {isTodayDate && !active && <div className="w-1 h-1 bg-amber-500 rounded-full mt-1" />}
-                        {active && <div className="w-1 h-1 bg-black rounded-full mt-1" />}
+                        <span className="text-[10px] font-black uppercase mb-1 tracking-tighter opacity-60">{format(day, "EEE", { locale: ptBR })}</span>
+                        <span className={`text-base font-black leading-none ${active ? "text-black" : "text-neutral-300"}`}>{format(day, "d")}</span>
+                        {hasAppointments && (
+                          <div className={`w-1.5 h-1.5 rounded-full mt-1.5 ${active ? "bg-black" : "bg-amber-500"}`} />
+                        )}
                     </button>
                 );
             })}
         </div>
-        <button onClick={() => setCurrentDate(addDays(currentDate, 7))}><ChevronRight className="w-5 h-5 text-neutral-700" /></button>
+        <button onClick={() => setCurrentDate(addDays(currentDate, 1))} className="text-neutral-700 hover:text-amber-500 transition-colors"><ChevronRight className="w-6 h-6" /></button>
       </div>
 
-      {/* Barber Filter */}
+      {/* Barber Filter (Avatars) */}
       {(role === 'manager' || role === 'barber') && (
           <div className="flex gap-4 overflow-x-auto no-scrollbar mb-8 pb-2">
               <button 
                 onClick={() => setSelectedBarberId("all")}
                 className="flex flex-col items-center gap-2 min-w-[64px]"
               >
-                  <div className={`w-14 h-14 rounded-full border-2 flex items-center justify-center transition-all ${selectedBarberId === 'all' ? 'border-amber-500 bg-amber-500/10' : 'border-white/10 bg-white/5'}`}>
-                      <Grip className="w-6 h-6 text-amber-500" />
+                  <div className={`w-14 h-14 rounded-full border-2 flex items-center justify-center transition-all ${selectedBarberId === 'all' ? 'border-amber-500' : 'border-white/10 bg-white/5 opacity-50'}`}>
+                      <User className="w-6 h-6 text-amber-500" />
                   </div>
-                  <span className={`text-[10px] font-bold uppercase ${selectedBarberId === 'all' ? 'text-amber-500' : 'text-neutral-500'}`}>Todos</span>
+                  <span className={`text-[10px] font-black uppercase tracking-widest ${selectedBarberId === 'all' ? 'text-white' : 'text-neutral-600'}`}>Todos</span>
               </button>
-              {barbers.map(barber => (
-                  <button 
-                    key={barber.id}
-                    onClick={() => setSelectedBarberId(barber.id)}
-                    className="flex flex-col items-center gap-2 min-w-[64px]"
-                  >
-                      <div className={`w-14 h-14 rounded-full border-2 overflow-hidden transition-all relative ${selectedBarberId === barber.id ? 'border-amber-500 ring-4 ring-amber-500/10' : 'border-white/10 opacity-40'}`}>
-                          <img src={barber.photoURL || `https://ui-avatars.com/api/?name=${barber.name}`} alt={barber.name} className="w-full h-full object-cover" />
-                      </div>
-                      <span className={`text-[10px] font-bold uppercase truncate w-14 text-center ${selectedBarberId === barber.id ? 'text-amber-500' : 'text-neutral-500'}`}>{barber.name.split(' ')[0]}</span>
-                  </button>
-              ))}
+              {barbers.map(barber => {
+                  const barberAppsCount = appointments.filter(a => a.barberId === barber.id && isSameDay(a.date instanceof Timestamp ? a.date.toDate() : parseISO(a.date), currentDate)).length;
+                  return (
+                    <button 
+                      key={barber.id}
+                      onClick={() => setSelectedBarberId(barber.id)}
+                      className="flex flex-col items-center gap-2 min-w-[64px]"
+                    >
+                        <div className={`w-14 h-14 rounded-full border-2 overflow-hidden transition-all relative ${selectedBarberId === barber.id ? 'border-amber-500' : 'border-white/10 opacity-50'}`}>
+                            <img src={barber.photoURL || `https://ui-avatars.com/api/?name=${barber.name}`} alt={barber.name} className="w-full h-full object-cover" />
+                            {barberAppsCount > 0 && (
+                              <div className="absolute -top-0.5 -right-0.5 bg-amber-500 text-black text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-black">
+                                {barberAppsCount}
+                              </div>
+                            )}
+                        </div>
+                        <span className={`text-[10px] font-black uppercase tracking-widest truncate w-14 text-center ${selectedBarberId === barber.id ? 'text-white' : 'text-neutral-600'}`}>{barber.name.split(' ')[0]}</span>
+                    </button>
+                  );
+              })}
           </div>
       )}
 
+      {/* Summary Row */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-2">
+          <span className="text-white font-black text-lg">Hoje</span>
+          <span className="text-neutral-500 font-bold text-sm">{format(currentDate, "dd/MM")}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="bg-neutral-900 px-3 py-1.5 rounded-full flex items-center gap-2 border border-white/5">
+             <Clock className="w-3.5 h-3.5 text-neutral-500" />
+             <span className="text-white font-bold text-xs">30min</span>
+          </div>
+          <div className="bg-neutral-900 px-4 py-1.5 rounded-full border border-white/5">
+             <span className="text-white font-bold text-xs">{filteredAppointments.length} agendamentos</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Notice Banner */}
+      <div className="bg-amber-500/5 border border-amber-500/10 px-4 py-2 rounded-full inline-flex items-center gap-2 mb-8 group cursor-pointer hover:bg-amber-500/10 transition-all">
+        <Lock className="w-3.5 h-3.5 text-amber-500" />
+        <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Bloqueios visíveis</span>
+        <X className="w-3.5 h-3.5 text-amber-500/40 group-hover:text-amber-500 transition-colors" />
+      </div>
+
       {/* Views */}
-      {role === 'manager' && (
-         <button onClick={() => setCurrentView('earnings')} className="mb-4 px-4 py-2 bg-amber-500 rounded-lg text-black font-bold">Ver Finanças</button>
-      )}
       {currentView === 'earnings' && <EarningsDashboard appointments={appointments} services={services} />}
+      
       {/* Agenda Main View */}
       {currentView === 'agenda' ? (
         <>
-            <div className="flex items-center justify-between mb-4 border-t border-white/5 pt-4">
-                <div className="flex items-center gap-2 text-white">
-                    <span className="font-bold">Hoje</span>
-                    <span className="text-neutral-500 text-sm">{format(currentDate, "dd/MM")}</span>
-                </div>
-                <div className="flex items-center gap-4 text-xs font-bold text-white border-l border-white/10 pl-4 py-1">
-                    <div className="flex items-center gap-1"><Clock className="w-3 h-3 text-amber-500" /> 30min</div>
-                    <div>{filteredAppointments.length} agendamentos</div>
-                </div>
-            </div>
-
-            <div className="space-y-0 relative">
+            <div className="space-y-0 relative border-l border-white/5 ml-2 pl-6">
                 {hoursSlots.map((hour, idx) => (
-                    <div key={hour} className="flex gap-4 min-h-[60px] group">
-                        <div className="w-12 text-right text-[11px] font-bold text-neutral-600 pt-1 group-hover:text-amber-500 transition-colors">
+                    <div key={hour} className="relative flex gap-4 min-h-[70px] group">
+                        {/* Hour Label */}
+                        <div className="absolute -left-8 -translate-x-1/2 text-[11px] font-black text-neutral-700 bg-black py-1 z-10">
                             {hour}
                         </div>
-                        <div className="flex-1 border-t border-white/5 relative h-full min-h-[60px] group-hover:border-amber-500/20 transition-colors">
+                        
+                        <div className="flex-1 relative">
                             {filteredAppointments.filter(app => {
                                 const appDate = app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date);
                                 const timeStr = `${String(appDate.getHours()).padStart(2, '0')}:${String(appDate.getMinutes()).padStart(2, '0')}`;
                                 return timeStr === hour;
                             }).map(app => (
-                                <div key={app.id} className="absolute left-2 top-2 right-2 bg-neutral-900 border border-white/5 rounded-2xl p-4 shadow-xl z-10 flex justify-between items-center group/card animate-in fade-in slide-in-from-left-2 duration-300">
-                                    <div>
-                                        <h4 className="text-base font-black text-white">{app.clientName}</h4>
-                                        <p className="text-[11px] text-amber-500 uppercase font-bold tracking-tight">{app.serviceName} • 30min</p>
+                                <motion.div 
+                                  key={app.id} 
+                                  initial={{ x: 10, opacity: 0 }}
+                                  animate={{ x: 0, opacity: 1 }}
+                                  className="absolute inset-x-0 top-0 bg-neutral-900 border border-white/10 rounded-[1.5rem] p-5 shadow-2xl z-20 flex justify-between items-center group/card hover:bg-neutral-800 transition-all"
+                                >
+                                    <div className="space-y-1">
+                                        <h4 className="text-lg font-black text-white leading-none">{app.clientName}</h4>
+                                        <div className="flex items-center gap-2">
+                                          <p className="text-[11px] text-neutral-500 uppercase font-bold tracking-widest">{app.serviceName}</p>
+                                          <span className="w-1 h-1 rounded-full bg-neutral-700" />
+                                          <p className="text-[11px] text-neutral-500 uppercase font-bold tracking-widest">30min</p>
+                                        </div>
                                     </div>
-                                    <div className="w-8 h-8 rounded-full bg-white/5 border border-amber-500 flex items-center justify-center text-amber-500 group-hover/card:bg-amber-500 group-hover/card:text-black transition-all">
+                                    <div className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-neutral-700 group-hover/card:border-amber-500 group-hover/card:text-amber-500 transition-all">
                                         <CheckCircle2 className="w-5 h-5" />
                                     </div>
-                                </div>
+                                </motion.div>
                             ))}
                         </div>
                     </div>
@@ -1848,9 +2117,9 @@ function DashboardScreen
             {/* FAB */}
             <button 
                 onClick={() => onBack()}
-                className="fixed bottom-24 right-6 w-16 h-16 bg-amber-500 text-black rounded-full flex items-center justify-center shadow-2xl shadow-amber-500/40 z-30 active:scale-95 transition-transform"
+                className="fixed bottom-32 right-8 w-16 h-16 bg-amber-500 text-black rounded-full flex items-center justify-center shadow-[0_20px_50px_rgba(245,158,11,0.3)] z-40 active:scale-95 transition-all hover:scale-110 active:rotate-90 group"
             >
-                <Plus className="w-8 h-8" />
+                <Plus className="w-8 h-8 group-hover:stroke-[3px] transition-all" />
             </button>
         </>
       ) : (
