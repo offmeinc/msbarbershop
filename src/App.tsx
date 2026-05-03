@@ -183,6 +183,15 @@ function ShareScreen({ onBack }: { onBack: () => void }) {
 }
 
 function LinkScreen({ onBack }: { onBack: () => void }) {
+    const publicLink = `${window.location.origin}/profile/${auth.currentUser?.uid || 'seu-perfil'}`;
+    const [copied, setCopied] = useState(false);
+
+    const copyToClipboard = () => {
+        navigator.clipboard.writeText(publicLink);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
     return (
         <div className="max-w-md mx-auto py-8 px-6">
             <button onClick={onBack} className="text-neutral-500 mb-4 flex items-center gap-2 hover:text-amber-500">
@@ -190,7 +199,13 @@ function LinkScreen({ onBack }: { onBack: () => void }) {
             </button>
             <div className="bg-neutral-900 rounded-[2.5rem] p-8 shadow-2xl border border-white/5 space-y-6 text-center">
                 <h2 className="text-xl font-bold text-white">Link Público</h2>
-                <p className="text-neutral-500">Seu perfil público: barber.app/seu-perfil</p>
+                <p className="text-neutral-500 text-sm">Compartilhe seu perfil profissional:</p>
+                <div className="bg-black/20 p-4 rounded-xl border border-white/5 break-all font-mono text-amber-500 text-sm">
+                    {publicLink}
+                </div>
+                <button onClick={copyToClipboard} className="w-full bg-amber-500 text-black py-3 rounded-xl font-bold hover:bg-amber-400 transition-all flex items-center justify-center gap-2">
+                    {copied ? 'Copiado!' : 'Copiar Link'}
+                </button>
             </div>
         </div>
     );
@@ -248,18 +263,41 @@ function RecurrenceScreen({ onBack }: { onBack: () => void }) {
       );
   }
 
-function DarkScreen({ onBack }: { onBack: () => void }) {
-    return (
-        <div className="max-w-md mx-auto py-8 px-6 text-center">
-            <button onClick={onBack} className="text-neutral-500 mb-4 flex items-center gap-2 hover:text-amber-500">
-               {"<"} Voltar
-            </button>
-            <div className="bg-neutral-900 rounded-[2.5rem] p-8 shadow-2xl border border-white/5 space-y-6 text-center">
-                <h2 className="text-xl font-bold text-white">Tema Escuro</h2>
-                <p className="text-neutral-500">O modo escuro está ativado por padrão para uma melhor experiência.</p>
+function ManagerHome({ user }: { user: any }) {
+  const [stats, setStats] = useState({ todayAppointments: 0, pending: 0, revenue: 0 });
+
+  useEffect(() => {
+    const q = query(collection(db, "appointments"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        const apps = snapshot.docs.map(d => d.data());
+        const today = new Date().toDateString();
+        const tApps = apps.filter(a => new Date(a.date.toDate()).toDateString() === today);
+        const pApps = apps.filter(a => a.status === 'pending');
+        const revenue = apps.filter(a => a.status === 'completed').reduce((acc, a) => acc + (a.price || 0), 0);
+        setStats({ todayAppointments: tApps.length, pending: pApps.length, revenue });
+    });
+    return unsubscribe;
+  }, []);
+
+  return (
+    <div className="max-w-2xl mx-auto py-8 px-6">
+        <h1 className="text-3xl font-black italic uppercase mb-8">Bem-vindo, {user?.displayName || "Gestor"}!</h1>
+        <div className="grid grid-cols-2 gap-4">
+            <div className="bg-neutral-900 p-6 rounded-3xl border border-white/5">
+                <p className="text-neutral-500 text-xs font-bold uppercase">Hoje</p>
+                <h3 className="text-3xl font-black text-white">{stats.todayAppointments}</h3>
+            </div>
+            <div className="bg-neutral-900 p-6 rounded-3xl border border-white/5">
+                <p className="text-neutral-500 text-xs font-bold uppercase">Pendente</p>
+                <h3 className="text-3xl font-black text-amber-500">{stats.pending}</h3>
+            </div>
+            <div className="col-span-2 bg-neutral-900 p-6 rounded-3xl border border-white/5">
+                <p className="text-neutral-500 text-xs font-bold uppercase">Receita Total</p>
+                <h3 className="text-3xl font-black text-green-500">R$ {stats.revenue.toFixed(2)}</h3>
             </div>
         </div>
-    );
+    </div>
+  );
 }
 
 function ProfileEditScreen({ user, onBack }: { user: any, onBack: () => void }) {
@@ -828,7 +866,7 @@ export default function App() {
 
       <main className="pt-20">
         <AnimatePresence mode="wait">
-          {currentScreen === "home" && <HomeScreen key="home" services={services} onStartBooking={() => user ? setCurrentScreen("booking") : setCurrentScreen("login")} />}
+          {currentScreen === "home" && (userRole === "manager" ? <ManagerHome user={user} /> : <HomeScreen key="home" services={services} onStartBooking={() => user ? setCurrentScreen("booking") : setCurrentScreen("login")} />)}
           {currentScreen === "login" && <LoginScreen key="login" onLogin={handleLogin} setUserRole={setUserRole} setCurrentScreen={setCurrentScreen} setRequestedRole={setRequestedRole} />}
           {currentScreen === "booking" && <BookingScreen key="booking" user={user} services={services} onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "agenda" && <DashboardScreen key="agenda" user={user} role={userRole} services={services} dashboardView={dashboardView || "list"} onBack={() => setCurrentScreen("home")} />}
