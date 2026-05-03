@@ -41,12 +41,19 @@ import {
   ExternalLink,
   Wallet,
   Lock,
+  MessageSquare,
   MessageCircle,
   Moon,
   HelpCircle,
   Smartphone
 } from "lucide-react";
 import { useState, useEffect, useRef, useMemo, ChangeEvent, FormEvent } from "react";
+
+// Dummy components
+const DarkScreen = ({ onBack }: { onBack: () => void }) => <div className="p-4">Dark Screen <button onClick={onBack}>Voltar</button></div>;
+const NotificationsScreen = ({ onBack }: { onBack: () => void }) => <div className="p-4">Notifications Screen <button onClick={onBack}>Voltar</button></div>;
+const EarningsScreen = ({ onBack }: { onBack: () => void }) => <div className="p-4">Earnings Screen <button onClick={onBack}>Voltar</button></div>;
+const MyWeekScreen = ({ user, onBack }: { user: any, onBack: () => void }) => <div className="p-4">My Week Screen <button onClick={onBack}>Voltar</button></div>;
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { 
   format, 
@@ -871,7 +878,7 @@ export default function App() {
 
       <main className="pt-20">
         <AnimatePresence mode="wait">
-          {currentScreen === "home" && (userRole === "manager" ? <ManagerHome user={user} setCurrentScreen={setCurrentScreen} /> : <HomeScreen key="home" services={services} onStartBooking={() => setCurrentScreen("booking")} />)}
+          {currentScreen === "home" && (userRole === "manager" ? <DashboardScreen key="agenda-home" user={user} role={userRole} services={services} dashboardView="list" onBack={() => setCurrentScreen("home")} /> : <HomeScreen key="home" services={services} onStartBooking={() => setCurrentScreen("booking")} />)}
           {currentScreen === "login" && <LoginScreen key="login" onLogin={handleLogin} setUserRole={setUserRole} setCurrentScreen={setCurrentScreen} setRequestedRole={setRequestedRole} />}
           {currentScreen === "booking" && <BookingScreen key="booking" user={user} services={services} onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "agenda" && <DashboardScreen key="agenda" user={user} role={userRole} services={services} dashboardView={dashboardView || "list"} onBack={() => setCurrentScreen("home")} />}
