@@ -81,9 +81,9 @@
       "schema": "User",
       "description": "Storage for user profiles."
     },
-    "/users/{userId}/workingHours/{workId}": {
+    "/workingHours/{workId}": {
       "schema": "WorkingHours",
-      "description": "Working hours for the barber."
+      "description": "Defined working hours for barbers."
     },
     "/services/{serviceId}": {
       "schema": "Service",
@@ -96,6 +96,14 @@
     "/reviews/{reviewId}": {
       "schema": "Review",
       "description": "Reviews and ratings."
+    },
+    "/internal_chats/{msgId}": {
+      "schema": { "type": "object", "properties": { "text": { "type": "string" }, "senderId": { "type": "string" }, "senderName": { "type": "string" }, "createdAt": { "type": "string", "format": "date-time" } } },
+      "description": "Staff internal chat messages."
+    },
+    "/chats/{userId}/messages/{msgId}": {
+      "schema": { "type": "object", "properties": { "text": { "type": "string" }, "userId": { "type": "string" }, "sender": { "type": "string" }, "createdAt": { "type": "string", "format": "date-time" } } },
+      "description": "Client support chat messages."
     }
   }
 }

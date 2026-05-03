@@ -285,6 +285,8 @@ function ProfessionalHome({ user, role, setCurrentScreen }: { user: any, role: s
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setAppointments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setLoading(false);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, "appointments");
     });
     return () => unsubscribe();
   }, [user?.uid, role]);
@@ -754,6 +756,8 @@ function StaffChatScreen({ user, onBack }: { user: any, onBack: () => void }) {
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setMessages(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, "internal_chats");
     });
     return unsubscribe;
   }, []);
@@ -798,6 +802,10 @@ function ChatScreen({ user, onBack }: { user: any, onBack: () => void }) {
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setMessages(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => {
+      if (user) {
+        handleFirestoreError(error, OperationType.LIST, `chats/${user.uid}/messages`);
+      }
     });
     return unsubscribe;
   }, [user]);
@@ -954,6 +962,8 @@ function ClientsScreen({ onBack }: { onBack: () => void, key?: any }) {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setClients(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setLoading(false);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, "users");
     });
     return () => unsubscribe();
   }, []);
@@ -1064,6 +1074,8 @@ export default function App() {
     const unsubscribeServices = onSnapshot(collection(db, "services"), (snapshot) => {
       const servicesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setServices(servicesData);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, "services");
     });
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -1771,6 +1783,8 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const barberData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setBarbers(barberData);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, "users");
     });
     return () => unsubscribe();
   }, []);
@@ -1786,6 +1800,7 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
     const q = query(
       collection(db, "appointments"),
       where("barberId", "==", selectedBarber),
+      where("status", "in", ["pending", "confirmed", "completed"]),
       where("date", ">=", Timestamp.fromDate(start)),
       where("date", "<=", Timestamp.fromDate(end))
     );
@@ -1793,6 +1808,8 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setBarberAppointments(snapshot.docs.map(doc => doc.data()));
       setLoadingSlots(false);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, "appointments");
     });
     return () => unsubscribe();
   }, [selectedBarber, selectedDate]);
@@ -2306,11 +2323,15 @@ function DashboardScreen
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setAppointments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setLoading(false);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, "appointments");
     });
 
     const qBarbers = query(collection(db, "users"), where("role", "in", ["barber", "manager"]));
     const unsubscribeBarbers = onSnapshot(qBarbers, (sn) => {
         setBarbers(sn.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, "users");
     });
 
     return () => {
@@ -2571,6 +2592,8 @@ function CollaboratorsManager() {
     const q = query(collection(db, "users"), where("role", "in", ["barber", "manager"]));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setBarbers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, "users");
     });
     return () => unsubscribe();
   }, []);
@@ -2664,11 +2687,16 @@ function WorkingHoursManager() {
 
   useEffect(() => {
     const fetchBarbers = async () => {
-      const q = query(collection(db, "users"), where("role", "in", ["barber", "manager"]));
-      const querySnapshot = await getDocs(q);
-      const barbersData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setBarbers(barbersData);
-      setLoading(false);
+      try {
+        const q = query(collection(db, "users"), where("role", "in", ["barber", "manager"]));
+        const querySnapshot = await getDocs(q);
+        const barbersData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setBarbers(barbersData);
+      } catch (error) {
+        handleFirestoreError(error, OperationType.LIST, "users");
+      } finally {
+        setLoading(false);
+      }
     };
     fetchBarbers();
   }, []);
@@ -2701,6 +2729,8 @@ function BarberHoursItem({ barber }: { barber: any, key?: any }) {
     const q = query(collection(db, "workingHours"), where("barberId", "==", barber.id));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setHours(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, "workingHours");
     });
     return () => unsubscribe();
   }, [barber.id]);

@@ -42,13 +42,15 @@ service cloud.firestore {
       }
 
       // Optimization: avoid get() for basic ownership check
-      allow get: if isSignedIn() && (
+      allow get: if (resource.data.role in ['barber', 'manager']) || (isSignedIn() && (
         isOwner(userId) || 
-        resource.data.role == 'barber' ||
         isManager()
-      );
+      ));
       
-      allow list: if isSignedIn() && (isManager() || isBarber());
+      allow list: if (resource.data.role in ['barber', 'manager']) || (isSignedIn() && (
+        isManager() || 
+        isBarber()
+      ));
       
       allow create: if isSignedIn() && isOwner(userId) && isValidUser(incoming(), userId);
       
@@ -114,11 +116,11 @@ service cloud.firestore {
           && (!('createdAt' in data) || data.createdAt is timestamp);
       }
 
-      allow read: if isSignedIn() && (
+      allow read: if (resource.data.status in ['pending', 'confirmed', 'completed']) || (isSignedIn() && (
         resource.data.clientId == request.auth.uid || 
         resource.data.barberId == request.auth.uid || 
         isManager()
-      );
+      ));
       
       allow create: if isSignedIn() && isValidAppointment(incoming()) 
         && (incoming().clientId == request.auth.uid || isManager());
