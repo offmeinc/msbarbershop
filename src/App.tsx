@@ -866,7 +866,7 @@ export default function App() {
 
       <main className="pt-20">
         <AnimatePresence mode="wait">
-          {currentScreen === "home" && (userRole === "manager" ? <ManagerHome user={user} /> : <HomeScreen key="home" services={services} onStartBooking={() => user ? setCurrentScreen("booking") : setCurrentScreen("login")} />)}
+          {currentScreen === "home" && (userRole === "manager" ? <ManagerHome user={user} /> : <HomeScreen key="home" services={services} onStartBooking={() => setCurrentScreen("booking")} />)}
           {currentScreen === "login" && <LoginScreen key="login" onLogin={handleLogin} setUserRole={setUserRole} setCurrentScreen={setCurrentScreen} setRequestedRole={setRequestedRole} />}
           {currentScreen === "booking" && <BookingScreen key="booking" user={user} services={services} onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "agenda" && <DashboardScreen key="agenda" user={user} role={userRole} services={services} dashboardView={dashboardView || "list"} onBack={() => setCurrentScreen("home")} />}
@@ -1343,6 +1343,9 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
   const [isBooking, setIsBooking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [guestName, setGuestName] = useState("");
+  const [guestEmail, setGuestEmail] = useState("");
+  const [guestPhone, setGuestPhone] = useState("");
 
   useEffect(() => {
     const q = query(collection(db, "users"), where("role", "==", "barber"));
@@ -1358,15 +1361,21 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
         setError("Todos os campos são obrigatórios.");
         return;
     }
+    if (!user && (!guestName || !guestEmail)) {
+        setError("Nome e E-mail são obrigatórios para visitantes.");
+        return;
+    }
     setError(null);
     setIsBooking(true);
     try {
       const service = services.find(s => s.id === selectedService);
       const barber = barbers.find(b => b.id === selectedBarber);
       const baseData = {
-        clientId: user.uid,
-        clientName: user.displayName,
-        clientPhoto: user.photoURL,
+        clientId: user ? user.uid : "guest",
+        clientName: user ? user.displayName : guestName,
+        clientEmail: user ? user.email : guestEmail,
+        clientPhone: guestPhone,
+        clientPhoto: user ? user.photoURL : null,
         barberId: selectedBarber,
         barberName: barber?.name,
         serviceId: selectedService,
@@ -1481,6 +1490,14 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
         )}
         {step === 4 && (
             <motion.div key="step4" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }}>
+                {!user && (
+                    <div className="bg-neutral-900 p-8 rounded-3xl border border-neutral-800 mb-8 space-y-4">
+                        <h3 className="text-xl font-bold mb-4">Seus dados (visitante)</h3>
+                         <input placeholder="Nome" className="w-full p-4 bg-black rounded-xl border border-neutral-800 text-white" value={guestName} onChange={e => setGuestName(e.target.value)} />
+                         <input placeholder="E-mail" className="w-full p-4 bg-black rounded-xl border border-neutral-800 text-white" value={guestEmail} onChange={e => setGuestEmail(e.target.value)} />
+                         <input placeholder="Telefone" className="w-full p-4 bg-black rounded-xl border border-neutral-800 text-white" value={guestPhone} onChange={e => setGuestPhone(e.target.value)} />
+                    </div>
+                )}
                 <h2 className="text-3xl font-black uppercase italic mb-8">Resumo</h2>
                 <div className="bg-neutral-900 p-8 rounded-3xl border border-neutral-800 mb-8 space-y-4">
                    <div className="flex justify-between">
@@ -1500,6 +1517,7 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
                        <span className="font-bold">{recurrence === 'none' ? 'Nenhuma' : recurrence === 'weekly' ? 'Semanal' : recurrence === 'biweekly' ? 'Quinzenal' : 'Mensal'}</span>
                    </div>
                 </div>
+                {error && <p className="text-red-500 font-bold text-center mb-4">{error}</p>}
                 <button disabled={isBooking} onClick={handleConfirmBooking} className="w-full bg-amber-500 text-black py-4 rounded-xl font-black uppercase italic hover:bg-amber-400 transition-all shadow-lg active:scale-95 disabled:opacity-50">
                     {isBooking ? 'Agendando...' : 'Confirmar agendamento'}
                 </button>
