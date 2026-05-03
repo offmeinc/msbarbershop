@@ -54,9 +54,85 @@ import { useState, useEffect, useRef, useMemo, ChangeEvent, FormEvent } from "re
 // Dummy components
 const DarkScreen = ({ onBack }: { onBack: () => void }) => <div className="p-4">Dark Screen <button onClick={onBack}>Voltar</button></div>;
 const NotificationsScreen = ({ onBack }: { onBack: () => void }) => <div className="p-4">Notifications Screen <button onClick={onBack}>Voltar</button></div>;
-const EarningsScreen = ({ onBack }: { onBack: () => void }) => <div className="p-4">Earnings Screen <button onClick={onBack}>Voltar</button></div>;
+const EarningsScreen = ({ onBack }: { onBack: () => void }) => {
+  const [appointments, setAppointments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const q = query(
+      collection(db, "appointments"),
+      where("status", "==", "completed")
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setAppointments(docs);
+      setLoading(false);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, "appointments");
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const dailyEarnings = useMemo(() => {
+    const data: Record<string, number> = {};
+    appointments.forEach(app => {
+      const date = app.date instanceof Timestamp ? app.date.toDate() : new Date(app.date);
+      const key = format(date, "dd/MM");
+      data[key] = (data[key] || 0) + (parseFloat(app.price) || 0);
+    });
+    return Object.entries(data).map(([name, value]) => ({ name, value }));
+  }, [appointments]);
+
+  const serviceDistribution = useMemo(() => {
+    const data: Record<string, number> = {};
+    appointments.forEach(app => {
+        const key = app.serviceName || "Outros";
+        data[key] = (data[key] || 0) + 1;
+    });
+    return Object.entries(data).map(([name, value]) => ({ name, value }));
+  }, [appointments]);
+
+  if (loading) return <div className="p-12 text-center text-white">Carregando relatórios...</div>;
+
+  return (
+    <div className="max-w-md mx-auto py-8 px-6 space-y-6">
+      <button onClick={onBack} className="text-neutral-500 mb-4 flex items-center gap-2 hover:text-amber-500">
+        {"<"} Voltar
+      </button>
+      <h2 className="text-2xl font-bold text-white uppercase tracking-tighter">Relatórios de Ganhos</h2>
+
+      <div className="bg-neutral-900 rounded-3xl p-6 border border-white/5 space-y-4">
+        <h3 className="text-lg font-bold text-white">Ganhos Diários</h3>
+        <ResponsiveContainer width="100%" height={200}>
+          <BarChart data={dailyEarnings}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+            <XAxis dataKey="name" stroke="#666" />
+            <YAxis stroke="#666" />
+            <Tooltip contentStyle={{ backgroundColor: '#111', border: '1px solid #333' }} />
+            <Bar dataKey="value" fill="#f59e0b" />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      <div className="bg-neutral-900 rounded-3xl p-6 border border-white/5 space-y-4">
+        <h3 className="text-lg font-bold text-white">Distribuição de Serviços</h3>
+        <ResponsiveContainer width="100%" height={200}>
+          <PieChart>
+            <Pie data={serviceDistribution} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60} fill="#8884d8" label>
+                {serviceDistribution.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={['#f59e0b', '#3b82f6', '#10b981', '#ef4444'][index % 4]} />
+                ))}
+            </Pie>
+            <Tooltip contentStyle={{ backgroundColor: '#111', border: '1px solid #333' }} />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+};
 const MyWeekScreen = ({ user, onBack }: { user: any, onBack: () => void }) => <div className="p-4">My Week Screen <button onClick={onBack}>Voltar</button></div>;
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { 
   format, 
   addMonths, 
@@ -229,7 +305,7 @@ function ReconScreen({ onBack }: { onBack: () => void }) {
       collection(db, "appointments"),
       where("status", "==", "completed")
     );
-    getDocs(q).then(snapshot => {
+    const unsubscribe = onSnapshot(q, (snapshot) => {
       let total = 0;
       snapshot.forEach(doc => {
         const data = doc.data();
@@ -237,7 +313,11 @@ function ReconScreen({ onBack }: { onBack: () => void }) {
       });
       setEarnings(total);
       setLoading(false);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, "appointments");
+      setLoading(false);
     });
+    return () => unsubscribe();
   }, []);
 
   return (
@@ -542,27 +622,26 @@ function ProfileEditScreen({ user, onBack }: { user: any, onBack: () => void }) 
   const [fetching, setFetching] = useState(true);
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const docRef = doc(db, "users", user.uid);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          setProfileData({
-            name: data.name || data.displayName || user?.displayName || "",
-            photoUrl: data.photoUrl || data.photoURL || user?.photoURL || "",
-            whatsapp: data.whatsapp || "",
-            bio: data.bio || "",
-            specialties: data.specialties || []
-          });
-        }
-      } catch (error) {
-        console.error("Error fetching profile:", error);
+    if (!user) return;
+    const docRef = doc(db, "users", user.uid);
+    const unsubscribe = onSnapshot(docRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setProfileData({
+          name: data.name || data.displayName || user?.displayName || "",
+          photoUrl: data.photoUrl || data.photoURL || user?.photoURL || "",
+          whatsapp: data.whatsapp || "",
+          bio: data.bio || "",
+          specialties: data.specialties || []
+        });
       }
       setFetching(false);
-    };
-    fetchProfile();
-  }, [user.uid]);
+    }, (error) => {
+      console.error("Error fetching profile:", error);
+      setFetching(false);
+    });
+    return () => unsubscribe();
+  }, [user]);
 
   const handleUpdate = async (e: FormEvent) => {
     e.preventDefault();
@@ -840,30 +919,36 @@ function MoreOptionsScreen({ user, role, onLogout, onBack }: { user: any, role: 
     'main' | 'profile' | 'notif' | 'block' | 'help' | 'share' | 'link' | 'earnings' | 'week' | 'recon' | 'recurrence' | 'support' | 'staff-chat' | 'dark'
   >('main');
 
-  const menuItems = [
-    { id: 'notif', label: 'Notificações', icon: <Bell className="w-6 h-6" />, badge: '99+', onClick: () => setActiveSubScreen('notif') },
-    { id: 'block', label: 'Bloqueios', icon: <Lock className="w-6 h-6" />, onClick: () => setActiveSubScreen('block') },
-    { id: 'help', label: 'Central de Ajuda', icon: <HelpCircle className="w-6 h-6" />, onClick: () => setActiveSubScreen('help') },
-    { id: 'share', label: 'Divulgar Horários', icon: <Smartphone className="w-6 h-6" />, onClick: () => setActiveSubScreen('share') },
-    { id: 'link', label: 'Link Público', icon: <ExternalLink className="w-6 h-6" />, onClick: () => setActiveSubScreen('link') },
-    { id: 'profile', label: 'Meu Perfil', icon: <User className="w-6 h-6" />, onClick: () => setActiveSubScreen('profile') },
+  const sections = [
+    {
+      title: "Perfil e Conta",
+      items: [
+        { id: 'profile', label: 'Meu Perfil', icon: <User className="w-5 h-5" />, onClick: () => setActiveSubScreen('profile') },
+        { id: 'notif', label: 'Notificações', icon: <Bell className="w-5 h-5" />, badge: '99+', onClick: () => setActiveSubScreen('notif') },
+        ...(role === 'barber' || role === 'manager' ? [{ id: 'earnings', label: 'Meus Ganhos', icon: <Wallet className="w-5 h-5" />, onClick: () => setActiveSubScreen('earnings') }] : []),
+      ]
+    },
+    {
+      title: "Agenda e Gestão",
+      items: [
+        { id: 'week', label: 'Minha Semana', icon: <Calendar className="w-5 h-5" />, onClick: () => setActiveSubScreen('week') },
+        { id: 'block', label: 'Bloqueios', icon: <Lock className="w-5 h-5" />, onClick: () => setActiveSubScreen('block') },
+        { id: 'recon', label: 'Reconciliação', icon: <CheckCircle2 className="w-5 h-5" />, onClick: () => setActiveSubScreen('recon') },
+        { id: 'recurrence', label: 'Recorrências', icon: <RefreshCw className="w-5 h-5" />, onClick: () => setActiveSubScreen('recurrence') },
+        { id: 'share', label: 'Divulgar', icon: <Smartphone className="w-5 h-5" />, onClick: () => setActiveSubScreen('share') },
+        { id: 'link', label: 'Link Público', icon: <ExternalLink className="w-5 h-5" />, onClick: () => setActiveSubScreen('link') },
+      ]
+    },
+    {
+      title: "Suporte e Outros",
+      items: [
+        ...(role === 'barber' || role === 'manager' ? [{ id: 'staff-chat', label: 'Chat Equipe', icon: <MessageSquare className="w-5 h-5" />, onClick: () => setActiveSubScreen('staff-chat') }] : []),
+        { id: 'support', label: 'Suporte', icon: <MessageCircle className="w-5 h-5" />, onClick: () => setActiveSubScreen('support') },
+        { id: 'help', label: 'Ajuda', icon: <HelpCircle className="w-5 h-5" />, onClick: () => setActiveSubScreen('help') },
+        { id: 'dark', label: 'Tema Escuro', icon: <Moon className="w-5 h-5" />, onClick: () => setActiveSubScreen('dark') },
+      ]
+    }
   ];
-
-  if (role === 'client') {
-       menuItems.push({ id: 'earnings', label: 'Meus Ganhos', icon: <Wallet className="w-6 h-6" />, onClick: () => setActiveSubScreen('earnings') });
-  }
-
-  if (['barber', 'manager'].includes(role)) {
-    menuItems.push({ id: 'staff-chat', label: 'Chat Interno', icon: <MessageSquare className="w-6 h-6" />, onClick: () => setActiveSubScreen('staff-chat') });
-  }
-
-  menuItems.push(
-    { id: 'week', label: 'Minha Semana', icon: <Calendar className="w-5 h-5" />, onClick: () => setActiveSubScreen('week') },
-    { id: 'recon', label: 'Reconciliação', icon: <CheckCircle2 className="w-6 h-6" />, onClick: () => setActiveSubScreen('recon') },
-    { id: 'recurrence', label: 'Recorrências', icon: <RefreshCw className="w-6 h-6" />, onClick: () => setActiveSubScreen('recurrence') },
-    { id: 'support', label: 'Suporte', icon: <MessageCircle className="w-6 h-6" />, onClick: () => setActiveSubScreen('support') },
-    { id: 'dark', label: 'Escuro', icon: <Moon className="w-6 h-6" />, onClick: () => setActiveSubScreen('dark') }
-  );
 
   if (activeSubScreen === 'block') return <BlockScreen onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'help') return <HelpScreen onBack={() => setActiveSubScreen('main')} />;
@@ -872,86 +957,69 @@ function MoreOptionsScreen({ user, role, onLogout, onBack }: { user: any, role: 
   if (activeSubScreen === 'recon') return <ReconScreen onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'recurrence') return <RecurrenceScreen onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'dark') return <DarkScreen onBack={() => setActiveSubScreen('main')} />;
-
-  if (activeSubScreen === 'profile') {
-    return <ProfileEditScreen user={user} onBack={() => setActiveSubScreen('main')} />;
-  }
-
-  if (activeSubScreen === 'notif') {
-    return <NotificationsScreen onBack={() => setActiveSubScreen('main')} />;
-  }
-
-  if (activeSubScreen === 'earnings') {
-    return <EarningsScreen onBack={() => setActiveSubScreen('main')} />;
-  }
-
-  if (activeSubScreen === 'week') {
-    return <MyWeekScreen user={user} onBack={() => setActiveSubScreen('main')} />;
-  }
-
-  if (activeSubScreen === 'staff-chat') {
-    return <StaffChatScreen user={user} onBack={() => setActiveSubScreen('main')} />;
-  }
-
-  if (activeSubScreen === 'support') {
-    return <ChatScreen user={user} onBack={() => setActiveSubScreen('main')} />;
-  }
-
-  if (activeSubScreen !== 'main') {
-    return (
-      <div className="max-w-md mx-auto py-8 px-6">
-        <button onClick={() => setActiveSubScreen('main')} className="text-neutral-500 mb-4 flex items-center gap-2 hover:text-amber-500">
-           {"<"} Voltar
-        </button>
-        <div className="bg-neutral-900 rounded-[2.5rem] p-8 shadow-2xl border border-white/5 space-y-6">
-          <h2 className="text-xl font-bold text-center text-white capitalize">{activeSubScreen}</h2>
-          <p className="text-neutral-500 text-center">Tela de {activeSubScreen} em desenvolvimento.</p>
-        </div>
-      </div>
-    );
-  }
+  if (activeSubScreen === 'profile') return <ProfileEditScreen user={user} onBack={() => setActiveSubScreen('main')} />;
+  if (activeSubScreen === 'notif') return <NotificationsScreen onBack={() => setActiveSubScreen('main')} />;
+  if (activeSubScreen === 'earnings') return <EarningsScreen onBack={() => setActiveSubScreen('main')} />;
+  if (activeSubScreen === 'week') return <MyWeekScreen user={user} onBack={() => setActiveSubScreen('main')} />;
+  if (activeSubScreen === 'staff-chat') return <StaffChatScreen user={user} onBack={() => setActiveSubScreen('main')} />;
+  if (activeSubScreen === 'support') return <ChatScreen user={user} onBack={() => setActiveSubScreen('main')} />;
 
   return (
     <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 20 }}
-      className="max-w-md mx-auto py-8 px-6"
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: 20 }}
+      className="max-w-md mx-auto py-8 px-6 min-h-screen pb-32"
     >
-      <div className="bg-neutral-900 rounded-[2.5rem] p-8 shadow-2xl border border-white/5">
-        <h2 className="text-xl font-bold text-center mb-8 text-white">Mais opções</h2>
-        <div className="grid grid-cols-3 gap-y-8 gap-x-4">
-          {menuItems.map((item) => (
-            <button key={item.id} onClick={item.onClick} className="flex flex-col items-center gap-2 group">
-              <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center relative group-active:scale-95 transition-transform text-neutral-400 border border-white/5">
-                {item.icon}
-                {item.badge && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full border-2 border-neutral-900">
-                    {item.badge}
+      <div className="flex items-center justify-between mb-8">
+        <h2 className="text-2xl font-black text-white uppercase tracking-tighter italic">Mais Opções</h2>
+        <button onClick={onBack} className="p-2 bg-white/5 rounded-full text-white/40 hover:text-white border border-white/5 transition-colors">
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+      </div>
+
+      <div className="space-y-8">
+        {sections.map((section, idx) => (
+          <div key={idx} className="space-y-4">
+            <h3 className="text-[10px] font-black text-neutral-500 uppercase tracking-widest ml-1">{section.title}</h3>
+            <div className="grid grid-cols-2 gap-3">
+              {section.items.map((item) => (
+                <button 
+                  key={item.id} 
+                  onClick={item.onClick}
+                  className="bg-neutral-900/50 backdrop-blur-xl border border-white/5 p-4 rounded-3xl flex items-center gap-3 hover:bg-neutral-800 transition-all group active:scale-95"
+                >
+                  <div className="w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center text-neutral-400 group-hover:bg-amber-500 group-hover:text-black transition-all relative">
+                    {item.icon}
+                    {item.badge && (
+                      <span className="absolute -top-1 -right-1 bg-amber-500 text-black text-[8px] font-black px-1.5 py-0.5 rounded-full border-2 border-neutral-900">
+                        {item.badge}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-xs font-bold text-white/70 group-hover:text-white transition-colors">
+                    {item.label}
                   </span>
-                )}
-              </div>
-              <span className="text-[10px] font-medium text-neutral-400 leading-tight text-center px-1">
-                {item.label}
-              </span>
-            </button>
-          ))}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+
+        <div className="pt-4">
           <button 
             onClick={onLogout}
-            className="flex flex-col items-center gap-2 group"
+            className="w-full bg-red-500/10 border border-red-500/20 p-5 rounded-3xl flex items-center justify-center gap-3 active:scale-95 transition-all text-red-500 hover:bg-red-500 hover:text-white"
           >
-            <div className="w-16 h-16 bg-red-500/10 rounded-2xl flex items-center justify-center group-active:scale-95 transition-transform text-red-500 border border-red-500/20">
-              <LogOut className="w-6 h-6" />
-            </div>
-            <span className="text-[10px] font-medium text-red-500 leading-tight text-center">
-              Sair
-            </span>
+            <LogOut className="w-5 h-5" />
+            <span className="text-xs font-black uppercase tracking-widest">Sair da Conta</span>
           </button>
         </div>
       </div>
     </motion.div>
   );
 }
+
 
 function ClientsScreen({ onBack }: { onBack: () => void, key?: any }) {
   const [clients, setClients] = useState<any[]>([]);
@@ -1048,7 +1116,7 @@ function BottomNav({ userRole, currentScreen, setCurrentScreen, user }: { userRo
       {items.map(item => (
         <button 
           key={item.id} 
-          onClick={() => setCurrentScreen(item.screen as any)} 
+          onClick={() => setCurrentScreen(currentScreen === item.screen ? "home" : item.screen as any)} 
           className={`flex flex-col items-center gap-1 py-1 px-4 rounded-2xl transition-all ${currentScreen === item.screen ? "text-amber-500 bg-white/5" : "text-neutral-500"}`}
         >
             {item.icon}
@@ -1069,6 +1137,17 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [services, setServices] = useState<any[]>([]);
   const isSigningUp = useRef(false);
+
+  useEffect(() => {
+    if (!user) return;
+    const userDocRef = doc(db, "users", user.uid);
+    const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setUserRole(docSnap.data().role || "client");
+      }
+    });
+    return () => unsubscribe();
+  }, [user]);
 
   useEffect(() => {
     const unsubscribeServices = onSnapshot(collection(db, "services"), (snapshot) => {
@@ -1266,7 +1345,10 @@ export default function App() {
                       </div>
                     )}
                   </div>
-                  <button onClick={() => setCurrentScreen("more")} className="p-2 bg-white/5 hover:bg-amber-500/20 hover:text-amber-500 rounded-lg transition-all">
+                  <button 
+                    onClick={() => setCurrentScreen(currentScreen === "more" ? "home" : "more")} 
+                    className={`p-2 rounded-lg transition-all ${currentScreen === 'more' ? 'bg-amber-500 text-black' : 'bg-white/5 text-neutral-400 hover:bg-amber-500/20 hover:text-amber-500'}`}
+                  >
                     <Settings className="w-4 h-4" />
                   </button>
                 </div>
@@ -1769,6 +1851,7 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [barberAppointments, setBarberAppointments] = useState<any[]>([]);
+  const [blockedTimes, setBlockedTimes] = useState<any[]>([]);
   const [recurrence, setRecurrence] = useState<'none' | 'weekly' | 'biweekly' | 'monthly'>('none');
   const [isBooking, setIsBooking] = useState(false);
   const [loadingSlots, setLoadingSlots] = useState(false);
@@ -1785,6 +1868,16 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
       setBarbers(barberData);
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, "users");
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const q = query(collection(db, "blocked_times"), orderBy("date", "asc"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setBlockedTimes(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, "blocked_times");
     });
     return () => unsubscribe();
   }, []);
@@ -1830,6 +1923,9 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
         const isBusy = barberAppointments.some(app => {
           const appDate = app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date);
           return format(appDate, "HH:mm") === time;
+        }) || blockedTimes.some(b => {
+          const bDate = b.date instanceof Timestamp ? b.date.toDate() : (typeof b.date === 'string' ? parseISO(b.date) : b.date);
+          return format(bDate, "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd") && format(bDate, "HH:mm") === time;
         });
 
         // Check if user is booking for past time today
@@ -2686,19 +2782,16 @@ function WorkingHoursManager() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchBarbers = async () => {
-      try {
-        const q = query(collection(db, "users"), where("role", "in", ["barber", "manager"]));
-        const querySnapshot = await getDocs(q);
-        const barbersData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setBarbers(barbersData);
-      } catch (error) {
-        handleFirestoreError(error, OperationType.LIST, "users");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchBarbers();
+    const q = query(collection(db, "users"), where("role", "in", ["barber", "manager"]));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const barbersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setBarbers(barbersData);
+      setLoading(false);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, "users");
+      setLoading(false);
+    });
+    return () => unsubscribe();
   }, []);
 
   if (loading) return <div className="p-12 text-center flex flex-col items-center justify-center gap-4">
