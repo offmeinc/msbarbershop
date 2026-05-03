@@ -178,6 +178,7 @@ import {
   where,
   getDocs,
   Timestamp,
+  serverTimestamp,
   addDoc,
   onSnapshot,
   limit,
@@ -1973,7 +1974,7 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
         serviceName: service?.name,
         status: "pending",
         totalPrice: service?.price,
-        createdAt: Timestamp.now()
+        createdAt: serverTimestamp()
       };
       
       const appointmentsToCreate = [];
@@ -2000,7 +2001,7 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
       setShowConfirmation(true);
     } catch (error) {
       console.error(error);
-      setError("Ocorreu um erro ao processar seu agendamento.");
+      setError(error instanceof Error ? error.message : "Ocorreu um erro ao processar seu agendamento.");
     } finally {
       setIsBooking(false);
     }
