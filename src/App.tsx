@@ -528,50 +528,217 @@ function ProfessionalHome({ user, role, setCurrentScreen }: { user: any, role: s
 }
 
 function ProfileEditScreen({ user, onBack }: { user: any, onBack: () => void }) {
-  const [name, setName] = useState(user?.displayName || "");
+  const [profileData, setProfileData] = useState({
+    name: user?.displayName || "",
+    photoUrl: user?.photoURL || "",
+    whatsapp: "",
+    bio: "",
+    specialties: [] as string[]
+  });
+  const [newSpecialty, setNewSpecialty] = useState("");
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const docRef = doc(db, "users", user.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setProfileData({
+            name: data.name || data.displayName || user?.displayName || "",
+            photoUrl: data.photoUrl || data.photoURL || user?.photoURL || "",
+            whatsapp: data.whatsapp || "",
+            bio: data.bio || "",
+            specialties: data.specialties || []
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching profile:", error);
+      }
+      setFetching(false);
+    };
+    fetchProfile();
+  }, [user.uid]);
 
   const handleUpdate = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      await updateProfile(user, { displayName: name });
-      await updateDoc(doc(db, "users", user.uid), { displayName: name });
-      alert("Perfil atualizado!");
+      // Update Firebase Auth profile
+      await updateProfile(user, { 
+        displayName: profileData.name,
+        photoURL: profileData.photoUrl
+      });
+
+      // Update Firestore
+      await updateDoc(doc(db, "users", user.uid), { 
+        name: profileData.name,
+        displayName: profileData.name,
+        photoUrl: profileData.photoUrl,
+        photoURL: profileData.photoUrl,
+        whatsapp: profileData.whatsapp,
+        bio: profileData.bio,
+        specialties: profileData.specialties,
+        updatedAt: Timestamp.now()
+      });
+      
+      alert("Perfil atualizado com sucesso! ✨");
     } catch (error) {
       console.error(error);
-      alert("Erro ao atualizar.");
+      alert("Erro ao atualizar perfil.");
     }
     setLoading(false);
   };
-  
+
+  const addSpecialty = () => {
+    if (newSpecialty.trim() && !profileData.specialties.includes(newSpecialty.trim())) {
+      setProfileData(prev => ({
+        ...prev,
+        specialties: [...prev.specialties, newSpecialty.trim()]
+      }));
+      setNewSpecialty("");
+    }
+  };
+
+  const removeSpecialty = (index: number) => {
+    setProfileData(prev => ({
+      ...prev,
+      specialties: prev.specialties.filter((_, i) => i !== index)
+    }));
+  };
+
+  if (fetching) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="animate-spin text-amber-500 w-8 h-8" />
+      </div>
+    );
+  }
+
   return (
-    <div className="max-w-md mx-auto py-8 px-6">
-      <div className="bg-neutral-900 rounded-[2.5rem] p-8 shadow-2xl border border-white/5 space-y-6">
-        <button onClick={onBack} className="text-neutral-500 mb-4 flex items-center gap-2 hover:text-amber-500">
-           {"<"} Voltar
+    <div className="max-w-xl mx-auto py-8 px-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex items-center justify-between mb-8">
+        <button onClick={onBack} className="w-10 h-10 rounded-full bg-neutral-900 flex items-center justify-center text-neutral-500 hover:text-amber-500 transition-colors">
+          <ChevronLeft className="w-6 h-6" />
         </button>
-        <h2 className="text-xl font-bold text-center text-white">Editar Perfil</h2>
-        
-        <form onSubmit={handleUpdate} className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-neutral-500 uppercase mb-1">Nome</label>
+        <h2 className="text-xl font-black text-white italic uppercase">Configurações de Perfil</h2>
+        <div className="w-10" />
+      </div>
+
+      <form onSubmit={handleUpdate} className="space-y-8 pb-20">
+        {/* Avatar Section */}
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative group">
+            <div className="w-24 h-24 rounded-[2rem] overflow-hidden border-2 border-amber-500 ring-8 ring-amber-500/10 transition-all group-hover:scale-105">
+              <img 
+                src={profileData.photoUrl || `https://ui-avatars.com/api/?name=${profileData.name}&background=f59e0b&color=000`} 
+                alt="Profile" 
+                className="w-full h-full object-cover" 
+              />
+            </div>
+            <div className="absolute -bottom-2 -right-2 bg-amber-500 w-8 h-8 rounded-xl flex items-center justify-center text-black shadow-lg">
+              <Camera className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="w-full">
+            <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest mb-2">URL da Foto</label>
             <input 
               type="text" 
-              value={name} 
-              onChange={(e) => setName(e.target.value)}
-              className="w-full bg-black border border-white/10 rounded-xl p-3 text-white"
+              value={profileData.photoUrl} 
+              onChange={(e) => setProfileData(prev => ({ ...prev, photoUrl: e.target.value }))}
+              placeholder="https://exemplo.com/foto.jpg"
+              className="w-full bg-neutral-900 border border-white/5 rounded-2xl p-4 text-sm text-white focus:border-amber-500 transition-all"
             />
           </div>
-          <button 
-            type="submit"
-            disabled={loading}
-            className="w-full bg-amber-500 text-black py-3 rounded-xl font-bold hover:bg-amber-400 transition-colors"
-          >
-            {loading ? "Salvando..." : "Salvar"}
-          </button>
-        </form>
-      </div>
+        </div>
+
+        {/* Basic Info */}
+        <div className="grid grid-cols-1 gap-6">
+          <div className="space-y-2">
+            <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest">Nome Público</label>
+            <input 
+              type="text" 
+              value={profileData.name} 
+              onChange={(e) => setProfileData(prev => ({ ...prev, name: e.target.value }))}
+              className="w-full bg-neutral-900 border border-white/5 rounded-2xl p-4 text-sm text-white focus:border-amber-500 transition-all font-bold"
+              placeholder="Seu nome"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest">WhatsApp / Contato</label>
+            <input 
+              type="text" 
+              value={profileData.whatsapp} 
+              onChange={(e) => setProfileData(prev => ({ ...prev, whatsapp: e.target.value }))}
+              className="w-full bg-neutral-900 border border-white/5 rounded-2xl p-4 text-sm text-white focus:border-amber-500 transition-all"
+              placeholder="(11) 99999-9999"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest">Biografia / Sobre você</label>
+            <textarea 
+              value={profileData.bio} 
+              onChange={(e) => setProfileData(prev => ({ ...prev, bio: e.target.value }))}
+              rows={4}
+              className="w-full bg-neutral-900 border border-white/5 rounded-2xl p-4 text-sm text-white focus:border-amber-500 transition-all resize-none"
+              placeholder="Conte um pouco sobre sua experiência e estilo..."
+            />
+          </div>
+        </div>
+
+        {/* Specialties */}
+        <div className="space-y-4">
+          <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest">Especialidades</label>
+          <div className="flex gap-2">
+            <input 
+              type="text" 
+              value={newSpecialty} 
+              onChange={(e) => setNewSpecialty(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addSpecialty())}
+              placeholder="Ex: Degradê, Barba, Pigmentação..."
+              className="flex-1 bg-neutral-900 border border-white/5 rounded-2xl p-4 text-sm text-white focus:border-amber-500 transition-all"
+            />
+            <button 
+              type="button"
+              onClick={addSpecialty}
+              className="w-14 h-14 bg-white text-black rounded-2xl flex items-center justify-center hover:bg-neutral-200 transition-colors"
+            >
+              <Plus className="w-6 h-6" />
+            </button>
+          </div>
+          
+          <div className="flex flex-wrap gap-2">
+            {profileData.specialties.map((spec, index) => (
+              <div key={index} className="bg-amber-500/10 border border-amber-500/20 px-3 py-2 rounded-xl flex items-center gap-2 group">
+                <span className="text-xs font-bold text-amber-500">{spec}</span>
+                <button 
+                  type="button" 
+                  onClick={() => removeSpecialty(index)}
+                  className="text-amber-500/40 hover:text-amber-500 transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+            {profileData.specialties.length === 0 && (
+              <p className="text-neutral-600 text-xs font-bold uppercase italic">Nenhuma especialidade adicionada</p>
+            )}
+          </div>
+        </div>
+
+        {/* Submit */}
+        <button 
+          type="submit"
+          disabled={loading}
+          className="w-full bg-amber-500 text-black py-5 rounded-2xl font-black uppercase italic tracking-widest hover:bg-amber-400 transition-all transform active:scale-95 disabled:opacity-50 shadow-lg shadow-amber-500/20"
+        >
+          {loading ? "Salvando Alterações..." : "Salvar Perfil Profissional"}
+        </button>
+      </form>
     </div>
   );
 }
@@ -1587,9 +1754,12 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
   const [selectedService, setSelectedService] = useState<string | null>(null);
   const [selectedBarber, setSelectedBarber] = useState<string | null>(null);
   const [barbers, setBarbers] = useState<any[]>([]);
-  const [bookingDate, setBookingDate] = useState("");
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [barberAppointments, setBarberAppointments] = useState<any[]>([]);
   const [recurrence, setRecurrence] = useState<'none' | 'weekly' | 'biweekly' | 'monthly'>('none');
   const [isBooking, setIsBooking] = useState(false);
+  const [loadingSlots, setLoadingSlots] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [guestName, setGuestName] = useState("");
@@ -1597,7 +1767,7 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
   const [guestPhone, setGuestPhone] = useState("");
 
   useEffect(() => {
-    const q = query(collection(db, "users"), where("role", "==", "barber"));
+    const q = query(collection(db, "users"), where("role", "in", ["barber", "manager"]));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const barberData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setBarbers(barberData);
@@ -1605,8 +1775,62 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
     return () => unsubscribe();
   }, []);
 
+  // Fetch appointments for the selected barber to check availability
+  useEffect(() => {
+    if (!selectedBarber) return;
+    setLoadingSlots(true);
+    
+    const start = startOfDay(selectedDate);
+    const end = endOfDay(selectedDate);
+
+    const q = query(
+      collection(db, "appointments"),
+      where("barberId", "==", selectedBarber),
+      where("date", ">=", Timestamp.fromDate(start)),
+      where("date", "<=", Timestamp.fromDate(end))
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setBarberAppointments(snapshot.docs.map(doc => doc.data()));
+      setLoadingSlots(false);
+    });
+    return () => unsubscribe();
+  }, [selectedBarber, selectedDate]);
+
+  const timeSlots = useMemo(() => {
+    const slots = [];
+    const isWeekend = selectedDate.getDay() === 0 || selectedDate.getDay() === 6;
+    const startHour = 9;
+    const endHour = isWeekend && selectedDate.getDay() === 6 ? 18 : (selectedDate.getDay() === 0 ? 0 : 20);
+
+    if (endHour === 0) return []; // Sunday typically closed or different hours
+
+    for (let h = startHour; h < endHour; h++) {
+      for (let m = 0; m < 60; m += 30) {
+        const time = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        
+        // Check if slot is taken
+        const isBusy = barberAppointments.some(app => {
+          const appDate = app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date);
+          return format(appDate, "HH:mm") === time;
+        });
+
+        // Check if user is booking for past time today
+        let isPast = false;
+        if (isToday(selectedDate)) {
+          const slotDate = new Date(selectedDate);
+          slotDate.setHours(h, m, 0, 0);
+          if (slotDate < new Date()) isPast = true;
+        }
+
+        slots.push({ time, available: !isBusy && !isPast });
+      }
+    }
+    return slots;
+  }, [selectedDate, barberAppointments]);
+
   const handleConfirmBooking = async () => {
-    if (!selectedService || !selectedBarber || !bookingDate) {
+    if (!selectedService || !selectedBarber || !selectedDate || !selectedTime) {
         setError("Todos os campos são obrigatórios.");
         return;
     }
@@ -1614,6 +1838,11 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
         setError("Nome e E-mail são obrigatórios para visitantes.");
         return;
     }
+
+    const [hours, minutes] = selectedTime.split(':').map(Number);
+    const finalDate = new Date(selectedDate);
+    finalDate.setHours(hours, minutes, 0, 0);
+
     setError(null);
     setIsBooking(true);
     try {
@@ -1635,16 +1864,15 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
       };
       
       const appointmentsToCreate = [];
-      const baseDate = new Date(bookingDate);
       
       if (recurrence === 'none') {
-        appointmentsToCreate.push({ ...baseData, date: Timestamp.fromDate(baseDate) });
+        appointmentsToCreate.push({ ...baseData, date: Timestamp.fromDate(finalDate) });
       } else {
         const num = recurrence === 'monthly' ? 3 : 4;
         const intervalDays = recurrence === 'weekly' ? 7 : recurrence === 'biweekly' ? 14 : 30;
         
         for (let i = 0; i < num; i++) {
-           let date = new Date(baseDate);
+           let date = new Date(finalDate);
            if (recurrence === 'monthly') {
                date.setMonth(date.getMonth() + i);
            } else {
@@ -1665,115 +1893,270 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
     }
   };
 
+  const getStepTitle = () => {
+    switch(step) {
+      case 1: return "Escolha o Serviço";
+      case 2: return "Escolha o Barbeiro";
+      case 3: return "Data e Horário";
+      case 4: return "Confirmar Agendamento";
+      default: return "Booking";
+    }
+  };
+
   return (
     <>
     <AnimatePresence>
       {showConfirmation && (
         <ConfirmationModal 
           service={services.find(s => s.id === selectedService)}
-          date={bookingDate}
+          date={(() => {
+            const [h, m] = (selectedTime || "00:00").split(':').map(Number);
+            const d = new Date(selectedDate);
+            d.setHours(h, m, 0, 0);
+            return d.toISOString();
+          })()}
           onConfirm={onBack}
         />
       )}
     </AnimatePresence>
     
-    <motion.div 
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="max-w-xl mx-auto py-8 px-6"
-    >
-      <div className="flex justify-between items-center mb-8">
-        <button onClick={onBack} className="text-neutral-500">Voltar</button>
-        <span className="text-neutral-400 font-bold uppercase tracking-widest text-xs">Passo {step} de 4</span>
-      </div>
+    <div className="min-h-screen bg-black pb-20">
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="max-w-xl mx-auto py-8 px-6"
+      >
+        {/* Progress Header */}
+        <div className="flex items-center justify-between mb-10">
+          <button onClick={step === 1 ? onBack : () => setStep(step - 1)} className="w-10 h-10 rounded-full bg-neutral-900 flex items-center justify-center text-neutral-500 hover:text-amber-500 transition-colors">
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+          <div className="text-center">
+            <h2 className="text-xl font-black text-white italic uppercase tracking-tighter">{getStepTitle()}</h2>
+            <div className="flex justify-center gap-1.5 mt-2">
+              {[1,2,3,4].map(s => (
+                <div key={s} className={`h-1 rounded-full transition-all duration-500 ${step >= s ? "w-6 bg-amber-500" : "w-1.5 bg-neutral-800"}`} />
+              ))}
+            </div>
+          </div>
+          <div className="w-10" />
+        </div>
 
-      <AnimatePresence mode="wait">
-        {step === 1 && (
-            <motion.div key="step1" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }}>
-                <h2 className="text-3xl font-black uppercase italic mb-8">Escolha o serviço</h2>
-                <div className="grid gap-4">
-                  {services.map(s => (
-                    <button key={s.id} onClick={() => { setSelectedService(s.id); setStep(2); }} className={`p-6 rounded-3xl border transition-all ${selectedService === s.id ? 'border-amber-500 bg-neutral-900 shadow-lg shadow-amber-500/10' : 'border-neutral-800 bg-neutral-900/50 hover:border-neutral-700'}`}>
-                        <div className="flex justify-between items-center">
-                            <span className="font-bold text-lg">{s.name}</span>
-                            <div className="bg-amber-500/10 px-3 py-1 rounded-full">
-                                <span className="text-amber-500 font-black text-sm">R${s.price}</span>
+        <AnimatePresence mode="wait">
+          {step === 1 && (
+              <motion.div key="step1" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} className="space-y-4">
+                  <p className="text-neutral-500 text-xs font-black uppercase tracking-[0.2em] mb-6">Selecione o procedimento desejado</p>
+                  <div className="grid gap-3">
+                    {services.filter(s => s.active !== false).map(s => (
+                      <button 
+                        key={s.id} 
+                        onClick={() => { setSelectedService(s.id); setStep(2); }} 
+                        className={`group p-6 rounded-[2rem] border text-left transition-all relative overflow-hidden ${selectedService === s.id ? 'border-amber-500 bg-neutral-900 shadow-2xl shadow-amber-500/20' : 'border-white/5 bg-neutral-900/50 hover:border-white/10'}`}
+                      >
+                        <div className="flex justify-between items-center relative z-10">
+                          <div className="space-y-1">
+                            <h4 className="font-black text-white text-lg uppercase italic tracking-tight">{s.name}</h4>
+                            <div className="flex items-center gap-2 text-neutral-500 text-xs font-bold uppercase">
+                              <Clock className="w-3.5 h-3.5" />
+                              {s.duration} min
                             </div>
+                          </div>
+                          <div className={`px-4 py-2 rounded-2xl transition-all ${selectedService === s.id ? 'bg-amber-500 text-black' : 'bg-white/5 text-amber-500 font-black'}`}>
+                              <span className="text-sm font-black italic">R${s.price}</span>
+                          </div>
                         </div>
-                    </button>
-                  ))}
-                </div>
-            </motion.div>
-        )}
-        {step === 2 && (
-            <motion.div key="step2" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }}>
-                <h2 className="text-3xl font-black uppercase italic mb-8">Escolha o barbeiro</h2>
-                <div className="grid gap-4">
-                    {barbers.map(b => (
-                        <button key={b.id} onClick={() => { setSelectedBarber(b.id); setStep(3); }} className={`p-4 rounded-3xl border flex items-center gap-4 transition-all ${selectedBarber === b.id ? 'border-amber-500 bg-neutral-900 shadow-lg shadow-amber-500/10' : 'border-neutral-800 bg-neutral-900/50 hover:border-neutral-700'}`}>
-                            <img src={b.photoURL || `https://ui-avatars.com/api/?name=${b.name}`} className="w-16 h-16 rounded-full border-2 border-neutral-800" />
-                            <span className="font-bold text-lg">{b.name}</span>
-                        </button>
+                      </button>
                     ))}
-                </div>
-            </motion.div>
-        )}
-        {step === 3 && (
-            <motion.div key="step3" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }}>
-                <h2 className="text-3xl font-black uppercase italic mb-8">Data e recorrência</h2>
-                <label className="block text-xs font-bold uppercase text-neutral-500 mb-2">Selecione o dia e hora</label>
-                <input type="datetime-local" className="w-full p-4 bg-neutral-900 rounded-3xl text-white border border-neutral-800 outline-none focus:border-amber-500" onChange={(e) => setBookingDate(e.target.value)} />
-                <label className="block text-xs font-bold uppercase text-neutral-500 mb-2 mt-6">Recorrência</label>
-                <select
-                  className="w-full p-4 bg-neutral-900 rounded-3xl text-white border border-neutral-800 outline-none focus:border-amber-500"
-                  value={recurrence}
-                  onChange={(e) => setRecurrence(e.target.value as any)}
-                >
-                  <option value="none">Sem recorrência</option>
-                  <option value="weekly">Semanalmente</option>
-                  <option value="biweekly">Quinzenalmente</option>
-                  <option value="monthly">Mensalmente</option>
-                </select>
-                <button onClick={() => setStep(4)} className="w-full mt-8 bg-amber-500 text-black py-4 rounded-xl font-black uppercase italic hover:bg-amber-400 transition-all">Continuar</button>
-            </motion.div>
-        )}
-        {step === 4 && (
-            <motion.div key="step4" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }}>
-                {!user && (
-                    <div className="bg-neutral-900 p-8 rounded-3xl border border-neutral-800 mb-8 space-y-4">
-                        <h3 className="text-xl font-bold mb-4">Seus dados (visitante)</h3>
-                         <input placeholder="Nome" className="w-full p-4 bg-black rounded-xl border border-neutral-800 text-white" value={guestName} onChange={e => setGuestName(e.target.value)} />
-                         <input placeholder="E-mail" className="w-full p-4 bg-black rounded-xl border border-neutral-800 text-white" value={guestEmail} onChange={e => setGuestEmail(e.target.value)} />
-                         <input placeholder="Telefone" className="w-full p-4 bg-black rounded-xl border border-neutral-800 text-white" value={guestPhone} onChange={e => setGuestPhone(e.target.value)} />
+                  </div>
+              </motion.div>
+          )}
+
+          {step === 2 && (
+              <motion.div key="step2" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} className="space-y-6">
+                  <p className="text-neutral-500 text-xs font-black uppercase tracking-[0.2em] mb-6">Com qual profissional deseja agendar?</p>
+                  <div className="grid gap-4">
+                      {barbers.map(b => (
+                          <button 
+                            key={b.id} 
+                            onClick={() => { setSelectedBarber(b.id); setStep(3); }} 
+                            className={`p-5 rounded-[2rem] border flex items-center justify-between transition-all group ${selectedBarber === b.id ? 'border-amber-500 bg-neutral-900 shadow-2xl shadow-amber-500/20' : 'border-white/5 bg-neutral-900/50 hover:border-white/10'}`}
+                          >
+                              <div className="flex items-center gap-4">
+                                <div className="relative">
+                                  <img 
+                                    src={b.photoURL || `https://ui-avatars.com/api/?name=${b.name}&background=f59e0b&color=000`} 
+                                    className={`w-16 h-16 rounded-[1.5rem] object-cover border-2 transition-all ${selectedBarber === b.id ? 'border-amber-500' : 'border-white/10'}`} 
+                                    alt={b.name}
+                                  />
+                                  {selectedBarber === b.id && <div className="absolute -top-1 -right-1 bg-amber-500 text-black rounded-full p-1 border-2 border-black"><CheckCircle2 className="w-3 h-3" /></div>}
+                                </div>
+                                <div className="text-left">
+                                  <h4 className="font-black text-white text-lg tracking-tight">{b.name}</h4>
+                                  <p className="text-[10px] text-amber-500 font-black uppercase tracking-widest">Especialista</p>
+                                </div>
+                              </div>
+                              <ChevronRight className={`w-5 h-5 transition-all ${selectedBarber === b.id ? 'text-amber-500 translate-x-1' : 'text-neutral-700'}`} />
+                          </button>
+                      ))}
+                  </div>
+              </motion.div>
+          )}
+
+          {step === 3 && (
+              <motion.div key="step3" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} className="space-y-8">
+                  {/* Calendar Selector */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-white font-black italic uppercase tracking-tight">Selecione o dia</h3>
+                      <span className="text-amber-500 text-[10px] font-black uppercase tracking-widest leading-none">{format(selectedDate, "MMMM", { locale: ptBR })}</span>
                     </div>
-                )}
-                <h2 className="text-3xl font-black uppercase italic mb-8">Resumo</h2>
-                <div className="bg-neutral-900 p-8 rounded-3xl border border-neutral-800 mb-8 space-y-4">
-                   <div className="flex justify-between">
-                       <span className="text-neutral-500 font-bold uppercase text-xs">Serviço</span>
-                       <span className="font-bold">{services.find(s => s.id === selectedService)?.name}</span>
-                   </div>
-                   <div className="flex justify-between">
-                       <span className="text-neutral-500 font-bold uppercase text-xs">Barbeiro</span>
-                       <span className="font-bold">{barbers.find(b => b.id === selectedBarber)?.name}</span>
-                   </div>
-                   <div className="flex justify-between">
-                       <span className="text-neutral-500 font-bold uppercase text-xs">Data</span>
-                       <span className="font-bold">{bookingDate ? format(new Date(bookingDate), "dd MMM, HH:mm", { locale: ptBR }) : '-'}</span>
-                   </div>
-                   <div className="flex justify-between">
-                       <span className="text-neutral-500 font-bold uppercase text-xs">Recorrência</span>
-                       <span className="font-bold">{recurrence === 'none' ? 'Nenhuma' : recurrence === 'weekly' ? 'Semanal' : recurrence === 'biweekly' ? 'Quinzenal' : 'Mensal'}</span>
-                   </div>
-                </div>
-                {error && <p className="text-red-500 font-bold text-center mb-4">{error}</p>}
-                <button disabled={isBooking} onClick={handleConfirmBooking} className="w-full bg-amber-500 text-black py-4 rounded-xl font-black uppercase italic hover:bg-amber-400 transition-all shadow-lg active:scale-95 disabled:opacity-50">
-                    {isBooking ? 'Agendando...' : 'Confirmar agendamento'}
-                </button>
-            </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
+                    
+                    <div className="flex gap-2 overflow-x-auto no-scrollbar py-2">
+                      {Array.from({ length: 14 }).map((_, i) => {
+                        const day = addDays(new Date(), i);
+                        const isSunday = day.getDay() === 0;
+                        const active = isSameDay(day, selectedDate);
+                        
+                        return (
+                          <button 
+                            key={i}
+                            disabled={isSunday}
+                            onClick={() => { setSelectedDate(day); setSelectedTime(null); }}
+                            className={`flex flex-col items-center min-w-[64px] py-4 rounded-3xl transition-all border ${active ? "bg-amber-500 border-amber-500 text-black shadow-lg shadow-amber-500/20" : isSunday ? "opacity-20 border-transparent cursor-not-allowed" : "bg-neutral-900 border-white/5 text-neutral-500 hover:border-white/10"}`}
+                          >
+                            <span className="text-[10px] font-black uppercase mb-1 tracking-tighter">{format(day, "EEE", { locale: ptBR })}</span>
+                            <span className={`text-base font-black ${active ? "text-black" : "text-neutral-200"}`}>{format(day, "d")}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Time Slots */}
+                  <div className="space-y-4">
+                    <h3 className="text-white font-black italic uppercase tracking-tight">Horários disponíveis</h3>
+                    {loadingSlots ? (
+                      <div className="flex justify-center py-10">
+                        <Loader2 className="w-8 h-8 text-amber-500 animate-spin" />
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-3 gap-3">
+                        {timeSlots.map(({ time, available }) => (
+                          <button 
+                            key={time} 
+                            disabled={!available}
+                            onClick={() => setSelectedTime(time)}
+                            className={`py-4 rounded-2xl text-sm font-black transition-all border ${selectedTime === time ? "bg-amber-500 border-amber-500 text-black" : available ? "bg-neutral-900 border-white/5 text-white hover:border-amber-500/50" : "bg-neutral-900/30 border-transparent text-neutral-700 cursor-not-allowed line-through opacity-50"}`}
+                          >
+                            {time}
+                          </button>
+                        ))}
+                        {timeSlots.length === 0 && (
+                          <div className="col-span-3 p-8 text-center text-neutral-600 font-bold uppercase text-xs border border-dashed border-white/10 rounded-3xl">
+                            Sem disponibilidade para este dia
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Recurrence Selection */}
+                  <div className="bg-neutral-900/50 border border-white/5 rounded-[2rem] p-6 space-y-4">
+                    <div className="flex items-center gap-2">
+                      <RefreshCw className="w-4 h-4 text-amber-500" />
+                      <h4 className="text-xs font-black uppercase text-neutral-400 tracking-widest">Deseja tornar recorrente?</h4>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {(['none', 'weekly', 'biweekly', 'monthly'] as const).map(r => (
+                        <button 
+                          key={r}
+                          onClick={() => setRecurrence(r)}
+                          className={`py-2 px-2 rounded-xl text-[10px] font-black uppercase transition-all ${recurrence === r ? "bg-amber-500 text-black" : "bg-white/5 text-neutral-600 hover:text-white"}`}
+                        >
+                          {r === 'none' ? 'Único' : r === 'weekly' ? 'Semanal' : r === 'biweekly' ? 'Quinzenal' : 'Mensal'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button 
+                    disabled={!selectedTime}
+                    onClick={() => setStep(4)} 
+                    className="w-full bg-white text-black py-5 rounded-2xl font-black uppercase italic tracking-widest hover:bg-neutral-200 transition-all disabled:opacity-30 flex items-center justify-center gap-2 group shadow-xl"
+                  >
+                    Próximo Passo <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </button>
+              </motion.div>
+          )}
+
+          {step === 4 && (
+              <motion.div key="step4" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} className="space-y-6">
+                  {!user && (
+                      <div className="bg-neutral-900 p-6 rounded-[2rem] border border-white/5 space-y-4">
+                          <h3 className="text-sm font-black uppercase tracking-widest text-amber-500">Dados do solicitante</h3>
+                          <div className="space-y-3">
+                             <input placeholder="Seu Nome" className="w-full p-4 bg-black rounded-2xl border border-white/5 text-white focus:border-amber-500 transition-all" value={guestName} onChange={e => setGuestName(e.target.value)} />
+                             <input placeholder="E-mail" className="w-full p-4 bg-black rounded-2xl border border-white/5 text-white focus:border-amber-500 transition-all" value={guestEmail} onChange={e => setGuestEmail(e.target.value)} />
+                             <input placeholder="WhatsApp (opcional)" className="w-full p-4 bg-black rounded-2xl border border-white/5 text-white focus:border-amber-500 transition-all" value={guestPhone} onChange={e => setGuestPhone(e.target.value)} />
+                          </div>
+                      </div>
+                  )}
+
+                  <div className="bg-neutral-900 p-8 rounded-[2.5rem] border border-white/5 space-y-6 text-sm relative overflow-hidden">
+                     <div className="absolute top-0 right-0 p-6 opacity-5">
+                       <Scissors className="w-24 h-24 rotate-12" />
+                     </div>
+                     
+                     <div className="flex justify-between items-center border-b border-white/5 pb-4">
+                         <span className="text-neutral-500 font-bold uppercase tracking-widest text-[10px]">Procedimento</span>
+                         <span className="font-black text-white italic uppercase">{services.find(s => s.id === selectedService)?.name}</span>
+                     </div>
+                     <div className="flex justify-between items-center border-b border-white/5 pb-4">
+                         <span className="text-neutral-500 font-bold uppercase tracking-widest text-[10px]">Barbeiro</span>
+                         <span className="font-black text-white uppercase">{barbers.find(b => b.id === selectedBarber)?.name}</span>
+                     </div>
+                     <div className="flex justify-between items-center border-b border-white/5 pb-4">
+                         <span className="text-neutral-500 font-bold uppercase tracking-widest text-[10px]">Data e Hora</span>
+                         <span className="font-black text-amber-500">
+                           {selectedDate ? format(selectedDate, "dd MMM", { locale: ptBR }) : '-'} • {selectedTime}
+                         </span>
+                     </div>
+                     <div className="flex justify-between items-center border-b border-white/5 pb-4">
+                         <span className="text-neutral-500 font-bold uppercase tracking-widest text-[10px]">Recorrência</span>
+                         <span className="font-black text-white text-[10px] bg-amber-500/10 px-2 py-1 rounded-full uppercase tracking-widest">
+                           {recurrence === 'none' ? 'Apenas uma vez' : recurrence === 'weekly' ? 'Semanal' : recurrence === 'biweekly' ? 'Quinzenal' : 'Mensal'}
+                         </span>
+                     </div>
+                     <div className="flex justify-between items-center pt-2">
+                         <span className="text-neutral-500 font-black uppercase tracking-widest text-base">Total</span>
+                         <span className="text-3xl font-black text-white">R${services.find(s => s.id === selectedService)?.price}</span>
+                     </div>
+                  </div>
+
+                  {error && (
+                    <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="bg-red-500/10 border border-red-500/20 p-4 rounded-2xl flex items-center gap-3 text-red-500">
+                      <XCircle className="w-5 h-5 flex-shrink-0" />
+                      <p className="text-xs font-bold leading-tight">{error}</p>
+                    </motion.div>
+                  )}
+
+                  <button 
+                    disabled={isBooking} 
+                    onClick={handleConfirmBooking} 
+                    className="w-full bg-amber-500 text-black py-5 rounded-[2rem] font-black uppercase italic tracking-widest hover:bg-amber-400 transition-all shadow-2xl shadow-amber-500/20 active:scale-95 disabled:opacity-50 text-xl"
+                  >
+                    {isBooking ? (
+                      <div className="flex items-center justify-center gap-3">
+                        <Loader2 className="w-6 h-6 animate-spin" />
+                        AGENDANDO...
+                      </div>
+                    ) : 'FINALIZAR AGENDAMENTO'}
+                  </button>
+              </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
+    </div>
     </>
   );
 }

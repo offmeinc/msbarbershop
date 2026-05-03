@@ -30,11 +30,13 @@ service cloud.firestore {
     match /users/{userId} {
       function isValidUser(data, id) {
         return data.uid == id
-          && data.name is string && data.name.size() > 0 && data.name.size() < 100
+          && (data.name is string || data.displayName is string)
           && (data.role in ['client', 'barber', 'manager', 'inactive_barber'])
           && (!('whatsapp' in data) || (data.whatsapp is string && data.whatsapp.size() < 40))
           && (!('bio' in data) || (data.bio is string && data.bio.size() < 1000))
           && (!('photoUrl' in data) || data.photoUrl is string)
+          && (!('photoURL' in data) || data.photoURL is string)
+          && (!('specialties' in data) || data.specialties is list)
           && (!('createdAt' in data) || data.createdAt is timestamp)
           && (!('updatedAt' in data) || data.updatedAt is timestamp);
       }
