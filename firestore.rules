@@ -128,7 +128,6 @@ service cloud.firestore {
       ));
       
       allow create: if isSignedIn() && isValidAppointment(incoming()) 
-        && incoming().createdAt == request.time
         && (incoming().clientId == request.auth.uid || isManager());
       
       allow update: if isSignedIn() && (
