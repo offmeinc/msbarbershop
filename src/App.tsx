@@ -667,6 +667,7 @@ export default function App() {
   const [requestedRole, setRequestedRole] = useState<string>("client");
   const [loading, setLoading] = useState(true);
   const [services, setServices] = useState<any[]>([]);
+  const isSigningUp = useRef(false);
 
   useEffect(() => {
     const unsubscribeServices = onSnapshot(collection(db, "services"), (snapshot) => {
@@ -678,6 +679,10 @@ export default function App() {
       setUser(firebaseUser);
       if (firebaseUser) {
         console.log("Auth state changed: User logged in", firebaseUser.uid);
+        if (isSigningUp.current) {
+          setLoading(false);
+          return;
+        }
         try {
           const userDocRef = doc(db, "users", firebaseUser.uid);
           const userDoc = await getDoc(userDocRef);
@@ -719,6 +724,7 @@ export default function App() {
   }, []);
 
   const handleLogin = async (role: string = "client", email?: string, password?: string, isSignUp?: boolean, name?: string, whatsapp?: string) => {
+    isSigningUp.current = isSignUp || false;
     setRequestedRole(role);
     console.log("HandleLogin: Attempting to create user with email:", email, "role:", role, "isSignUp:", isSignUp, "name:", name, "whatsapp:", whatsapp);
     
@@ -761,6 +767,9 @@ export default function App() {
       if (error.code === 'auth/invalid-email') message = "E-mail inválido.";
       if (error.code === 'auth/weak-password') message = "A senha deve ter pelo menos 6 caracteres.";
       alert(message);
+    } finally {
+      isSigningUp.current = false;
+      setLoading(false);
     }
   };
 

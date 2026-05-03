@@ -8,19 +8,17 @@ service cloud.firestore {
 
     // Global helpers
     function isSignedIn() { return request.auth != null; }
-    function getUserData() { 
-      let userRef = /databases/$(database)/documents/users/$(request.auth.uid);
-      return exists(userRef) ? get(userRef).data : null;
+    
+    // Check if the REQUESTING user has a specific role
+    function hasRole(role) {
+      let path = /databases/$(database)/documents/users/$(request.auth.uid);
+      return isSignedIn() && exists(path) && get(path).data.role == role;
     }
-    function isManager() { 
-      let data = getUserData();
-      return isSignedIn() && data != null && data.role == 'manager'; 
-    }
-    function isBarber() { 
-      let data = getUserData();
-      return isSignedIn() && data != null && data.role == 'barber'; 
-    }
+    
+    function isManager() { return hasRole('manager'); }
+    function isBarber() { return hasRole('barber'); }
     function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
 
@@ -33,18 +31,59 @@ service cloud.firestore {
       function isValidUser(data, id) {
         return data.uid == id
           && data.name is string && data.name.size() > 0 && data.name.size() < 100
-          && (data.email == request.auth.token.email || data.email == null || isManager())
-          && data.role in ['client', 'barber', 'manager']
-          && (!('whatsapp' in data) || (data.whatsapp is string && data.whatsapp.size() < 20))
-          && (!('bio' in data) || (data.bio is string && data.bio.size() < 500))
-          && (!('photoUrl' in data) || data.photoUrl is string);
+          && (data.role in ['client', 'barber', 'manager', 'inactive_barber'])
+          && (!('whatsapp' in data) || (data.whatsapp is string && data.whatsapp.size() < 40))
+          && (!('bio' in data) || (data.bio is string && data.bio.size() < 1000))
+          && (!('photoUrl' in data) || data.photoUrl is string)
+          && (!('createdAt' in data) || data.createdAt is timestamp)
+          && (!('updatedAt' in data) || data.updatedAt is timestamp);
       }
 
-      allow get: if isSignedIn() && (isOwner(userId) || isManager() || isBarber());
-      allow list: if isSignedIn() && isManager();
+      // Optimization: avoid get() for basic ownership check
+      allow get: if isSignedIn() && (
+        isOwner(userId) || 
+        resource.data.role == 'barber' ||
+        isManager()
+      );
+      
+      allow list: if isSignedIn() && (isManager() || isBarber());
+      
       allow create: if isSignedIn() && isOwner(userId) && isValidUser(incoming(), userId);
-      allow update: if isSignedIn() && (isOwner(userId) || isManager()) && isValidUser(incoming(), userId)
-        && (isManager() || incoming().role == existing().role); 
+      
+      allow update: if isSignedIn() && (
+        // Owner can update their own profile, but changing role requires manager or it must match
+        // We allow changing from 'client' to something else during the initialization phase
+        (isOwner(userId) && isValidUser(incoming(), userId) && (incoming().role == existing().role || existing().role == 'client')) || 
+        isManager()
+      ); 
+
+      // Working Hours Subcollection
+      match /workingHours/{workId} {
+        allow read: if true;
+        allow write: if isManager() || isOwner(userId);
+      }
+    }
+
+    // Working Hours Collection (Top-level)
+    match /workingHours/{workId} {
+      allow read: if true;
+      allow write: if isSignedIn() && (isManager() || isOwner(incoming().barberId) || (resource != null && isOwner(resource.data.barberId)));
+    }
+
+    // Blocked Times Collection
+    match /blocked_times/{docId} {
+      allow read: if true;
+      allow write: if isManager() || isBarber();
+    }
+
+    // Chats Collection
+    match /chats/{userId}/messages/{msgId} {
+      allow read, write: if isSignedIn() && (isOwner(userId) || isManager() || isBarber());
+    }
+
+    // Test Connection
+    match /test/{docId} {
+      allow get: if true;
     }
 
     // Services Collection
@@ -53,7 +92,8 @@ service cloud.firestore {
         return data.name is string && data.name.size() > 0 && data.name.size() < 100
           && data.price is number && data.price >= 0
           && data.duration is number && data.duration > 0
-          && (data.active == null || data.active is bool);
+          && (!('active' in data) || data.active is bool)
+          && (!('description' in data) || data.description is string);
       }
       allow read: if true; 
       allow write: if isManager() && isValidService(incoming());
@@ -62,33 +102,32 @@ service cloud.firestore {
     // Appointments Collection
     match /appointments/{appointmentId} {
       function isValidAppointment(data) {
-        return data.clientId == request.auth.uid
+        return isValidId(data.clientId)
           && isValidId(data.barberId)
           && isValidId(data.serviceId)
           && data.status in ['pending', 'confirmed', 'completed', 'cancelled']
-          && data.totalPrice is number;
+          && data.totalPrice is number
+          && (!('date' in data) || data.date is timestamp || data.date is string)
+          && (!('serviceName' in data) || data.serviceName is string)
+          && (!('createdAt' in data) || data.createdAt is timestamp);
       }
 
-      allow get: if isSignedIn() && (
+      allow read: if isSignedIn() && (
         resource.data.clientId == request.auth.uid || 
         resource.data.barberId == request.auth.uid || 
         isManager()
       );
       
-      allow list: if isSignedIn() && (
-        resource.data.clientId == request.auth.uid || 
-        resource.data.barberId == request.auth.uid || 
-        isManager()
-      );
-
       allow create: if isSignedIn() && isValidAppointment(incoming()) 
-        && incoming().status == 'pending';
+        && (incoming().clientId == request.auth.uid || isManager());
       
       allow update: if isSignedIn() && (
         (isOwner(existing().clientId) && incoming().diff(existing()).affectedKeys().hasOnly(['status']) && incoming().status == 'cancelled') ||
-        (isOwner(existing().barberId) && incoming().diff(existing()).affectedKeys().hasOnly(['status']) && incoming().status in ['confirmed', 'completed']) ||
+        (isOwner(existing().barberId) && (incoming().diff(existing()).affectedKeys().hasOnly(['status']) || incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])) && incoming().status in ['confirmed', 'completed']) ||
         isManager()
       ) && isValidAppointment(incoming());
+      
+      allow delete: if isManager();
     }
 
     // Reviews Collection
