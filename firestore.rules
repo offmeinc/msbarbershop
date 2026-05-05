@@ -123,11 +123,13 @@ service cloud.firestore {
         return data.status in ['completed', 'cancelled'];
       }
 
-      allow read: if (resource.data.status in ['pending', 'confirmed', 'completed', 'cancelled']) || (isSignedIn() && (
+      allow get: if (resource.data.status in ['pending', 'confirmed', 'completed', 'cancelled']) || (isSignedIn() && (
         resource.data.clientId == request.auth.uid || 
         resource.data.barberId == request.auth.uid || 
         isManager()
       )) || (resource.data.loginCode is string);
+
+      allow list: if request.auth == null || isSignedIn();
       
       allow create: if isValidAppointment(incoming(), true) && (isSignedIn() || incoming().clientId == 'guest');
       
@@ -157,6 +159,13 @@ service cloud.firestore {
 
       allow read: if true;
       allow create: if isSignedIn() && isValidReview(incoming());
+    }
+
+    // Notifications Collection
+    match /notifications/{docId} {
+      allow get: if resource.data.loginCode is string;
+      allow list: if request.auth == null || isSignedIn();
+      allow write: if isSignedIn() && (isManager() || isBarber());
     }
 
     // Internal Chats Collection

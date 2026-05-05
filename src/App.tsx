@@ -47,7 +47,8 @@ import {
   HelpCircle,
   Smartphone,
   TrendingUp,
-  DollarSign
+  DollarSign,
+  Download
 } from "lucide-react";
 import { useState, useEffect, useRef, useMemo, ChangeEvent, FormEvent } from "react";
 
@@ -2154,7 +2155,14 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
         }
       }
 
-      await Promise.all(appointmentsToCreate.map(app => addDoc(collection(db, "appointments"), app)));
+      await Promise.all(appointmentsToCreate.map(async (app) => {
+        await addDoc(collection(db, "appointments"), app);
+        await addDoc(collection(db, "notifications"), {
+            loginCode: app.loginCode,
+            message: `Agendamento confirmado para ${app.date.toDate().toLocaleDateString()} - ${app.serviceName}`,
+            timestamp: serverTimestamp(),
+        });
+      }));
       
       // Auto send WhatsApp confirmation
       appointmentsToCreate.forEach((app) => {
@@ -2579,6 +2587,31 @@ function DashboardScreen
     }
   };
 
+  const exportToCSV = () => {
+    const headers = ["Cliente", "Serviço", "Data", "Hora", "Barbeiro", "Status"];
+    const rows = filteredAppointmentsList.map(app => {
+        const d = app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date);
+        return [
+            app.clientName,
+            app.serviceName,
+            format(d, "dd/MM/yyyy"),
+            format(d, "HH:mm"),
+            app.barberName || "",
+            app.status
+        ].map(val => `"${val}"`).join(",");
+    });
+    
+    const csvContent = [headers.join(","), ...rows].join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "agendamentos.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const filteredAppointmentsList = useMemo(() => {
 	  return appointments.filter(app => {
 		  if (filterStatus === 'all') return true;
@@ -2822,7 +2855,12 @@ function DashboardScreen
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
               {currentView === 'list' && (
                   <div className="space-y-6">
-                      <h2 className="text-xl font-black uppercase italic tracking-tight underline decoration-amber-500/30 decoration-4 underline-offset-4 text-white">Meus Atendimentos</h2>
+                      <div className="flex justify-between items-center gap-4">
+                        <h2 className="text-xl font-black uppercase italic tracking-tight underline decoration-amber-500/30 decoration-4 underline-offset-4 text-white">Meus Atendimentos</h2>
+                        <button onClick={exportToCSV} className="text-xs font-bold text-amber-500 uppercase flex items-center gap-1 hover:text-amber-400"> 
+                          <Download className="w-3 h-3"/> Exportar
+                        </button>
+                      </div>
                       
                       {/* Filter Buttons */}
                       <div className="flex gap-2 pb-2 overflow-x-auto no-scrollbar">
