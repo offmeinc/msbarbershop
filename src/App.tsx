@@ -1263,6 +1263,33 @@ export default function App() {
     setCurrentScreen("home");
   };
 
+  const handleClientLogin = async (email: string, code: string) => {
+    // 1. Verify if code is valid
+    const appointmentsQuery = query(collection(db, "appointments"), where("loginCode", "==", code));
+    const querySnapshot = await getDocs(appointmentsQuery);
+    
+    if (querySnapshot.empty) {
+        alert("Código inválido.");
+        return;
+    }
+    
+    // 2. Check if user exists, if not, create
+    const userQuery = query(collection(db, "users"), where("email", "==", email));
+    const userSnapshot = await getDocs(userQuery);
+    
+    if (userSnapshot.empty) {
+        // Create user doc
+        await setDoc(doc(db, "users", email), {
+            email: email,
+            role: "client",
+            createdAt: serverTimestamp(),
+        });
+    }
+    
+    setClientLoginCode(code);
+    setCurrentScreen("client-dashboard");
+  };
+
   if (loading) {
     return (
       <div className="h-screen bg-black flex items-center justify-center">
@@ -1381,7 +1408,7 @@ export default function App() {
             : <HomeScreen key="home" services={services} onStartBooking={() => setCurrentScreen("booking")} />
           )}
           {currentScreen === "login" && <LoginScreen key="login" onLogin={handleLogin} setUserRole={setUserRole} setCurrentScreen={setCurrentScreen} setRequestedRole={setRequestedRole} />}
-          {currentScreen === "client-login" && <ClientLoginScreen onLogin={(code) => { setClientLoginCode(code); setCurrentScreen("client-dashboard"); }} onBack={() => setCurrentScreen("home")} />}
+          {currentScreen === "client-login" && <ClientLoginScreen onLogin={handleClientLogin} onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "client-dashboard" && <ClientDashboardScreen loginCode={clientLoginCode} onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "booking" && <BookingScreen key="booking" user={user} services={services} onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "agenda" && <DashboardScreen key="agenda" user={user} role={userRole} services={services} dashboardView={dashboardView || "list"} onBack={() => setCurrentScreen("home")} />}
@@ -1597,14 +1624,16 @@ function ClientDashboardScreen({ loginCode, onBack }: { loginCode: string, onBac
   );
 }
 
-function ClientLoginScreen({ onLogin, onBack }: { onLogin: (code: string) => void, onBack: () => void }) {
+function ClientLoginScreen({ onLogin, onBack }: { onLogin: (email: string, code: string) => void, onBack: () => void }) {
   const [code, setCode] = useState("");
+  const [email, setEmail] = useState("");
   return (
     <div className="max-w-md mx-auto py-8 px-6 space-y-4">
        <button onClick={onBack} className="text-neutral-500">Voltar</button>
        <h2 className="text-white font-black text-2xl">Acessar Painel do Cliente</h2>
-       <input type="text" value={code} onChange={e => setCode(e.target.value)} placeholder="Código de Acesso" className="w-full bg-neutral-900 text-white p-4 rounded-xl"/>
-       <button onClick={() => onLogin(code)} className="w-full bg-amber-500 text-black font-black p-4 rounded-xl">Entrar</button>
+       <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Seu E-mail" className="w-full bg-neutral-900 text-white p-4 rounded-xl border border-white/5 focus:border-amber-500"/>
+       <input type="text" value={code} onChange={e => setCode(e.target.value)} placeholder="Código de Acesso" className="w-full bg-neutral-900 text-white p-4 rounded-xl border border-white/5 focus:border-amber-500"/>
+       <button onClick={() => onLogin(email, code)} className="w-full bg-amber-500 text-black font-black p-4 rounded-xl">Entrar</button>
     </div>
   );
 }
@@ -1877,7 +1906,13 @@ function LoginScreen({ onLogin, setUserRole, setCurrentScreen, setRequestedRole 
 }
 
 
-function ConfirmationModal({ service, date, onConfirm, loginCode }: { service: any, date: string, onConfirm: () => void, loginCode: string }) {
+function ConfirmationModal({ service, date, onConfirm, loginCode, phone }: { service: any, date: string, onConfirm: () => void, loginCode: string, phone: string }) {
+  const sendWhatsAppConfirmation = () => {
+    const text = `Agendamento confirmado! Serviço: ${service?.name}, Data: ${format(new Date(date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}. Código de acesso: ${loginCode}`;
+    const url = `https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+  };
+
   return (
     <motion.div 
       initial={{ opacity: 0 }}
@@ -1906,6 +1941,13 @@ function ConfirmationModal({ service, date, onConfirm, loginCode }: { service: a
             <p className="text-2xl font-black text-amber-500 uppercase tracking-widest">{loginCode}</p>
             <p className="text-[9px] text-neutral-600 mt-1">Guarde este código para acessar seus agendamentos no painel do cliente.</p>
         </div>
+
+        <button 
+          onClick={sendWhatsAppConfirmation}
+          className="w-full bg-green-500 text-white font-black uppercase italic py-4 rounded-xl mb-4 hover:bg-green-400 transition-all shadow-lg"
+        >
+          WhatsApp
+        </button>
 
         <button 
           onClick={onConfirm}
@@ -2061,6 +2103,22 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
       const service = services.find(s => s.id === selectedService);
       const barber = barbers.find(b => b.id === selectedBarber);
       const loginCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      
+      // Ensure user is in 'users' collection if logged in
+      if (user && user.uid) {
+        const userDocRef = doc(db, "users", user.uid);
+        const userDoc = await getDoc(userDocRef);
+        if (!userDoc.exists()) {
+           await setDoc(userDocRef, {
+               uid: user.uid,
+               name: user.displayName,
+               email: user.email,
+               role: 'client',
+               createdAt: serverTimestamp(),
+           });
+        }
+      }
+
       const baseData = {
         clientId: user ? user.uid : "guest",
         clientName: user ? user.displayName : guestName,
@@ -2098,6 +2156,14 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
 
       await Promise.all(appointmentsToCreate.map(app => addDoc(collection(db, "appointments"), app)));
       
+      // Auto send WhatsApp confirmation
+      appointmentsToCreate.forEach((app) => {
+          const dateFormatted = format(app.date.toDate(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+          const text = `Agendamento realizado! Serviço: ${app.serviceName}, Data: ${dateFormatted}. Código: ${loginCode}`;
+          const url = `https://wa.me/${app.clientPhone.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`;
+          window.open(url, '_blank');
+      });
+      
       setLastLoginCode(loginCode);
       setShowConfirmation(true);
     } catch (error) {
@@ -2132,6 +2198,7 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
           })()}
           onConfirm={onBack}
           loginCode={lastLoginCode}
+          phone={guestPhone}
         />
       )}
     </AnimatePresence>
@@ -2491,6 +2558,9 @@ function DashboardScreen
   const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "confirmed" | "completed" | "cancelled">("all");
   const [reviewAppointment, setReviewAppointment] = useState<any>(null);
 
+  const [expandedAppointmentId, setExpandedAppointmentId] = useState<string | null>(null);
+  const [statusMsg, setStatusMsg] = useState<string | null>(null);
+
   const handleStatusUpdate = async (app: any, newStatus: string) => {
     try {
       await updateDoc(doc(db, "appointments", app.id), { status: newStatus });
@@ -2500,6 +2570,10 @@ function DashboardScreen
         timestamp: serverTimestamp(),
         read: false
       });
+      if (newStatus === 'cancelled') {
+        setStatusMsg('Agendamento cancelado com sucesso!');
+        setTimeout(() => setStatusMsg(null), 3000);
+      }
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, "appointments");
     }
@@ -2579,6 +2653,11 @@ function DashboardScreen
 
   return (
     <div className="min-h-screen bg-black px-4 pt-16 relative pb-28">
+      {statusMsg && (
+        <div className="fixed top-5 left-4 right-4 bg-green-500 text-white p-4 rounded-full font-bold text-center z-50 shadow-xl shadow-green-500/20">
+          {statusMsg}
+        </div>
+      )}
       {/* Revised Header */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-3">
@@ -2763,7 +2842,10 @@ function DashboardScreen
                       ) : (
                           <div className="space-y-3">
                               {filteredAppointmentsList.map(app => (
-                                  <div key={app.id} className="bg-neutral-900 p-5 rounded-3xl border border-white/5 shadow-lg">
+                                  <div key={app.id} 
+                                       className="bg-neutral-900 p-5 rounded-3xl border border-white/5 shadow-lg group cursor-pointer hover:bg-neutral-800 transition-all"
+                                       onClick={() => setExpandedAppointmentId(expandedAppointmentId === app.id ? null : app.id)}
+                                  >
                                       <div className="flex justify-between items-start mb-3">
                                           <div>
                                               <p className="text-[10px] text-amber-500 uppercase font-black mb-1">{format(app.date instanceof Timestamp ? app.date.toDate() : parseISO(app.date), "PPP", { locale: ptBR })}</p>
@@ -2775,16 +2857,36 @@ function DashboardScreen
                                       </div>
                                       <p className="text-sm text-neutral-400 font-medium">{app.clientName} • {app.barberName}</p>
                                       
+                                      {expandedAppointmentId === app.id && (
+                                        <div className="mt-4 pt-4 border-t border-white/10 text-white text-xs space-y-2 uppercase tracking-wider font-bold">
+                                            <div className="flex justify-between"><span>Preço Total</span><span className="text-amber-500">R$ {app.price || '0,00'}</span></div>
+                                            <div className="flex justify-between"><span>Pagamento</span><span className="text-neutral-400">{app.paymentStatus || 'Pendente'}</span></div>
+                                        </div>
+                                      )}
+
                                       {(role === 'manager' || role === 'barber') && (
-                                        <div className="flex gap-2 mt-4">
+                                        <div className="flex gap-2 mt-4" onClick={(e) => e.stopPropagation()}>
                                             {app.status === 'pending' && <button onClick={() => handleStatusUpdate(app, 'confirmed')} className="bg-green-500/10 text-green-500 text-[10px] font-black uppercase p-2 rounded-lg flex-1">Confirmar</button>}
                                             {app.status === 'confirmed' && <button onClick={() => handleStatusUpdate(app, 'completed')} className="bg-blue-500/10 text-blue-500 text-[10px] font-black uppercase p-2 rounded-lg flex-1">Concluir</button>}
                                             {app.status !== 'cancelled' && app.status !== 'completed' && <button onClick={() => handleStatusUpdate(app, 'cancelled')} className="bg-red-500/10 text-red-500 text-[10px] font-black uppercase p-2 rounded-lg flex-1">Cancelar</button>}
+                                            {app.clientPhone && (
+                                                <button 
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        const dateFormatted = format(app.date instanceof Timestamp ? app.date.toDate() : parseISO(app.date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+                                                        const text = `Olá ${app.clientName}, passando para confirmar seu agendamento de ${app.serviceName} no dia ${dateFormatted}. Aguardamos você!`;
+                                                        window.open(`https://wa.me/${app.clientPhone.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`, '_blank');
+                                                    }} 
+                                                    className="bg-green-500/10 text-green-500 text-[10px] font-black uppercase p-2 rounded-lg flex-1"
+                                                >
+                                                    WhatsApp
+                                                </button>
+                                            )}
                                         </div>
                                       )}
 
                                        {role === 'client' && app.status === 'completed' && (
-                                            <button onClick={() => setReviewAppointment(app)} className="w-full bg-neutral-800 text-white font-bold py-2 rounded-xl">Avaliar</button>
+                                            <button onClick={(e) => { e.stopPropagation(); setReviewAppointment(app); }} className="w-full bg-neutral-800 text-white font-bold py-2 rounded-xl mt-4">Avaliar</button>
                                        )}
 
                                   </div>
