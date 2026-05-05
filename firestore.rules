@@ -28,7 +28,7 @@ service cloud.firestore {
 
     // Users Collection
     match /users/{userId} {
-      function isValidUser(data, id) {
+      function isValidUser(data, id, isCreate) {
         return data.uid == id
           && (data.name is string || data.displayName is string)
           && (data.role in ['client', 'barber', 'manager', 'inactive_barber'])
@@ -37,7 +37,7 @@ service cloud.firestore {
           && (!('photoUrl' in data) || data.photoUrl is string)
           && (!('photoURL' in data) || data.photoURL is string)
           && (!('specialties' in data) || data.specialties is list)
-          && (!('createdAt' in data) || data.createdAt is timestamp)
+          && (!('createdAt' in data) || (isCreate ? data.createdAt == request.time : data.createdAt is timestamp))
           && (!('updatedAt' in data) || data.updatedAt is timestamp);
       }
 
@@ -52,7 +52,8 @@ service cloud.firestore {
         isBarber()
       ));
       
-      allow create: if isSignedIn() && isOwner(userId) && isValidUser(incoming(), userId);
+      allow create: if isSignedIn() && isOwner(userId) && isValidUser(incoming(), userId, true);
+
       
       allow update: if isSignedIn() && (
         // Owner can update their own profile, but changing role requires manager or it must match
@@ -105,13 +106,13 @@ service cloud.firestore {
 
     // Appointments Collection
     match /appointments/{appointmentId} {
-      function isValidAppointment(data) {
+      function isValidAppointment(data, isCreate) {
         return isValidId(data.clientId)
           && isValidId(data.barberId)
           && isValidId(data.serviceId)
           && data.status in ['pending', 'confirmed', 'completed', 'cancelled']
           && data.totalPrice is number
-          && data.createdAt is timestamp
+          && (isCreate ? data.createdAt is timestamp : data.createdAt is timestamp)
           && (!('date' in data) || data.date is timestamp || data.date is string)
           && (!('serviceName' in data) || data.serviceName is string)
           && (!('loginCode' in data) || data.loginCode is string);
@@ -122,13 +123,13 @@ service cloud.firestore {
         return data.status in ['completed', 'cancelled'];
       }
 
-      allow read: if (resource.data.status in ['pending', 'confirmed', 'completed']) || (isSignedIn() && (
+      allow read: if (resource.data.status in ['pending', 'confirmed', 'completed', 'cancelled']) || (isSignedIn() && (
         resource.data.clientId == request.auth.uid || 
         resource.data.barberId == request.auth.uid || 
         isManager()
       )) || (resource.data.loginCode is string);
       
-      allow create: if isValidAppointment(incoming()) && (isSignedIn() || incoming().clientId == 'guest');
+      allow create: if isValidAppointment(incoming(), true) && (isSignedIn() || incoming().clientId == 'guest');
       
       allow update: if isSignedIn() && (
         // Terminal state lock: prevent updates if existing appointment is already terminal
@@ -137,7 +138,7 @@ service cloud.firestore {
             (isOwner(existing().barberId) && (incoming().diff(existing()).affectedKeys().hasOnly(['status']) || incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])) && incoming().status in ['confirmed', 'completed']) ||
             isManager()
         )
-      ) && isValidAppointment(incoming())
+      ) && isValidAppointment(incoming(), false)
         // Immutable system fields
         && incoming().createdAt == existing().createdAt;
       
