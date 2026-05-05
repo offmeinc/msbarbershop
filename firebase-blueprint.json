@@ -45,7 +45,8 @@
         "status": { "type": "string", "enum": ["pending", "confirmed", "completed", "cancelled"] },
         "totalPrice": { "type": "number" },
         "paymentStatus": { "type": "string", "enum": ["unpaid", "paid"] },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "createdAt": { "type": "string", "format": "date-time" },
+        "loginCode": { "type": "string" }
       },
       "required": ["clientId", "barberId", "serviceId", "date", "status"]
     },

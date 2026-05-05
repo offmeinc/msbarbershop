@@ -182,10 +182,11 @@ import {
   addDoc,
   onSnapshot,
   limit,
-  orderBy
+  orderBy,
+  deleteDoc
 } from "firebase/firestore";
 
-type Screen = "home" | "booking" | "agenda" | "clients" | "more" | "login" | "collaborators" | "services";
+type Screen = "home" | "booking" | "agenda" | "clients" | "more" | "login" | "collaborators" | "services" | "client-login" | "client-dashboard";
 
 function BrandLogo({ className = "w-10 h-10", iconSize = "w-6 h-6" }: { className?: string, iconSize?: string }) {
   return (
@@ -1131,6 +1132,7 @@ function BottomNav({ userRole, currentScreen, setCurrentScreen, user }: { userRo
 export default function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [clientLoginCode, setClientLoginCode] = useState<string>("");
   const [userRole, setUserRole] = useState<string>("client");
   const [currentScreen, setCurrentScreen] = useState<Screen>("home");
   const [dashboardView, setDashboardView] = useState<"list" | "calendar" | "services" | "hours" | "collaborators">("list");
@@ -1379,6 +1381,8 @@ export default function App() {
             : <HomeScreen key="home" services={services} onStartBooking={() => setCurrentScreen("booking")} />
           )}
           {currentScreen === "login" && <LoginScreen key="login" onLogin={handleLogin} setUserRole={setUserRole} setCurrentScreen={setCurrentScreen} setRequestedRole={setRequestedRole} />}
+          {currentScreen === "client-login" && <ClientLoginScreen onLogin={(code) => { setClientLoginCode(code); setCurrentScreen("client-dashboard"); }} onBack={() => setCurrentScreen("home")} />}
+          {currentScreen === "client-dashboard" && <ClientDashboardScreen loginCode={clientLoginCode} onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "booking" && <BookingScreen key="booking" user={user} services={services} onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "agenda" && <DashboardScreen key="agenda" user={user} role={userRole} services={services} dashboardView={dashboardView || "list"} onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "collaborators" && <DashboardScreen key="collaborators" user={user} role={userRole} services={services} dashboardView="collaborators" onBack={() => setCurrentScreen("home")} />}
@@ -1429,7 +1433,8 @@ export default function App() {
             ) : (
               <>
                 <a href="#servicos" onClick={() => setIsMenuOpen(false)}>Serviços</a>
-                <button onClick={() => { setCurrentScreen("login"); setIsMenuOpen(false); }}>Portal</button>
+                <button onClick={() => { setCurrentScreen("login"); setIsMenuOpen(false); }}>Portal Profissional</button>
+                <button onClick={() => { setCurrentScreen("client-login"); setIsMenuOpen(false); }}>Painel do Cliente</button>
               </>
             )}
             <button onClick={() => setIsMenuOpen(false)} className="absolute top-24 right-6"><X /></button>
@@ -1537,6 +1542,72 @@ function HomeScreen({ services, onStartBooking }: { services: any[], onStartBook
   );
 }
 
+function ClientDashboardScreen({ loginCode, onBack }: { loginCode: string, onBack: () => void }) {
+  const [appointments, setAppointments] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const q = query(collection(db, "appointments"), where("loginCode", "==", loginCode));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setAppointments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setLoading(false);
+    }, (error) => {
+      console.error(error);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, [loginCode]);
+
+  useEffect(() => {
+    const q = query(collection(db, "notifications"), where("loginCode", "==", loginCode), orderBy("timestamp", "desc"), limit(5));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setNotifications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => {
+      console.error(error);
+    });
+    return () => unsubscribe();
+  }, [loginCode]);
+
+  const handleDelete = async (id: string) => {
+    await deleteDoc(doc(db, "appointments", id));
+  }
+
+  return (
+    <div className="max-w-md mx-auto py-8 px-6 space-y-4">
+      <button onClick={onBack} className="text-neutral-500">Voltar</button>
+      
+      {notifications.length > 0 && (
+        <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-xl">
+           <h3 className="text-amber-500 font-bold mb-2">Notificações</h3>
+           {notifications.map(n => (
+             <p key={n.id} className="text-white text-sm">・{n.message}</p>
+           ))}
+        </div>
+      )}
+
+      <h2 className="text-white font-black text-2xl">Meus Agendamentos (Code: {loginCode})</h2>
+      {loading ? <p>Carregando...</p> : appointments.map(app => (
+        <div key={app.id} className="bg-neutral-900 p-4 rounded-xl flex items-center justify-between text-white">
+          <div><p>{app.serviceName}</p><p className="text-xs text-neutral-500">{app.date instanceof Timestamp ? app.date.toDate().toLocaleDateString() : app.date.toString()}</p></div>
+          <button onClick={() => handleDelete(app.id)} className="text-red-500"><Trash2/></button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ClientLoginScreen({ onLogin, onBack }: { onLogin: (code: string) => void, onBack: () => void }) {
+  const [code, setCode] = useState("");
+  return (
+    <div className="max-w-md mx-auto py-8 px-6 space-y-4">
+       <button onClick={onBack} className="text-neutral-500">Voltar</button>
+       <h2 className="text-white font-black text-2xl">Acessar Painel do Cliente</h2>
+       <input type="text" value={code} onChange={e => setCode(e.target.value)} placeholder="Código de Acesso" className="w-full bg-neutral-900 text-white p-4 rounded-xl"/>
+       <button onClick={() => onLogin(code)} className="w-full bg-amber-500 text-black font-black p-4 rounded-xl">Entrar</button>
+    </div>
+  );
+}
 function LoginScreen({ onLogin, setUserRole, setCurrentScreen, setRequestedRole }: { onLogin: (role: string, email?: string, password?: string, isSignUp?: boolean, name?: string, whatsapp?: string) => void, setUserRole: (role: string) => void, setCurrentScreen: (screen: string) => void, setRequestedRole: (role: string) => void, key?: string }) {
   const [activeTab, setActiveTab] = useState<string>("client");
   const [authMode, setAuthMode] = useState<"choice" | "email">("choice");
@@ -1806,7 +1877,7 @@ function LoginScreen({ onLogin, setUserRole, setCurrentScreen, setRequestedRole 
 }
 
 
-function ConfirmationModal({ service, date, onConfirm }: { service: any, date: string, onConfirm: () => void }) {
+function ConfirmationModal({ service, date, onConfirm, loginCode }: { service: any, date: string, onConfirm: () => void, loginCode: string }) {
   return (
     <motion.div 
       initial={{ opacity: 0 }}
@@ -1824,13 +1895,16 @@ function ConfirmationModal({ service, date, onConfirm }: { service: any, date: s
           <CheckCircle2 className="w-8 h-8" />
         </div>
         <h3 className="text-2xl font-black uppercase italic mb-2">Agendado!</h3>
-        <p className="text-neutral-400 text-xs uppercase tracking-widest mb-8">Recebemos sua reserva.</p>
+        <p className="text-neutral-400 text-xs uppercase tracking-widest mb-4">Recebemos sua reserva.</p>
         
-        <div className="text-left bg-black/30 p-4 rounded-xl mb-8 space-y-2">
+        <div className="text-left bg-black/30 p-4 rounded-xl mb-4 space-y-2">
             <p className="text-[10px] uppercase text-neutral-500 font-bold">Serviço</p>
             <p className="text-sm font-bold uppercase">{service?.name}</p>
             <p className="text-[10px] uppercase text-neutral-500 font-bold mt-2">Data/Hora</p>
             <p className="text-sm font-bold uppercase">{format(new Date(date), "dd 'de' MMM 'às' HH:mm", { locale: ptBR })}</p>
+            <p className="text-[10px] uppercase text-neutral-500 font-bold mt-2">Seu código de acesso:</p>
+            <p className="text-2xl font-black text-amber-500 uppercase tracking-widest">{loginCode}</p>
+            <p className="text-[9px] text-neutral-600 mt-1">Guarde este código para acessar seus agendamentos no painel do cliente.</p>
         </div>
 
         <button 
@@ -1858,6 +1932,7 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [lastLoginCode, setLastLoginCode] = useState("");
   const [guestName, setGuestName] = useState("");
   const [guestEmail, setGuestEmail] = useState("");
   const [guestPhone, setGuestPhone] = useState("");
@@ -1929,13 +2004,10 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
           return format(bDate, "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd") && format(bDate, "HH:mm") === time;
         });
 
-        // Check if user is booking for past time today
-        let isPast = false;
-        if (isToday(selectedDate)) {
-          const slotDate = new Date(selectedDate);
-          slotDate.setHours(h, m, 0, 0);
-          if (slotDate < new Date()) isPast = true;
-        }
+        // Check if user is booking for past time
+        const slotDate = new Date(selectedDate);
+        slotDate.setHours(h, m, 0, 0);
+        const isPast = slotDate < new Date();
 
         slots.push({ time, available: !isBusy && !isPast });
       }
@@ -1959,9 +2031,36 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
 
     setError(null);
     setIsBooking(true);
+    
+    // --- Validation ---
+    // Check if time is in past
+    if (finalDate < new Date()) {
+        setError("Este horário já passou.");
+        setIsBooking(false);
+        return;
+    }
+
+    // Check if time is blocked or already booked
+    const timeFormatted = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    const isBusy = barberAppointments.some(app => {
+      const appDate = app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date);
+      return format(appDate, "HH:mm") === timeFormatted && format(appDate, "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd");
+    }) || blockedTimes.some(b => {
+      const bDate = b.date instanceof Timestamp ? b.date.toDate() : (typeof b.date === 'string' ? parseISO(b.date) : b.date);
+      return format(bDate, "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd") && format(bDate, "HH:mm") === timeFormatted;
+    });
+
+    if (isBusy) {
+        setError("Este horário já não está disponível.");
+        setIsBooking(false);
+        return;
+    }
+    // ------------------
+
     try {
       const service = services.find(s => s.id === selectedService);
       const barber = barbers.find(b => b.id === selectedBarber);
+      const loginCode = Math.random().toString(36).substring(2, 8).toUpperCase();
       const baseData = {
         clientId: user ? user.uid : "guest",
         clientName: user ? user.displayName : guestName,
@@ -1974,7 +2073,8 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
         serviceName: service?.name,
         status: "pending",
         totalPrice: service?.price,
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
+        loginCode
       };
       
       const appointmentsToCreate = [];
@@ -1998,9 +2098,10 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
 
       await Promise.all(appointmentsToCreate.map(app => addDoc(collection(db, "appointments"), app)));
       
+      setLastLoginCode(loginCode);
       setShowConfirmation(true);
     } catch (error) {
-      console.error(error);
+      console.error("Booking error details:", error);
       setError(error instanceof Error ? error.message : "Ocorreu um erro ao processar seu agendamento.");
     } finally {
       setIsBooking(false);
@@ -2030,6 +2131,7 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
             return d.toISOString();
           })()}
           onConfirm={onBack}
+          loginCode={lastLoginCode}
         />
       )}
     </AnimatePresence>
@@ -2389,6 +2491,20 @@ function DashboardScreen
   const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "confirmed" | "completed" | "cancelled">("all");
   const [reviewAppointment, setReviewAppointment] = useState<any>(null);
 
+  const handleStatusUpdate = async (app: any, newStatus: string) => {
+    try {
+      await updateDoc(doc(db, "appointments", app.id), { status: newStatus });
+      await addDoc(collection(db, "notifications"), {
+        loginCode: app.loginCode,
+        message: `Seu agendamento foi atualizado para: ${newStatus}`,
+        timestamp: serverTimestamp(),
+        read: false
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, "appointments");
+    }
+  };
+
   const filteredAppointmentsList = useMemo(() => {
 	  return appointments.filter(app => {
 		  if (filterStatus === 'all') return true;
@@ -2658,6 +2774,15 @@ function DashboardScreen
                                           </div>
                                       </div>
                                       <p className="text-sm text-neutral-400 font-medium">{app.clientName} • {app.barberName}</p>
+                                      
+                                      {(role === 'manager' || role === 'barber') && (
+                                        <div className="flex gap-2 mt-4">
+                                            {app.status === 'pending' && <button onClick={() => handleStatusUpdate(app, 'confirmed')} className="bg-green-500/10 text-green-500 text-[10px] font-black uppercase p-2 rounded-lg flex-1">Confirmar</button>}
+                                            {app.status === 'confirmed' && <button onClick={() => handleStatusUpdate(app, 'completed')} className="bg-blue-500/10 text-blue-500 text-[10px] font-black uppercase p-2 rounded-lg flex-1">Concluir</button>}
+                                            {app.status !== 'cancelled' && app.status !== 'completed' && <button onClick={() => handleStatusUpdate(app, 'cancelled')} className="bg-red-500/10 text-red-500 text-[10px] font-black uppercase p-2 rounded-lg flex-1">Cancelar</button>}
+                                        </div>
+                                      )}
+
                                        {role === 'client' && app.status === 'completed' && (
                                             <button onClick={() => setReviewAppointment(app)} className="w-full bg-neutral-800 text-white font-bold py-2 rounded-xl">Avaliar</button>
                                        )}

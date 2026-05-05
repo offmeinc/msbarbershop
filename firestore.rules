@@ -111,8 +111,10 @@ service cloud.firestore {
           && isValidId(data.serviceId)
           && data.status in ['pending', 'confirmed', 'completed', 'cancelled']
           && data.totalPrice is number
+          && data.createdAt is timestamp
           && (!('date' in data) || data.date is timestamp || data.date is string)
-          && (!('serviceName' in data) || data.serviceName is string);
+          && (!('serviceName' in data) || data.serviceName is string)
+          && (!('loginCode' in data) || data.loginCode is string);
       }
       
       // Helper for Terminal States
@@ -124,7 +126,7 @@ service cloud.firestore {
         resource.data.clientId == request.auth.uid || 
         resource.data.barberId == request.auth.uid || 
         isManager()
-      ));
+      )) || (resource.data.loginCode is string);
       
       allow create: if isValidAppointment(incoming()) && (isSignedIn() || incoming().clientId == 'guest');
       
