@@ -1,6 +1,15 @@
 @import "tailwindcss";
 
-body {
-  background-color: #000000;
-  color: #FFFFFF;
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
+
+body {
+  background: radial-gradient(circle at center top, #1a1a1a, #000000);
+  background-attachment: fixed;
+  color: #FFFFFF;
+  margin: 0;
+  font-family: var(--font-sans);
+}
+

@@ -448,18 +448,28 @@ function ProfessionalHome({ user, role, setCurrentScreen }: { user: any, role: s
       {/* Stats Grid */}
       <div className="grid grid-cols-2 gap-4">
         {/* Earnings */}
-        <div className="bg-neutral-900 p-5 rounded-[2rem] border border-white/5 space-y-3 relative overflow-hidden group">
+        <div className="bg-neutral-900 p-5 rounded-[2rem] border border-neutral-800 space-y-3 relative overflow-hidden group hover:border-amber-500/30 transition-colors">
           <div className="flex justify-between items-start">
             <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">Ganhos Hoje</p>
-            <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-500">
+            <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-500 group-hover:bg-amber-500/20 transition-colors">
               <DollarSign className="w-4 h-4" />
             </div>
           </div>
-          <div className="space-y-1">
-            <h3 className="text-2xl font-black text-white">R$ {stats.earnings.toFixed(2)}</h3>
-            <p className="text-[10px] text-amber-500 font-bold flex items-center gap-1">
-              <TrendingUp className="w-3 h-3" /> {stats.earnings > 0 ? "em alta" : "estável"}
-            </p>
+          <div className="space-y-0.5">
+            <h3 className="text-3xl font-black text-white tracking-tighter">R$ {stats.earnings.toFixed(2)}</h3>
+          </div>
+        </div>
+
+        {/* Appointments Count */}
+        <div className="bg-neutral-900 p-5 rounded-[2rem] border border-neutral-800 space-y-3 relative overflow-hidden group hover:border-blue-500/30 transition-colors">
+          <div className="flex justify-between items-start">
+            <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">Atendimentos</p>
+            <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500 group-hover:bg-blue-500/20 transition-colors">
+              <Calendar className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="space-y-0.5">
+            <h3 className="text-3xl font-black text-white tracking-tighter">{stats.appointmentsCount}</h3>
           </div>
         </div>
 
