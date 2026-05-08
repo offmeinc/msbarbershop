@@ -1301,6 +1301,29 @@ export default function App() {
     setCurrentScreen("client-dashboard");
   };
 
+  const handleForgotPassword = async () => {
+    const email = prompt("Digite seu e-mail cadastrado:");
+    if (!email) return;
+    
+    // Look up appointments with this email as clientEmail
+    const appointmentsQuery = query(collection(db, "appointments"), where("clientEmail", "==", email), orderBy("createdAt", "desc"), limit(1));
+    const querySnapshot = await getDocs(appointmentsQuery);
+
+    if (querySnapshot.empty) {
+        alert("Nenhum agendamento encontrado para este e-mail.");
+        return;
+    }
+
+    const doc = querySnapshot.docs[0];
+    const code = doc.data().loginCode;
+
+    if (code) {
+        alert("Seu código de acesso é: " + code + ". (Simulando envio por WhatsApp/E-mail)");
+    } else {
+        alert("Código não encontrado para este agendamento.");
+    }
+  };
+
   if (loading) {
     return (
       <div className="h-screen bg-black flex items-center justify-center">
@@ -1396,7 +1419,7 @@ export default function App() {
               </div>
             ) : (
               <button 
-                onClick={() => setCurrentScreen("client-portal")}
+                onClick={() => setCurrentScreen("client-login")}
                 className="bg-amber-500 text-black px-6 py-2 rounded-full font-bold hover:bg-amber-400 transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(245,158,11,0.2)]"
               >
                 <User className="w-4 h-4" />
@@ -1419,7 +1442,7 @@ export default function App() {
             : <HomeScreen key="home" services={services} onStartBooking={() => setCurrentScreen("booking")} />
           )}
           {currentScreen === "login" && <CollaboratorLoginScreen onLogin={handleLogin} setCurrentScreen={setCurrentScreen} setRequestedRole={setRequestedRole} />}
-          {currentScreen === "client-portal" && <ClientPortalScreen onLogin={handleClientLogin} onBack={() => setCurrentScreen("home")} />}
+          {currentScreen === "client-login" && <ClientPortalScreen onLogin={handleClientLogin} onForgotPassword={handleForgotPassword} onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "client-dashboard" && <ClientDashboardScreen loginCode={clientLoginCode} onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "booking" && <BookingScreen key="booking" user={user} services={services} onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "agenda" && <DashboardScreen key="agenda" user={user} role={userRole} services={services} dashboardView={dashboardView || "list"} onBack={() => setCurrentScreen("home")} />}
@@ -1635,7 +1658,7 @@ function ClientDashboardScreen({ loginCode, onBack }: { loginCode: string, onBac
   );
 }
 
-function ClientPortalScreen({ onLogin, onBack }: { onLogin: (email: string, code: string) => void, onBack: () => void }) {
+function ClientPortalScreen({ onLogin, onForgotPassword, onBack }: { onLogin: (email: string, code: string) => void, onForgotPassword: () => void, onBack: () => void }) {
   const [code, setCode] = useState("");
   const [email, setEmail] = useState("");
   return (
@@ -1645,6 +1668,7 @@ function ClientPortalScreen({ onLogin, onBack }: { onLogin: (email: string, code
        <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Seu E-mail" className="w-full bg-neutral-900 text-white p-4 rounded-xl border border-white/5 focus:border-amber-500"/>
        <input type="text" value={code} onChange={e => setCode(e.target.value)} placeholder="Código de Acesso" className="w-full bg-neutral-900 text-white p-4 rounded-xl border border-white/5 focus:border-amber-500"/>
        <button onClick={() => onLogin(email, code)} className="w-full bg-amber-500 text-black font-black p-4 rounded-xl">Entrar</button>
+       <button onClick={onForgotPassword} className="w-full text-neutral-500 text-sm hover:text-amber-500">Esqueceu o código?</button>
     </div>
   );
 }
@@ -1974,13 +1998,13 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
         const userSnapshot = await getDocs(qUser);
         if (userSnapshot.empty) {
           // Add as new client
-          await addDoc(collection(db, "users"), {
-            name: guestName,
-            email: guestEmail,
-            whatsapp: guestPhone,
-            role: 'client',
-            createdAt: serverTimestamp(),
-          });
+          // await addDoc(collection(db, "users"), {
+          //   name: guestName,
+          //   email: guestEmail,
+          //   whatsapp: guestPhone,
+          //   role: 'client',
+          //   createdAt: serverTimestamp(),
+          // });
         }
       }
 
@@ -1995,7 +2019,7 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
         serviceId: selectedService,
         serviceName: service?.name,
         status: "pending",
-        totalPrice: service?.price,
+        totalPrice: Number(service?.price) || 0,
         createdAt: serverTimestamp(),
         loginCode
       };
@@ -2020,12 +2044,25 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
       }
 
       await Promise.all(appointmentsToCreate.map(async (app) => {
-        await addDoc(collection(db, "appointments"), app);
-        await addDoc(collection(db, "notifications"), {
+        console.log("Attempting to write appointment:", JSON.stringify(app));
+        try {
+          await addDoc(collection(db, "appointments"), app);
+        } catch (error) {
+          console.error("Error writing appointment:", error);
+          handleFirestoreError(error, OperationType.WRITE, "appointments");
+        }
+        /*
+        try {
+          await addDoc(collection(db, "notifications"), {
             loginCode: app.loginCode,
             message: `Agendamento confirmado para ${app.date.toDate().toLocaleDateString()} - ${app.serviceName}`,
             timestamp: serverTimestamp(),
-        });
+          });
+        } catch (error) {
+          console.error("Error writing notification:", error);
+          handleFirestoreError(error, OperationType.WRITE, "notifications");
+        }
+        */
       }));
       
       // Auto send WhatsApp confirmation
@@ -3046,6 +3083,35 @@ function ServicesManagement({ services }: { services: any[] }) {
     setFormData({ name: "", price: 0, duration: 30, active: true });
   };
 
+  const importServices = async () => {
+    const defaultServices = [
+      { name: "Barba completa", duration: 30, price: 30 },
+      { name: "Corte Degrade", duration: 30, price: 35 },
+      { name: "Corte fast ( 1 pente )", duration: 20, price: 20 },
+      { name: "Corte Infantil", duration: 30, price: 35 },
+      { name: "Corte social", duration: 30, price: 30 },
+      { name: "Corte+ sobrancelha", duration: 30, price: 40 },
+      { name: "Corte+barba", duration: 60, price: 60 },
+      { name: "Corte+barba+limpeza", duration: 60, price: 80 },
+      { name: "Corte+limpeza", duration: 60, price: 60 },
+      { name: "Corte+relaxamento", duration: 60, price: 60 },
+      { name: "Luzes", duration: 90, price: 120 },
+      { name: "Platinado", duration: 90, price: 150 },
+      { name: "Sobrancelhas", duration: 10, price: 10 },
+    ];
+    setLoading(true);
+    try {
+      await Promise.all(defaultServices.map(service => 
+        addDoc(collection(db, "services"), { ...service, active: true, createdAt: Timestamp.now() })
+      ));
+      alert("Serviços importados!");
+    } catch (error) {
+       handleFirestoreError(error, OperationType.CREATE, "services");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -3081,21 +3147,10 @@ function ServicesManagement({ services }: { services: any[] }) {
         {!isAdding && !editingId && (
           <div className="flex gap-2">
             <button 
-              onClick={async () => {
-                const popularServices = [
-                    { name: "Degradê", price: 50, duration: 40, active: true, createdAt: Timestamp.now() },
-                    { name: "Barba", price: 30, duration: 20, active: true, createdAt: Timestamp.now() },
-                    { name: "Corte Completo", price: 70, duration: 60, active: true, createdAt: Timestamp.now() }
-                ];
-                setLoading(true);
-                try {
-                  await Promise.all(popularServices.map(s => addDoc(collection(db, "services"), s)));
-                } catch(e) { console.error(e); }
-                setLoading(false);
-              }}
+              onClick={importServices}
               className="bg-neutral-800 text-white px-6 py-2 rounded-2xl font-black uppercase text-[10px] flex items-center gap-2 hover:bg-neutral-700 transition-all"
             >
-              <Sparkles className="w-4 h-4" /> Importar Sugeridos
+              <Sparkles className="w-4 h-4" /> Importar Padrão
             </button>
             <button 
               onClick={() => setIsAdding(true)}
