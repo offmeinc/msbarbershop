@@ -23,6 +23,10 @@ service cloud.firestore {
       allow read: if true;
       allow write: if false;
     }
+    // Client Profiles
+    match /client_profiles/{loginCode} {
+      allow read, write: if true;
+    }
     // Fallback
     match /{document=**} {
       allow read, write: if false;

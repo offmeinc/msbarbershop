@@ -1607,9 +1607,44 @@ function ClientDashboardScreen({ loginCode, onBack }: { loginCode: string, onBac
   const [appointments, setAppointments] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'upcoming' | 'history'>('upcoming');
+  const [profile, setProfile] = useState<{photoUrl?: string}>({});
 
   useEffect(() => {
-    const q = query(collection(db, "appointments"), where("loginCode", "==", loginCode));
+    const docRef = doc(db, "client_profiles", loginCode);
+    const unsubscribe = onSnapshot(docRef, (docSnap) => {
+        if(docSnap.exists()) {
+            setProfile(docSnap.data());
+        }
+    });
+    return () => unsubscribe();
+  }, [loginCode]);
+
+  const handlePhotoUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const file = e.target.files[0];
+    
+    // Upload to ImgBB
+    const formData = new FormData();
+    formData.append("image", file);
+    try {
+        const response = await fetch(`https://api.imgbb.com/1/upload?key=${import.meta.env.VITE_IMGBB_API_KEY}`, {
+            method: "POST",
+            body: formData
+        });
+        const data = await response.json();
+        if (data.success) {
+            await setDoc(doc(db, "client_profiles", loginCode), { photoUrl: data.data.url }, { merge: true });
+        } else {
+            console.error(data);
+        }
+    } catch(e) {
+        console.error(e);
+    }
+  }
+
+  useEffect(() => {
+    const q = query(collection(db, "appointment_requests"), where("loginCode", "==", loginCode));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setAppointments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setLoading(false);
@@ -1631,29 +1666,106 @@ function ClientDashboardScreen({ loginCode, onBack }: { loginCode: string, onBac
   }, [loginCode]);
 
   const handleDelete = async (id: string) => {
-    await deleteDoc(doc(db, "appointments", id));
+    if (confirm("Deseja mesmo cancelar este agendamento?")) {
+      await deleteDoc(doc(db, "appointments", id));
+    }
   }
 
+  const now = new Date();
+  const sortedAppointments = appointments.sort((a,b) => {
+    const dateA = a.date instanceof Timestamp ? a.date.toDate() : new Date(a.date);
+    const dateB = b.date instanceof Timestamp ? b.date.toDate() : new Date(b.date);
+    return dateA.getTime() - dateB.getTime();
+  });
+  
+  const upcoming = sortedAppointments.filter(app => {
+    const date = app.date instanceof Timestamp ? app.date.toDate() : new Date(app.date);
+    return date >= now;
+  });
+  
+  const history = sortedAppointments.filter(app => {
+    const date = app.date instanceof Timestamp ? app.date.toDate() : new Date(app.date);
+    return date < now;
+  });
+
+  const displayAppointments = activeTab === 'upcoming' ? upcoming : history;
+
   return (
-    <div className="max-w-md mx-auto py-8 px-6 space-y-4">
-      <button onClick={onBack} className="text-neutral-500">Voltar</button>
-      
+    <div className="max-w-xl mx-auto py-8 px-6 space-y-8 animate-in fade-in duration-500">
+      {/* Profile Header */}
+      <div className="flex items-center gap-4 bg-neutral-900 p-6 rounded-[2rem] border border-white/5">
+        <label className="relative cursor-pointer">
+          <input type="file" onChange={handlePhotoUpload} className="hidden" accept="image/*" />
+          <div className="w-16 h-16 rounded-full bg-neutral-800 flex items-center justify-center text-amber-500 text-2xl font-black overflow-hidden border-2 border-amber-500/20">
+            {profile.photoUrl ? (
+                <img src={profile.photoUrl} alt="Foto" className="w-full h-full object-cover" />
+            ) : (
+                loginCode.slice(0, 2).toUpperCase()
+            )}
+          </div>
+          <div className="absolute -bottom-1 -right-1 bg-neutral-900 border border-white/10 p-1 rounded-full text-white">
+            <Camera className="w-4 h-4" />
+          </div>
+        </label>
+        <div>
+          <h2 className="text-white font-black text-xl">Cliente</h2>
+          <p className="text-neutral-500 font-bold uppercase text-[10px] tracking-widest">Code: {loginCode}</p>
+        </div>
+      </div>
+
       {notifications.length > 0 && (
-        <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-xl">
-           <h3 className="text-amber-500 font-bold mb-2">Notificações</h3>
-           {notifications.map(n => (
-             <p key={n.id} className="text-white text-sm">・{n.message}</p>
-           ))}
+        <div className="bg-amber-500/10 border border-amber-500/20 p-6 rounded-[2rem] space-y-3">
+          <h3 className="text-amber-500 font-black uppercase text-[10px] tracking-widest">Notificações</h3>
+          {notifications.map(n => (
+            <p key={n.id} className="text-white text-sm font-medium leading-relaxed">・{n.message}</p>
+          ))}
         </div>
       )}
 
-      <h2 className="text-white font-black text-2xl">Meus Agendamentos (Code: {loginCode})</h2>
-      {loading ? <p>Carregando...</p> : appointments.map(app => (
-        <div key={app.id} className="bg-neutral-900 p-4 rounded-xl flex items-center justify-between text-white">
-          <div><p>{app.serviceName}</p><p className="text-xs text-neutral-500">{app.date instanceof Timestamp ? app.date.toDate().toLocaleDateString() : app.date.toString()}</p></div>
-          <button onClick={() => handleDelete(app.id)} className="text-red-500"><Trash2/></button>
-        </div>
-      ))}
+      {/* Tabs */}
+      <div className="flex bg-neutral-900 rounded-full p-1 border border-white/5">
+        <button 
+          onClick={() => setActiveTab('upcoming')}
+          className={`flex-1 py-3 px-4 rounded-full font-black text-xs uppercase tracking-widest transition-all ${activeTab === 'upcoming' ? 'bg-amber-500 text-black' : 'text-neutral-500'}`}
+        >
+          Próximos
+        </button>
+        <button 
+          onClick={() => setActiveTab('history')}
+          className={`flex-1 py-3 px-4 rounded-full font-black text-xs uppercase tracking-widest transition-all ${activeTab === 'history' ? 'bg-amber-500 text-black' : 'text-neutral-500'}`}
+        >
+          Histórico
+        </button>
+      </div>
+
+      <div className="space-y-4">
+        {loading ? (
+          <div className="flex items-center justify-center py-10">
+            <Loader2 className="animate-spin text-amber-500 w-8 h-8" />
+          </div>
+        ) : displayAppointments.length === 0 ? (
+          <div className="p-8 text-center text-neutral-600 font-bold uppercase text-xs border border-dashed border-white/5 rounded-3xl">
+            Nenhum agendamento encontrado
+          </div>
+        ) : displayAppointments.map(app => (
+          <div key={app.id} className="bg-neutral-900 p-6 rounded-[2rem] border border-white/5 flex items-center justify-between hover:border-amber-500/30 transition-all group">
+            <div className="space-y-1">
+              <h4 className="font-bold text-white text-base">{app.serviceName || "Serviço"}</h4>
+              <p className="text-[11px] font-black uppercase tracking-widest text-neutral-500">
+                {app.date instanceof Timestamp ? app.date.toDate().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : app.date.toString()}
+              </p>
+              <div className={`text-[10px] uppercase font-black tracking-widest mt-1 ${app.status === 'confirmed' ? 'text-amber-500' : 'text-neutral-500'}`}>
+                {app.status}
+              </div>
+            </div>
+            {activeTab === 'upcoming' && (
+                <button onClick={() => handleDelete(app.id)} className="w-10 h-10 rounded-full flex items-center justify-center text-red-500 hover:bg-red-500/10 transition-all">
+                  <Trash2 className="w-5 h-5"/>
+                </button>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
