@@ -1396,7 +1396,7 @@ export default function App() {
               </div>
             ) : (
               <button 
-                onClick={() => setCurrentScreen("login")}
+                onClick={() => setCurrentScreen("client-portal")}
                 className="bg-amber-500 text-black px-6 py-2 rounded-full font-bold hover:bg-amber-400 transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(245,158,11,0.2)]"
               >
                 <User className="w-4 h-4" />
@@ -1418,8 +1418,8 @@ export default function App() {
             ? <ProfessionalHome key="pro-home" user={user} role={userRole} setCurrentScreen={setCurrentScreen} /> 
             : <HomeScreen key="home" services={services} onStartBooking={() => setCurrentScreen("booking")} />
           )}
-          {currentScreen === "login" && <LoginScreen key="login" onLogin={handleLogin} setUserRole={setUserRole} setCurrentScreen={setCurrentScreen} setRequestedRole={setRequestedRole} />}
-          {currentScreen === "client-login" && <ClientLoginScreen onLogin={handleClientLogin} onBack={() => setCurrentScreen("home")} />}
+          {currentScreen === "login" && <CollaboratorLoginScreen onLogin={handleLogin} setCurrentScreen={setCurrentScreen} setRequestedRole={setRequestedRole} />}
+          {currentScreen === "client-portal" && <ClientPortalScreen onLogin={handleClientLogin} onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "client-dashboard" && <ClientDashboardScreen loginCode={clientLoginCode} onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "booking" && <BookingScreen key="booking" user={user} services={services} onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "agenda" && <DashboardScreen key="agenda" user={user} role={userRole} services={services} dashboardView={dashboardView || "list"} onBack={() => setCurrentScreen("home")} />}
@@ -1635,34 +1635,25 @@ function ClientDashboardScreen({ loginCode, onBack }: { loginCode: string, onBac
   );
 }
 
-function ClientLoginScreen({ onLogin, onBack }: { onLogin: (email: string, code: string) => void, onBack: () => void }) {
+function ClientPortalScreen({ onLogin, onBack }: { onLogin: (email: string, code: string) => void, onBack: () => void }) {
   const [code, setCode] = useState("");
   const [email, setEmail] = useState("");
   return (
     <div className="max-w-md mx-auto py-8 px-6 space-y-4">
        <button onClick={onBack} className="text-neutral-500">Voltar</button>
-       <h2 className="text-white font-black text-2xl">Acessar Painel do Cliente</h2>
+       <h2 className="text-white font-black text-2xl">Portal do Cliente</h2>
        <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Seu E-mail" className="w-full bg-neutral-900 text-white p-4 rounded-xl border border-white/5 focus:border-amber-500"/>
        <input type="text" value={code} onChange={e => setCode(e.target.value)} placeholder="Código de Acesso" className="w-full bg-neutral-900 text-white p-4 rounded-xl border border-white/5 focus:border-amber-500"/>
        <button onClick={() => onLogin(email, code)} className="w-full bg-amber-500 text-black font-black p-4 rounded-xl">Entrar</button>
     </div>
   );
 }
-function LoginScreen({ onLogin, setUserRole, setCurrentScreen, setRequestedRole }: { onLogin: (role: string, email?: string, password?: string, isSignUp?: boolean, name?: string, whatsapp?: string) => void, setUserRole: (role: string) => void, setCurrentScreen: (screen: string) => void, setRequestedRole: (role: string) => void, key?: string }) {
-  const [activeTab, setActiveTab] = useState<string>("client");
-  const [authMode, setAuthMode] = useState<"choice" | "email">("choice");
+function CollaboratorLoginScreen({ onLogin, setCurrentScreen, setRequestedRole }: { onLogin: (role: string, email?: string, password?: string, isSignUp?: boolean, name?: string, whatsapp?: string) => void, setCurrentScreen: (screen: string) => void, setRequestedRole: (role: string) => void }) {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
-  const [whatsapp, setWhatsapp] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string; name?: string }>({});
-
-  const roles = [
-    { id: "client", label: "Cliente", icon: <User className="w-4 h-4" />, desc: "Agende seus cortes e acumule pontos." },
-    { id: "barber", label: "Colaborador", icon: <Scissors className="w-4 h-4" />, desc: "Veja sua agenda e gerencie atendimentos." },
-  ];
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
   const handleManagerLogin = async () => {
     setAuthLoading(true);
@@ -1674,7 +1665,6 @@ function LoginScreen({ onLogin, setUserRole, setCurrentScreen, setRequestedRole 
         await signInWithEmailAndPassword(auth, email, password);
       } catch (err: any) {
         if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
-            // Try sign up
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             await updateProfile(userCredential.user, { displayName: "Marley Souza" });
             const userDocRef = doc(db, "users", userCredential.user.uid);
@@ -1690,7 +1680,7 @@ function LoginScreen({ onLogin, setUserRole, setCurrentScreen, setRequestedRole 
         }
       }
       signInWithEmailAndPassword(auth, email, password).then(() => {
-        setUserRole("manager");
+        setRequestedRole("manager");
         setCurrentScreen("home");
       });
     } catch (error) {
@@ -1702,7 +1692,7 @@ function LoginScreen({ onLogin, setUserRole, setCurrentScreen, setRequestedRole 
   };
 
   const validate = () => {
-    const newErrors: { email?: string; password?: string; name?: string } = {};
+    const newErrors: { email?: string; password?: string } = {};
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (email && !emailRegex.test(email)) {
@@ -1717,19 +1707,15 @@ function LoginScreen({ onLogin, setUserRole, setCurrentScreen, setRequestedRole 
   };
 
   useEffect(() => {
-    if (authMode === "email") {
-      validate();
-    }
-  }, [email, password, name, isSignUp, authMode]);
+    validate();
+  }, [email, password, isSignUp]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     
-    // Final check before submission
     const finalErrors: any = {};
     if (!email) finalErrors.email = "E-mail obrigatório";
     if (!password) finalErrors.password = "Senha obrigatória";
-    if (isSignUp && !name) finalErrors.name = "Nome obrigatório";
     
     if (Object.keys(finalErrors).length > 0 || Object.keys(errors).length > 0) {
       setErrors({ ...errors, ...finalErrors });
@@ -1738,7 +1724,7 @@ function LoginScreen({ onLogin, setUserRole, setCurrentScreen, setRequestedRole 
 
     setAuthLoading(true);
     try {
-      await onLogin(activeTab, email, password, isSignUp, name, whatsapp);
+      await onLogin("barber", email, password, isSignUp);
     } catch (error) {
       console.error(error);
     } finally {
@@ -1751,170 +1737,24 @@ function LoginScreen({ onLogin, setUserRole, setCurrentScreen, setRequestedRole 
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      className="max-w-2xl mx-auto py-16 px-6 text-center"
+      className="max-w-md mx-auto py-16 px-6 text-center"
     >
-      <div className="bg-neutral-900 p-8 md:p-12 rounded-[2.5rem] border border-white/5 shadow-2xl relative overflow-hidden">
-        <div className="w-24 h-24 bg-amber-500 rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-[0_0_40px_rgba(245,158,11,0.2)]">
-          <BrandLogo className="w-full h-full" iconSize="w-12 h-12" />
-        </div>
-        
-        <h2 className="text-3xl font-black italic uppercase mb-2">Portal MS Barber</h2>
-        <p className="text-neutral-500 text-sm mb-10 uppercase tracking-widest font-bold">
-          {authMode === "choice" ? "Selecione seu perfil de acesso" : isSignUp ? "Criar nova conta" : "Entrar na sua conta"}
-        </p>
-        
-        {authMode === "choice" ? (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10 text-left">
-              {roles.map((role) => (
-                <button
-                  key={role.id}
-                  onClick={() => { setActiveTab(role.id); setAuthMode("email"); }}
-                  className={`p-6 rounded-2xl border transition-all relative overflow-hidden group ${
-                    activeTab === role.id 
-                    ? "border-amber-500 bg-amber-500/5" 
-                    : "border-white/5 bg-black/20 hover:border-white/20"
-                  }`}
-                >
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-4 transition-colors ${
-                    activeTab === role.id ? "bg-amber-500 text-black" : "bg-white/5 text-neutral-500"
-                  }`}>
-                    {role.icon}
-                  </div>
-                  <p className={`font-bold uppercase text-xs mb-1 ${activeTab === role.id ? "text-amber-500" : "text-neutral-300"}`}>
-                    {role.label}
-                  </p>
-                  <p className="text-[10px] text-neutral-500 leading-tight uppercase font-medium">
-                    {role.desc}
-                  </p>
-                </button>
-              ))}
-            </div>
-          </>
-        ) : (
-          <>
-            <button onClick={() => setAuthMode("choice")} className="text-neutral-500 text-xs uppercase tracking-widest font-bold mb-6 hover:text-white flex items-center gap-2">
-               {"<"} Voltar
-            </button>
-            <form onSubmit={handleSubmit} className="space-y-4 text-left max-w-sm mx-auto">
-            {isSignUp && (
-              <div>
-                <label className="text-[10px] font-black uppercase text-neutral-500 ml-4 mb-1 block tracking-widest">Nome Completo</label>
-                <input 
-                  type="text" 
-                  placeholder="Seu nome"
-                  className={`w-full bg-black border p-4 rounded-xl text-white outline-none transition-all ${errors.name ? "border-red-500" : "border-white/10 focus:border-amber-500"}`}
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                />
-                <label className="text-[10px] font-black uppercase text-neutral-500 ml-4 mb-1 block tracking-widest mt-4">WhatsApp</label>
-                <input 
-                  type="text" 
-                  placeholder="(00) 00000-0000"
-                  className="w-full bg-black border p-4 rounded-xl text-white outline-none transition-all border-white/10 focus:border-amber-500"
-                  value={whatsapp}
-                  onChange={(e) => setWhatsapp(e.target.value)}
-                />
-                <AnimatePresence>
-                  {errors.name && (
-                    <motion.p 
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="text-[10px] text-red-500 font-bold uppercase mt-1 ml-4 overflow-hidden"
-                    >
-                      {errors.name}
-                    </motion.p>
-                  )}
-                </AnimatePresence>
-              </div>
-            )}
-            <div>
-              <label className="text-[10px] font-black uppercase text-neutral-500 ml-4 mb-1 block tracking-widest">E-mail</label>
-              <input 
-                type="email" 
-                placeholder="seu@email.com"
-                className={`w-full bg-black border p-4 rounded-xl text-white outline-none transition-all ${errors.email ? "border-red-500" : "border-white/10 focus:border-amber-500"}`}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-              <AnimatePresence>
-                {errors.email && (
-                  <motion.p 
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="text-[10px] text-red-500 font-bold uppercase mt-1 ml-4 overflow-hidden"
-                  >
-                    {errors.email}
-                  </motion.p>
-                )}
-              </AnimatePresence>
-            </div>
-            <div>
-              <label className="text-[10px] font-black uppercase text-neutral-500 ml-4 mb-1 block tracking-widest">Senha</label>
-              <input 
-                type="password" 
-                placeholder="••••••••"
-                className={`w-full bg-black border p-4 rounded-xl text-white outline-none transition-all ${errors.password ? "border-red-500" : "border-white/10 focus:border-amber-500"}`}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-              <AnimatePresence>
-                {errors.password && (
-                  <motion.p 
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="text-[10px] text-red-500 font-bold uppercase mt-1 ml-4 overflow-hidden"
-                  >
-                    {errors.password}
-                  </motion.p>
-                )}
-              </AnimatePresence>
-            </div>
-            
-            <button 
-              type="submit"
-              disabled={authLoading}
-              className="w-full bg-amber-500 text-black font-black uppercase italic py-5 rounded-2xl flex items-center justify-center gap-3 transition-all mt-6 shadow-xl disabled:opacity-50"
-            >
-              {authLoading ? <Loader2 className="animate-spin w-5 h-5" /> : isSignUp ? "Criar Minha Conta" : "Entrar no Portal"}
-            </button>
-
-            <div className="flex flex-col gap-4 mt-8">
-              <button 
-                type="button"
-                onClick={() => {
-                  setIsSignUp(!isSignUp);
-                  setErrors({});
-                }}
-                className="text-xs font-bold text-amber-500 uppercase tracking-widest hover:text-amber-400"
-              >
-                {isSignUp ? "Já tenho uma conta" : "Não tenho uma conta"}
-              </button>
-              <button 
-                type="button"
-                onClick={() => {
-                  setAuthMode("choice");
-                  setErrors({});
-                }}
-                className="text-xs font-bold text-neutral-500 uppercase tracking-widest hover:text-white flex items-center justify-center gap-2"
-              >
-                <ChevronRight className="rotate-180 w-4 h-4" /> Voltar
-              </button>
-            </div>
-          </form>
-          </>
-        )}
-        
-        <p className="text-[10px] text-neutral-600 uppercase tracking-[0.2em] mt-12 font-bold leading-relaxed">
-          Os acessos de Gestor e Colaborador <br /> exigem aprovação administrativa.
-        </p>
+      <div className="bg-neutral-900 p-8 rounded-[2rem] border border-white/5 shadow-2xl">
+        <h2 className="text-2xl font-black italic uppercase mb-6">Portal do Colaborador</h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Seu E-mail" className="w-full bg-black/50 text-white p-4 rounded-xl border border-white/5 focus:border-amber-500"/>
+          <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Senha" className="w-full bg-black/50 text-white p-4 rounded-xl border border-white/5 focus:border-amber-500"/>
+          <button type="submit" className="w-full bg-amber-500 text-black font-black p-4 rounded-xl">Entrar</button>
+        </form>
+        <button onClick={handleManagerLogin} className="mt-4 text-xs text-neutral-500 hover:text-white">Acesso do Gestor</button>
       </div>
     </motion.div>
   );
 }
+
+
+
+
 
 
 function ConfirmationModal({ service, date, onConfirm, loginCode, phone }: { service: any, date: string, onConfirm: () => void, loginCode: string, phone: string }) {
@@ -2127,6 +1967,20 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
                role: 'client',
                createdAt: serverTimestamp(),
            });
+        }
+      } else if (guestEmail) {
+        // Find if user already exists
+        const qUser = query(collection(db, "users"), where("email", "==", guestEmail));
+        const userSnapshot = await getDocs(qUser);
+        if (userSnapshot.empty) {
+          // Add as new client
+          await addDoc(collection(db, "users"), {
+            name: guestName,
+            email: guestEmail,
+            whatsapp: guestPhone,
+            role: 'client',
+            createdAt: serverTimestamp(),
+          });
         }
       }
 
