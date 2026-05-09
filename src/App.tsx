@@ -1456,6 +1456,10 @@ export default function App() {
 
       <BottomNav userRole={userRole} currentScreen={currentScreen} setCurrentScreen={setCurrentScreen} user={user} />
 
+      <footer className="py-8 text-center border-t border-white/5 text-neutral-600 text-[10px] uppercase tracking-widest font-bold">
+        © 2026 MS BARBER SHOP | Developed by Rulio
+      </footer>
+
       {/* Mobile Menu */}
       <AnimatePresence>
         {isMenuOpen && (
