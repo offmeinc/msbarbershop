@@ -1166,7 +1166,8 @@ export default function App() {
   useEffect(() => {
     const unsubscribeServices = onSnapshot(collection(db, "services"), (snapshot) => {
       const servicesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setServices(servicesData);
+      const uniqueServices = Array.from(new Map(servicesData.map(item => [item.name, item])).values());
+      setServices(uniqueServices);
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, "services");
     });
