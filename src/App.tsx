@@ -1602,7 +1602,6 @@ function HomeScreen({ services, onStartBooking }: { services: any[], onStartBook
 
       {/* Footer */}
       <section className="py-12 border-t border-white/5 flex flex-col items-center gap-4 bg-neutral-900/50">
-        <p className="text-neutral-500 text-xs font-bold uppercase tracking-widest">© 2024 MS Barber Shop</p>
       </section>
     </motion.div>
   );
@@ -1676,6 +1675,13 @@ function ClientDashboardScreen({ loginCode, onBack }: { loginCode: string, onBac
     }
   }
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Bom dia";
+    if (hour < 18) return "Boa tarde";
+    return "Boa noite";
+  }
+
   const now = new Date();
   const sortedAppointments = appointments.sort((a,b) => {
     const dateA = a.date instanceof Timestamp ? a.date.toDate() : new Date(a.date);
@@ -1713,7 +1719,7 @@ function ClientDashboardScreen({ loginCode, onBack }: { loginCode: string, onBac
           </div>
         </label>
         <div>
-          <h2 className="text-white font-black text-xl">Cliente</h2>
+          <h2 className="text-white font-black text-xl">{getGreeting()}, Cliente</h2>
           <p className="text-neutral-500 font-bold uppercase text-[10px] tracking-widest">Code: {loginCode}</p>
         </div>
       </div>
