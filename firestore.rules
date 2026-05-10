@@ -27,6 +27,10 @@ service cloud.firestore {
     match /client_profiles/{loginCode} {
       allow read, write: if true;
     }
+    // Staff Notifications
+    match /staff_notifications/{docId} {
+      allow read, write: if true;
+    }
     // Fallback
     match /{document=**} {
       allow read, write: if false;

@@ -75,12 +75,30 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["appointmentId", "clientId", "barberId", "rating"]
+    },
+    "StaffNotification": {
+      "title": "StaffNotification",
+      "description": "Real-time notifications for the barbershop staff.",
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["booking", "cancellation", "update"] },
+        "message": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "read": { "type": "boolean" },
+        "clientId": { "type": "string" },
+        "appointmentId": { "type": "string" }
+      },
+      "required": ["type", "message", "timestamp", "read"]
     }
   },
   "firestore": {
     "/users/{userId}": {
       "schema": "User",
       "description": "Storage for user profiles."
+    },
+    "/staff_notifications/{notifId}": {
+      "schema": "StaffNotification",
+      "description": "Storage for staff notifications."
     },
     "/workingHours/{workId}": {
       "schema": "WorkingHours",

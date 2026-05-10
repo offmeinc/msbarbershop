@@ -20,6 +20,9 @@ import {
   Settings,
   Sparkles,
   Bell,
+  BellOff,
+  CalendarCheck,
+  CalendarX,
   Camera,
   Loader2,
   ChevronLeft,
@@ -54,7 +57,123 @@ import { useState, useEffect, useRef, useMemo, ChangeEvent, FormEvent } from "re
 
 // Dummy components
 const DarkScreen = ({ onBack }: { onBack: () => void }) => <div className="p-4">Dark Screen <button onClick={onBack}>Voltar</button></div>;
-const NotificationsScreen = ({ onBack }: { onBack: () => void }) => <div className="p-4">Notifications Screen <button onClick={onBack}>Voltar</button></div>;
+const NotificationsScreen = ({ notifications, appointments, onBack, onClear }: { notifications: any[], appointments: any[], onBack: () => void, onClear: () => void }) => {
+  const [activeTab, setActiveTab] = useState<'recent' | 'history'>('recent');
+
+  const history = useMemo(() => {
+    return appointments
+      .sort((a,b) => {
+        const dateA = a.date instanceof Timestamp ? a.date.toDate() : (typeof a.date === 'string' ? parseISO(a.date) : a.date);
+        const dateB = b.date instanceof Timestamp ? b.date.toDate() : (typeof b.date === 'string' ? parseISO(b.date) : b.date);
+        return dateB.getTime() - dateA.getTime();
+      })
+      .slice(0, 10);
+  }, [appointments]);
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: 20 }}
+      className="max-w-md mx-auto py-8 px-6 min-h-screen pb-32"
+    >
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-4">
+          <button onClick={onBack} className="p-2 bg-white/5 rounded-full text-white/40 hover:text-white border border-white/5 transition-colors">
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <h2 className="text-2xl font-black text-white uppercase tracking-tighter italic">Notificações</h2>
+        </div>
+        {notifications.length > 0 && activeTab === 'recent' && (
+          <button 
+            onClick={onClear}
+            className="text-[10px] text-amber-500 hover:text-amber-400 font-bold uppercase tracking-widest bg-amber-500/10 px-3 py-1.5 rounded-full"
+          >
+            Limpar
+          </button>
+        )}
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-2 p-1 bg-neutral-900 rounded-2xl mb-6 border border-white/5">
+        <button 
+          onClick={() => setActiveTab('recent')}
+          className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'recent' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/10' : 'text-neutral-500 hover:text-white'}`}
+        >
+          Recentes ({notifications.filter(n => !n.read).length})
+        </button>
+        <button 
+          onClick={() => setActiveTab('history')}
+          className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'history' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/10' : 'text-neutral-500 hover:text-white'}`}
+        >
+          Histórico
+        </button>
+      </div>
+
+      <div className="space-y-3">
+        {activeTab === 'recent' ? (
+          <>
+            {notifications.map((n) => (
+              <div 
+                key={n.id} 
+                className={`p-4 rounded-3xl border transition-all ${n.read ? 'bg-neutral-900/30 border-white/5 opacity-60' : 'bg-neutral-900 border-amber-500/30 shadow-lg shadow-amber-500/5'}`}
+              >
+                <div className="flex gap-4">
+                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${n.type === 'booking' ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'}`}>
+                    {n.type === 'booking' ? <CalendarCheck className="w-5 h-5" /> : <CalendarX className="w-5 h-5" />}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <span className={`text-[10px] font-black uppercase tracking-widest ${n.type === 'booking' ? 'text-green-500' : 'text-red-500'}`}>
+                        {n.type === 'booking' ? 'Novo Agendamento' : 'Cancelamento'}
+                      </span>
+                      <span className="text-[9px] text-neutral-600 font-bold whitespace-nowrap">
+                        {n.timestamp?.toDate ? format(n.timestamp.toDate(), "HH:mm • dd/MM", { locale: ptBR }) : "Agora"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-neutral-300 leading-relaxed font-medium">
+                      {n.message}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {notifications.length === 0 && (
+              <div className="py-20 text-center space-y-4">
+                <BellOff className="w-12 h-12 text-neutral-800 mx-auto" />
+                <p className="text-xs text-neutral-500 uppercase font-black tracking-widest">Nenhuma atividade recente</p>
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            {history.map((app) => (
+              <div key={app.id} className="p-4 rounded-3xl bg-neutral-900/50 border border-white/5 flex items-center justify-between group hover:border-white/10 transition-all">
+                <div className="flex items-center gap-4">
+                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${app.status === 'completed' ? 'bg-green-500/10 text-green-500' : 'bg-neutral-800 text-neutral-500'}`}>
+                    <Calendar className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-white">{app.clientName}</h4>
+                    <p className="text-[10px] text-neutral-500 uppercase font-black tracking-tighter ring-offset-2">
+                      {app.serviceName} • {app.time} • {format(app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date), "dd/MM")}
+                    </p>
+                  </div>
+                </div>
+                <div className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest ${
+                  app.status === 'completed' ? 'bg-green-500/10 text-green-500' : 
+                  app.status === 'cancelled' ? 'bg-red-500/10 text-red-500' : 'bg-amber-500/10 text-amber-500'
+                }`}>
+                  {app.status === 'completed' ? 'Concluído' : app.status === 'cancelled' ? 'Cancelado' : 'Agendado'}
+                </div>
+              </div>
+            ))}
+          </>
+        )}
+      </div>
+    </motion.div>
+  );
+};
 const EarningsScreen = ({ onBack }: { onBack: () => void }) => {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -927,17 +1046,25 @@ function ChatScreen({ user, onBack }: { user: any, onBack: () => void }) {
   );
 }
 
-function MoreOptionsScreen({ user, role, onLogout, onBack }: { user: any, role: string, onLogout: () => void, onBack: () => void, key?: any }) {
+function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotifications, appointments, onClearNotifications }: { user: any, role: string, onLogout: () => void, onBack: () => void, key?: any, staffNotifications: any[], appointments: any[], onClearNotifications: () => void }) {
   const [activeSubScreen, setActiveSubScreen] = useState<
     'main' | 'profile' | 'notif' | 'block' | 'help' | 'share' | 'link' | 'earnings' | 'week' | 'recon' | 'recurrence' | 'support' | 'staff-chat' | 'dark'
   >('main');
+
+  const unreadCount = staffNotifications.filter(n => !n.read).length;
 
   const sections = [
     {
       title: "Perfil e Conta",
       items: [
         { id: 'profile', label: 'Meu Perfil', icon: <User className="w-5 h-5" />, onClick: () => setActiveSubScreen('profile') },
-        { id: 'notif', label: 'Notificações', icon: <Bell className="w-5 h-5" />, badge: '99+', onClick: () => setActiveSubScreen('notif') },
+        { 
+          id: 'notif', 
+          label: 'Notificações', 
+          icon: <Bell className="w-5 h-5" />, 
+          badge: unreadCount > 0 ? (unreadCount > 99 ? '99+' : unreadCount.toString()) : undefined, 
+          onClick: () => setActiveSubScreen('notif') 
+        },
         ...(role === 'barber' || role === 'manager' ? [{ id: 'earnings', label: 'Meus Ganhos', icon: <Wallet className="w-5 h-5" />, onClick: () => setActiveSubScreen('earnings') }] : []),
       ]
     },
@@ -971,7 +1098,7 @@ function MoreOptionsScreen({ user, role, onLogout, onBack }: { user: any, role: 
   if (activeSubScreen === 'recurrence') return <RecurrenceScreen onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'dark') return <DarkScreen onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'profile') return <ProfileEditScreen user={user} onBack={() => setActiveSubScreen('main')} />;
-  if (activeSubScreen === 'notif') return <NotificationsScreen onBack={() => setActiveSubScreen('main')} />;
+  if (activeSubScreen === 'notif') return <NotificationsScreen notifications={staffNotifications} appointments={appointments} onClear={onClearNotifications} onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'earnings') return <EarningsScreen onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'week') return <MyWeekScreen user={user} onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'staff-chat') return <StaffChatScreen user={user} onBack={() => setActiveSubScreen('main')} />;
@@ -1095,7 +1222,7 @@ function ClientsScreen({ onBack }: { onBack: () => void, key?: any }) {
     </motion.div>
   );
 }
-function BottomNav({ userRole, currentScreen, setCurrentScreen, user }: { userRole: string, currentScreen: string, setCurrentScreen: (s: any) => void, user: any }) {
+function BottomNav({ userRole, currentScreen, setCurrentScreen, user, unreadCount }: { userRole: string, currentScreen: string, setCurrentScreen: (s: any) => void, user: any, unreadCount: number }) {
   if (!user) return null;
 
   const items = [];
@@ -1117,7 +1244,9 @@ function BottomNav({ userRole, currentScreen, setCurrentScreen, user }: { userRo
           <motion.div animate={{ rotate: currentScreen === 'more' ? 90 : 0 }}>
             <Grip className="w-5 h-5" />
           </motion.div>
-          <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full border border-black shadow-[0_0_5px_rgba(239,68,68,0.5)]" />
+          {unreadCount > 0 && (
+            <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-500 rounded-full border-2 border-black" />
+          )}
         </div>
       ), 
       screen: "more"
@@ -1150,7 +1279,44 @@ export default function App() {
   const [requestedRole, setRequestedRole] = useState<string>("client");
   const [loading, setLoading] = useState(true);
   const [services, setServices] = useState<any[]>([]);
+  const [appointments, setAppointments] = useState<any[]>([]);
+  const [staffNotifications, setStaffNotifications] = useState<any[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
   const isSigningUp = useRef(false);
+
+  useEffect(() => {
+    if (!['manager', 'barber'].includes(userRole)) return;
+    
+    const q = query(
+      collection(db, "staff_notifications"),
+      orderBy("timestamp", "desc"),
+      limit(20)
+    );
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setStaffNotifications(data);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, "staff_notifications");
+    });
+    
+    return () => unsubscribe();
+  }, [userRole]);
+
+  useEffect(() => {
+    if (!user || userRole === 'client') return;
+    
+    const q = userRole === 'manager' 
+      ? query(collection(db, "appointments"), orderBy("date", "desc"), limit(100))
+      : query(collection(db, "appointments"), where("barberId", "==", user.uid), orderBy("date", "desc"), limit(100));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setAppointments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, "appointments");
+    });
+    return () => unsubscribe();
+  }, [user?.uid, userRole]);
 
   useEffect(() => {
     if (!user) return;
@@ -1166,7 +1332,7 @@ export default function App() {
   useEffect(() => {
     const unsubscribeServices = onSnapshot(collection(db, "services"), (snapshot) => {
       const servicesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      const uniqueServices = Array.from(new Map(servicesData.map(item => [item.name, item])).values());
+      const uniqueServices = Array.from(new Map(servicesData.map((item: any) => [item.name, item])).values());
       setServices(uniqueServices);
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, "services");
@@ -1410,6 +1576,75 @@ export default function App() {
                       </div>
                     )}
                   </div>
+
+                  {['manager', 'barber'].includes(userRole) && (
+                    <div className="relative">
+                      <button 
+                        onClick={() => setShowNotifications(!showNotifications)}
+                        className={`p-2 rounded-lg transition-all relative ${showNotifications ? 'bg-amber-500 text-black' : 'bg-white/5 text-neutral-400 hover:bg-amber-500/20 hover:text-amber-500'}`}
+                      >
+                        <Bell className="w-4 h-4" />
+                        {staffNotifications.filter(n => !n.read).length > 0 && (
+                          <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 text-black text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-black">
+                            {staffNotifications.filter(n => !n.read).length}
+                          </span>
+                        )}
+                      </button>
+                      
+                      <AnimatePresence>
+                        {showNotifications && (
+                          <motion.div 
+                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                            className="absolute right-0 mt-4 w-80 bg-neutral-900 border border-white/10 rounded-2xl shadow-2xl z-50 p-4 max-h-[32rem] flex flex-col"
+                          >
+                            <div className="flex items-center justify-between mb-4">
+                              <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white">Notificações</h3>
+                              <button 
+                                onClick={async () => {
+                                  const unread = staffNotifications.filter(n => !n.read);
+                                  await Promise.all(unread.map(n => updateDoc(doc(db, "staff_notifications", n.id), { read: true })));
+                                }}
+                                className="text-[10px] text-amber-500 hover:text-amber-400 font-bold uppercase tracking-wider"
+                              >
+                                Limpar
+                              </button>
+                            </div>
+                            
+                            <div className="space-y-2 overflow-y-auto pr-1">
+                              {staffNotifications.map(n => (
+                                <div 
+                                  key={n.id} 
+                                  className={`p-3 rounded-xl border transition-all cursor-pointer ${n.read ? 'bg-transparent border-white/5 opacity-60' : 'bg-white/5 border-amber-500/30 ring-1 ring-amber-500/10'}`}
+                                  onClick={async () => {
+                                    if (!n.read) await updateDoc(doc(db, "staff_notifications", n.id), { read: true });
+                                  }}
+                                >
+                                  <div className="flex gap-3">
+                                    <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${n.type === 'booking' ? 'bg-green-500' : 'bg-red-500'}`} />
+                                    <div>
+                                      <p className="text-[11px] text-white leading-relaxed">{n.message}</p>
+                                      <p className="text-[9px] text-neutral-500 mt-1 font-bold uppercase tracking-tighter">
+                                        {n.timestamp?.toDate ? format(n.timestamp.toDate(), "HH:mm • dd/MM", { locale: ptBR }) : "Agora"}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                              {staffNotifications.length === 0 && (
+                                <div className="py-8 text-center">
+                                  <Bell className="w-8 h-8 text-neutral-800 mx-auto mb-2" />
+                                  <p className="text-[10px] text-neutral-500 uppercase font-black">Nenhuma atividade recente</p>
+                                </div>
+                              )}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  )}
+
                   <button 
                     onClick={() => setCurrentScreen(currentScreen === "more" ? "home" : "more")} 
                     className={`p-2 rounded-lg transition-all ${currentScreen === 'more' ? 'bg-amber-500 text-black' : 'bg-white/5 text-neutral-400 hover:bg-amber-500/20 hover:text-amber-500'}`}
@@ -1419,13 +1654,21 @@ export default function App() {
                 </div>
               </div>
             ) : (
-              <button 
-                onClick={() => setCurrentScreen("client-login")}
-                className="bg-amber-500 text-black px-6 py-2 rounded-full font-bold hover:bg-amber-400 transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(245,158,11,0.2)]"
-              >
-                <User className="w-4 h-4" />
-                ACESSAR PORTAL
-              </button>
+              <>
+                <button 
+                  onClick={() => setCurrentScreen("login")}
+                  className="text-neutral-400 hover:text-white transition-colors uppercase text-sm font-medium tracking-widest"
+                >
+                  Portal Profissional
+                </button>
+                <button 
+                  onClick={() => setCurrentScreen("client-login")}
+                  className="bg-amber-500 text-black px-6 py-2 rounded-full font-bold hover:bg-amber-400 transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(245,158,11,0.2)]"
+                >
+                  <User className="w-4 h-4" />
+                  ACESSAR PORTAL
+                </button>
+              </>
             )}
           </div>
 
@@ -1450,11 +1693,31 @@ export default function App() {
           {currentScreen === "collaborators" && <DashboardScreen key="collaborators" user={user} role={userRole} services={services} dashboardView="collaborators" onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "services" && <DashboardScreen key="services" user={user} role={userRole} services={services} dashboardView="services" onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "clients" && <ClientsScreen key="clients" onBack={() => setCurrentScreen("home")} />}
-          {currentScreen === "more" && <MoreOptionsScreen key="more" user={user} role={userRole} onLogout={handleLogout} onBack={() => setCurrentScreen("home")} />}
+          {currentScreen === "more" && (
+            <MoreOptionsScreen 
+              key="more" 
+              user={user} 
+              role={userRole} 
+              onLogout={handleLogout} 
+              onBack={() => setCurrentScreen("home")}
+              staffNotifications={staffNotifications}
+              appointments={appointments}
+              onClearNotifications={async () => {
+                const unread = staffNotifications.filter(n => !n.read);
+                await Promise.all(unread.map(n => updateDoc(doc(db, "staff_notifications", n.id), { read: true })));
+              }}
+            />
+          )}
         </AnimatePresence>
       </main>
 
-      <BottomNav userRole={userRole} currentScreen={currentScreen} setCurrentScreen={setCurrentScreen} user={user} />
+      <BottomNav 
+        userRole={userRole} 
+        currentScreen={currentScreen} 
+        setCurrentScreen={setCurrentScreen} 
+        user={user} 
+        unreadCount={staffNotifications.filter(n => !n.read).length}
+      />
 
       <footer className="py-8 text-center border-t border-white/5 text-neutral-600 text-[10px] uppercase tracking-widest font-bold">
         © 2026 MS BARBER SHOP | Developed by Rulio
@@ -1632,7 +1895,7 @@ function ClientDashboardScreen({ loginCode, onBack }: { loginCode: string, onBac
     const formData = new FormData();
     formData.append("image", file);
     try {
-        const response = await fetch(`https://api.imgbb.com/1/upload?key=${import.meta.env.VITE_IMGBB_API_KEY}`, {
+        const response = await fetch(`https://api.imgbb.com/1/upload?key=${(import.meta as any).env.VITE_IMGBB_API_KEY}`, {
             method: "POST",
             body: formData
         });
@@ -2170,6 +2433,16 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
         console.log("Attempting to write appointment:", JSON.stringify(app));
         try {
           await addDoc(collection(db, "appointments"), app);
+          
+          // Staff notification
+          await addDoc(collection(db, "staff_notifications"), {
+            type: 'booking',
+            message: `Novo agendamento: ${app.clientName} reservou ${app.serviceName} para ${format(app.date.toDate(), "dd/MM 'às' HH:mm", { locale: ptBR })}`,
+            timestamp: serverTimestamp(),
+            read: false,
+            clientId: app.clientId,
+            appointmentId: 'new' // Simplified
+          });
         } catch (error) {
           console.error("Error writing appointment:", error);
           handleFirestoreError(error, OperationType.WRITE, "appointments");
@@ -2602,6 +2875,17 @@ function DashboardScreen
         timestamp: serverTimestamp(),
         read: false
       });
+
+      // Staff notification
+      await addDoc(collection(db, "staff_notifications"), {
+        type: newStatus === 'cancelled' ? 'cancellation' : 'update',
+        message: `${newStatus === 'cancelled' ? 'Cancelamento' : 'Atualização'}: ${app.clientName} ${newStatus === 'cancelled' ? 'desmarcou' : 'teve o status alterado para ' + newStatus} (${app.serviceName})`,
+        timestamp: serverTimestamp(),
+        read: false,
+        clientId: app.clientId,
+        appointmentId: app.id
+      });
+
       if (newStatus === 'cancelled') {
         setStatusMsg('Agendamento cancelado com sucesso!');
         setTimeout(() => setStatusMsg(null), 3000);
