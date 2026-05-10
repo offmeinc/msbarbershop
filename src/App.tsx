@@ -141,7 +141,7 @@ const NotificationsScreen = ({ notifications, appointments, onBack, onClear }: {
             {notifications.length === 0 && (
               <div className="py-20 text-center space-y-4">
                 <BellOff className="w-12 h-12 text-neutral-800 mx-auto" />
-                <p className="text-xs text-neutral-500 uppercase font-black tracking-widest">Nenhuma atividade recente</p>
+                <p className="text-xs text-neutral-500 uppercase font-black tracking-widest">Sem notificações no momento.</p>
               </div>
             )}
           </>
@@ -1635,7 +1635,7 @@ export default function App() {
                               {staffNotifications.length === 0 && (
                                 <div className="py-8 text-center">
                                   <Bell className="w-8 h-8 text-neutral-800 mx-auto mb-2" />
-                                  <p className="text-[10px] text-neutral-500 uppercase font-black">Nenhuma atividade recente</p>
+                                  <p className="text-[10px] text-neutral-500 uppercase font-black">Sem notificações no momento.</p>
                                 </div>
                               )}
                             </div>
