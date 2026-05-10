@@ -1351,7 +1351,7 @@ export default function App() {
               <span className="text-xl font-black tracking-tighter uppercase italic block leading-none">
                 Marley Souza
               </span>
-              <span className="text-[10px] text-amber-500 uppercase tracking-[0.3em] font-bold">Barber Shop</span>
+              <span className="text-[10px] text-amber-500 uppercase tracking-[0.3em] font-bold">BARBEARIA</span>
             </div>
           </div>
 
