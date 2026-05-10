@@ -3115,9 +3115,9 @@ function DashboardScreen
         <>
             <div className="space-y-0 relative border-l border-white/5 ml-2 pl-6">
                 {hoursSlots.map((hour, idx) => (
-                    <div key={hour} className="relative flex gap-4 min-h-[70px] group">
+                    <div key={hour} className="relative flex gap-4 min-h-[50px] group border-b border-white/5 last:border-none">
                         {/* Hour Label */}
-                        <div className="absolute -left-8 -translate-x-1/2 text-[11px] font-black text-neutral-700 bg-black py-1 z-10">
+                        <div className="absolute -left-8 -translate-x-1/2 text-[10px] font-bold text-neutral-700 py-1 z-10">
                             {hour}
                         </div>
                         
@@ -3131,18 +3131,17 @@ function DashboardScreen
                                   key={app.id} 
                                   initial={{ x: 10, opacity: 0 }}
                                   animate={{ x: 0, opacity: 1 }}
-                                  className="absolute inset-x-0 top-0 bg-neutral-900 border border-white/10 rounded-[1.5rem] p-5 shadow-2xl z-20 flex justify-between items-center group/card hover:bg-neutral-800 transition-all"
+                                  className="absolute inset-x-0 top-0.5 p-2 bg-neutral-900 border border-white/10 rounded-xl z-20 flex items-center gap-2 cursor-pointer hover:bg-neutral-800 transition-all"
                                 >
-                                    <div className="space-y-1">
-                                        <h4 className="text-lg font-black text-white leading-none">{app.clientName}</h4>
-                                        <div className="flex items-center gap-2">
-                                          <p className="text-[11px] text-neutral-500 uppercase font-bold tracking-widest">{app.serviceName}</p>
-                                          <span className="w-1 h-1 rounded-full bg-neutral-700" />
-                                          <p className="text-[11px] text-neutral-500 uppercase font-bold tracking-widest">30min</p>
-                                        </div>
+                                    <div className="w-1 h-8 rounded-full bg-amber-500" />
+                                    <div className="flex-1 min-w-0">
+                                        <h4 className="text-xs font-black text-white truncate">{app.clientName}</h4>
+                                        <p className="text-[9px] text-neutral-500 font-bold uppercase truncate">{app.serviceName}</p>
                                     </div>
-                                    <div className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-neutral-700 group-hover/card:border-amber-500 group-hover/card:text-amber-500 transition-all">
-                                        <CheckCircle2 className="w-5 h-5" />
+                                    <div className="flex-none">
+                                        <div className="w-6 h-6 rounded-full bg-white/5 flex items-center justify-center text-neutral-700">
+                                            <CheckCircle2 className="w-3 h-3" />
+                                        </div>
                                     </div>
                                 </motion.div>
                             ))}
@@ -3895,28 +3894,26 @@ function CalendarWidget({
                 const hourApps = dayApps.filter(a => a.time.startsWith(hour.toString().padStart(2, '0')));
                 
                 return (
-                  <div key={hour} className="group flex gap-4 min-h-[60px]">
-                    <div className="w-12 pt-1 text-right">
-                       <span className="text-[10px] font-black text-neutral-700 group-hover:text-amber-500 transition-colors uppercase tracking-tight">{timeStr}</span>
-                    </div>
-                    <div className="flex-1 flex flex-col gap-2 relative">
-                       <div className="absolute left-0 right-0 top-3 h-[1px] bg-white/5 group-hover:bg-amber-500/10 transition-colors" />
-                       <div className="relative z-10 pl-2">
+                  <div key={hour} className="group flex gap-4 min-h-[50px] border-b border-white/5 last:border-none">
+                     <div className="w-12 pt-0.5 text-right">
+                        <span className="text-[10px] font-bold text-neutral-800 uppercase tracking-tight">{timeStr}</span>
+                     </div>
+                     <div className="flex-1 flex flex-col gap-1 pb-2">
                           {hourApps.map((app, idx) => (
                             <motion.div 
                               key={idx}
                               initial={{ opacity: 0, x: -10 }}
                               animate={{ opacity: 1, x: 0 }}
-                              className="bg-black border border-white/5 p-4 rounded-2xl shadow-xl flex items-center justify-between mb-2 hover:border-amber-500/30 hover:shadow-amber-500/5 transition-all group/card"
+                              className="bg-black border border-white/5 p-3 rounded-xl flex items-center justify-between hover:border-amber-500/30 transition-all group/card"
                             >
-                              <div className="flex items-center gap-4">
-                                <div className={`w-2 h-10 rounded-full transition-colors ${
+                              <div className="flex items-center gap-3">
+                                <div className={`w-1 h-8 rounded-full ${
                                   app.status === 'completed' ? 'bg-amber-500' : 
                                   app.status === 'confirmed' ? 'bg-amber-500' : 'bg-red-500'
                                 }`} />
                                 <div>
-                                  <p className="font-bold text-white group-hover/card:text-amber-500 transition-colors">{app.clientName}</p>
-                                  <p className="text-[10px] text-neutral-500 font-black uppercase tracking-widest">{app.serviceName} • {app.time}</p>
+                                  <p className="text-xs font-black text-white">{app.clientName}</p>
+                                  <p className="text-[9px] text-neutral-500 font-bold uppercase">{app.serviceName}</p>
                                 </div>
                               </div>
                               <div className="flex gap-2">
@@ -3924,27 +3921,17 @@ function CalendarWidget({
                                    <div className="flex gap-1">
                                       <button 
                                         onClick={() => updateStatus(app.id, 'confirmed')}
-                                        className="bg-amber-500 text-black p-2 rounded-xl hover:bg-amber-400 transition-colors"
+                                        className="bg-amber-500 text-black p-1.5 rounded-lg hover:bg-amber-400"
                                       >
-                                        <CheckCircle2 className="w-4 h-4" />
-                                      </button>
-                                       <button 
-                                        onClick={() => updateStatus(app.id, 'cancelled')}
-                                        className="bg-red-500/10 text-red-500 p-2 rounded-xl hover:bg-red-500/20 transition-colors"
-                                      >
-                                        <XCircle className="w-4 h-4" />
+                                        <CheckCircle2 className="w-3 h-3" />
                                       </button>
                                    </div>
                                  )}
-                                 <button className="bg-white/5 text-neutral-500 p-2 rounded-xl hover:bg-white/10">
-                                   <MoreHorizontal className="w-4 h-4" />
-                                 </button>
                               </div>
                             </motion.div>
                           ))}
-                       </div>
-                    </div>
-                  </div>
+                     </div>
+                   </div>
                 );
               })}
            </div>
