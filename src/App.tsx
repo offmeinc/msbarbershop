@@ -2852,6 +2852,36 @@ function EarningsDashboard({ appointments, services }: { appointments: any[], se
   );
 }
 
+function AppointmentModal({ appointment, onClose, onUpdate }: { appointment: any, onClose: () => void, onUpdate: (app: any, status: string) => void }) {
+    if (!appointment) return null;
+    const appDate = appointment.date instanceof Timestamp ? appointment.date.toDate() : (typeof appointment.date === 'string' ? parseISO(appointment.date) : appointment.date);
+    
+    return (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+            <div className="bg-neutral-900 border border-white/10 rounded-3xl p-6 w-full max-w-sm space-y-6">
+                <div className="flex justify-between items-start">
+                    <h3 className="text-xl font-black text-white">{appointment.clientName}</h3>
+                    <button onClick={onClose} className="text-neutral-500 hover:text-white"><X className="w-6 h-6" /></button>
+                </div>
+                <div className="space-y-4">
+                    <div className="flex items-center gap-3 text-neutral-400 font-bold">
+                        <Scissors className="w-5 h-5 text-amber-500" />
+                        <span>{appointment.serviceName}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-neutral-400 font-bold">
+                        <Calendar className="w-5 h-5 text-amber-500" />
+                        <span>{format(appDate, "dd/MM/yyyy HH:mm")}</span>
+                    </div>
+                </div>
+                <div className="flex gap-3">
+                    <button onClick={() => { onUpdate(appointment, 'confirmed'); onClose(); }} className="flex-1 bg-amber-500 text-black font-black py-3 rounded-xl">Confirmar</button>
+                    <button onClick={() => { onUpdate(appointment, 'cancelled'); onClose(); }} className="flex-1 bg-red-500/10 text-red-500 font-black py-3 rounded-xl">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 function DashboardScreen
 ({ user, role, services, dashboardView, onBack }: { user: any, role: string, services: any[], dashboardView?: "list" | "calendar" | "services" | "hours" | "collaborators", onBack: () => void, key?: string }) {
   const [appointments, setAppointments] = useState<any[]>([]);
@@ -2864,6 +2894,7 @@ function DashboardScreen
   const [reviewAppointment, setReviewAppointment] = useState<any>(null);
 
   const [expandedAppointmentId, setExpandedAppointmentId] = useState<string | null>(null);
+  const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
 
   const handleStatusUpdate = async (app: any, newStatus: string) => {
@@ -3110,6 +3141,14 @@ function DashboardScreen
       {/* Views */}
       {currentView === 'earnings' && <EarningsDashboard appointments={appointments} services={services} />}
       
+      {selectedAppointment && (
+        <AppointmentModal 
+          appointment={selectedAppointment} 
+          onClose={() => setSelectedAppointment(null)} 
+          onUpdate={handleStatusUpdate}
+        />
+      )}
+      
       {/* Agenda Main View */}
       {currentView === 'agenda' ? (
         <>
@@ -3125,13 +3164,16 @@ function DashboardScreen
                             {filteredAppointments.filter(app => {
                                 const appDate = app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date);
                                 const timeStr = `${String(appDate.getHours()).padStart(2, '0')}:${String(appDate.getMinutes()).padStart(2, '0')}`;
-                                return timeStr === hour;
+                                const matchesTime = timeStr === hour;
+                                const matchesStatus = filterStatus === 'all' || (filterStatus === 'pending' ? (!app.status || app.status === 'pending') : app.status === filterStatus);
+                                return matchesTime && matchesStatus;
                             }).map(app => (
                                 <motion.div 
                                   key={app.id} 
                                   initial={{ x: 10, opacity: 0 }}
                                   animate={{ x: 0, opacity: 1 }}
                                   className="absolute inset-x-0 top-0.5 p-2 bg-neutral-900 border border-white/10 rounded-xl z-20 flex items-center gap-2 cursor-pointer hover:bg-neutral-800 transition-all"
+                                  onClick={() => setSelectedAppointment(app)}
                                 >
                                     <div className="w-1 h-8 rounded-full bg-amber-500" />
                                     <div className="flex-1 min-w-0">
