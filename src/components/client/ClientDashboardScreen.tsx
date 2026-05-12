@@ -211,30 +211,10 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
               </div>
            </div>
            
-           <div className="col-span-2 bg-amber-500 rounded-[2.5rem] p-6 shadow-2xl shadow-amber-500/20 relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-4 opacity-10">
-                <Scissors className="w-20 h-20 rotate-12" />
-              </div>
-              <div className="relative z-10">
-                <h3 className="text-black font-black uppercase italic tracking-tighter text-lg mb-1">Cartão Fidelidade</h3>
-                <div className="grid grid-cols-5 gap-2 mt-4">
-                  {[...Array(10)].map((_, i) => (
-                    <div key={i} className={`aspect-square rounded-xl border-2 flex items-center justify-center ${
-                      i < (stats.completedCount % 10 || (stats.completedCount > 0 && stats.completedCount % 10 === 0 ? 10 : 0))
-                        ? 'bg-black border-black text-amber-500 shadow-lg' 
-                        : 'bg-transparent border-black/10 text-black/10'
-                    }`}>
-                      <Scissors className="w-3 h-3" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-           </div>
-
-           <div className="bg-[#0A0A0A] p-5 rounded-[2rem] border border-white/5">
-              <p className="text-[10px] font-black uppercase tracking-widest text-neutral-500 mb-1">Visitas</p>
-              <p className="text-2xl font-black italic underline decoration-amber-500 decoration-2 underline-offset-4">{stats.completedCount}</p>
-           </div>
+            <div className="bg-[#0A0A0A] p-5 rounded-[2rem] border border-white/5">
+               <p className="text-[10px] font-black uppercase tracking-widest text-neutral-500 mb-1">Visitas</p>
+               <p className="text-2xl font-black italic underline decoration-amber-500 decoration-2 underline-offset-4">{stats.completedCount}</p>
+            </div>
            
            <div className="bg-[#0A0A0A] p-5 rounded-[2rem] border border-white/5">
               <p className="text-[10px] font-black uppercase tracking-widest text-neutral-500 mb-1">Cashback</p>

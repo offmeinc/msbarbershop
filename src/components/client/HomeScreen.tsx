@@ -1,8 +1,10 @@
-import { motion } from "motion/react";
+import { useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import { ChevronRight, Sparkles, MapPin, Instagram, Phone, Clock, Scissors } from "lucide-react";
 import { BARBERSHOP_NAME, BARBERSHOP_ADDRESS, BARBERSHOP_PHONE, BARBERSHOP_INSTAGRAM } from "../../constants";
 
 export function HomeScreen({ services, onStartBooking }: { services: any[], onStartBooking: () => void, key?: string }) {
+  const [locationSelectorOpen, setLocationSelectorOpen] = useState(false);
   return (
     <div className="max-w-xl mx-auto py-8">
       {/* Hero Section */}
@@ -113,16 +115,100 @@ export function HomeScreen({ services, onStartBooking }: { services: any[], onSt
       </div>
 
       {/* Info Cards */}
-      <div className="px-6 grid grid-cols-1 gap-4 mt-8 pb-12">
-        <div className="bg-neutral-950 border border-white/5 p-6 rounded-[2.5rem] flex items-start gap-4 group hover:bg-neutral-900 transition-colors">
+      <div className="px-6 grid grid-cols-1 gap-4 mt-8 pb-12 relative">
+        <button 
+          onClick={() => {
+            const encodedAddr = encodeURIComponent(BARBERSHOP_ADDRESS);
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+            
+            // On mobile, show options. For now, we can use a simpler approach or a prompt
+            // But to be really cool, let's open a custom prompt or just fallback to Google Maps for all
+            // The prompt approach is better for UX as requested.
+            
+            const options = [
+              { name: "Google Maps", url: `https://www.google.com/maps/dir/?api=1&destination=${encodedAddr}` },
+              { name: "Waze", url: `https://waze.com/ul?q=${encodedAddr}&navigate=yes` }
+            ];
+            
+            if (isIOS) {
+              options.unshift({ name: "Apple Maps", url: `maps://?daddr=${encodedAddr}` });
+            }
+
+            // For simplicity and following the request, I'll use a confirm-like flow or just a simple modal
+            // Let's create a local state for the selector
+            setLocationSelectorOpen(true);
+          }}
+          className="w-full bg-neutral-950 border border-white/5 p-6 rounded-[2.5rem] flex items-start gap-4 group hover:bg-neutral-900 transition-colors text-left active:scale-[0.98]"
+        >
           <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500 flex-shrink-0 group-hover:scale-110 transition-transform">
             <MapPin className="w-6 h-6" />
           </div>
-          <div>
-            <h3 className="text-white font-bold text-sm mb-1 uppercase tracking-tight italic">Localização</h3>
+          <div className="flex-1">
+            <div className="flex items-center justify-between">
+              <h3 className="text-white font-bold text-sm mb-1 uppercase tracking-tight italic">Localização</h3>
+              <p className="text-[10px] text-amber-500/50 font-black uppercase tracking-widest group-hover:text-amber-500 transition-colors">Como chegar</p>
+            </div>
             <p className="text-neutral-500 text-[11px] font-medium uppercase tracking-wider">{BARBERSHOP_ADDRESS}</p>
           </div>
-        </div>
+        </button>
+
+        {/* Location Selector Modal */}
+        <AnimatePresence>
+          {locationSelectorOpen && (
+            <>
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setLocationSelectorOpen(false)}
+                className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60]"
+              />
+              <motion.div 
+                initial={{ y: "100%" }}
+                animate={{ y: 0 }}
+                exit={{ y: "100%" }}
+                className="fixed bottom-0 left-0 right-0 bg-[#0a0a0a] border-t border-white/5 rounded-t-[2.5rem] p-8 z-[70] pb-[calc(2rem+env(safe-area-inset-bottom))]"
+              >
+                <div className="w-12 h-1.5 bg-neutral-800 rounded-full mx-auto mb-8" />
+                <h3 className="text-xl font-black uppercase italic italic text-white mb-6 text-center">Escolha seu Mapa</h3>
+                <div className="grid gap-3">
+                  {(() => {
+                    const encodedAddr = encodeURIComponent(BARBERSHOP_ADDRESS);
+                    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                    const apps = [
+                      { name: "Google Maps", url: `https://www.google.com/maps/dir/?api=1&destination=${encodedAddr}`, icon: "🗺️" },
+                      { name: "Waze", url: `https://waze.com/ul?q=${encodedAddr}&navigate=yes`, icon: "🚙" }
+                    ];
+                    if (isIOS) apps.unshift({ name: "Apple Maps", url: `maps://?daddr=${encodedAddr}`, icon: "🍎" });
+                    
+                    return apps.map(app => (
+                      <a 
+                        key={app.name}
+                        href={app.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => setLocationSelectorOpen(false)}
+                        className="flex items-center justify-between p-5 bg-neutral-900 rounded-2xl border border-white/5 hover:border-amber-500/50 transition-all active:scale-[0.98]"
+                      >
+                        <div className="flex items-center gap-4">
+                          <span className="text-2xl">{app.icon}</span>
+                          <span className="text-white font-bold uppercase italic tracking-widest text-sm">{app.name}</span>
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-neutral-700" />
+                      </a>
+                    ));
+                  })()}
+                </div>
+                <button 
+                  onClick={() => setLocationSelectorOpen(false)}
+                  className="w-full mt-6 py-4 text-neutral-500 font-bold uppercase tracking-[0.2em] text-[10px]"
+                >
+                  Cancelar
+                </button>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
 
         <a 
           href={`https://instagram.com/${BARBERSHOP_INSTAGRAM}`} 
