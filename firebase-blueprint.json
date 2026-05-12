@@ -89,6 +89,20 @@
         "appointmentId": { "type": "string" }
       },
       "required": ["type", "message", "timestamp", "read"]
+    },
+    "Promotion": {
+      "title": "Promotion",
+      "description": "Discount codes or special offers.",
+      "type": "object",
+      "properties": {
+        "code": { "type": "string" },
+        "discountPercentage": { "type": "number" },
+        "validFrom": { "type": "string", "format": "date-time" },
+        "validUntil": { "type": "string", "format": "date-time" },
+        "active": { "type": "boolean" },
+        "serviceIds": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["code", "discountPercentage", "active"]
     }
   },
   "firestore": {
@@ -119,6 +133,10 @@
     "/internal_chats/{msgId}": {
       "schema": { "type": "object", "properties": { "text": { "type": "string" }, "senderId": { "type": "string" }, "senderName": { "type": "string" }, "createdAt": { "type": "string", "format": "date-time" } } },
       "description": "Staff internal chat messages."
+    },
+    "/promotions/{promoId}": {
+      "schema": "Promotion",
+      "description": "Storage for promotional codes."
     },
     "/chats/{userId}/messages/{msgId}": {
       "schema": { "type": "object", "properties": { "text": { "type": "string" }, "userId": { "type": "string" }, "sender": { "type": "string" }, "createdAt": { "type": "string", "format": "date-time" } } },

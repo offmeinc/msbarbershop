@@ -6,7 +6,8 @@
 import { BARBERSHOP_ADDRESS, BARBERSHOP_NAME } from "./constants";
 import { motion, AnimatePresence } from "motion/react";
 import { 
-  Scissors, 
+  Scissors,
+  Tag,
   Calendar, 
   User, 
   MapPin, 
@@ -743,6 +744,50 @@ function ProfessionalHome({ user, role, setCurrentScreen }: { user: any, role: s
   );
 }
 
+function ClientDashboardSimpleScreen({ user, db, onBack }: { user: any, db: any, onBack: () => void }) {
+  const [appointments, setAppointments] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    const q = query(collection(db, "appointments"), where("clientId", "==", user.uid), orderBy("date", "desc"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setAppointments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+    return unsubscribe;
+  }, [user, db]);
+
+  return (
+    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="max-w-md mx-auto py-8 px-6 min-h-screen pb-32">
+      <div className="flex items-center justify-between mb-8">
+        <h2 className="text-2xl font-black text-white uppercase tracking-tighter italic">Painel do Cliente</h2>
+        <button onClick={onBack} className="p-2 bg-white/5 rounded-full text-white/40 hover:text-white border border-white/5 transition-colors">
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+      </div>
+
+      <div className="bg-neutral-900/50 p-6 rounded-3xl border border-white/5 mb-6">
+        <h3 className="text-neutral-400 font-bold uppercase text-[10px] tracking-widest mb-1">Cashback Disponível</h3>
+        <p className="text-3xl font-black text-amber-500">R$ 0,00</p>
+      </div>
+
+      <div className="space-y-4">
+        <h3 className="text-neutral-400 font-bold uppercase text-[10px] tracking-widest">Meus Cortes</h3>
+        {appointments.map(app => (
+            <div key={app.id} className="p-4 bg-neutral-900/50 rounded-2xl border border-white/5 flex justify-between items-center">
+                <div>
+                     <p className="text-white font-bold">{app.serviceName}</p>
+                     <p className="text-neutral-500 text-xs">{new Date(app.date).toLocaleDateString()}</p>
+                </div>
+                <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${app.status === 'completed' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-neutral-800 text-neutral-400'}`}>
+                    {app.status}
+                </span>
+            </div>
+        ))}
+      </div>
+    </motion.div>
+  );
+}
+
 function ProfileEditScreen({ user, onBack }: { user: any, onBack: () => void }) {
   const [profileData, setProfileData] = useState({
     name: user?.displayName || "",
@@ -1048,9 +1093,9 @@ function ChatScreen({ user, onBack }: { user: any, onBack: () => void }) {
   );
 }
 
-function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotifications, appointments, onClearNotifications }: { user: any, role: string, onLogout: () => void, onBack: () => void, key?: any, staffNotifications: any[], appointments: any[], onClearNotifications: () => void }) {
+function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotifications, appointments, onClearNotifications, db }: { user: any, role: string, onLogout: () => void, onBack: () => void, key?: any, staffNotifications: any[], appointments: any[], onClearNotifications: () => void, db: any }) {
   const [activeSubScreen, setActiveSubScreen] = useState<
-    'main' | 'profile' | 'notif' | 'block' | 'help' | 'share' | 'link' | 'earnings' | 'week' | 'recon' | 'recurrence' | 'support' | 'staff-chat' | 'dark'
+    'main' | 'profile' | 'dashboard' | 'notif' | 'block' | 'help' | 'share' | 'link' | 'earnings' | 'week' | 'recon' | 'recurrence' | 'support' | 'staff-chat' | 'dark' | 'promotions'
   >('main');
 
   const unreadCount = staffNotifications.filter(n => !n.read).length;
@@ -1060,6 +1105,7 @@ function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotifications, a
       title: "Perfil e Conta",
       items: [
         { id: 'profile', label: 'Meu Perfil', icon: <User className="w-5 h-5" />, onClick: () => setActiveSubScreen('profile') },
+        { id: 'dashboard', label: 'Painel Cliente', icon: <CreditCard className="w-5 h-5" />, onClick: () => setActiveSubScreen('dashboard') },
         { 
           id: 'notif', 
           label: 'Notificações', 
@@ -1077,6 +1123,7 @@ function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotifications, a
         { id: 'block', label: 'Bloqueios', icon: <Lock className="w-5 h-5" />, onClick: () => setActiveSubScreen('block') },
         { id: 'recon', label: 'Reconciliação', icon: <CheckCircle2 className="w-5 h-5" />, onClick: () => setActiveSubScreen('recon') },
         { id: 'recurrence', label: 'Recorrências', icon: <RefreshCw className="w-5 h-5" />, onClick: () => setActiveSubScreen('recurrence') },
+        ...(role === 'manager' ? [{ id: 'promotions', label: 'Promoções', icon: <Tag className="w-5 h-5" />, onClick: () => setActiveSubScreen('promotions') }] : []),
         { id: 'share', label: 'Divulgar', icon: <Smartphone className="w-5 h-5" />, onClick: () => setActiveSubScreen('share') },
         { id: 'link', label: 'Link Público', icon: <ExternalLink className="w-5 h-5" />, onClick: () => setActiveSubScreen('link') },
       ]
@@ -1098,6 +1145,8 @@ function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotifications, a
   if (activeSubScreen === 'link') return <LinkScreen onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'recon') return <ReconScreen onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'recurrence') return <RecurrenceScreen onBack={() => setActiveSubScreen('main')} />;
+  if (activeSubScreen === 'promotions') return <PromotionsManager db={db} />;
+  if (activeSubScreen === 'dashboard') return <ClientDashboardSimpleScreen user={user} db={db} onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'dark') return <DarkScreen onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'profile') return <ProfileEditScreen user={user} onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'notif') return <NotificationsScreen notifications={staffNotifications} appointments={appointments} onClear={onClearNotifications} onBack={() => setActiveSubScreen('main')} />;
@@ -1275,6 +1324,7 @@ export default function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [clientLoginCode, setClientLoginCode] = useState<string>("");
+  const [loggedInClient, setLoggedInClient] = useState<any>(null);
   const [userRole, setUserRole] = useState<string>("client");
   const [currentScreen, setCurrentScreen] = useState<Screen>("home");
   const [dashboardView, setDashboardView] = useState<"list" | "calendar" | "services" | "hours" | "collaborators">("list");
@@ -1443,30 +1493,17 @@ export default function App() {
     setCurrentScreen("home");
   };
 
-  const handleClientLogin = async (email: string, code: string) => {
-    // 1. Verify if code is valid
-    const appointmentsQuery = query(collection(db, "appointments"), where("loginCode", "==", code));
-    const querySnapshot = await getDocs(appointmentsQuery);
-    
-    if (querySnapshot.empty) {
-        alert("Código inválido.");
-        return;
-    }
-    
-    // 2. Check if user exists, if not, create
-    const userQuery = query(collection(db, "users"), where("email", "==", email));
+  const handleClientLogin = async (email: string, password: string) => {
+    // 1. Verify if user exists with password
+    const userQuery = query(collection(db, "users"), where("email", "==", email), where("password", "==", password));
     const userSnapshot = await getDocs(userQuery);
     
     if (userSnapshot.empty) {
-        // Create user doc
-        await setDoc(doc(db, "users", email), {
-            email: email,
-            role: "client",
-            createdAt: serverTimestamp(),
-        });
+        alert("E-mail ou senha inválidos.");
+        return;
     }
     
-    setClientLoginCode(code);
+    setLoggedInClient({ id: userSnapshot.docs[0].id, ...userSnapshot.docs[0].data() });
     setCurrentScreen("client-dashboard");
   };
 
@@ -1689,11 +1726,12 @@ export default function App() {
           )}
           {currentScreen === "login" && <CollaboratorLoginScreen onLogin={handleLogin} setCurrentScreen={setCurrentScreen} setRequestedRole={setRequestedRole} />}
           {currentScreen === "client-login" && <ClientPortalScreen onLogin={handleClientLogin} onForgotPassword={handleForgotPassword} onBack={() => setCurrentScreen("home")} />}
-          {currentScreen === "client-dashboard" && <ClientDashboardScreen loginCode={clientLoginCode} onBack={() => setCurrentScreen("home")} />}
+          {currentScreen === "client-dashboard" && <ClientDashboardSimpleScreen user={loggedInClient} db={db} onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "booking" && <BookingScreen key="booking" user={user} services={services} onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "agenda" && <DashboardScreen key="agenda" user={user} role={userRole} services={services} dashboardView={dashboardView || "list"} onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "collaborators" && <DashboardScreen key="collaborators" user={user} role={userRole} services={services} dashboardView="collaborators" onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "services" && <DashboardScreen key="services" user={user} role={userRole} services={services} dashboardView="services" onBack={() => setCurrentScreen("home")} />}
+          {currentScreen === "promotions" && <PromotionsManager db={db} />}
           {currentScreen === "clients" && <ClientsScreen key="clients" onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "more" && (
             <MoreOptionsScreen 
@@ -1708,6 +1746,7 @@ export default function App() {
                 const unread = staffNotifications.filter(n => !n.read);
                 await Promise.all(unread.map(n => updateDoc(doc(db, "staff_notifications", n.id), { read: true })));
               }}
+              db={db}
             />
           )}
         </AnimatePresence>
@@ -2065,9 +2104,9 @@ function ClientPortalScreen({ onLogin, onForgotPassword, onBack }: { onLogin: (e
        <button onClick={onBack} className="text-neutral-500">Voltar</button>
        <h2 className="text-white font-black text-2xl">Portal do Cliente</h2>
        <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Seu E-mail" className="w-full bg-neutral-900 text-white p-4 rounded-xl border border-white/5 focus:border-amber-500"/>
-       <input type="text" value={code} onChange={e => setCode(e.target.value)} placeholder="Código de Acesso" className="w-full bg-neutral-900 text-white p-4 rounded-xl border border-white/5 focus:border-amber-500"/>
+       <input type="text" value={code} onChange={e => setCode(e.target.value)} placeholder="Senha" className="w-full bg-neutral-900 text-white p-4 rounded-xl border border-white/5 focus:border-amber-500"/>
        <button onClick={() => onLogin(email, code)} className="w-full bg-amber-500 text-black font-black p-4 rounded-xl">Entrar</button>
-       <button onClick={onForgotPassword} className="w-full text-neutral-500 text-sm hover:text-amber-500">Esqueceu o código?</button>
+       <button onClick={onForgotPassword} className="w-full text-neutral-500 text-sm hover:text-amber-500">Esqueceu a senha?</button>
     </div>
   );
 }
@@ -2252,6 +2291,8 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
   const [guestName, setGuestName] = useState("");
   const [guestEmail, setGuestEmail] = useState("");
   const [guestPhone, setGuestPhone] = useState("");
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedDiscount, setAppliedDiscount] = useState(0);
 
   useEffect(() => {
     const q = query(collection(db, "users"), where("role", "in", ["barber", "manager"]));
@@ -2397,15 +2438,17 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
         const userSnapshot = await getDocs(qUser);
         if (userSnapshot.empty) {
           // Add as new client
-          // await addDoc(collection(db, "users"), {
-          //   name: guestName,
-          //   email: guestEmail,
-          //   whatsapp: guestPhone,
-          //   role: 'client',
-          //   createdAt: serverTimestamp(),
-          // });
+          await addDoc(collection(db, "users"), {
+            name: guestName,
+            email: guestEmail,
+            whatsapp: guestPhone,
+            role: 'client',
+            password: '1234',
+            createdAt: serverTimestamp(),
+          });
         }
       }
+
 
       const baseData = {
         clientId: user ? user.uid : "guest",
@@ -2418,8 +2461,9 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
         serviceId: selectedService,
         serviceName: service?.name,
         status: "pending",
-        totalPrice: Number(service?.price) || 0,
+        totalPrice: (Number(service?.price) || 0) * (1 - appliedDiscount / 100),
         createdAt: serverTimestamp(),
+        couponCode: couponCode || null,
         loginCode
       };
       
@@ -2687,11 +2731,25 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
                       </div>
                   )}
 
-                  <div className="bg-neutral-900 p-8 rounded-[2.5rem] border border-white/5 space-y-6 text-sm relative overflow-hidden">
+                      <div className="bg-neutral-900 p-8 rounded-[2.5rem] border border-white/5 space-y-6 text-sm relative overflow-hidden">
                      <div className="absolute top-0 right-0 p-6 opacity-5">
                        <Scissors className="w-24 h-24 rotate-12" />
                      </div>
                      
+                     <div className="flex gap-2">
+                         <input placeholder="Cupom (opcional)" className="flex-1 p-4 bg-black rounded-2xl border border-white/5 text-white" value={couponCode} onChange={e => setCouponCode(e.target.value)} />
+                         <button onClick={async () => {
+                            const q = query(collection(db, "promotions"), where("code", "==", couponCode.toUpperCase()), where("active", "==", true));
+                            const snapshot = await getDocs(q);
+                            if (!snapshot.empty) {
+                                const promo = snapshot.docs[0].data() as any;
+                                setAppliedDiscount(promo.discountPercentage);
+                            } else {
+                                alert("Cupom inválido");
+                            }
+                         }} className="p-4 bg-neutral-800 rounded-2xl text-white">Aplicar</button>
+                     </div>
+
                      <div className="flex justify-between items-center border-b border-white/5 pb-4">
                          <span className="text-neutral-500 font-bold uppercase tracking-widest text-[10px]">Procedimento</span>
                          <span className="font-black text-white italic uppercase">{services.find(s => s.id === selectedService)?.name}</span>
@@ -4068,3 +4126,60 @@ function RecurrenceUI({ userRole, recurrence, setRecurrence }: { userRole: strin
     </div>
   );
 }
+
+const PromotionsManager = ({ db }: { db: any }) => {
+  const [promotions, setPromotions] = useState<any[]>([]);
+  const [code, setCode] = useState("");
+  const [discount, setDiscount] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const q = query(collection(db, "promotions"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setPromotions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+    return unsubscribe;
+  }, [db]);
+
+  const handleAddPromotion = async () => {
+    if (!code || !discount) return;
+    setLoading(true);
+    try {
+      await addDoc(collection(db, "promotions"), {
+        code: code.toUpperCase(),
+        discountPercentage: Number(discount),
+        active: true,
+        createdAt: new Date().toISOString()
+      });
+      setCode("");
+      setDiscount("");
+    } catch (e) {
+      console.error(e);
+    }
+    setLoading(false);
+  };
+
+  const deletePromotion = async (id: string) => {
+    await deleteDoc(doc(db, "promotions", id));
+  };
+
+  return (
+    <div className="p-6 space-y-6">
+      <h2 className="text-xl font-black text-white">Promoções</h2>
+      <div className="bg-neutral-900/50 border border-white/5 rounded-3xl p-6 space-y-4">
+        <input placeholder="Código" className="w-full p-4 bg-black rounded-2xl border border-white/5 text-white" value={code} onChange={e => setCode(e.target.value)} />
+        <input placeholder="Desconto (%)" type="number" className="w-full p-4 bg-black rounded-2xl border border-white/5 text-white" value={discount} onChange={e => setDiscount(e.target.value)} />
+        <button onClick={handleAddPromotion} disabled={loading} className="w-full bg-amber-500 text-black py-4 rounded-2xl font-black uppercase">Adicionar</button>
+      </div>
+      <div className="space-y-2">
+        {promotions.map(p => (
+          <div key={p.id} className="flex justify-between items-center p-4 bg-neutral-900/50 rounded-2xl">
+            <span className="text-white font-black">{p.code} ({p.discountPercentage}%)</span>
+            <button onClick={() => deletePromotion(p.id)} className="text-red-500 text-xs">Excluir</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
