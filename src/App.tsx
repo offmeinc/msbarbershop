@@ -33,6 +33,9 @@ import {
   List as ListIcon,
   Plus,
   Trash2,
+  Star,
+  Home,
+  Layout,
   Pencil,
   Save,
   CheckCircle2,
@@ -759,7 +762,10 @@ function ClientDashboardScreen({ user, db, onBack }: { user: any, db: any, onBac
     if (!user || !user.email) return;
     const q = query(collection(db, "appointments"), where("clientEmail", "==", user.email), orderBy("date", "desc"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      setAppointments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setAppointments(snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter((app: any) => app.hiddenByClient !== true)
+      );
       setLoading(false);
     }, (error) => {
       console.error("Error fetching appointments:", error);
@@ -825,6 +831,18 @@ function ClientDashboardScreen({ user, db, onBack }: { user: any, db: any, onBac
       alert("Agendamento cancelado com sucesso.");
     } catch (error) {
       console.error("Error cancelling appointment:", error);
+      handleFirestoreError(error, OperationType.WRITE, "appointments");
+    }
+  };
+
+  const handleHideAppointment = async (appId: string) => {
+    if (!confirm("Remover do seu histórico?")) return;
+    try {
+      await updateDoc(doc(db, "appointments", appId), {
+        hiddenByClient: true,
+        updatedAt: serverTimestamp()
+      });
+    } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, "appointments");
     }
   };
@@ -1051,21 +1069,23 @@ function ClientDashboardScreen({ user, db, onBack }: { user: any, db: any, onBac
                       </div>
                       
                       {app.status !== 'completed' && app.status !== 'cancelled' && (
-                        <div className="flex gap-1">
+                        <div className="flex gap-2">
                           <button 
                             onClick={() => {
                               setSelectedAppointment(app);
                               setCurrentView('booking');
                             }}
-                            className="p-2 bg-neutral-900 rounded-lg text-neutral-500 hover:text-amber-500 transition-all border border-white/5"
+                            className="flex items-center gap-2 px-3 py-2 bg-neutral-900 rounded-xl text-neutral-400 hover:text-amber-500 transition-all border border-white/5 text-[10px] font-black uppercase italic"
                           >
                             <Calendar className="w-3.5 h-3.5" />
+                            Reagendar
                           </button>
                           <button 
                             onClick={() => handleCancelAppointment(app)}
-                            className="p-2 bg-neutral-900 rounded-lg text-neutral-500 hover:text-red-500 transition-all border border-white/5"
+                            className="flex items-center gap-2 px-3 py-2 bg-neutral-900 rounded-xl text-neutral-400 hover:text-red-500 transition-all border border-white/5 text-[10px] font-black uppercase italic"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
+                            Cancelar
                           </button>
                         </div>
                       )}
@@ -1075,6 +1095,15 @@ function ClientDashboardScreen({ user, db, onBack }: { user: any, db: any, onBac
                           className="px-3 py-1.5 bg-amber-500 text-black text-[9px] font-black uppercase rounded-xl hover:bg-amber-400 transition-all"
                         >
                           AVALIAR
+                        </button>
+                      )}
+                      {(app.status === 'completed' || app.status === 'cancelled') && (
+                        <button 
+                          onClick={() => handleHideAppointment(app.id)}
+                          className="px-3 py-1.5 bg-neutral-900 text-neutral-600 hover:text-red-500 text-[9px] font-black uppercase rounded-xl transition-all border border-white/5 flex items-center gap-1.5"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          Excluir
                         </button>
                       )}
                       {app.status === 'completed' && app.rating && (
@@ -2256,7 +2285,7 @@ export default function App() {
           {currentScreen === "login" && <CollaboratorLoginScreen onLogin={handleLogin} setCurrentScreen={setCurrentScreen} setRequestedRole={setRequestedRole} />}
           {currentScreen === "client-login" && <ClientPortalScreen onLogin={handleClientLogin} onForgotPassword={handleForgotPassword} onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "client-dashboard" && <ClientDashboardScreen user={loggedInClient} db={db} onBack={() => setCurrentScreen("home")} />}
-          {currentScreen === "booking" && <BookingScreen key="booking" user={user} services={services} onBack={() => setCurrentScreen("home")} />}
+          {currentScreen === "booking" && <BookingScreen user={user} services={services} onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "agenda" && <DashboardScreen key="agenda" user={user} role={userRole} services={services} dashboardView={dashboardView || "list"} onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "collaborators" && <DashboardScreen key="collaborators" user={user} role={userRole} services={services} dashboardView="collaborators" onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "services" && <DashboardScreen key="services" user={user} role={userRole} services={services} dashboardView="services" onBack={() => setCurrentScreen("home")} />}
