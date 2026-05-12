@@ -3023,6 +3023,7 @@ function DashboardScreen
   const [selectedBarberId, setSelectedBarberId] = useState<string>("all");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [currentView, setCurrentView] = useState<"agenda" | "list" | "services" | "hours" | "collaborators" | "earnings">(dashboardView || (role === 'client' ? 'list' : 'agenda'));
+  const [agendaMode, setAgendaMode] = useState<"day" | "week" | "month">("day");
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "confirmed" | "completed" | "cancelled">("all");
   const [reviewAppointment, setReviewAppointment] = useState<any>(null);
@@ -3164,58 +3165,62 @@ function DashboardScreen
           {statusMsg}
         </div>
       )}
-      {/* Revised Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex flex-col gap-1">
-           <h1 className="text-2xl font-black text-white capitalize">{format(currentDate, "dd 'de' MMMM", { locale: ptBR })}</h1>
-           <div className="flex gap-2">
-            <button onClick={() => setCurrentDate(subDays(currentDate, 1))} className="text-neutral-500 hover:text-white"><ChevronLeft className="w-5 h-5"/></button>
-            <button onClick={() => setCurrentDate(new Date())} className="text-xs font-bold text-amber-500 hover:text-amber-400">Hoje</button>
-            <button onClick={() => setCurrentDate(addDays(currentDate, 1))} className="text-neutral-500 hover:text-white"><ChevronRight className="w-5 h-5"/></button>
+      {/* Revised Header - Only if not in agenda view or earnings */}
+      {currentView !== 'agenda' && currentView !== 'earnings' && (
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col gap-1">
+             <h1 className="text-2xl font-black text-white capitalize">{format(currentDate, "dd 'de' MMMM", { locale: ptBR })}</h1>
+             <div className="flex gap-2">
+              <button onClick={() => setCurrentDate(subDays(currentDate, 1))} className="text-neutral-500 hover:text-white"><ChevronLeft className="w-5 h-5"/></button>
+              <button onClick={() => setCurrentDate(new Date())} className="text-xs font-bold text-amber-500 hover:text-amber-400">Hoje</button>
+              <button onClick={() => setCurrentDate(addDays(currentDate, 1))} className="text-neutral-500 hover:text-white"><ChevronRight className="w-5 h-5"/></button>
+             </div>
            </div>
-         </div>
-        <div className="flex items-center gap-3 text-neutral-500">
-           <Scissors className="w-5 h-5 cursor-pointer hover:text-amber-500 transition-colors" />
-           <Lock className="w-5 h-5 cursor-pointer hover:text-amber-500 transition-colors" />
-           <Search className="w-5 h-5 cursor-pointer hover:text-amber-500 transition-colors" />
-           <RefreshCw className="w-5 h-5 cursor-pointer hover:text-amber-500 transition-colors" />
-           <Calendar className="w-5 h-5 cursor-pointer hover:text-amber-500 transition-colors" />
+          <div className="flex items-center gap-3 text-neutral-500">
+             <Scissors className="w-5 h-5 cursor-pointer hover:text-amber-500 transition-colors" />
+             <Lock className="w-5 h-5 cursor-pointer hover:text-amber-500 transition-colors" />
+             <Search className="w-5 h-5 cursor-pointer hover:text-amber-500 transition-colors" />
+             <RefreshCw className="w-5 h-5 cursor-pointer hover:text-amber-500 transition-colors" />
+             <Calendar className="w-5 h-5 cursor-pointer hover:text-amber-500 transition-colors" />
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Modern Date Selector */}
-      <div className="flex items-center gap-2 mb-8">
-        <button onClick={() => setCurrentDate(addDays(currentDate, -1))} className="text-neutral-700 hover:text-amber-500 transition-colors"><ChevronLeft className="w-6 h-6" /></button>
-        <div className="flex-1 overflow-x-auto no-scrollbar flex gap-1 justify-between">
-            {Array.from({ length: 7 }).map((_, i) => {
-                const day = addDays(startOfWeek(currentDate, { weekStartsOn: 0 }), i);
-                const active = isSameDay(day, currentDate);
-                
-                // Check if there are appointments on this day
-                const hasAppointments = appointments.some(app => {
-                  const appDate = app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date);
-                  return isSameDay(appDate, day);
-                });
+      {/* Modern Date Selector - Only if not in agenda view or earnings */}
+      {currentView !== 'agenda' && currentView !== 'earnings' && (
+        <div className="flex items-center gap-2 mb-8">
+          <button onClick={() => setCurrentDate(addDays(currentDate, -1))} className="text-neutral-700 hover:text-amber-500 transition-colors"><ChevronLeft className="w-6 h-6" /></button>
+          <div className="flex-1 overflow-x-auto no-scrollbar flex gap-1 justify-between">
+              {Array.from({ length: 7 }).map((_, i) => {
+                  const day = addDays(startOfWeek(currentDate, { weekStartsOn: 0 }), i);
+                  const active = isSameDay(day, currentDate);
+                  
+                  // Check if there are appointments on this day
+                  const hasAppointments = appointments.some(app => {
+                    const appDate = app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date);
+                    return isSameDay(appDate, day);
+                  });
 
-                return (
-                    <button 
-                        key={i} 
-                        onClick={() => setCurrentDate(day)}
-                        className={`flex flex-col items-center flex-1 min-w-[45px] py-3 rounded-2xl transition-all relative ${active ? "bg-amber-500 text-black shadow-[0_10px_20px_rgba(245,158,11,0.2)]" : "text-neutral-500 hover:text-neutral-300"}`}
-                    >
-                        <span className="text-[10px] font-black uppercase mb-1 tracking-tighter opacity-60">{format(day, "EEE", { locale: ptBR })}</span>
-                        <span className={`text-base font-black leading-none ${active ? "text-black" : "text-neutral-300"}`}>{format(day, "d")}</span>
-                        {hasAppointments && (
-                          <div className={`w-1.5 h-1.5 rounded-full mt-1.5 ${active ? "bg-black" : "bg-amber-500"}`} />
-                        )}
-                    </button>
-                );
-            })}
+                  return (
+                      <button 
+                          key={i} 
+                          onClick={() => setCurrentDate(day)}
+                          className={`flex flex-col items-center flex-1 min-w-[45px] py-3 rounded-2xl transition-all relative ${active ? "bg-amber-500 text-black shadow-[0_10px_20px_rgba(245,158,11,0.2)]" : "text-neutral-500 hover:text-neutral-300"}`}
+                      >
+                          <span className="text-[10px] font-black uppercase mb-1 tracking-tighter opacity-60">{format(day, "EEE", { locale: ptBR })}</span>
+                          <span className={`text-base font-black leading-none ${active ? "text-black" : "text-neutral-300"}`}>{format(day, "d")}</span>
+                          {hasAppointments && (
+                            <div className={`w-1.5 h-1.5 rounded-full mt-1.5 ${active ? "bg-black" : "bg-amber-500"}`} />
+                          )}
+                      </button>
+                  );
+              })}
+          </div>
+          <button onClick={() => setCurrentDate(addDays(currentDate, 1))} className="text-neutral-700 hover:text-amber-500 transition-colors"><ChevronRight className="w-6 h-6" /></button>
         </div>
-        <button onClick={() => setCurrentDate(addDays(currentDate, 1))} className="text-neutral-700 hover:text-amber-500 transition-colors"><ChevronRight className="w-6 h-6" /></button>
-      </div>
+      )}
 
-      {/* Barber Filter (Avatars) */}
+      {/* Barber Filter (Avatars) - Keep this as it filters what is shown in the CalendarWidget */}
       {(role === 'manager' || role === 'barber') && (
           <div className="flex gap-4 overflow-x-auto no-scrollbar mb-8 pb-2">
               <button 
@@ -3250,29 +3255,33 @@ function DashboardScreen
           </div>
       )}
 
-      {/* Summary Row */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2">
-          <span className="text-white font-black text-lg">Hoje</span>
-          <span className="text-neutral-500 font-bold text-sm">{format(currentDate, "dd/MM")}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="bg-neutral-900 px-3 py-1.5 rounded-full flex items-center gap-2 border border-white/5">
-             <Clock className="w-3.5 h-3.5 text-neutral-500" />
-             <span className="text-white font-bold text-xs">30min</span>
+      {/* Summary Row - Only if not in agenda view or earnings */}
+      {currentView !== 'agenda' && currentView !== 'earnings' && (
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2">
+            <span className="text-white font-black text-lg">Hoje</span>
+            <span className="text-neutral-500 font-bold text-sm">{format(currentDate, "dd/MM")}</span>
           </div>
-          <div className="bg-neutral-900 px-4 py-1.5 rounded-full border border-white/5">
-             <span className="text-white font-bold text-xs">{filteredAppointments.length} agendamentos</span>
+          <div className="flex items-center gap-2">
+            <div className="bg-neutral-900 px-3 py-1.5 rounded-full flex items-center gap-2 border border-white/5">
+               <Clock className="w-3.5 h-3.5 text-neutral-500" />
+               <span className="text-white font-bold text-xs">30min</span>
+            </div>
+            <div className="bg-neutral-900 px-4 py-1.5 rounded-full border border-white/5">
+               <span className="text-white font-bold text-xs">{filteredAppointments.length} agendamentos</span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Notice Banner */}
-      <div className="bg-amber-500/5 border border-amber-500/10 px-4 py-2 rounded-full inline-flex items-center gap-2 mb-8 group cursor-pointer hover:bg-amber-500/10 transition-all">
-        <Lock className="w-3.5 h-3.5 text-amber-500" />
-        <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Bloqueios visíveis</span>
-        <X className="w-3.5 h-3.5 text-amber-500/40 group-hover:text-amber-500 transition-colors" />
-      </div>
+      {/* Notice Banner - Only if not in agenda view or earnings */}
+      {currentView !== 'agenda' && currentView !== 'earnings' && (
+        <div className="bg-amber-500/5 border border-amber-500/10 px-4 py-2 rounded-full inline-flex items-center gap-2 mb-8 group cursor-pointer hover:bg-amber-500/10 transition-all">
+          <Lock className="w-3.5 h-3.5 text-amber-500" />
+          <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Bloqueios visíveis</span>
+          <X className="w-3.5 h-3.5 text-amber-500/40 group-hover:text-amber-500 transition-colors" />
+        </div>
+      )}
 
       {/* Views */}
       {currentView === 'earnings' && <EarningsDashboard appointments={appointments} services={services} />}
@@ -3287,64 +3296,15 @@ function DashboardScreen
       
       {/* Agenda Main View */}
       {currentView === 'agenda' ? (
-        loading ? (
-          <div className="flex justify-center py-20 text-neutral-500">
-            <Loader2 className="w-8 h-8 animate-spin" />
-          </div>
-        ) : (
-          <>
-            <div className="space-y-0 relative border-l border-white/5 ml-2 pl-6">
-                {filteredAppointments.length === 0 && (
-                    <div className="text-center text-neutral-500 py-10 font-bold uppercase text-xs tracking-widest">Nenhum agendamento hoje</div>
-                )}
-                {hoursSlots.map((hour, idx) => (
-                    <div key={hour} className="relative flex gap-4 min-h-[50px] group border-b border-white/5 last:border-none">
-                        {/* Hour Label */}
-                        <div className="absolute -left-8 -translate-x-1/2 text-[10px] font-bold text-neutral-700 py-1 z-10">
-                            {hour}
-                        </div>
-                        
-                        <div className="flex-1 relative">
-                            {filteredAppointments.filter(app => {
-                                const appDate = app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date);
-                                const timeStr = `${String(appDate.getHours()).padStart(2, '0')}:${String(appDate.getMinutes()).padStart(2, '0')}`;
-                                const matchesTime = timeStr === hour;
-                                const matchesStatus = filterStatus === 'all' || (filterStatus === 'pending' ? (!app.status || app.status === 'pending') : app.status === filterStatus);
-                                return matchesTime && matchesStatus;
-                            }).map(app => (
-                                <motion.div 
-                                  key={app.id} 
-                                  initial={{ x: 10, opacity: 0 }}
-                                  animate={{ x: 0, opacity: 1 }}
-                                  className="absolute inset-x-0 top-0.5 p-2 bg-neutral-900 border border-white/10 rounded-xl z-20 flex items-center gap-2 cursor-pointer hover:bg-neutral-800 transition-all"
-                                  onClick={() => setSelectedAppointment(app)}
-                                >
-                                    <div className="w-1 h-8 rounded-full bg-amber-500" />
-                                    <div className="flex-1 min-w-0">
-                                        <h4 className="text-xs font-black text-white truncate">{app.clientName}</h4>
-                                        <p className="text-[9px] text-neutral-500 font-bold uppercase truncate">{app.serviceName}</p>
-                                    </div>
-                                    <div className="flex-none">
-                                        <div className="w-6 h-6 rounded-full bg-white/5 flex items-center justify-center text-neutral-700">
-                                            <CheckCircle2 className="w-3 h-3" />
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            ))}
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            {/* FAB */}
-            <button 
-                onClick={() => onBack()}
-                className="fixed bottom-32 right-8 w-16 h-16 bg-amber-500 text-black rounded-full flex items-center justify-center shadow-[0_20px_50px_rgba(245,158,11,0.3)] z-40 active:scale-95 transition-all hover:scale-110 active:rotate-90 group"
-            >
-                <Plus className="w-8 h-8 group-hover:stroke-[3px] transition-all" />
-            </button>
-          </>
-        )
+        <CalendarWidget 
+          appointments={appointments.filter(app => selectedBarberId === 'all' || app.barberId === selectedBarberId)}
+          mode={agendaMode}
+          onModeChange={setAgendaMode}
+          currentDate={currentDate}
+          onDateChange={setCurrentDate}
+          role={role}
+          updateStatus={handleStatusUpdate}
+        />
       ) : (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
               {currentView === 'list' && (
