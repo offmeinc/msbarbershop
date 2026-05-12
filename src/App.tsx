@@ -749,7 +749,9 @@ function ClientDashboardSimpleScreen({ user, db, onBack }: { user: any, db: any,
 
   useEffect(() => {
     if (!user) return;
-    const q = query(collection(db, "appointments"), where("clientId", "==", user.uid), orderBy("date", "desc"));
+    const clientId = user.uid || user.id;
+    if (!clientId) return;
+    const q = query(collection(db, "appointments"), where("clientId", "==", clientId), orderBy("date", "desc"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setAppointments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
@@ -794,6 +796,7 @@ function ProfileEditScreen({ user, onBack }: { user: any, onBack: () => void }) 
     photoUrl: user?.photoURL || "",
     whatsapp: "",
     bio: "",
+    password: "",
     specialties: [] as string[]
   });
   const [newSpecialty, setNewSpecialty] = useState("");
@@ -811,6 +814,7 @@ function ProfileEditScreen({ user, onBack }: { user: any, onBack: () => void }) 
           photoUrl: data.photoUrl || data.photoURL || user?.photoURL || "",
           whatsapp: data.whatsapp || "",
           bio: data.bio || "",
+          password: data.password || "",
           specialties: data.specialties || []
         });
       }
@@ -826,11 +830,13 @@ function ProfileEditScreen({ user, onBack }: { user: any, onBack: () => void }) 
     e.preventDefault();
     setLoading(true);
     try {
-      // Update Firebase Auth profile
-      await updateProfile(user, { 
-        displayName: profileData.name,
-        photoURL: profileData.photoUrl
-      });
+      // Update Firebase Auth profile if applicable
+      if (user && typeof user.getIdToken === 'function') {
+        await updateProfile(user, { 
+          displayName: profileData.name,
+          photoURL: profileData.photoUrl
+        });
+      }
 
       // Update Firestore
       await updateDoc(doc(db, "users", user.uid), { 
@@ -840,6 +846,7 @@ function ProfileEditScreen({ user, onBack }: { user: any, onBack: () => void }) 
         photoURL: profileData.photoUrl,
         whatsapp: profileData.whatsapp,
         bio: profileData.bio,
+        password: profileData.password,
         specialties: profileData.specialties,
         updatedAt: Timestamp.now()
       });
@@ -936,6 +943,18 @@ function ProfileEditScreen({ user, onBack }: { user: any, onBack: () => void }) 
               className="w-full bg-neutral-900 border border-white/5 rounded-2xl p-4 text-sm text-white focus:border-amber-500 transition-all"
               placeholder="(11) 99999-9999"
             />
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest">Alterar Senha do Portal</label>
+            <input 
+              type="text" 
+              value={profileData.password} 
+              onChange={(e) => setProfileData(prev => ({ ...prev, password: e.target.value }))}
+              className="w-full bg-neutral-900 border border-white/5 rounded-2xl p-4 text-sm text-white focus:border-amber-500 transition-all"
+              placeholder="Senha de 4 dígitos ou mais"
+            />
+            <p className="text-[9px] text-neutral-600 mt-1 uppercase tracking-tight">Esta senha será usada para acessar seu painel pelo e-mail.</p>
           </div>
 
           <div className="space-y-2">
@@ -2219,9 +2238,10 @@ function CollaboratorLoginScreen({ onLogin, setCurrentScreen, setRequestedRole }
 
 
 
-function ConfirmationModal({ service, date, onConfirm, loginCode, phone }: { service: any, date: string, onConfirm: () => void, loginCode: string, phone: string }) {
+function ConfirmationModal({ service, date, onConfirm, email, password, phone }: { service: any, date: string, onConfirm: () => void, email?: string, password?: string, phone: string }) {
   const sendWhatsAppConfirmation = () => {
-    const text = `Agendamento confirmado! Serviço: ${service?.name}, Data: ${format(new Date(date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}. Código de acesso: ${loginCode}`;
+    const passMsg = password ? `. Sua senha de acesso ao portal é: ${password}` : "";
+    const text = `Agendamento confirmado! Serviço: ${service?.name}, Data: ${format(new Date(date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}${passMsg}`;
     const url = `https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
   };
@@ -2250,9 +2270,16 @@ function ConfirmationModal({ service, date, onConfirm, loginCode, phone }: { ser
             <p className="text-sm font-bold uppercase">{service?.name}</p>
             <p className="text-[10px] uppercase text-neutral-500 font-bold mt-2">Data/Hora</p>
             <p className="text-sm font-bold uppercase">{format(new Date(date), "dd 'de' MMM 'às' HH:mm", { locale: ptBR })}</p>
-            <p className="text-[10px] uppercase text-neutral-500 font-bold mt-2">Seu código de acesso:</p>
-            <p className="text-2xl font-black text-amber-500 uppercase tracking-widest">{loginCode}</p>
-            <p className="text-[9px] text-neutral-600 mt-1">Guarde este código para acessar seus agendamentos no painel do cliente.</p>
+            
+            {email && (
+              <>
+                <p className="text-[10px] uppercase text-neutral-500 font-bold mt-2">Sua conta (portal do cliente):</p>
+                <p className="text-xs font-bold text-white uppercase">{email}</p>
+                <p className="text-[10px] uppercase text-neutral-500 font-bold mt-1">Sua senha inicial:</p>
+                <p className="text-2xl font-black text-amber-500 uppercase tracking-widest">{password}</p>
+                <p className="text-[9px] text-neutral-600 mt-1">Use seu e-mail e esta senha para acessar o painel e gerenciar seu brinde/cashback.</p>
+              </>
+            )}
         </div>
 
         <button 
@@ -2419,6 +2446,8 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
       const barber = barbers.find(b => b.id === selectedBarber);
       const loginCode = Math.random().toString(36).substring(2, 8).toUpperCase();
       
+      let effectiveClientId = user ? user.uid : "guest";
+      
       // Ensure user is in 'users' collection if logged in
       if (user && user.uid) {
         const userDocRef = doc(db, "users", user.uid);
@@ -2438,7 +2467,7 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
         const userSnapshot = await getDocs(qUser);
         if (userSnapshot.empty) {
           // Add as new client
-          await addDoc(collection(db, "users"), {
+          const newDoc = await addDoc(collection(db, "users"), {
             name: guestName,
             email: guestEmail,
             whatsapp: guestPhone,
@@ -2446,12 +2475,15 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
             password: '1234',
             createdAt: serverTimestamp(),
           });
+          effectiveClientId = newDoc.id;
+        } else {
+          effectiveClientId = userSnapshot.docs[0].id;
         }
       }
 
 
       const baseData = {
-        clientId: user ? user.uid : "guest",
+        clientId: effectiveClientId,
         clientName: user ? user.displayName : guestName,
         clientEmail: user ? user.email : guestEmail,
         clientPhone: guestPhone,
@@ -2559,7 +2591,8 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
             return d.toISOString();
           })()}
           onConfirm={onBack}
-          loginCode={lastLoginCode}
+          email={user ? user.email : guestEmail}
+          password="1234"
           phone={guestPhone}
         />
       )}
