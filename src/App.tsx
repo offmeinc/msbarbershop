@@ -946,31 +946,24 @@ function ProfileEditScreen({ user, onBack }: { user: any, onBack: () => void }) 
           <div className="w-full">
             <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest mb-2">Foto de Perfil</label>
             <div className="flex gap-4">
-              <div className="relative flex-1">
-                <input 
-                  type="text" 
-                  value={profileData.photoUrl} 
-                  onChange={(e) => setProfileData(prev => ({ ...prev, photoUrl: e.target.value }))}
-                  placeholder="URL ou faça upload ao lado →"
-                  className="w-full bg-neutral-900 border border-white/5 rounded-2xl p-4 text-sm text-white focus:border-amber-500 transition-all"
-                />
-                {uploadingImage && (
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                    <Loader2 className="w-4 h-4 text-amber-500 animate-spin" />
-                  </div>
-                )}
-              </div>
-              <label className="cursor-pointer bg-amber-500 text-black px-6 rounded-2xl flex items-center justify-center font-bold text-xs hover:bg-amber-400 transition-all">
-                {uploadingImage ? 'Enviando...' : 'Fazer Upload'}
+              <label className="flex-1 cursor-pointer bg-neutral-900 border border-white/5 rounded-2xl p-4 flex items-center justify-between hover:border-amber-500 transition-all group">
+                <span className="text-sm text-neutral-400 group-hover:text-white transition-colors">
+                  {uploadingImage ? 'Enviando para o servidor...' : (profileData.photoUrl ? 'Trocar imagem atual' : 'Selecionar foto de perfil')}
+                </span>
+                <div className="bg-amber-500 text-black px-4 py-2 rounded-xl font-bold text-[10px] uppercase flex items-center gap-2">
+                  {uploadingImage ? <Loader2 className="w-3 h-3 animate-spin" /> : <Camera className="w-3 h-3" />}
+                  {uploadingImage ? 'Processando' : 'Upload'}
+                </div>
                 <input 
                   type="file" 
                   accept="image/*" 
                   onChange={handleImageUpload} 
                   className="hidden" 
+                  disabled={uploadingImage}
                 />
               </label>
             </div>
-            <p className="text-[9px] text-neutral-600 mt-2 uppercase tracking-tight">Preferência por fotos quadradas para melhor visualização.</p>
+            <p className="text-[9px] text-neutral-600 mt-2 uppercase tracking-tight">A imagem será processada e otimizada automaticamente.</p>
           </div>
         </div>
 
