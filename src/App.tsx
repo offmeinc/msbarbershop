@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { BARBERSHOP_ADDRESS, BARBERSHOP_NAME } from "./constants";
 import { motion, AnimatePresence } from "motion/react";
 import { 
   Scissors, 
@@ -257,6 +258,7 @@ import {
   format, 
   addMonths, 
   subMonths, 
+  subDays,
   startOfMonth, 
   endOfMonth, 
   startOfWeek, 
@@ -1861,6 +1863,17 @@ function HomeScreen({ services, onStartBooking }: { services: any[], onStartBook
                 </div>
             </div>
         </div>
+      </section>
+
+      {/* Local */}
+      <section id="unidades" className="py-24 border-t border-white/5">
+          <div className="max-w-7xl mx-auto px-6 text-center">
+              <h2 className="text-4xl font-black italic uppercase mb-12">Onde estamos</h2>
+              <div className="flex items-center justify-center gap-3 text-neutral-400">
+                  <MapPin className="w-6 h-6 text-amber-500"/>
+                  <p className="text-lg font-bold text-white">{BARBERSHOP_ADDRESS}</p>
+              </div>
+          </div>
       </section>
 
       {/* Footer */}
