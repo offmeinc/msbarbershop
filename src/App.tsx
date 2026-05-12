@@ -53,7 +53,8 @@ import {
   Smartphone,
   TrendingUp,
   DollarSign,
-  Download
+  Download,
+  LayoutDashboard
 } from "lucide-react";
 import { useState, useEffect, useRef, useMemo, ChangeEvent, FormEvent } from "react";
 
@@ -744,47 +745,189 @@ function ProfessionalHome({ user, role, setCurrentScreen }: { user: any, role: s
   );
 }
 
-function ClientDashboardSimpleScreen({ user, db, onBack }: { user: any, db: any, onBack: () => void }) {
+function ClientDashboardScreen({ user, db, onBack }: { user: any, db: any, onBack: () => void }) {
   const [appointments, setAppointments] = useState<any[]>([]);
+  const [currentView, setCurrentView] = useState<"home" | "profile">("home");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
-    const clientId = user.uid || user.id;
+    const clientId = user.uid || user.id || user.email; // Fallback to email for guests if needed
     if (!clientId) return;
-    const q = query(collection(db, "appointments"), where("clientId", "==", clientId), orderBy("date", "desc"));
+    const q = query(collection(db, "appointments"), where("clientEmail", "==", user.email), orderBy("date", "desc"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setAppointments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching appointments:", error);
+      setLoading(false);
     });
     return unsubscribe;
   }, [user, db]);
 
+  const stats = useMemo(() => {
+    const totalSpent = appointments
+      .filter(app => app.status === 'completed')
+      .reduce((sum, app) => sum + (Number(app.price) || 0), 0);
+    
+    const completedCount = appointments.filter(app => app.status === 'completed').length;
+    
+    const upcoming = appointments
+      .filter(app => {
+        const appDate = app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date);
+        return appDate > new Date() && app.status !== 'cancelled';
+      })
+      .sort((a, b) => {
+        const dateA = a.date instanceof Timestamp ? a.date.toDate() : (typeof a.date === 'string' ? parseISO(a.date) : a.date);
+        const dateB = b.date instanceof Timestamp ? b.date.toDate() : (typeof b.date === 'string' ? parseISO(b.date) : b.date);
+        return dateA.getTime() - dateB.getTime();
+      })[0];
+
+    return { totalSpent, completedCount, upcoming };
+  }, [appointments]);
+
+  if (currentView === 'profile') {
+    return <ProfileEditScreen user={user} onBack={() => setCurrentView('home')} />;
+  }
+
   return (
-    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="max-w-md mx-auto py-8 px-6 min-h-screen pb-32">
-      <div className="flex items-center justify-between mb-8">
-        <h2 className="text-2xl font-black text-white uppercase tracking-tighter italic">Painel do Cliente</h2>
-        <button onClick={onBack} className="p-2 bg-white/5 rounded-full text-white/40 hover:text-white border border-white/5 transition-colors">
-          <ChevronLeft className="w-5 h-5" />
-        </button>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen bg-black text-white pb-32">
+      {/* Header */}
+      <div className="pt-12 px-6 pb-8 sticky top-0 bg-black/80 backdrop-blur-xl z-20">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-3">
+             <div className="w-12 h-12 rounded-2xl bg-amber-500 overflow-hidden border-2 border-amber-500 shadow-xl">
+                <img src={user?.photoURL || `https://ui-avatars.com/api/?name=${user?.displayName || 'Cliente'}&background=f59e0b&color=000`} alt="Avatar" className="w-full h-full object-cover" />
+             </div>
+             <div>
+                <p className="text-[10px] text-neutral-500 font-black uppercase tracking-[0.2em] leading-none mb-1">Bem-vind{user?.gender === 'female' ? 'a' : 'o'}</p>
+                <h2 className="text-xl font-black italic uppercase tracking-tighter truncate w-40">{user?.displayName?.split(' ')[0] || 'Cliente'}</h2>
+             </div>
+          </div>
+          <button onClick={onBack} className="p-3 bg-neutral-900 rounded-2xl text-neutral-500 hover:text-white border border-white/5 transition-all">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
       </div>
 
-      <div className="bg-neutral-900/50 p-6 rounded-3xl border border-white/5 mb-6">
-        <h3 className="text-neutral-400 font-bold uppercase text-[10px] tracking-widest mb-1">Cashback Disponível</h3>
-        <p className="text-3xl font-black text-amber-500">R$ 0,00</p>
-      </div>
-
-      <div className="space-y-4">
-        <h3 className="text-neutral-400 font-bold uppercase text-[10px] tracking-widest">Meus Cortes</h3>
-        {appointments.map(app => (
-            <div key={app.id} className="p-4 bg-neutral-900/50 rounded-2xl border border-white/5 flex justify-between items-center">
-                <div>
-                     <p className="text-white font-bold">{app.serviceName}</p>
-                     <p className="text-neutral-500 text-xs">{new Date(app.date).toLocaleDateString()}</p>
+      <div className="px-6 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        {/* Stats Bento Grid */}
+        <div className="grid grid-cols-2 gap-4">
+           <div className="col-span-2 bg-[#0A0A0A] p-6 rounded-[2.5rem] border border-white/5 relative overflow-hidden group">
+              <div className="absolute -right-2 -bottom-2 text-amber-500/10 group-hover:scale-110 transition-transform duration-700">
+                <TrendingUp size={120} strokeWidth={3} />
+              </div>
+              <div className="relative z-10">
+                <p className="text-[10px] font-black uppercase tracking-widest text-neutral-500 mb-2">Total Investido</p>
+                <div className="flex items-baseline gap-2">
+                   <span className="text-4xl font-black italic tracking-tighter">R${stats.totalSpent.toFixed(2)}</span>
+                   <span className="text-[10px] font-bold text-amber-500">CLIENTE VIP</span>
                 </div>
-                <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${app.status === 'completed' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-neutral-800 text-neutral-400'}`}>
-                    {app.status}
-                </span>
+              </div>
+           </div>
+           <div className="bg-[#0A0A0A] p-5 rounded-[2rem] border border-white/5">
+              <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center mb-3">
+                 <Scissors className="w-4 h-4" />
+              </div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-neutral-500 mb-1">Visitas</p>
+              <p className="text-2xl font-black italic underline decoration-amber-500 decoration-2 underline-offset-4">{stats.completedCount}</p>
+           </div>
+           <div className="bg-[#0A0A0A] p-5 rounded-[2rem] border border-white/5">
+              <div className="w-8 h-8 rounded-xl bg-green-500/10 text-green-500 flex items-center justify-center mb-3">
+                 <Wallet className="w-4 h-4" />
+              </div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-neutral-500 mb-1">Cashback</p>
+              <p className="text-2xl font-black italic text-green-500 leading-none">R$ 0,00</p>
+              <p className="text-[8px] text-neutral-700 mt-1 uppercase font-bold">Saldo para resgate</p>
+           </div>
+        </div>
+
+        {/* Upcoming Appointment */}
+        {stats.upcoming && (
+          <div className="bg-amber-500 p-6 rounded-[2.5rem] shadow-2xl shadow-amber-500/20 text-black">
+             <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                   <CalendarCheck className="w-5 h-5" />
+                   <span className="text-[10px] font-black uppercase tracking-[0.2em]">Próximo Agendamento</span>
+                </div>
+                <span className="bg-black text-amber-500 text-[10px] font-black px-2 py-1 rounded-lg">CONFIRMADO</span>
+             </div>
+             <h4 className="text-2xl font-black uppercase italic tracking-tighter mb-1 leading-tight">{stats.upcoming.serviceName}</h4>
+             <div className="flex items-center gap-4 text-xs font-bold opacity-80 mb-6">
+                <p>{format(stats.upcoming.date instanceof Timestamp ? stats.upcoming.date.toDate() : parseISO(stats.upcoming.date), "dd 'de' MMMM", { locale: ptBR })}</p>
+                <div className="w-1 h-1 bg-black rounded-full" />
+                <p>{stats.upcoming.time}</p>
+             </div>
+             <button className="w-full bg-black text-white font-black uppercase italic py-4 rounded-2xl text-[10px] tracking-widest shadow-xl active:scale-95 transition-transform">
+               VER DETALHES NO MAPA
+             </button>
+          </div>
+        )}
+
+        {/* Recent History */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between px-2">
+            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white">Histórico Recente</h3>
+            <span className="text-[10px] font-bold text-neutral-500 uppercase">{appointments.length} Cortes</span>
+          </div>
+          
+          {loading ? (
+            <div className="flex justify-center py-10 opacity-30">
+               <Loader2 className="w-6 h-6 animate-spin text-amber-500" />
             </div>
-        ))}
+          ) : appointments.length === 0 ? (
+            <div className="py-20 text-center bg-neutral-900/10 border-2 border-dashed border-white/5 rounded-[2.5rem] flex flex-col items-center justify-center opacity-40">
+               <Scissors className="w-12 h-12 mb-4 text-neutral-700" />
+               <p className="text-[10px] font-black uppercase text-neutral-600 tracking-widest">Nenhuma visita registrada</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {appointments.slice(0, 5).map(app => (
+                <div key={app.id} className="p-5 bg-[#0A0A0A] rounded-[2rem] border border-white/5 flex items-center justify-between group hover:border-amber-500/20 transition-all">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border border-white/5 transition-colors ${
+                      app.status === 'completed' ? 'bg-amber-500/10 text-amber-500' : 'bg-neutral-900 text-neutral-700'
+                    }`}>
+                      <CheckCircle2 className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-white group-hover:text-amber-500 transition-colors uppercase italic">{app.serviceName}</h4>
+                      <p className="text-[10px] text-neutral-600 uppercase font-bold tracking-tight">
+                        {format(app.date instanceof Timestamp ? app.date.toDate() : parseISO(app.date), "dd/MM/yyyy • HH:mm", { locale: ptBR })}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs font-black text-white italic">R${app.price || '0,00'}</p>
+                    <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded ${
+                       app.status === 'completed' ? 'text-amber-500' : 'text-neutral-700'
+                    }`}>{app.status || 'Pendente'}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Footer Navigation */}
+      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-[#0A0A0A]/90 border border-white/5 backdrop-blur-2xl rounded-full p-2 flex gap-2 z-50 shadow-2xl">
+         <button 
+           onClick={() => setCurrentView('home')}
+           className={`flex items-center gap-3 px-6 py-3 rounded-full transition-all ${
+           currentView === 'home' ? 'bg-amber-500 text-black font-black' : 'text-neutral-500 hover:text-white'
+         }`}>
+            <LayoutDashboard className="w-4 h-4" />
+            {currentView === 'home' && <span className="text-[10px] uppercase tracking-widest">Painel</span>}
+         </button>
+         <button 
+           onClick={() => setCurrentView('profile')}
+           className={`flex items-center gap-3 px-6 py-3 rounded-full transition-all ${
+           currentView === 'profile' ? 'bg-amber-500 text-black font-black' : 'text-neutral-500 hover:text-white'
+         }`}>
+            <User className="w-4 h-4" />
+            {currentView === 'profile' && <span className="text-[10px] uppercase tracking-widest">Perfil</span>}
+         </button>
       </div>
     </motion.div>
   );
@@ -1211,7 +1354,7 @@ function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotifications, a
   if (activeSubScreen === 'recon') return <ReconScreen onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'recurrence') return <RecurrenceScreen onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'promotions') return <PromotionsManager db={db} />;
-  if (activeSubScreen === 'dashboard') return <ClientDashboardSimpleScreen user={user} db={db} onBack={() => setActiveSubScreen('main')} />;
+  if (activeSubScreen === 'dashboard') return <ClientDashboardScreen user={user} db={db} onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'dark') return <DarkScreen onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'profile') return <ProfileEditScreen user={user} onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'notif') return <NotificationsScreen notifications={staffNotifications} appointments={appointments} onClear={onClearNotifications} onBack={() => setActiveSubScreen('main')} />;
@@ -1791,7 +1934,7 @@ export default function App() {
           )}
           {currentScreen === "login" && <CollaboratorLoginScreen onLogin={handleLogin} setCurrentScreen={setCurrentScreen} setRequestedRole={setRequestedRole} />}
           {currentScreen === "client-login" && <ClientPortalScreen onLogin={handleClientLogin} onForgotPassword={handleForgotPassword} onBack={() => setCurrentScreen("home")} />}
-          {currentScreen === "client-dashboard" && <ClientDashboardSimpleScreen user={loggedInClient} db={db} onBack={() => setCurrentScreen("home")} />}
+          {currentScreen === "client-dashboard" && <ClientDashboardScreen user={loggedInClient} db={db} onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "booking" && <BookingScreen key="booking" user={user} services={services} onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "agenda" && <DashboardScreen key="agenda" user={user} role={userRole} services={services} dashboardView={dashboardView || "list"} onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "collaborators" && <DashboardScreen key="collaborators" user={user} role={userRole} services={services} dashboardView="collaborators" onBack={() => setCurrentScreen("home")} />}
@@ -1987,7 +2130,7 @@ function HomeScreen({ services, onStartBooking }: { services: any[], onStartBook
   );
 }
 
-function ClientDashboardScreen({ loginCode, onBack }: { loginCode: string, onBack: () => void }) {
+function GuestDashboardScreen({ loginCode, onBack }: { loginCode: string, onBack: () => void }) {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
