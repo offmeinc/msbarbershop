@@ -31,6 +31,13 @@ service cloud.firestore {
     match /staff_notifications/{docId} {
       allow read, write: if true;
     }
+    // Promotions
+    match /promotions/{promoId} {
+      allow read: if true;
+      allow write: if exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+                      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'manager';
+    }
+
     // Fallback
     match /{document=**} {
       allow read, write: if false;
