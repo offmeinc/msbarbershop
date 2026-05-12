@@ -245,7 +245,14 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack }:
              </div>
            </div>
           <div className="flex items-center gap-3 text-neutral-500">
-             <Scissors className="w-5 h-5 cursor-pointer hover:text-amber-500 transition-colors" />
+             <div className="w-8 h-8 rounded-lg overflow-hidden border border-white/5 cursor-pointer hover:border-amber-500 transition-all">
+               <img 
+                 src="https://i.ibb.co/LXjzGkFs/cd17f19f-71a4-453e-b9d7-f129a7ecfb2f.jpg" 
+                 alt="Logo"
+                 className="w-full h-full object-cover"
+                 referrerPolicy="no-referrer"
+               />
+             </div>
              <Lock className="w-5 h-5 cursor-pointer hover:text-amber-500 transition-colors" />
              <Search className="w-5 h-5 cursor-pointer hover:text-amber-500 transition-colors" />
              <RefreshCw className="w-5 h-5 cursor-pointer hover:text-amber-500 transition-colors" />

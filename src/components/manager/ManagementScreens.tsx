@@ -425,7 +425,14 @@ export function ServicesManagement({ services }: { services: any[] }) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-20">
         {services.length === 0 ? (
           <div className="col-span-full py-20 flex flex-col items-center justify-center opacity-30 border-2 border-dashed border-white/10 rounded-[3rem]">
-            <Scissors className="w-16 h-16 mb-4 text-amber-500" />
+            <div className="w-16 h-16 mb-4 rounded-3xl overflow-hidden border border-white/5 opacity-50 grayscale">
+              <img 
+                src="https://i.ibb.co/LXjzGkFs/cd17f19f-71a4-453e-b9d7-f129a7ecfb2f.jpg" 
+                alt="Logo"
+                className="w-full h-full object-cover"
+                referrerPolicy="no-referrer"
+              />
+            </div>
             <p className="font-black uppercase tracking-[0.2em] text-[10px] text-neutral-400">Nenhum serviço catalogado</p>
           </div>
         ) : (
@@ -437,10 +444,15 @@ export function ServicesManagement({ services }: { services: any[] }) {
               }`}
             >
               <div className="flex justify-between items-start mb-6">
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors ${
-                  service.active === false ? "bg-black text-neutral-600" : "bg-amber-500/10 text-amber-500"
+                <div className={`w-14 h-14 rounded-2xl overflow-hidden flex items-center justify-center border border-white/5 ${
+                  service.active === false ? "opacity-50 grayscale" : ""
                 }`}>
-                  <Scissors className="w-7 h-7" />
+                  <img 
+                    src="https://i.ibb.co/LXjzGkFs/cd17f19f-71a4-453e-b9d7-f129a7ecfb2f.jpg" 
+                    alt="Logo"
+                    className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
                 </div>
                 <div className="flex gap-2">
                   <button 

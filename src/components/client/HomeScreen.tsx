@@ -72,8 +72,13 @@ export function HomeScreen({ services, onStartBooking }: { services: any[], onSt
              >
                 <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-3xl rounded-full opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity" />
                 
-                <div className="relative z-10 w-10 sm:w-12 h-10 sm:h-12 rounded-2xl bg-white/5 flex items-center justify-center text-amber-500 group-hover:bg-amber-500 group-hover:text-black group-active:bg-amber-500 group-active:text-black transition-all rotate-0 group-hover:rotate-12 duration-500 shadow-lg">
-                  <Scissors className="w-5 sm:w-6 h-5 sm:h-6" />
+                <div className="relative z-10 w-10 sm:w-12 h-10 sm:h-12 rounded-2xl bg-white/5 overflow-hidden flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-lg border border-white/5 group-hover:border-amber-500/50">
+                  <img 
+                    src="https://i.ibb.co/LXjzGkFs/cd17f19f-71a4-453e-b9d7-f129a7ecfb2f.jpg" 
+                    alt="Logo"
+                    className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
                 </div>
 
                 <div className="relative z-10">

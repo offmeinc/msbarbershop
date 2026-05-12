@@ -47,8 +47,13 @@ export function GuestDashboardScreen({ loginCode, onBack }: { loginCode: string,
                   return (
                       <div key={app.id} className="bg-neutral-950 border border-white/5 p-6 rounded-[2.5rem] flex items-center justify-between group">
                           <div className="flex items-center gap-4">
-                              <div className="w-12 h-12 bg-neutral-900 rounded-2xl flex items-center justify-center text-neutral-600">
-                                <Scissors className="w-6 h-6" />
+                              <div className="w-12 h-12 bg-neutral-900 rounded-2xl overflow-hidden flex items-center justify-center border border-white/5">
+                                <img 
+                                  src="https://i.ibb.co/LXjzGkFs/cd17f19f-71a4-453e-b9d7-f129a7ecfb2f.jpg" 
+                                  alt="Logo"
+                                  className="w-full h-full object-cover"
+                                  referrerPolicy="no-referrer"
+                                />
                               </div>
                               <div>
                                   <h4 className="font-black text-white uppercase italic text-sm">{app.serviceName}</h4>
