@@ -747,8 +747,13 @@ function ProfessionalHome({ user, role, setCurrentScreen }: { user: any, role: s
 
 function ClientDashboardScreen({ user, db, onBack }: { user: any, db: any, onBack: () => void }) {
   const [appointments, setAppointments] = useState<any[]>([]);
-  const [currentView, setCurrentView] = useState<"home" | "profile">("home");
+  const [currentView, setCurrentView] = useState<"home" | "profile" | "booking" | "gallery">("home");
+  const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [services, setServices] = useState<any[]>([]);
+  const [showReviewModal, setShowReviewModal] = useState<any>(null);
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState("");
 
   useEffect(() => {
     if (!user || !user.email) return;
@@ -762,6 +767,14 @@ function ClientDashboardScreen({ user, db, onBack }: { user: any, db: any, onBac
     });
     return unsubscribe;
   }, [user?.email, db]);
+
+  useEffect(() => {
+    const q = query(collection(db, "services"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setServices(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+    return unsubscribe;
+  }, [db]);
 
   const stats = useMemo(() => {
     if (!appointments) return { totalSpent: 0, completedCount: 0, upcoming: null };
@@ -789,6 +802,65 @@ function ClientDashboardScreen({ user, db, onBack }: { user: any, db: any, onBac
     return { totalSpent, completedCount, upcoming };
   }, [appointments]);
 
+  const handleCancelAppointment = async (app: any) => {
+    if (!confirm("Tem certeza que deseja cancelar este agendamento?")) return;
+    
+    try {
+      await updateDoc(doc(db, "appointments", app.id), {
+        status: 'cancelled',
+        cancelledBy: 'client',
+        updatedAt: serverTimestamp()
+      });
+
+      // Staff notification
+      await addDoc(collection(db, "staff_notifications"), {
+        type: 'cancellation',
+        message: `Agendamento Cancelado: ${app.clientName} cancelou ${app.serviceName} marcado para ${format(app.date instanceof Timestamp ? app.date.toDate() : parseISO(app.date), "dd/MM 'às' HH:mm", { locale: ptBR })}`,
+        timestamp: serverTimestamp(),
+        read: false,
+        clientId: app.clientId,
+        appointmentId: app.id
+      });
+
+      alert("Agendamento cancelado com sucesso.");
+    } catch (error) {
+      console.error("Error cancelling appointment:", error);
+      handleFirestoreError(error, OperationType.WRITE, "appointments");
+    }
+  };
+
+  const handleSubmitReview = async () => {
+    if (!showReviewModal) return;
+    try {
+      await updateDoc(doc(db, "appointments", showReviewModal.id), {
+        rating,
+        reviewComment: comment,
+        reviewedAt: serverTimestamp()
+      });
+
+      // Staff notification about review
+      await addDoc(collection(db, "staff_notifications"), {
+        type: 'review',
+        message: `Nova Avaliação: ${user.name} deu ${rating} estrelas para ${showReviewModal.serviceName}`,
+        timestamp: serverTimestamp(),
+        read: false,
+        clientId: user.id || user.uid,
+        appointmentId: showReviewModal.id
+      });
+
+      setShowReviewModal(null);
+      setComment("");
+      setRating(5);
+      alert("Obrigado pela sua avaliação!");
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, "appointments");
+    }
+  };
+
+  if (currentView === 'gallery') {
+    return <StyleGalleryScreen onBack={() => setCurrentView('home')} />;
+  }
+
   if (!user) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -799,6 +871,20 @@ function ClientDashboardScreen({ user, db, onBack }: { user: any, db: any, onBac
 
   if (currentView === 'profile') {
     return <ProfileEditScreen user={user} onBack={() => setCurrentView('home')} isClient={true} />;
+  }
+
+  if (currentView === 'booking') {
+    return (
+      <BookingScreen 
+        user={user} 
+        services={services} 
+        onBack={() => {
+          setCurrentView('home');
+          setSelectedAppointment(null);
+        }} 
+        editAppointment={selectedAppointment}
+      />
+    );
   }
 
   return (
@@ -834,6 +920,29 @@ function ClientDashboardScreen({ user, db, onBack }: { user: any, db: any, onBac
                    <span className="text-4xl font-black italic tracking-tighter">R${stats.totalSpent.toFixed(2)}</span>
                    <span className="text-[10px] font-bold text-amber-500">CLIENTE VIP</span>
                 </div>
+              </div>
+           </div>
+           {/* Loyalty Card integration */}
+           <div className="col-span-2 bg-amber-500 rounded-[2.5rem] p-6 shadow-2xl shadow-amber-500/20 relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-4 opacity-10">
+                <Scissors className="w-20 h-20 rotate-12" />
+              </div>
+              <div className="relative z-10">
+                <h3 className="text-black font-black uppercase italic tracking-tighter text-lg mb-1">Cartão Fidelidade</h3>
+                <div className="grid grid-cols-5 gap-2 mt-4">
+                  {[...Array(10)].map((_, i) => (
+                    <div key={i} className={`aspect-square rounded-xl border-2 flex items-center justify-center ${
+                      i < (stats.completedCount % 10 || (stats.completedCount > 0 && stats.completedCount % 10 === 0 ? 10 : 0))
+                        ? 'bg-black border-black text-amber-500 shadow-lg' 
+                        : 'bg-transparent border-black/10 text-black/10'
+                    }`}>
+                      <Scissors className="w-3 h-3" />
+                    </div>
+                  ))}
+                </div>
+                <p className="text-black font-black uppercase italic text-[8px] mt-4 tracking-widest text-center opacity-70">
+                  {10 - (stats.completedCount % 10 || (stats.completedCount > 0 && stats.completedCount % 10 === 0 ? 10 : 0))} FALTANTES PARA O PREMIO
+                </p>
               </div>
            </div>
            <div className="bg-[#0A0A0A] p-5 rounded-[2rem] border border-white/5">
@@ -876,9 +985,23 @@ function ClientDashboardScreen({ user, db, onBack }: { user: any, db: any, onBac
                 <div className="w-1 h-1 bg-black rounded-full" />
                 <p>{stats.upcoming.time}</p>
              </div>
-             <button className="w-full bg-black text-white font-black uppercase italic py-4 rounded-2xl text-[10px] tracking-widest shadow-xl active:scale-95 transition-transform">
-               VER DETALHES NO MAPA
-             </button>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => {
+                    setSelectedAppointment(stats.upcoming);
+                    setCurrentView('booking');
+                  }}
+                  className="flex-1 bg-black text-white font-black uppercase italic py-4 rounded-2xl text-[10px] tracking-widest shadow-xl active:scale-95 transition-transform"
+                >
+                  REAGENDAR
+                </button>
+                <button 
+                  onClick={() => handleCancelAppointment(stats.upcoming)}
+                  className="px-6 bg-red-600 text-white font-black uppercase italic py-4 rounded-2xl text-[10px] tracking-widest shadow-xl active:scale-95 transition-transform"
+                >
+                  CANCELAR
+                </button>
+              </div>
           </div>
         )}
 
@@ -919,12 +1042,48 @@ function ClientDashboardScreen({ user, db, onBack }: { user: any, db: any, onBac
                       </p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-xs font-black text-white italic">R${(Number(app.totalPrice) || 0).toFixed(2)}</p>
-                    <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded ${
-                       app.status === 'completed' ? 'text-amber-500' : 'text-neutral-700'
-                    }`}>{app.status || 'Pendente'}</span>
-                  </div>
+                    <div className="text-right flex flex-col items-end gap-2">
+                      <div>
+                        <p className="text-xs font-black text-white italic">R${(Number(app.totalPrice) || 0).toFixed(2)}</p>
+                        <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded ${
+                           app.status === 'completed' ? 'text-amber-500' : app.status === 'cancelled' ? 'text-red-500' : 'text-neutral-700'
+                        }`}>{app.status || 'Pendente'}</span>
+                      </div>
+                      
+                      {app.status !== 'completed' && app.status !== 'cancelled' && (
+                        <div className="flex gap-1">
+                          <button 
+                            onClick={() => {
+                              setSelectedAppointment(app);
+                              setCurrentView('booking');
+                            }}
+                            className="p-2 bg-neutral-900 rounded-lg text-neutral-500 hover:text-amber-500 transition-all border border-white/5"
+                          >
+                            <Calendar className="w-3.5 h-3.5" />
+                          </button>
+                          <button 
+                            onClick={() => handleCancelAppointment(app)}
+                            className="p-2 bg-neutral-900 rounded-lg text-neutral-500 hover:text-red-500 transition-all border border-white/5"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                      {app.status === 'completed' && !app.rating && (
+                        <button 
+                          onClick={() => setShowReviewModal(app)}
+                          className="px-3 py-1.5 bg-amber-500 text-black text-[9px] font-black uppercase rounded-xl hover:bg-amber-400 transition-all"
+                        >
+                          AVALIAR
+                        </button>
+                      )}
+                      {app.status === 'completed' && app.rating && (
+                        <div className="flex items-center gap-1">
+                          <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
+                          <span className="text-[10px] font-black text-amber-500">{app.rating}</span>
+                        </div>
+                      )}
+                    </div>
                 </div>
               ))}
             </div>
@@ -933,25 +1092,145 @@ function ClientDashboardScreen({ user, db, onBack }: { user: any, db: any, onBac
       </div>
 
       {/* Footer Navigation */}
-      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-[#0A0A0A]/90 border border-white/5 backdrop-blur-2xl rounded-full p-2 flex gap-2 z-50 shadow-2xl">
+      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-[#0A0A0A]/90 border border-white/5 backdrop-blur-2xl rounded-full p-2 flex gap-1 z-50 shadow-2xl">
          <button 
            onClick={() => setCurrentView('home')}
            className={`flex items-center gap-3 px-6 py-3 rounded-full transition-all ${
-           currentView === 'home' ? 'bg-amber-500 text-black font-black' : 'text-neutral-500 hover:text-white'
+           currentView === 'home' ? 'bg-amber-500 text-black font-black shadow-lg shadow-amber-500/20' : 'text-neutral-500 hover:text-white'
          }`}>
-            <LayoutDashboard className="w-4 h-4" />
-            {currentView === 'home' && <span className="text-[10px] uppercase tracking-widest">Painel</span>}
+            <Home className="w-4 h-4" />
+            {currentView === 'home' && <span className="text-[10px] uppercase tracking-widest italic">Início</span>}
+         </button>
+         <button 
+           onClick={() => setCurrentView('gallery')}
+           className={`flex items-center gap-3 px-6 py-3 rounded-full transition-all ${
+           currentView === 'gallery' ? 'bg-amber-500 text-black font-black shadow-lg shadow-amber-500/20' : 'text-neutral-500 hover:text-white'
+         }`}>
+            <Layout className="w-4 h-4" />
+            {currentView === 'gallery' && <span className="text-[10px] uppercase tracking-widest italic">Estilos</span>}
          </button>
          <button 
            onClick={() => setCurrentView('profile')}
            className={`flex items-center gap-3 px-6 py-3 rounded-full transition-all ${
-           currentView === 'profile' ? 'bg-amber-500 text-black font-black' : 'text-neutral-500 hover:text-white'
+           currentView === 'profile' ? 'bg-amber-500 text-black font-black shadow-lg shadow-amber-500/20' : 'text-neutral-500 hover:text-white'
          }`}>
             <User className="w-4 h-4" />
-            {currentView === 'profile' && <span className="text-[10px] uppercase tracking-widest">Perfil</span>}
+            {currentView === 'profile' && <span className="text-[10px] uppercase tracking-widest italic">Perfil</span>}
+         </button>
+         <button 
+           onClick={onBack}
+           className="p-3 text-neutral-600 hover:text-red-500 transition-colors"
+         >
+            <LogOut className="w-4 h-4" />
          </button>
       </div>
+
+      {/* Review Modal */}
+      <AnimatePresence>
+        {showReviewModal && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-xl flex items-center justify-center p-6"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              className="bg-neutral-900 border border-white/10 p-8 rounded-[3rem] w-full max-w-sm text-center"
+            >
+              <div className="w-20 h-20 bg-amber-500 rounded-3xl mx-auto flex items-center justify-center mb-6 shadow-2xl shadow-amber-500/20">
+                <Star className="w-10 h-10 text-black fill-black" />
+              </div>
+              <h2 className="text-2xl font-black italic uppercase mb-2">Avaliar Serviço</h2>
+              <p className="text-neutral-500 text-xs font-bold uppercase mb-8">Como foi sua experiência?</p>
+              
+              <div className="flex justify-center gap-2 mb-8">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button 
+                    key={star} 
+                    onClick={() => setRating(star)}
+                  >
+                    <Star className={`w-8 h-8 ${rating >= star ? 'text-amber-500 fill-amber-500' : 'text-neutral-700'}`} />
+                  </button>
+                ))}
+              </div>
+
+              <textarea 
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="Comentário (opcional)..."
+                className="w-full bg-black border border-white/5 rounded-2xl p-4 text-sm text-white mb-6 focus:border-amber-500 transition-all resize-none"
+                rows={3}
+              />
+
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setShowReviewModal(null)}
+                  className="flex-1 py-4 bg-neutral-800 text-white rounded-2xl font-black uppercase italic text-xs"
+                >
+                  CANCELAR
+                </button>
+                <button 
+                  onClick={handleSubmitReview}
+                  className="flex-1 py-4 bg-amber-500 text-black rounded-2xl font-black uppercase italic text-xs"
+                >
+                  ENVIAR
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
+  );
+}
+
+function StyleGalleryScreen({ onBack }: { onBack: () => void }) {
+  const styles = [
+    { name: "Buzz Cut", image: "https://images.unsplash.com/photo-1593702275677-f916c8c76045?auto=format&fit=crop&q=80&w=400", tags: ["Prático", "Moderno"] },
+    { name: "Pompadour", image: "https://images.unsplash.com/photo-1621605815841-28d94471354f?auto=format&fit=crop&q=80&w=400", tags: ["Clássico", "Elegante"] },
+    { name: "Fade Degradê", image: "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?auto=format&fit=crop&q=80&w=400", tags: ["Tendência", "Estiloso"] },
+    { name: "Barba Lenhador", image: "https://images.unsplash.com/photo-1590540179832-2c3d8a58f257?auto=format&fit=crop&q=80&w=400", tags: ["Robusto", "Barba"] },
+    { name: "Mullet Moderno", image: "https://images.unsplash.com/photo-1622286332303-0738643e8dbb?auto=format&fit=crop&q=80&w=400", tags: ["Ousado", "Retro"] },
+    { name: "Corte Social", image: "https://images.unsplash.com/photo-1605497788044-5a32c7078486?auto=format&fit=crop&q=80&w=400", tags: ["Executivo", "Limpo"] },
+  ];
+
+  return (
+    <div className="min-h-screen bg-black text-white p-6 pb-24">
+      <div className="flex items-center justify-between mb-8">
+        <button onClick={onBack} className="w-10 h-10 bg-neutral-900 rounded-full flex items-center justify-center">
+          <ChevronLeft className="w-5 h-5 text-neutral-400" />
+        </button>
+        <h2 className="text-sm font-black uppercase tracking-widest italic">Inspirações</h2>
+        <div className="w-10" />
+      </div>
+
+      <div className="grid grid-cols-1 gap-6">
+        {styles.map((style, idx) => (
+          <motion.div 
+            key={idx}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: idx * 0.1 }}
+            className="group relative h-80 rounded-3xl overflow-hidden shadow-2xl border border-white/5"
+          >
+            <img src={style.image} alt={style.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
+            <div className="absolute bottom-0 left-0 right-0 p-6">
+              <div className="flex gap-2 mb-2">
+                {style.tags.map(tag => (
+                  <span key={tag} className="text-[8px] font-bold uppercase tracking-tighter bg-white/10 backdrop-blur-md px-2 py-1 rounded-md text-white/70">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+              <h3 className="text-xl font-black italic uppercase tracking-tight">{style.name}</h3>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -2531,13 +2810,17 @@ function ConfirmationModal({ service, date, onConfirm, email, password, phone }:
   );
 }
 
-function BookingScreen({ user, services, onBack }: { user: any, services: any[], onBack: () => void, key?: string }) {
-  const [step, setStep] = useState(1);
-  const [selectedService, setSelectedService] = useState<string | null>(null);
-  const [selectedBarber, setSelectedBarber] = useState<string | null>(null);
+function BookingScreen({ user, services, onBack, editAppointment }: { user: any, services: any[], onBack: () => void, editAppointment?: any }) {
+  const [step, setStep] = useState(editAppointment ? 3 : 1);
+  const [selectedService, setSelectedService] = useState<string | null>(editAppointment?.serviceId || null);
+  const [selectedBarber, setSelectedBarber] = useState<string | null>(editAppointment?.barberId || null);
   const [barbers, setBarbers] = useState<any[]>([]);
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date>(
+    editAppointment?.date 
+      ? (editAppointment.date instanceof Timestamp ? editAppointment.date.toDate() : (typeof editAppointment.date === 'string' ? parseISO(editAppointment.date) : editAppointment.date))
+      : new Date()
+  );
+  const [selectedTime, setSelectedTime] = useState<string | null>(editAppointment?.time || null);
   const [barberAppointments, setBarberAppointments] = useState<any[]>([]);
   const [blockedTimes, setBlockedTimes] = useState<any[]>([]);
   const [recurrence, setRecurrence] = useState<'none' | 'weekly' | 'biweekly' | 'monthly'>('none');
@@ -2731,9 +3014,10 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
       };
       
       const appointmentsToCreate = [];
+      const isEditing = !!editAppointment;
       
-      if (recurrence === 'none') {
-        appointmentsToCreate.push({ ...baseData, date: Timestamp.fromDate(finalDate) });
+      if (recurrence === 'none' || isEditing) {
+        appointmentsToCreate.push({ ...baseData, date: Timestamp.fromDate(finalDate), time: selectedTime });
       } else {
         const num = recurrence === 'monthly' ? 3 : 4;
         const intervalDays = recurrence === 'weekly' ? 7 : recurrence === 'biweekly' ? 14 : 30;
@@ -2745,41 +3029,53 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
            } else {
                date.setDate(date.getDate() + i * intervalDays);
            }
-           appointmentsToCreate.push({ ...baseData, date: Timestamp.fromDate(date) });
+           appointmentsToCreate.push({ ...baseData, date: Timestamp.fromDate(date), time: selectedTime });
         }
       }
 
-      await Promise.all(appointmentsToCreate.map(async (app) => {
-        console.log("Attempting to write appointment:", JSON.stringify(app));
+      if (isEditing) {
+        const app = appointmentsToCreate[0];
         try {
-          await addDoc(collection(db, "appointments"), app);
-          
+          await updateDoc(doc(db, "appointments", editAppointment.id), {
+            ...app,
+            updatedAt: serverTimestamp(),
+            rescheduledBy: 'client'
+          });
+
           // Staff notification
           await addDoc(collection(db, "staff_notifications"), {
-            type: 'booking',
-            message: `Novo agendamento: ${app.clientName} reservou ${app.serviceName} para ${format(app.date.toDate(), "dd/MM 'às' HH:mm", { locale: ptBR })}`,
+            type: 'reschedule',
+            message: `Agendamento Reagendado: ${app.clientName} alterou ${app.serviceName} para ${format(app.date.toDate(), "dd/MM 'às' HH:mm", { locale: ptBR })}`,
             timestamp: serverTimestamp(),
             read: false,
             clientId: app.clientId,
-            appointmentId: 'new' // Simplified
+            appointmentId: editAppointment.id
           });
         } catch (error) {
-          console.error("Error writing appointment:", error);
+          console.error("Error updating appointment:", error);
           handleFirestoreError(error, OperationType.WRITE, "appointments");
         }
-        /*
-        try {
-          await addDoc(collection(db, "notifications"), {
-            loginCode: app.loginCode,
-            message: `Agendamento confirmado para ${app.date.toDate().toLocaleDateString()} - ${app.serviceName}`,
-            timestamp: serverTimestamp(),
-          });
-        } catch (error) {
-          console.error("Error writing notification:", error);
-          handleFirestoreError(error, OperationType.WRITE, "notifications");
-        }
-        */
-      }));
+      } else {
+        await Promise.all(appointmentsToCreate.map(async (app) => {
+          console.log("Attempting to write appointment:", JSON.stringify(app));
+          try {
+            await addDoc(collection(db, "appointments"), app);
+            
+            // Staff notification
+            await addDoc(collection(db, "staff_notifications"), {
+              type: 'booking',
+              message: `Novo agendamento: ${app.clientName} reservou ${app.serviceName} para ${format(app.date.toDate(), "dd/MM 'às' HH:mm", { locale: ptBR })}`,
+              timestamp: serverTimestamp(),
+              read: false,
+              clientId: app.clientId,
+              appointmentId: 'new' // Simplified
+            });
+          } catch (error) {
+            console.error("Error writing appointment:", error);
+            handleFirestoreError(error, OperationType.WRITE, "appointments");
+          }
+        }));
+      }
       
       // Auto send WhatsApp confirmation
       appointmentsToCreate.forEach((app) => {
