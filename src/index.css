@@ -5,6 +5,26 @@
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
+@keyframes gradient-x {
+  0%, 100% {
+    background-size: 200% 200%;
+    background-position: left center;
+  }
+  50% {
+    background-size: 200% 200%;
+    background-position: right center;
+  }
+}
+
+.animate-gradient-text {
+  background-image: linear-gradient(to right, #ffffff, #fbbf24, #ffffff);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: gradient-x 3s linear infinite;
+}
+
 body {
   background: radial-gradient(circle at center top, #1a1a1a, #000000);
   background-attachment: fixed;
