@@ -2336,8 +2336,8 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
         setError("Todos os campos são obrigatórios.");
         return;
     }
-    if (!user && (!guestName || !guestEmail)) {
-        setError("Nome e E-mail são obrigatórios para visitantes.");
+    if (!user && (!guestName || !guestPhone)) {
+        setError("Nome e WhatsApp são obrigatórios para visitantes.");
         return;
     }
 
@@ -2662,7 +2662,7 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
                   </div>
 
                   {/* Recurrence Selection */}
-                  <RecurrenceUI userRole={userRole} recurrence={recurrence} setRecurrence={setRecurrence} />
+                  <RecurrenceUI userRole={user ? (user.role || 'client') : 'client'} recurrence={recurrence} setRecurrence={setRecurrence} />
 
                   <button 
                     disabled={!selectedTime}
@@ -2681,8 +2681,8 @@ function BookingScreen({ user, services, onBack }: { user: any, services: any[],
                           <h3 className="text-sm font-black uppercase tracking-widest text-amber-500">Dados do solicitante</h3>
                           <div className="space-y-3">
                              <input placeholder="Seu Nome" className="w-full p-4 bg-black rounded-2xl border border-white/5 text-white focus:border-amber-500 transition-all" value={guestName} onChange={e => setGuestName(e.target.value)} />
-                             <input placeholder="E-mail" className="w-full p-4 bg-black rounded-2xl border border-white/5 text-white focus:border-amber-500 transition-all" value={guestEmail} onChange={e => setGuestEmail(e.target.value)} />
-                             <input placeholder="WhatsApp (opcional)" className="w-full p-4 bg-black rounded-2xl border border-white/5 text-white focus:border-amber-500 transition-all" value={guestPhone} onChange={e => setGuestPhone(e.target.value)} />
+                             <input placeholder="WhatsApp" className="w-full p-4 bg-black rounded-2xl border border-white/5 text-white focus:border-amber-500 transition-all" value={guestPhone} onChange={e => setGuestPhone(e.target.value)} />
+                             <input placeholder="E-mail (opcional)" className="w-full p-4 bg-black rounded-2xl border border-white/5 text-white focus:border-amber-500 transition-all" value={guestEmail} onChange={e => setGuestEmail(e.target.value)} />
                           </div>
                       </div>
                   )}
