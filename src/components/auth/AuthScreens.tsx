@@ -151,15 +151,15 @@ export function CollaboratorLoginScreen({ onLogin, setCurrentScreen, setRequeste
         )}
 
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest ml-4">WhatsApp Profissional</label>
+          <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest ml-4">E-mail ou WhatsApp</label>
           <div className="relative group">
-            <Phone className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-600 group-focus-within:text-amber-500 transition-colors" />
+            <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-600 group-focus-within:text-amber-500 transition-colors" />
             <input 
-              type="tel"
+              type="text"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               className="w-full bg-neutral-950 border border-white/5 rounded-[2rem] p-5 pl-14 text-sm text-white focus:border-amber-500 outline-none transition-all"
-              placeholder="(00) 00000-0000"
+              placeholder="seu@email.com ou (00) 00000-0000"
               required
             />
           </div>

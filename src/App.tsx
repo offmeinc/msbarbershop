@@ -290,11 +290,14 @@ export default function App() {
     isSigningUp.current = isSignUp || false;
     setRequestedRole(role);
     
-    // Convert phone to virtual email
-    const email = phone ? `${phone.replace(/\D/g, '')}@barbershop.com` : undefined;
+    // Check if the input is an email, otherwise convert phone to virtual email
+    const isEmail = phone?.includes('@');
+    const email = phone 
+      ? (isEmail ? phone : `${phone.replace(/\D/g, '')}@barbershop.com`) 
+      : undefined;
     const finalWhatsapp = whatsapp || phone;
 
-    console.log("HandleLogin: Attempting to create user with virtual email:", email, "role:", role, "isSignUp:", isSignUp);
+    console.log("HandleLogin: Attempting to create user with email:", email, "role:", role, "isSignUp:", isSignUp);
     
     try {
       if (email && password) {
