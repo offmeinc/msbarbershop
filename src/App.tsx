@@ -798,7 +798,7 @@ function ClientDashboardScreen({ user, db, onBack }: { user: any, db: any, onBac
   }
 
   if (currentView === 'profile') {
-    return <ProfileEditScreen user={user} onBack={() => setCurrentView('home')} />;
+    return <ProfileEditScreen user={user} onBack={() => setCurrentView('home')} isClient={true} />;
   }
 
   return (
@@ -955,10 +955,10 @@ function ClientDashboardScreen({ user, db, onBack }: { user: any, db: any, onBac
   );
 }
 
-function ProfileEditScreen({ user, onBack }: { user: any, onBack: () => void }) {
+function ProfileEditScreen({ user, onBack, isClient = false }: { user: any, onBack: () => void, isClient?: boolean }) {
   const [profileData, setProfileData] = useState({
-    name: user?.displayName || "",
-    photoUrl: user?.photoURL || "",
+    name: user?.displayName || user?.name || "",
+    photoUrl: user?.photoURL || user?.photoUrl || "",
     whatsapp: "",
     bio: "",
     password: "",
@@ -1140,7 +1140,7 @@ function ProfileEditScreen({ user, onBack }: { user: any, onBack: () => void }) 
         {/* Basic Info */}
         <div className="grid grid-cols-1 gap-6">
           <div className="space-y-2">
-            <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest">Nome Público</label>
+            <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest">Nome Completo</label>
             <input 
               type="text" 
               value={profileData.name} 
@@ -1173,57 +1173,61 @@ function ProfileEditScreen({ user, onBack }: { user: any, onBack: () => void }) 
             <p className="text-[9px] text-neutral-600 mt-1 uppercase tracking-tight">Esta senha será usada para acessar seu painel pelo e-mail.</p>
           </div>
 
-          <div className="space-y-2">
-            <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest">Biografia / Sobre você</label>
-            <textarea 
-              value={profileData.bio} 
-              onChange={(e) => setProfileData(prev => ({ ...prev, bio: e.target.value }))}
-              rows={4}
-              className="w-full bg-neutral-900 border border-white/5 rounded-2xl p-4 text-sm text-white focus:border-amber-500 transition-all resize-none"
-              placeholder="Conte um pouco sobre sua experiência e estilo..."
-            />
-          </div>
+          {!isClient && (
+            <div className="space-y-2">
+              <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest">Biografia / Sobre você</label>
+              <textarea 
+                value={profileData.bio} 
+                onChange={(e) => setProfileData(prev => ({ ...prev, bio: e.target.value }))}
+                rows={4}
+                className="w-full bg-neutral-900 border border-white/5 rounded-2xl p-4 text-sm text-white focus:border-amber-500 transition-all resize-none"
+                placeholder="Conte um pouco sobre sua experiência e estilo..."
+              />
+            </div>
+          )}
         </div>
 
         {/* Specialties */}
-        <div className="space-y-4">
-          <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest">Especialidades</label>
-          <div className="flex gap-2">
-            <input 
-              type="text" 
-              value={newSpecialty} 
-              onChange={(e) => setNewSpecialty(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addSpecialty())}
-              placeholder="Ex: Degradê, Barba, Pigmentação..."
-              className="flex-1 bg-neutral-900 border border-white/5 rounded-2xl p-4 text-sm text-white focus:border-amber-500 transition-all"
-            />
-            <button 
-              type="button"
-              onClick={addSpecialty}
-              className="w-14 h-14 bg-white text-black rounded-2xl flex items-center justify-center hover:bg-neutral-200 transition-colors"
-            >
-              <Plus className="w-6 h-6" />
-            </button>
+        {!isClient && (
+          <div className="space-y-4">
+            <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest">Especialidades</label>
+            <div className="flex gap-2">
+              <input 
+                type="text" 
+                value={newSpecialty} 
+                onChange={(e) => setNewSpecialty(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addSpecialty())}
+                placeholder="Ex: Degradê, Barba, Pigmentação..."
+                className="flex-1 bg-neutral-900 border border-white/5 rounded-2xl p-4 text-sm text-white focus:border-amber-500 transition-all"
+              />
+              <button 
+                type="button"
+                onClick={addSpecialty}
+                className="w-14 h-14 bg-white text-black rounded-2xl flex items-center justify-center hover:bg-neutral-200 transition-colors"
+              >
+                <Plus className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="flex flex-wrap gap-2">
+              {profileData.specialties.map((spec, index) => (
+                <div key={index} className="bg-amber-500/10 border border-amber-500/20 px-3 py-2 rounded-xl flex items-center gap-2 group">
+                  <span className="text-xs font-bold text-amber-500">{spec}</span>
+                  <button 
+                    type="button" 
+                    onClick={() => removeSpecialty(index)}
+                    className="text-amber-500/40 hover:text-amber-500 transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+              {profileData.specialties.length === 0 && (
+                <p className="text-neutral-600 text-xs font-bold uppercase italic">Nenhuma especialidade adicionada</p>
+              )}
+            </div>
           </div>
-          
-          <div className="flex flex-wrap gap-2">
-            {profileData.specialties.map((spec, index) => (
-              <div key={index} className="bg-amber-500/10 border border-amber-500/20 px-3 py-2 rounded-xl flex items-center gap-2 group">
-                <span className="text-xs font-bold text-amber-500">{spec}</span>
-                <button 
-                  type="button" 
-                  onClick={() => removeSpecialty(index)}
-                  className="text-amber-500/40 hover:text-amber-500 transition-colors"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            ))}
-            {profileData.specialties.length === 0 && (
-              <p className="text-neutral-600 text-xs font-bold uppercase italic">Nenhuma especialidade adicionada</p>
-            )}
-          </div>
-        </div>
+        )}
 
         {/* Submit */}
         <button 
@@ -1231,7 +1235,7 @@ function ProfileEditScreen({ user, onBack }: { user: any, onBack: () => void }) 
           disabled={loading}
           className="w-full bg-amber-500 text-black py-5 rounded-2xl font-black uppercase italic tracking-widest hover:bg-amber-400 transition-all transform active:scale-95 disabled:opacity-50 shadow-lg shadow-amber-500/20"
         >
-          {loading ? "Salvando Alterações..." : "Salvar Perfil Profissional"}
+          {loading ? "Salvando Alterações..." : (isClient ? "Salvar Alterações" : "Salvar Perfil Profissional")}
         </button>
       </form>
     </div>
