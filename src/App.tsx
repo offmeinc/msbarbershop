@@ -3032,12 +3032,14 @@ function DashboardScreen
       )}
       {/* Revised Header */}
       <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-black text-white capitalize">{format(currentDate, "MMMM", { locale: ptBR })} <span className="text-neutral-600 font-medium ml-1">{format(currentDate, "yyyy")}</span></h1>
-          <div className="bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full flex items-center gap-1.5">
-            <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest leading-none">Filtros</span>
-          </div>
-        </div>
+        <div className="flex flex-col gap-1">
+           <h1 className="text-2xl font-black text-white capitalize">{format(currentDate, "dd 'de' MMMM", { locale: ptBR })}</h1>
+           <div className="flex gap-2">
+            <button onClick={() => setCurrentDate(subDays(currentDate, 1))} className="text-neutral-500 hover:text-white"><ChevronLeft className="w-5 h-5"/></button>
+            <button onClick={() => setCurrentDate(new Date())} className="text-xs font-bold text-amber-500 hover:text-amber-400">Hoje</button>
+            <button onClick={() => setCurrentDate(addDays(currentDate, 1))} className="text-neutral-500 hover:text-white"><ChevronRight className="w-5 h-5"/></button>
+           </div>
+         </div>
         <div className="flex items-center gap-3 text-neutral-500">
            <Scissors className="w-5 h-5 cursor-pointer hover:text-amber-500 transition-colors" />
            <Lock className="w-5 h-5 cursor-pointer hover:text-amber-500 transition-colors" />
@@ -3151,8 +3153,16 @@ function DashboardScreen
       
       {/* Agenda Main View */}
       {currentView === 'agenda' ? (
-        <>
+        loading ? (
+          <div className="flex justify-center py-20 text-neutral-500">
+            <Loader2 className="w-8 h-8 animate-spin" />
+          </div>
+        ) : (
+          <>
             <div className="space-y-0 relative border-l border-white/5 ml-2 pl-6">
+                {filteredAppointments.length === 0 && (
+                    <div className="text-center text-neutral-500 py-10 font-bold uppercase text-xs tracking-widest">Nenhum agendamento hoje</div>
+                )}
                 {hoursSlots.map((hour, idx) => (
                     <div key={hour} className="relative flex gap-4 min-h-[50px] group border-b border-white/5 last:border-none">
                         {/* Hour Label */}
@@ -3199,7 +3209,8 @@ function DashboardScreen
             >
                 <Plus className="w-8 h-8 group-hover:stroke-[3px] transition-all" />
             </button>
-        </>
+          </>
+        )
       ) : (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
               {currentView === 'list' && (
