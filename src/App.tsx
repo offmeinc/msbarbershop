@@ -802,6 +802,7 @@ function ProfileEditScreen({ user, onBack }: { user: any, onBack: () => void }) 
   const [newSpecialty, setNewSpecialty] = useState("");
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -876,6 +877,39 @@ function ProfileEditScreen({ user, onBack }: { user: any, onBack: () => void }) 
     }));
   };
 
+  const handleImageUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingImage(true);
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      const apiKey = (import.meta as any).env.VITE_IMGBB_API_KEY;
+      if (!apiKey) {
+        alert("Configuração de API do ImgBB faltando. Por favor, adicione VITE_IMGBB_API_KEY no arquivo .env");
+        setUploadingImage(false);
+        return;
+      }
+      const response = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await response.json();
+      if (data.success) {
+        setProfileData(prev => ({ ...prev, photoUrl: data.data.url }));
+      } else {
+        alert("Erro ao fazer upload da imagem.");
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+      alert("Erro na conexão com ImgBB.");
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   if (fetching) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -910,14 +944,33 @@ function ProfileEditScreen({ user, onBack }: { user: any, onBack: () => void }) 
             </div>
           </div>
           <div className="w-full">
-            <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest mb-2">URL da Foto</label>
-            <input 
-              type="text" 
-              value={profileData.photoUrl} 
-              onChange={(e) => setProfileData(prev => ({ ...prev, photoUrl: e.target.value }))}
-              placeholder="https://exemplo.com/foto.jpg"
-              className="w-full bg-neutral-900 border border-white/5 rounded-2xl p-4 text-sm text-white focus:border-amber-500 transition-all"
-            />
+            <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest mb-2">Foto de Perfil</label>
+            <div className="flex gap-4">
+              <div className="relative flex-1">
+                <input 
+                  type="text" 
+                  value={profileData.photoUrl} 
+                  onChange={(e) => setProfileData(prev => ({ ...prev, photoUrl: e.target.value }))}
+                  placeholder="URL ou faça upload ao lado →"
+                  className="w-full bg-neutral-900 border border-white/5 rounded-2xl p-4 text-sm text-white focus:border-amber-500 transition-all"
+                />
+                {uploadingImage && (
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                    <Loader2 className="w-4 h-4 text-amber-500 animate-spin" />
+                  </div>
+                )}
+              </div>
+              <label className="cursor-pointer bg-amber-500 text-black px-6 rounded-2xl flex items-center justify-center font-bold text-xs hover:bg-amber-400 transition-all">
+                {uploadingImage ? 'Enviando...' : 'Fazer Upload'}
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={handleImageUpload} 
+                  className="hidden" 
+                />
+              </label>
+            </div>
+            <p className="text-[9px] text-neutral-600 mt-2 uppercase tracking-tight">Preferência por fotos quadradas para melhor visualização.</p>
           </div>
         </div>
 
