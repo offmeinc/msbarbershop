@@ -276,7 +276,7 @@ import {
   subWeeks,
   parseISO
 } from "date-fns";
-import { ptBR } from "date-fns/locale/pt-BR";
+import { ptBR } from "date-fns/locale";
 import { 
   auth, 
   db, 
@@ -751,9 +751,7 @@ function ClientDashboardScreen({ user, db, onBack }: { user: any, db: any, onBac
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
-    const clientId = user.uid || user.id || user.email; // Fallback to email for guests if needed
-    if (!clientId) return;
+    if (!user || !user.email) return;
     const q = query(collection(db, "appointments"), where("clientEmail", "==", user.email), orderBy("date", "desc"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setAppointments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
@@ -763,28 +761,41 @@ function ClientDashboardScreen({ user, db, onBack }: { user: any, db: any, onBac
       setLoading(false);
     });
     return unsubscribe;
-  }, [user, db]);
+  }, [user?.email, db]);
 
   const stats = useMemo(() => {
+    if (!appointments) return { totalSpent: 0, completedCount: 0, upcoming: null };
+    
     const totalSpent = appointments
       .filter(app => app.status === 'completed')
-      .reduce((sum, app) => sum + (Number(app.price) || 0), 0);
+      .reduce((sum, app) => sum + (Number(app.totalPrice) || 0), 0);
     
     const completedCount = appointments.filter(app => app.status === 'completed').length;
     
     const upcoming = appointments
       .filter(app => {
+        if (!app.date) return false;
         const appDate = app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date);
-        return appDate > new Date() && app.status !== 'cancelled';
+        return appDate instanceof Date && !isNaN(appDate.getTime()) && appDate > new Date() && app.status !== 'cancelled';
       })
       .sort((a, b) => {
         const dateA = a.date instanceof Timestamp ? a.date.toDate() : (typeof a.date === 'string' ? parseISO(a.date) : a.date);
         const dateB = b.date instanceof Timestamp ? b.date.toDate() : (typeof b.date === 'string' ? parseISO(b.date) : b.date);
-        return dateA.getTime() - dateB.getTime();
+        const timeA = dateA instanceof Date && !isNaN(dateA.getTime()) ? dateA.getTime() : 0;
+        const timeB = dateB instanceof Date && !isNaN(dateB.getTime()) ? dateB.getTime() : 0;
+        return timeA - timeB;
       })[0];
 
     return { totalSpent, completedCount, upcoming };
   }, [appointments]);
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+      </div>
+    );
+  }
 
   if (currentView === 'profile') {
     return <ProfileEditScreen user={user} onBack={() => setCurrentView('home')} />;
@@ -797,11 +808,11 @@ function ClientDashboardScreen({ user, db, onBack }: { user: any, db: any, onBac
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-3">
              <div className="w-12 h-12 rounded-2xl bg-amber-500 overflow-hidden border-2 border-amber-500 shadow-xl">
-                <img src={user?.photoURL || `https://ui-avatars.com/api/?name=${user?.displayName || 'Cliente'}&background=f59e0b&color=000`} alt="Avatar" className="w-full h-full object-cover" />
+                <img src={user?.photoURL || user?.photoUrl || `https://ui-avatars.com/api/?name=${user?.displayName || user?.name || 'Cliente'}&background=f59e0b&color=000`} alt="Avatar" className="w-full h-full object-cover" />
              </div>
              <div>
                 <p className="text-[10px] text-neutral-500 font-black uppercase tracking-[0.2em] leading-none mb-1">Bem-vind{user?.gender === 'female' ? 'a' : 'o'}</p>
-                <h2 className="text-xl font-black italic uppercase tracking-tighter truncate w-40">{user?.displayName?.split(' ')[0] || 'Cliente'}</h2>
+                <h2 className="text-xl font-black italic uppercase tracking-tighter truncate w-40">{(user?.displayName || 'Cliente').split(' ')[0]}</h2>
              </div>
           </div>
           <button onClick={onBack} className="p-3 bg-neutral-900 rounded-2xl text-neutral-500 hover:text-white border border-white/5 transition-all">
@@ -854,7 +865,14 @@ function ClientDashboardScreen({ user, db, onBack }: { user: any, db: any, onBac
              </div>
              <h4 className="text-2xl font-black uppercase italic tracking-tighter mb-1 leading-tight">{stats.upcoming.serviceName}</h4>
              <div className="flex items-center gap-4 text-xs font-bold opacity-80 mb-6">
-                <p>{format(stats.upcoming.date instanceof Timestamp ? stats.upcoming.date.toDate() : parseISO(stats.upcoming.date), "dd 'de' MMMM", { locale: ptBR })}</p>
+                <p>{(() => {
+                  try {
+                    const d = stats.upcoming.date instanceof Timestamp ? stats.upcoming.date.toDate() : (typeof stats.upcoming.date === 'string' ? parseISO(stats.upcoming.date) : stats.upcoming.date);
+                    return format(d, "dd 'de' MMMM", { locale: ptBR });
+                  } catch (e) {
+                    return "Data indefinida";
+                  }
+                })()}</p>
                 <div className="w-1 h-1 bg-black rounded-full" />
                 <p>{stats.upcoming.time}</p>
              </div>
@@ -893,12 +911,16 @@ function ClientDashboardScreen({ user, db, onBack }: { user: any, db: any, onBac
                     <div>
                       <h4 className="text-sm font-bold text-white group-hover:text-amber-500 transition-colors uppercase italic">{app.serviceName}</h4>
                       <p className="text-[10px] text-neutral-600 uppercase font-bold tracking-tight">
-                        {format(app.date instanceof Timestamp ? app.date.toDate() : parseISO(app.date), "dd/MM/yyyy • HH:mm", { locale: ptBR })}
+                        {(() => {
+                          if (!app.date) return "Data indefinida";
+                          const d = app.date instanceof Timestamp ? app.date.toDate() : parseISO(app.date);
+                          return (d instanceof Date && !isNaN(d.getTime())) ? format(d, "dd/MM/yyyy • HH:mm", { locale: ptBR }) : "Data inválida";
+                        })()}
                       </p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs font-black text-white italic">R${app.price || '0,00'}</p>
+                    <p className="text-xs font-black text-white italic">R${(Number(app.totalPrice) || 0).toFixed(2)}</p>
                     <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded ${
                        app.status === 'completed' ? 'text-amber-500' : 'text-neutral-700'
                     }`}>{app.status || 'Pendente'}</span>
@@ -948,8 +970,12 @@ function ProfileEditScreen({ user, onBack }: { user: any, onBack: () => void }) 
   const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
-    if (!user) return;
-    const docRef = doc(db, "users", user.uid);
+    const userId = user?.uid || user?.id;
+    if (!userId) {
+      setFetching(false);
+      return;
+    }
+    const docRef = doc(db, "users", userId);
     const unsubscribe = onSnapshot(docRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
@@ -967,8 +993,8 @@ function ProfileEditScreen({ user, onBack }: { user: any, onBack: () => void }) 
       console.error("Error fetching profile:", error);
       setFetching(false);
     });
-    return () => unsubscribe();
-  }, [user]);
+    return unsubscribe;
+  }, [user?.uid, user?.id]);
 
   const handleUpdate = async (e: FormEvent) => {
     e.preventDefault();
@@ -983,7 +1009,8 @@ function ProfileEditScreen({ user, onBack }: { user: any, onBack: () => void }) 
       }
 
       // Update Firestore
-      await updateDoc(doc(db, "users", user.uid), { 
+      const userId = user.uid || user.id;
+      await updateDoc(doc(db, "users", userId), { 
         name: profileData.name,
         displayName: profileData.name,
         photoUrl: profileData.photoUrl,
@@ -1588,6 +1615,17 @@ export default function App() {
     });
     return () => unsubscribe();
   }, [user]);
+
+  useEffect(() => {
+    if (!loggedInClient?.id) return;
+    const docRef = doc(db, "users", loggedInClient.id);
+    const unsubscribe = onSnapshot(docRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setLoggedInClient({ id: docSnap.id, ...docSnap.data() });
+      }
+    });
+    return unsubscribe;
+  }, [loggedInClient?.id]);
 
   useEffect(() => {
     const unsubscribeServices = onSnapshot(collection(db, "services"), (snapshot) => {
@@ -3293,8 +3331,11 @@ function DashboardScreen
   }, []);
 
   const filteredAppointments = useMemo(() => {
+    if (!appointments) return [];
     return appointments.filter(app => {
+        if (!app.date) return false;
         const appDate = app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date);
+        if (!(appDate instanceof Date) || isNaN(appDate.getTime())) return false;
         const sameDay = isSameDay(appDate, currentDate);
         const sameBarber = selectedBarberId === 'all' || app.barberId === selectedBarberId;
         return sameDay && sameBarber;
@@ -3339,10 +3380,11 @@ function DashboardScreen
                   const active = isSameDay(day, currentDate);
                   
                   // Check if there are appointments on this day
-                  const hasAppointments = appointments.some(app => {
-                    const appDate = app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date);
-                    return isSameDay(appDate, day);
-                  });
+      const hasAppointments = appointments.some(app => {
+        if (!app.date) return false;
+        const appDate = app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date);
+        return appDate instanceof Date && !isNaN(appDate.getTime()) && isSameDay(appDate, day);
+      });
 
                   return (
                       <button 
@@ -4029,8 +4071,9 @@ function CalendarWidget({
 
   const getAppointmentsForDay = (date: Date) => {
     return appointments.filter(app => {
+      if (!app.date) return false;
       const appDate = app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date);
-      return isSameDay(appDate, date);
+      return appDate instanceof Date && !isNaN(appDate.getTime()) && isSameDay(appDate, date);
     });
   };
 
