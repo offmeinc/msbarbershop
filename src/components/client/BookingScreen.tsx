@@ -272,6 +272,23 @@ export function BookingScreen({ user, services, onBack, editAppointment }: Booki
           date: Timestamp.fromDate(finalDate),
           time: selectedTime
         });
+
+        // Ensure user exists for later login with phone
+        if (!user && guestPhone) {
+          const cleanPhone = guestPhone.replace(/\D/g, '');
+          const userRef = doc(db, "users", cleanPhone); // Use phone as ID to avoid duplicates
+          const userSnap = await getDoc(userRef);
+          if (!userSnap.exists()) {
+             await setDoc(userRef, {
+               uid: cleanPhone,
+               name: guestName,
+               whatsapp: cleanPhone,
+               role: "client",
+               password: "123456", // "Aquela senha padrão"
+               createdAt: serverTimestamp()
+             });
+          }
+        }
       }
 
       // WhatsApp notification

@@ -3,13 +3,13 @@ import { motion } from "motion/react";
 import { Loader2, Key, Mail, Lock, User, Phone, Sparkles, LogIn, ChevronLeft } from "lucide-react";
 import { BARBERSHOP_NAME } from "../../constants";
 
-export function ClientPortalScreen({ onLogin, onForgotPassword, onBack }: { onLogin: (email: string, code: string) => void, onForgotPassword: () => void, onBack: () => void }) {
-  const [email, setEmail] = useState("");
+export function ClientPortalScreen({ onLogin, onForgotPassword, onBack }: { onLogin: (phone: string, code: string) => void, onForgotPassword: () => void, onBack: () => void }) {
+  const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onLogin(email, code);
+    onLogin(phone, code);
   };
 
   return (
@@ -28,22 +28,22 @@ export function ClientPortalScreen({ onLogin, onForgotPassword, onBack }: { onLo
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest ml-2">Seu E-mail</label>
+          <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest ml-2">Qual seu WhatsApp?</label>
           <div className="relative group">
-            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-600 group-focus-within:text-amber-500 transition-colors" />
+            <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-600 group-focus-within:text-amber-500 transition-colors" />
             <input 
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
               className="w-full bg-neutral-950 border border-white/5 rounded-3xl p-5 pl-12 text-sm text-white focus:border-amber-500 outline-none transition-all"
-              placeholder="exemplo@email.com"
+              placeholder="(00) 00000-0000"
               required
             />
           </div>
         </div>
 
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest ml-2">Código de Acesso</label>
+          <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest ml-2">Sua Senha</label>
           <div className="relative group">
             <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-600 group-focus-within:text-amber-500 transition-colors" />
             <input 
@@ -51,7 +51,7 @@ export function ClientPortalScreen({ onLogin, onForgotPassword, onBack }: { onLo
               value={code}
               onChange={(e) => setCode(e.target.value)}
               className="w-full bg-neutral-950 border border-white/5 rounded-3xl p-5 pl-12 text-sm text-white focus:border-amber-500 outline-none transition-all"
-              placeholder="Digite seu código"
+              placeholder="Digite sua senha"
               required
             />
           </div>
@@ -69,20 +69,19 @@ export function ClientPortalScreen({ onLogin, onForgotPassword, onBack }: { onLo
           onClick={onForgotPassword}
           className="w-full text-neutral-600 text-[10px] font-black uppercase tracking-widest hover:text-amber-500 transition-colors py-4"
         >
-          Esqueceu seu código?
+          Esqueceu sua senha?
         </button>
       </form>
     </div>
   );
 }
 
-export function CollaboratorLoginScreen({ onLogin, setCurrentScreen, setRequestedRole }: { onLogin: (role: string, email?: string, password?: string, isSignUp?: boolean, name?: string, whatsapp?: string) => void, setCurrentScreen: (screen: string) => void, setRequestedRole: (role: string) => void }) {
+export function CollaboratorLoginScreen({ onLogin, setCurrentScreen, setRequestedRole }: { onLogin: (role: string, phone?: string, password?: string, isSignUp?: boolean, name?: string, whatsapp?: string) => void, setCurrentScreen: (screen: string) => void, setRequestedRole: (role: string) => void }) {
   const [isSignUp, setIsSignUp] = useState(false);
   const [role, setRole] = useState<"manager" | "barber">("barber");
-  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-  const [whatsapp, setWhatsapp] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -90,7 +89,7 @@ export function CollaboratorLoginScreen({ onLogin, setCurrentScreen, setRequeste
     setLoading(true);
     setRequestedRole(role);
     try {
-      await onLogin(role, email, password, isSignUp, name, whatsapp);
+      await onLogin(role, phone, password, isSignUp, name, phone);
     } catch (err) {
       console.error(err);
     } finally {
@@ -152,36 +151,19 @@ export function CollaboratorLoginScreen({ onLogin, setCurrentScreen, setRequeste
         )}
 
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest ml-4">E-mail Profissional</label>
+          <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest ml-4">WhatsApp Profissional</label>
           <div className="relative group">
-            <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-600 group-focus-within:text-amber-500 transition-colors" />
+            <Phone className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-600 group-focus-within:text-amber-500 transition-colors" />
             <input 
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
               className="w-full bg-neutral-950 border border-white/5 rounded-[2rem] p-5 pl-14 text-sm text-white focus:border-amber-500 outline-none transition-all"
-              placeholder="email@portal.com"
+              placeholder="(00) 00000-0000"
               required
             />
           </div>
         </div>
-
-        {isSignUp && (
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest ml-4">WhatsApp</label>
-            <div className="relative group">
-              <Phone className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-600 group-focus-within:text-amber-500 transition-colors" />
-              <input 
-                type="text"
-                value={whatsapp}
-                onChange={(e) => setWhatsapp(e.target.value)}
-                className="w-full bg-neutral-950 border border-white/5 rounded-[2rem] p-5 pl-14 text-sm text-white focus:border-amber-500 outline-none transition-all"
-                placeholder="(11) 99999-9999"
-                required
-              />
-            </div>
-          </div>
-        )}
 
         <div className="space-y-2">
           <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest ml-4">Senha de Acesso</label>

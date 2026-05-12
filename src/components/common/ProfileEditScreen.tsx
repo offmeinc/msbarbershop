@@ -232,7 +232,7 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
               className="w-full bg-neutral-900 border border-white/5 rounded-2xl p-4 text-sm text-white focus:border-amber-500 transition-all"
               placeholder="Senha de 4 dígitos ou mais"
             />
-            <p className="text-[9px] text-neutral-600 mt-1 uppercase tracking-tight">Esta senha será usada para acessar seu painel pelo e-mail.</p>
+            <p className="text-[9px] text-neutral-600 mt-1 uppercase tracking-tight">Esta senha será usada para acessar seu painel pelo WhatsApp.</p>
           </div>
 
           {!isClient && (

@@ -250,7 +250,7 @@ export default function App() {
           const userDoc = await getDoc(userDocRef);
           
           if (!userDoc.exists()) {
-            console.log("Creating initial user document for:", firebaseUser.email);
+            console.log("Creating initial user document for:", firebaseUser.email || firebaseUser.uid);
             const newUser = {
               uid: firebaseUser.uid,
               name: firebaseUser.displayName || "Usuário",
@@ -263,7 +263,8 @@ export default function App() {
           } else {
             const data = userDoc.data();
             console.log("User document found. Role:", data?.role);
-            if (firebaseUser.email === "marley@marley.com" && data?.role !== "manager") {
+            // Admin/Manager auto-assignment by phone-based email or legacy email
+            if ((firebaseUser.email === "marley@marley.com" || firebaseUser.email === "51992590046@barbershop.com") && data?.role !== "manager") {
               await updateDoc(userDocRef, { role: "manager" });
               setUserRole("manager");
             } else {
@@ -285,48 +286,50 @@ export default function App() {
     };
   }, []);
 
-  const handleLogin = async (role: string = "client", email?: string, password?: string, isSignUp?: boolean, name?: string, whatsapp?: string) => {
+  const handleLogin = async (role: string = "client", phone?: string, password?: string, isSignUp?: boolean, name?: string, whatsapp?: string) => {
     isSigningUp.current = isSignUp || false;
     setRequestedRole(role);
-    console.log("HandleLogin: Attempting to create user with email:", email, "role:", role, "isSignUp:", isSignUp, "name:", name, "whatsapp:", whatsapp);
+    
+    // Convert phone to virtual email
+    const email = phone ? `${phone.replace(/\D/g, '')}@barbershop.com` : undefined;
+    const finalWhatsapp = whatsapp || phone;
+
+    console.log("HandleLogin: Attempting to create user with virtual email:", email, "role:", role, "isSignUp:", isSignUp);
     
     try {
       if (email && password) {
         if (isSignUp) {
           console.log("HandleLogin: Creating user with email:", email);
           const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-          console.log("HandleLogin: User created with UID:", userCredential.user.uid);
           if (name) {
             await updateProfile(userCredential.user, { displayName: name });
           }
           
-          console.log("HandleLogin: Setting user document in Firestore");
           await setDoc(doc(db, "users", userCredential.user.uid), {
              uid: userCredential.user.uid,
              name: name || userCredential.user.displayName || "Usuário",
-             email: userCredential.user.email,
+             email: email,
              role: role,
-             whatsapp: whatsapp,
+             whatsapp: finalWhatsapp,
              createdAt: Timestamp.now(),
            });
-          console.log("HandleLogin: User document set successfully");
 
           setUserRole(role);
         } else {
            await signInWithEmailAndPassword(auth, email, password);
         }
       } else {
-        alert("E-mail e senha são obrigatórios.");
+        alert("Número de telefone e senha são obrigatórios.");
       }
       
       setCurrentScreen("home");
     } catch (error: any) {
       console.error("Login failed", error);
       let message = "Erro na autenticação. Tente novamente.";
-      if (error.code === 'auth/email-already-in-use') message = "Este e-mail já está em uso.";
+      if (error.code === 'auth/email-already-in-use') message = "Este número já está cadastrado.";
       if (error.code === 'auth/wrong-password') message = "Senha incorreta.";
       if (error.code === 'auth/user-not-found') message = "Usuário não encontrado.";
-      if (error.code === 'auth/invalid-email') message = "E-mail inválido.";
+      if (error.code === 'auth/invalid-email') message = "Número de telefone inválido.";
       if (error.code === 'auth/weak-password') message = "A senha deve ter pelo menos 6 caracteres.";
       alert(message);
     } finally {
@@ -340,30 +343,40 @@ export default function App() {
     setCurrentScreen("home");
   };
 
-  const handleClientLogin = async (email: string, password: string) => {
-    // 1. Verify if user exists with password
-    const userQuery = query(collection(db, "users"), where("email", "==", email), where("password", "==", password));
+  const handleClientLogin = async (phone: string, password: string) => {
+    // Search by cleaned whatsapp number
+    const cleanPhone = phone.replace(/\D/g, '');
+    const userQuery = query(collection(db, "users"), where("whatsapp", "==", cleanPhone), where("password", "==", password));
     const userSnapshot = await getDocs(userQuery);
     
-    if (userSnapshot.empty) {
-        alert("E-mail ou senha inválidos.");
+    // Try original phone too just in case
+    let docs = userSnapshot.docs;
+    if (docs.length === 0) {
+      const altQuery = query(collection(db, "users"), where("whatsapp", "==", phone), where("password", "==", password));
+      const altSnap = await getDocs(altQuery);
+      docs = altSnap.docs;
+    }
+
+    if (docs.length === 0) {
+        alert("Telefone ou senha inválidos.");
         return;
     }
     
-    setLoggedInClient({ id: userSnapshot.docs[0].id, ...userSnapshot.docs[0].data() });
+    setLoggedInClient({ id: docs[0].id, ...docs[0].data() });
     setCurrentScreen("client-dashboard");
   };
 
   const handleForgotPassword = async () => {
-    const email = prompt("Digite seu e-mail cadastrado:");
-    if (!email) return;
+    const phone = prompt("Digite seu WhatsApp cadastrado:");
+    if (!phone) return;
     
-    // Look up appointments with this email as clientEmail
-    const appointmentsQuery = query(collection(db, "appointments"), where("clientEmail", "==", email), orderBy("createdAt", "desc"), limit(1));
+    // Look up appointments with this phone
+    const cleanPhone = phone.replace(/\D/g, '');
+    const appointmentsQuery = query(collection(db, "appointments"), where("clientPhone", "==", cleanPhone), orderBy("createdAt", "desc"), limit(1));
     const querySnapshot = await getDocs(appointmentsQuery);
 
     if (querySnapshot.empty) {
-        alert("Nenhum agendamento encontrado para este e-mail.");
+        alert("Nenhum agendamento encontrado para este número.");
         return;
     }
 
@@ -371,9 +384,9 @@ export default function App() {
     const code = doc.data().loginCode;
 
     if (code) {
-        alert("Seu código de acesso é: " + code + ". (Simulando envio por WhatsApp/E-mail)");
+        alert("Seu código de acesso é: " + code);
     } else {
-        alert("Código não encontrado para este agendamento.");
+        alert("Código não encontrado.");
     }
   };
 
