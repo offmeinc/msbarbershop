@@ -45,8 +45,12 @@ export function AppointmentModal({ appointment, onClose, onUpdate }: { appointme
       >
         <button onClick={onClose} className="absolute top-6 right-6 text-neutral-500 hover:text-white"><X className="w-6 h-6"/></button>
         
-        <div className="w-20 h-20 bg-amber-500 rounded-3xl mx-auto flex items-center justify-center mb-6 shadow-2xl shadow-amber-500/20">
-          <User className="w-10 h-10 text-black outline-none" />
+        <div className="w-20 h-20 bg-amber-500 rounded-3xl mx-auto flex items-center justify-center mb-6 shadow-2xl shadow-amber-500/20 overflow-hidden">
+          {appointment.clientPhoto ? (
+             <img src={appointment.clientPhoto} alt={appointment.clientName} className="w-full h-full object-cover" />
+          ) : (
+             <User className="w-10 h-10 text-black outline-none" />
+          )}
         </div>
         
         <h2 className="text-2xl font-black italic uppercase mb-2">{appointment.clientName}</h2>
@@ -59,7 +63,7 @@ export function AppointmentModal({ appointment, onClose, onUpdate }: { appointme
             </div>
             <div className="flex items-center gap-3">
                 <Clock className="w-4 h-4 text-neutral-500" />
-                <span className="text-sm font-bold text-white/90">{appointment.time}</span>
+                <span className="text-sm font-bold text-white/90">{appointment.time || format(d, 'HH:mm')}</span>
             </div>
             <div className="flex items-center gap-3">
                 <User className="w-4 h-4 text-neutral-500" />
@@ -214,12 +218,23 @@ export function CalendarWidget({
                <div className="space-y-2">
                  {dayApps.map((app, appIdx) => (
                    <div key={appIdx} className="bg-neutral-900 p-3 rounded-2xl border border-white/5 shadow-lg flex flex-col gap-1 group hover:border-amber-500/30 transition-all">
-                      <div className="flex items-center justify-between">
-                         <span className="text-[10px] font-black text-amber-500 uppercase">{app.time}</span>
+                      <div className="flex items-center justify-between mb-1">
+                         <span className="text-[10px] font-black text-amber-500 uppercase">{app.time || format(app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date), 'HH:mm')}</span>
                          <div className={`w-2 h-2 rounded-full ${app.status === 'completed' ? 'bg-amber-500' : 'bg-red-500'}`} />
                       </div>
-                      <p className="text-xs font-bold text-white truncate">{app.clientName}</p>
-                      <p className="text-[9px] text-neutral-500 uppercase font-black">{app.serviceName}</p>
+                      <div className="flex items-center gap-2">
+                        {app.clientPhoto ? (
+                          <img src={app.clientPhoto} alt={app.clientName} className="w-6 h-6 rounded-md object-cover" />
+                        ) : (
+                          <div className="w-6 h-6 rounded-md bg-white/5 flex items-center justify-center text-[10px] font-black text-white">
+                            {app.clientName?.charAt(0) || '?'}
+                          </div>
+                        )}
+                        <div className="overflow-hidden">
+                          <p className="text-xs font-bold text-white truncate">{app.clientName}</p>
+                          <p className="text-[8px] text-neutral-500 uppercase font-black truncate">{app.serviceName}</p>
+                        </div>
+                      </div>
                    </div>
                  ))}
                  {dayApps.length === 0 && (
@@ -227,7 +242,7 @@ export function CalendarWidget({
                      <Clock className="w-4 h-4 mb-1 text-neutral-400" />
                    </div>
                  )}
-               </div>
+                </div>
             </div>
           );
         })}
@@ -241,9 +256,16 @@ export function CalendarWidget({
     
     // Calculate overlapping for events
     const calculateOverlaps = (events: any[]) => {
-      const sorted = [...events].sort((a, b) => {
-        const timeA = a.time.split(':').map(Number);
-        const timeB = b.time.split(':').map(Number);
+      const validEvents = events.filter(e => e && e.date);
+      const getEventTime = (evt: any) => {
+        if (typeof evt.time === 'string') return evt.time;
+        const d = evt.date instanceof Timestamp ? evt.date.toDate() : (typeof evt.date === 'string' ? parseISO(evt.date) : evt.date);
+        return format(d, 'HH:mm');
+      };
+
+      const sorted = [...validEvents].sort((a, b) => {
+        const timeA = getEventTime(a).split(':').map(Number);
+        const timeB = getEventTime(b).split(':').map(Number);
         return (timeA[0]*60 + timeA[1]) - (timeB[0]*60 + timeB[1]);
       });
 
@@ -253,7 +275,8 @@ export function CalendarWidget({
       let currentClusterEnd = 0;
 
       sorted.forEach(evt => {
-        const [h, m] = evt.time.split(':').map(Number);
+        const timeStr = getEventTime(evt);
+        const [h, m] = timeStr.split(':').map(Number);
         const start = h * 60 + m;
         const end = start + duration;
 
@@ -317,6 +340,10 @@ export function CalendarWidget({
                     <p className="text-[10px] text-neutral-500 font-black uppercase tracking-widest">{dayApps.length} Agendamentos</p>
                  </div>
               </div>
+              <div className="flex bg-black p-1 rounded-xl border border-white/5">
+                 <button onClick={() => navigate(-1)} className="p-2 hover:bg-white/5 rounded-lg transition-all text-neutral-500 hover:text-amber-500 shadow-sm"><ChevronLeft className="w-4 h-4" /></button>
+                 <button onClick={() => navigate(1)} className="p-2 hover:bg-white/5 rounded-lg transition-all text-neutral-500 hover:text-amber-500 shadow-sm"><ChevronRight className="w-4 h-4" /></button>
+              </div>
            </div>
 
            {/* Timeline */}
@@ -360,9 +387,18 @@ export function CalendarWidget({
                          }}
                        >
                           <div className="flex items-start justify-between">
-                             <div className="pt-0.5 truncate">
-                               <p className="text-xs font-black text-white truncate">{app.clientName}</p>
-                               <p className="text-[9px] text-white/70 font-bold uppercase truncate">{app.time} - {app.serviceName}</p>
+                             <div className="flex gap-2">
+                               {app.clientPhoto ? (
+                                  <img src={app.clientPhoto} alt={app.clientName} className="w-8 h-8 rounded-lg object-cover" />
+                               ) : (
+                                  <div className="w-8 h-8 rounded-lg bg-black/40 flex items-center justify-center text-xs font-black text-amber-500">
+                                    {app.clientName?.charAt(0) || '?'}
+                                  </div>
+                               )}
+                               <div className="pt-0.5 truncate">
+                                 <p className="text-xs font-black text-white truncate">{app.clientName}</p>
+                                 <p className="text-[9px] text-white/70 font-bold uppercase truncate">{app.time || format(app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date), 'HH:mm')} - {app.serviceName}</p>
+                               </div>
                              </div>
                              {(role === 'manager' || role === 'barber') && app.status === 'pending' && (
                                <button 

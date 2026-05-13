@@ -250,6 +250,7 @@ export function BookingScreen({ user, services, onBack, editAppointment }: Booki
         barberName: barber?.name,
         serviceId: selectedService,
         serviceName: service?.name,
+        clientPhoto: user ? (user.photoURL || user.photoUrl) : null,
         status: "pending",
         totalPrice: (Number(service?.price) || 0) * (1 - appliedDiscount / 100),
         createdAt: serverTimestamp(),

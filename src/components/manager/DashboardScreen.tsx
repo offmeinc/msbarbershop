@@ -415,7 +415,16 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack }:
                                               {app.status || 'Pendente'}
                                           </div>
                                       </div>
-                                      <p className="text-sm text-neutral-400 font-medium">{app.clientName} • {app.barberName}</p>
+                                      <div className="flex items-center gap-2">
+                                        {app.clientPhoto ? (
+                                           <img src={app.clientPhoto} alt={app.clientName} className="w-6 h-6 rounded-md object-cover" />
+                                        ) : (
+                                           <div className="w-6 h-6 rounded-md bg-white/5 flex items-center justify-center text-[10px] font-black text-white">
+                                             {app.clientName?.charAt(0) || '?'}
+                                           </div>
+                                        )}
+                                        <p className="text-sm text-neutral-400 font-medium">{app.clientName} • {app.barberName}</p>
+                                      </div>
                                       
                                       {expandedAppointmentId === app.id && (
                                         <div className="mt-4 pt-4 border-t border-white/10 text-white text-xs space-y-2 uppercase tracking-wider font-bold">
