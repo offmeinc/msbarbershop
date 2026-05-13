@@ -131,11 +131,12 @@ export function BookingScreen({ user, role, services, onBack, editAppointment }:
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
-  const [guestName, setGuestName] = useState("");
-  const [guestEmail, setGuestEmail] = useState("");
-  const [guestPhone, setGuestPhone] = useState("");
-  const [couponCode, setCouponCode] = useState("");
+  const [guestName, setGuestName] = useState(editAppointment?.clientName || "");
+  const [guestEmail, setGuestEmail] = useState(editAppointment?.clientEmail || "");
+  const [guestPhone, setGuestPhone] = useState(editAppointment?.clientPhone || "");
+  const [couponCode, setCouponCode] = useState(editAppointment?.couponCode || "");
   const [appliedDiscount, setAppliedDiscount] = useState(0);
+  const [customDuration, setCustomDuration] = useState<number>(editAppointment?.serviceDuration || 0);
 
   useEffect(() => {
     const q = query(collection(db, "users"), where("role", "in", ["barber", "manager"]));
@@ -202,21 +203,28 @@ export function BookingScreen({ user, role, services, onBack, editAppointment }:
         if (slotTimeInHours >= endHour) break;
 
         const time = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        const slotDate = new Date(selectedDate);
+        slotDate.setHours(h, m, 0, 0);
+        const slotEnd = new Date(slotDate.getTime() + (customDuration || 30) * 60000);
+
         const isBusy = barberAppointments.some(app => {
+          if (editAppointment && app.id === editAppointment.id) return false; // Ignore self when editing
           const appDate = app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date);
-          return format(appDate, "HH:mm") === time;
+          if (format(appDate, "yyyy-MM-dd") !== format(selectedDate, "yyyy-MM-dd")) return false;
+          const appDuration = app.serviceDuration || 50;
+          const appEnd = new Date(appDate.getTime() + appDuration * 60000);
+          return slotDate < appEnd && slotEnd > appDate;
         }) || blockedTimes.some(b => {
           const bDate = b.date instanceof Timestamp ? b.date.toDate() : (typeof b.date === 'string' ? parseISO(b.date) : b.date);
           return format(bDate, "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd") && format(bDate, "HH:mm") === time;
         });
-        const slotDate = new Date(selectedDate);
-        slotDate.setHours(h, m, 0, 0);
+
         const isPast = slotDate < new Date();
         slots.push({ time, available: !isBusy && !isPast });
       }
     }
     return slots;
-  }, [selectedDate, barberAppointments, blockedTimes]);
+  }, [selectedDate, barberAppointments, blockedTimes, customDuration]);
 
   const handleConfirmBooking = async () => {
     if (!selectedService || !selectedBarber || !selectedDate || !selectedTime) {
@@ -259,6 +267,7 @@ export function BookingScreen({ user, role, services, onBack, editAppointment }:
         barberName: barber?.name,
         serviceId: selectedService,
         serviceName: service?.name,
+        serviceDuration: customDuration || service?.duration || 30,
         clientPhoto: clientPhotoData,
         status: "pending",
         totalPrice: (Number(service?.price) || 0) * (1 - appliedDiscount / 100),
@@ -368,7 +377,7 @@ export function BookingScreen({ user, role, services, onBack, editAppointment }:
             <motion.div key="step1" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} className="space-y-4">
                 <div className="grid gap-3">
                   {services.filter(s => s.active !== false).map(s => (
-                    <button key={s.id} onClick={() => { setSelectedService(s.id); setStep(2); }} className={`group p-6 rounded-[2rem] border text-left transition-all relative overflow-hidden ${selectedService === s.id ? 'border-amber-500 bg-neutral-900 shadow-2xl shadow-amber-500/20' : 'border-white/5 bg-neutral-900/50 hover:border-white/10'}`}>
+                    <button key={s.id} onClick={() => { setSelectedService(s.id); setCustomDuration(s.duration || 30); setStep(2); }} className={`group p-6 rounded-[2rem] border text-left transition-all relative overflow-hidden ${selectedService === s.id ? 'border-amber-500 bg-neutral-900 shadow-2xl shadow-amber-500/20' : 'border-white/5 bg-neutral-900/50 hover:border-white/10'}`}>
                       <div className="flex justify-between items-center relative z-10">
                         <div className="space-y-1">
                           <h4 className="font-black text-white text-lg uppercase italic tracking-tight">{s.name}</h4>
@@ -407,6 +416,12 @@ export function BookingScreen({ user, role, services, onBack, editAppointment }:
 
           {step === 3 && (
             <motion.div key="step3" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} className="space-y-8">
+                {(role === 'manager' || role === 'barber') && (
+                    <div className="bg-neutral-900 border border-amber-500/30 p-4 rounded-[2rem] flex flex-col gap-2">
+                        <span className="text-xs font-black uppercase text-amber-500 tracking-widest pl-2">Duração do Serviço (Minutos)</span>
+                        <input type="number" step="10" min="10" className="w-full bg-black border border-white/10 rounded-2xl p-4 text-white font-bold" value={customDuration} onChange={e => {setCustomDuration(Number(e.target.value)); setSelectedTime(null);}} />
+                    </div>
+                )}
                 <div className="space-y-4">
                   <div className="flex gap-2 overflow-x-auto no-scrollbar py-2">
                     {Array.from({ length: 14 }).map((_, i) => {
@@ -435,7 +450,7 @@ export function BookingScreen({ user, role, services, onBack, editAppointment }:
 
           {step === 4 && (
             <motion.div key="step4" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} className="space-y-6">
-                {(!user || role === 'manager' || role === 'barber') && (
+                 {(!user || role === 'manager' || role === 'barber') && (
                     <div className="bg-neutral-900 p-6 rounded-[2rem] border border-white/5 space-y-3">
                        <input placeholder="Nome do Cliente" className="w-full p-4 bg-black rounded-2xl border border-white/5 text-white" value={guestName} onChange={e => setGuestName(e.target.value)} />
                        <input placeholder="WhatsApp do Cliente" className="w-full p-4 bg-black rounded-2xl border border-white/5 text-white" value={guestPhone} onChange={e => setGuestPhone(e.target.value)} />

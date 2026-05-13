@@ -28,7 +28,7 @@ import {
 import { ptBR } from "date-fns/locale";
 import { Timestamp } from "firebase/firestore";
 
-export function AppointmentModal({ appointment, onClose, onUpdate }: { appointment: any, onClose: () => void, onUpdate: (app: any, status: string) => void }) {
+export function AppointmentModal({ appointment, onClose, onUpdate, onEdit }: { appointment: any, onClose: () => void, onUpdate: (app: any, status: string) => void, onEdit?: (app: any) => void }) {
   if (!appointment) return null;
   const d = appointment.date instanceof Timestamp ? appointment.date.toDate() : (typeof appointment.date === 'string' ? parseISO(appointment.date) : appointment.date);
 
@@ -71,9 +71,14 @@ export function AppointmentModal({ appointment, onClose, onUpdate }: { appointme
             </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-           <button onClick={() => onUpdate(appointment, 'confirmed')} className="py-4 bg-amber-500 text-black rounded-2xl font-black uppercase italic text-xs">CONFIRMAR</button>
-           <button onClick={() => onUpdate(appointment, 'cancelled')} className="py-4 bg-red-500/10 text-red-500 border border-red-500/20 rounded-2xl font-black uppercase italic text-xs">CANCELAR</button>
+        <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+               <button onClick={() => onUpdate(appointment, 'confirmed')} className="py-4 bg-amber-500 text-black rounded-2xl font-black uppercase italic text-xs">CONFIRMAR</button>
+               <button onClick={() => onUpdate(appointment, 'cancelled')} className="py-4 bg-red-500/10 text-red-500 border border-red-500/20 rounded-2xl font-black uppercase italic text-xs">CANCELAR</button>
+            </div>
+            {onEdit && (
+                <button onClick={() => onEdit(appointment)} className="w-full py-4 bg-white/5 text-white border border-white/10 rounded-2xl font-black uppercase italic text-xs hover:bg-white/10 transition-colors">EDITAR AGENDAMENTO</button>
+            )}
         </div>
       </motion.div>
     </motion.div>
@@ -88,7 +93,8 @@ export function CalendarWidget({
   onDateChange, 
   role, 
   updateStatus,
-  onNewBooking
+  onNewBooking,
+  onSelectAppointment
 }: { 
   appointments: any[], 
   mode: "day" | "week" | "month", 
@@ -97,7 +103,8 @@ export function CalendarWidget({
   onDateChange: (date: Date) => void,
   role: string,
   updateStatus: (app: any, status: string) => void,
-  onNewBooking?: () => void
+  onNewBooking?: () => void,
+  onSelectAppointment?: (app: any) => void
 }) {
   const navigate = (direction: number) => {
     if (mode === "month") onDateChange(addMonths(currentDate, direction));
@@ -163,7 +170,7 @@ export function CalendarWidget({
             </div>
             <div className="space-y-1 mt-1 overflow-hidden">
                {dayAppointments.slice(0, 3).map((app, idx) => (
-                 <div key={idx} className="text-[8px] bg-white/5 text-neutral-400 px-1.5 py-0.5 rounded truncate font-medium border border-white/5">
+                 <div key={idx} onClick={(e) => {e.stopPropagation(); onSelectAppointment && onSelectAppointment(app); }} className="text-[8px] bg-white/5 text-neutral-400 px-1.5 py-0.5 rounded truncate font-medium border border-white/5 cursor-pointer hover:bg-white/10 hover:text-white transition-colors">
                    {app.clientName?.split(' ')[0] || "Cliente"}
                  </div>
                ))}
@@ -219,7 +226,7 @@ export function CalendarWidget({
                </div>
                <div className="space-y-2">
                  {dayApps.map((app, appIdx) => (
-                   <div key={appIdx} className="bg-neutral-900 p-3 rounded-2xl border border-white/5 shadow-lg flex flex-col gap-1 group hover:border-amber-500/30 transition-all">
+                   <div key={appIdx} onClick={() => onSelectAppointment && onSelectAppointment(app)} className="cursor-pointer bg-neutral-900 p-3 rounded-2xl border border-white/5 shadow-lg flex flex-col gap-1 group hover:border-amber-500/30 transition-all">
                       <div className="flex items-center justify-between mb-1">
                          <span className="text-[10px] font-black text-amber-500 uppercase">{app.time || format(app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date), 'HH:mm')}</span>
                          <div className={`w-2 h-2 rounded-full ${app.status === 'completed' ? 'bg-amber-500' : 'bg-red-500'}`} />
@@ -271,7 +278,6 @@ export function CalendarWidget({
         return (timeA[0]*60 + timeA[1]) - (timeB[0]*60 + timeB[1]);
       });
 
-      const duration = 50; // Assume 50 minutes duration
       let clusters: any[][] = [];
       let currentCluster: any[] = [];
       let currentClusterEnd = 0;
@@ -280,6 +286,7 @@ export function CalendarWidget({
         const timeStr = getEventTime(evt);
         const [h, m] = timeStr.split(':').map(Number);
         const start = h * 60 + m;
+        const duration = evt.serviceDuration || 50;
         const end = start + duration;
 
         if (currentCluster.length > 0 && start >= currentClusterEnd) {
@@ -375,7 +382,8 @@ export function CalendarWidget({
                          initial={{ opacity: 0, scale: 0.95 }}
                          animate={{ opacity: 1, scale: 1 }}
                          key={idx} 
-                         className="absolute rounded-xl p-2.5 overflow-hidden group hover:z-50 transition-all flex flex-col shadow-lg backdrop-blur-sm"
+                         onClick={() => onSelectAppointment && onSelectAppointment(app)}
+                         className="absolute cursor-pointer rounded-xl p-2.5 overflow-hidden group hover:z-50 transition-all flex flex-col shadow-lg backdrop-blur-sm"
                          style={{ 
                            top: `${startOffset}px`, 
                            height: `${heightPixels}px`,

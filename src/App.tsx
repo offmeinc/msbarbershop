@@ -169,6 +169,7 @@ export default function App() {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [staffNotifications, setStaffNotifications] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [appointmentToEdit, setAppointmentToEdit] = useState<any>(null);
   const isSigningUp = useRef(false);
 
   useEffect(() => {
@@ -599,10 +600,10 @@ export default function App() {
           {currentScreen === "login" && <CollaboratorLoginScreen onLogin={handleLogin} setCurrentScreen={setCurrentScreen} setRequestedRole={setRequestedRole} />}
           {currentScreen === "client-login" && <ClientPortalScreen onLogin={handleClientLogin} onForgotPassword={handleForgotPassword} onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "client-dashboard" && <ClientDashboardScreen user={loggedInClient} onBack={() => setCurrentScreen("home")} />}
-          {currentScreen === "booking" && <BookingScreen user={user} role={userRole} services={services} onBack={() => setCurrentScreen("home")} />}
-          {currentScreen === "agenda" && <DashboardScreen user={user} role={userRole} services={services} dashboardView="calendar" onBack={() => setCurrentScreen("home")} onNewBooking={() => setCurrentScreen("booking")} />}
-          {currentScreen === "collaborators" && <DashboardScreen user={user} role={userRole} services={services} dashboardView="collaborators" onBack={() => setCurrentScreen("home")} onNewBooking={() => setCurrentScreen("booking")} />}
-          {currentScreen === "services" && <DashboardScreen user={user} role={userRole} services={services} dashboardView="services" onBack={() => setCurrentScreen("home")} onNewBooking={() => setCurrentScreen("booking")} />}
+          {currentScreen === "booking" && <BookingScreen user={user} role={userRole} services={services} onBack={() => { setCurrentScreen("home"); setAppointmentToEdit(null); }} editAppointment={appointmentToEdit} />}
+          {currentScreen === "agenda" && <DashboardScreen user={user} role={userRole} services={services} dashboardView="calendar" onBack={() => setCurrentScreen("home")} onNewBooking={() => setCurrentScreen("booking")} onEditBooking={(app) => { setAppointmentToEdit(app); setCurrentScreen("booking"); }} />}
+          {currentScreen === "collaborators" && <DashboardScreen user={user} role={userRole} services={services} dashboardView="collaborators" onBack={() => setCurrentScreen("home")} onNewBooking={() => setCurrentScreen("booking")} onEditBooking={(app) => { setAppointmentToEdit(app); setCurrentScreen("booking"); }} />}
+          {currentScreen === "services" && <DashboardScreen user={user} role={userRole} services={services} dashboardView="services" onBack={() => setCurrentScreen("home")} onNewBooking={() => setCurrentScreen("booking")} onEditBooking={(app) => { setAppointmentToEdit(app); setCurrentScreen("booking"); }} />}
           {currentScreen === "promotions" && <PromotionsManager onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "clients" && <ClientsScreen onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "more" && (

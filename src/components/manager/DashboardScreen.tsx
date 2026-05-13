@@ -98,7 +98,7 @@ export function EarningsDashboard({ appointments, services }: { appointments: an
   );
 }
 
-export function DashboardScreen({ user, role, services, dashboardView, onBack, onNewBooking }: { user: any, role: string, services: any[], dashboardView?: "agenda" | "list" | "calendar" | "services" | "hours" | "collaborators" | "earnings", onBack: () => void, onNewBooking?: () => void }) {
+export function DashboardScreen({ user, role, services, dashboardView, onBack, onNewBooking, onEditBooking }: { user: any, role: string, services: any[], dashboardView?: "agenda" | "list" | "calendar" | "services" | "hours" | "collaborators" | "earnings", onBack: () => void, onNewBooking?: () => void, onEditBooking?: (app: any) => void }) {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [barbers, setBarbers] = useState<any[]>([]);
   const [selectedBarberId, setSelectedBarberId] = useState<string>("all");
@@ -361,6 +361,10 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
           appointment={selectedAppointment} 
           onClose={() => setSelectedAppointment(null)} 
           onUpdate={handleStatusUpdate}
+          onEdit={(app) => {
+              setSelectedAppointment(null);
+              if (onEditBooking) onEditBooking(app);
+          }}
         />
       )}
       
@@ -374,6 +378,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
           role={role}
           updateStatus={handleStatusUpdate}
           onNewBooking={onNewBooking}
+          onSelectAppointment={setSelectedAppointment}
         />
       ) : (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
