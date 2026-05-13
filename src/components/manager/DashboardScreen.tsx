@@ -98,7 +98,7 @@ export function EarningsDashboard({ appointments, services }: { appointments: an
   );
 }
 
-export function DashboardScreen({ user, role, services, dashboardView, onBack }: { user: any, role: string, services: any[], dashboardView?: "agenda" | "list" | "calendar" | "services" | "hours" | "collaborators" | "earnings", onBack: () => void }) {
+export function DashboardScreen({ user, role, services, dashboardView, onBack, onNewBooking }: { user: any, role: string, services: any[], dashboardView?: "agenda" | "list" | "calendar" | "services" | "hours" | "collaborators" | "earnings", onBack: () => void, onNewBooking?: () => void }) {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [barbers, setBarbers] = useState<any[]>([]);
   const [selectedBarberId, setSelectedBarberId] = useState<string>("all");
@@ -234,7 +234,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack }:
         </div>
       )}
       
-      {currentView !== 'agenda' && currentView !== 'earnings' && (
+      {currentView === 'list' && (
         <div className="flex items-center justify-between mb-8">
           <div className="flex flex-col gap-1">
              <h1 className="text-2xl font-black text-white capitalize">{format(currentDate, "dd 'de' MMMM", { locale: ptBR })}</h1>
@@ -261,7 +261,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack }:
         </div>
       )}
 
-      {currentView !== 'agenda' && currentView !== 'earnings' && (
+      {currentView === 'list' && (
         <div className="flex items-center gap-2 mb-8">
           <button onClick={() => setCurrentDate(addDays(currentDate, -1))} className="text-neutral-700 hover:text-amber-500 transition-colors"><ChevronLeft className="w-6 h-6" /></button>
           <div className="flex-1 overflow-x-auto no-scrollbar flex gap-1 justify-between">
@@ -294,7 +294,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack }:
         </div>
       )}
 
-      {(role === 'manager' || role === 'barber') && (
+      {(role === 'manager' || role === 'barber') && (currentView === 'list' || currentView === 'agenda') && (
           <div className="flex gap-4 overflow-x-auto no-scrollbar mb-8 pb-2">
               <button 
                 onClick={() => setSelectedBarberId("all")}
@@ -328,7 +328,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack }:
           </div>
       )}
 
-      {currentView !== 'agenda' && currentView !== 'earnings' && (
+      {currentView === 'list' && (
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
             <span className="text-white font-black text-lg">Hoje</span>
@@ -346,7 +346,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack }:
         </div>
       )}
 
-      {currentView !== 'agenda' && currentView !== 'earnings' && (
+      {currentView === 'list' && (
         <div className="bg-amber-500/5 border border-amber-500/10 px-4 py-2 rounded-full inline-flex items-center gap-2 mb-8 group cursor-pointer hover:bg-amber-500/10 transition-all">
           <Lock className="w-3.5 h-3.5 text-amber-500" />
           <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Bloqueios visíveis</span>
@@ -373,6 +373,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack }:
           onDateChange={setCurrentDate}
           role={role}
           updateStatus={handleStatusUpdate}
+          onNewBooking={onNewBooking}
         />
       ) : (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">

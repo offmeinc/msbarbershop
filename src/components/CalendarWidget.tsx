@@ -87,7 +87,8 @@ export function CalendarWidget({
   currentDate, 
   onDateChange, 
   role, 
-  updateStatus 
+  updateStatus,
+  onNewBooking
 }: { 
   appointments: any[], 
   mode: "day" | "week" | "month", 
@@ -95,7 +96,8 @@ export function CalendarWidget({
   currentDate: Date, 
   onDateChange: (date: Date) => void,
   role: string,
-  updateStatus: (app: any, status: string) => void
+  updateStatus: (app: any, status: string) => void,
+  onNewBooking?: () => void
 }) {
   const navigate = (direction: number) => {
     if (mode === "month") onDateChange(addMonths(currentDate, direction));
@@ -427,7 +429,14 @@ export function CalendarWidget({
             <h2 className="text-3xl font-black italic uppercase tracking-tighter leading-none text-white">
                Meu <span className="text-amber-500">Fluxo</span>
             </h2>
-            <p className="hidden sm:block text-[10px] text-neutral-500 uppercase tracking-widest font-black pt-1">Calendário de Atendimentos</p>
+            {(role === 'manager' || role === 'barber') && onNewBooking && (
+                <button
+                   onClick={onNewBooking}
+                   className="flex items-center gap-2 bg-amber-500 px-4 py-2 rounded-xl text-black font-black uppercase text-[10px] tracking-widest active:scale-95 transition-all shrink-0"
+                >
+                   + Nova Reserva
+                </button>
+            )}
          </div>
          <div className="flex bg-neutral-900 p-1 rounded-2xl border border-white/5 shadow-xl overflow-x-auto max-w-full">
            {[

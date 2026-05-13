@@ -107,12 +107,13 @@ function ConfirmationModal({ service, date, onConfirm }: any) {
 
 interface BookingScreenProps {
   user: any;
+  role?: string;
   services: any[];
   onBack: () => void;
   editAppointment?: any;
 }
 
-export function BookingScreen({ user, services, onBack, editAppointment }: BookingScreenProps) {
+export function BookingScreen({ user, role, services, onBack, editAppointment }: BookingScreenProps) {
   const [step, setStep] = useState(editAppointment ? 3 : 1);
   const [selectedService, setSelectedService] = useState<string | null>(editAppointment?.serviceId || null);
   const [selectedBarber, setSelectedBarber] = useState<string | null>(editAppointment?.barberId || null);
@@ -222,8 +223,10 @@ export function BookingScreen({ user, services, onBack, editAppointment }: Booki
         setError("Todos os campos são obrigatórios.");
         return;
     }
-    if (!user && (!guestName || !guestPhone)) {
-        setError("Nome e WhatsApp são obrigatórios para visitantes.");
+    const isStaffBooking = role === 'manager' || role === 'barber';
+
+    if ((!user || isStaffBooking) && (!guestName || !guestPhone)) {
+        setError("Nome e WhatsApp são obrigatórios para o cliente.");
         return;
     }
     const [hours, minutes] = selectedTime.split(':').map(Number);
@@ -240,17 +243,23 @@ export function BookingScreen({ user, services, onBack, editAppointment }: Booki
       const service = services.find(s => s.id === selectedService);
       const barber = barbers.find(b => b.id === selectedBarber);
       const loginCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-      let effectiveClientId = user ? (user.uid || user.id) : "guest";
+      
+      const cleanPhone = guestPhone.replace(/\D/g, '');
+      let effectiveClientId = user && !isStaffBooking ? (user.uid || user.id) : (cleanPhone || "guest");
+      const clientNameData = user && !isStaffBooking ? (user.displayName || user.name) : guestName;
+      const clientEmailData = user && !isStaffBooking ? user.email : guestEmail;
+      const clientPhotoData = user && !isStaffBooking ? (user.photoURL || user.photoUrl) : null;
+
       const baseData = {
         clientId: effectiveClientId,
-        clientName: user ? (user.displayName || user.name) : guestName,
-        clientEmail: user ? user.email : guestEmail,
+        clientName: clientNameData,
+        clientEmail: clientEmailData,
         clientPhone: guestPhone,
         barberId: selectedBarber,
         barberName: barber?.name,
         serviceId: selectedService,
         serviceName: service?.name,
-        clientPhoto: user ? (user.photoURL || user.photoUrl) : null,
+        clientPhoto: clientPhotoData,
         status: "pending",
         totalPrice: (Number(service?.price) || 0) * (1 - appliedDiscount / 100),
         createdAt: serverTimestamp(),
@@ -265,7 +274,7 @@ export function BookingScreen({ user, services, onBack, editAppointment }: Booki
           date: Timestamp.fromDate(finalDate),
           time: selectedTime,
           updatedAt: serverTimestamp(),
-          rescheduledBy: 'client'
+          rescheduledBy: isStaffBooking ? 'staff' : 'client'
         });
       } else {
         await addDoc(collection(db, "appointments"), {
@@ -275,8 +284,7 @@ export function BookingScreen({ user, services, onBack, editAppointment }: Booki
         });
 
         // Ensure user exists for later login with phone
-        if (!user && guestPhone) {
-          const cleanPhone = guestPhone.replace(/\D/g, '');
+        if ((!user || isStaffBooking) && guestPhone) {
           const userRef = doc(db, "users", cleanPhone); // Use phone as ID to avoid duplicates
           const userSnap = await getDoc(userRef);
           if (!userSnap.exists()) {
@@ -427,10 +435,10 @@ export function BookingScreen({ user, services, onBack, editAppointment }: Booki
 
           {step === 4 && (
             <motion.div key="step4" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} className="space-y-6">
-                {!user && (
+                {(!user || role === 'manager' || role === 'barber') && (
                     <div className="bg-neutral-900 p-6 rounded-[2rem] border border-white/5 space-y-3">
-                       <input placeholder="Seu Nome" className="w-full p-4 bg-black rounded-2xl border border-white/5 text-white" value={guestName} onChange={e => setGuestName(e.target.value)} />
-                       <input placeholder="WhatsApp" className="w-full p-4 bg-black rounded-2xl border border-white/5 text-white" value={guestPhone} onChange={e => setGuestPhone(e.target.value)} />
+                       <input placeholder="Nome do Cliente" className="w-full p-4 bg-black rounded-2xl border border-white/5 text-white" value={guestName} onChange={e => setGuestName(e.target.value)} />
+                       <input placeholder="WhatsApp do Cliente" className="w-full p-4 bg-black rounded-2xl border border-white/5 text-white" value={guestPhone} onChange={e => setGuestPhone(e.target.value)} />
                        <input placeholder="E-mail (opcional)" className="w-full p-4 bg-black rounded-2xl border border-white/5 text-white" value={guestEmail} onChange={e => setGuestEmail(e.target.value)} />
                     </div>
                 )}

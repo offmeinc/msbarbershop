@@ -4,7 +4,8 @@ service cloud.firestore {
     // Services
     match /services/{serviceId} {
       allow read: if true;
-      allow write: if false;
+      allow write: if exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+                      (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'manager' || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'barber');
     }
     // Appointments
     match /appointments/{appointmentId} {
