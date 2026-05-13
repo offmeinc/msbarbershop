@@ -34,7 +34,6 @@ import {
   LogOut 
 } from "lucide-react";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
-import { StyleGalleryScreen } from "./StyleGalleryScreen";
 import { BookingScreen } from "./BookingScreen";
 import { ProfileEditScreen } from "../common/ProfileEditScreen";
 
@@ -45,7 +44,7 @@ interface ClientDashboardScreenProps {
 
 export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenProps) {
   const [appointments, setAppointments] = useState<any[]>([]);
-  const [currentView, setCurrentView] = useState<"home" | "profile" | "booking" | "gallery">("home");
+  const [currentView, setCurrentView] = useState<"home" | "profile" | "booking">("home");
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [services, setServices] = useState<any[]>([]);
@@ -165,7 +164,6 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
     }
   };
 
-  if (currentView === 'gallery') return <StyleGalleryScreen onBack={() => setCurrentView('home')} />;
   if (currentView === 'profile') return <ProfileEditScreen user={user} onBack={() => setCurrentView('home')} isClient={true} />;
   if (currentView === 'booking') return <BookingScreen user={user} services={services} onBack={() => { setCurrentView('home'); setSelectedAppointment(null); }} editAppointment={selectedAppointment} />;
 
@@ -286,7 +284,6 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
 
       <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-[#0A0A0A]/95 border border-white/10 backdrop-blur-3xl rounded-[2.5rem] p-1.5 flex items-center gap-1.5 z-50 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
          <button onClick={() => setCurrentView('home')} className={`px-5 py-3.5 rounded-full ${currentView === 'home' ? 'bg-amber-500 text-black' : 'text-neutral-500'}`}><Home className="w-4 h-4" /></button>
-         <button onClick={() => setCurrentView('gallery')} className={`px-5 py-3.5 rounded-full ${currentView === 'gallery' ? 'bg-amber-500 text-black' : 'text-neutral-500'}`}><Layout className="w-4 h-4" /></button>
          <button onClick={() => setCurrentView('profile')} className={`px-5 py-3.5 rounded-full ${currentView === 'profile' ? 'bg-amber-500 text-black' : 'text-neutral-500'}`}><User className="w-4 h-4" /></button>
          <div className="w-[1px] h-4 bg-white/10 mx-1" />
          <button onClick={onBack} className="p-4 text-neutral-600 hover:text-red-500 uppercase"><LogOut className="w-4 h-4" /></button>

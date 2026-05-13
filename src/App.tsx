@@ -69,7 +69,6 @@ import { HelpScreen, ShareScreen, RecurrenceScreen } from "./components/manager/
 import { ReconScreen, LinkScreen } from "./components/manager/UtilityScreens";
 import { ProfessionalHome } from "./components/professional/ProfessionalHome";
 import { ClientDashboardScreen } from "./components/client/ClientDashboardScreen";
-import { StyleGalleryScreen } from "./components/client/StyleGalleryScreen";
 import { ProfileEditScreen } from "./components/common/ProfileEditScreen";
 import { BookingScreen } from "./components/client/BookingScreen";
 import { HomeScreen } from "./components/client/HomeScreen";
@@ -599,7 +598,7 @@ export default function App() {
           {currentScreen === "client-login" && <ClientPortalScreen onLogin={handleClientLogin} onForgotPassword={handleForgotPassword} onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "client-dashboard" && <ClientDashboardScreen user={loggedInClient} onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "booking" && <BookingScreen user={user} services={services} onBack={() => setCurrentScreen("home")} />}
-          {currentScreen === "agenda" && <DashboardScreen user={user} role={userRole} services={services} dashboardView={dashboardView || "list"} onBack={() => setCurrentScreen("home")} />}
+          {currentScreen === "agenda" && <DashboardScreen user={user} role={userRole} services={services} dashboardView="calendar" onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "collaborators" && <DashboardScreen user={user} role={userRole} services={services} dashboardView="collaborators" onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "services" && <DashboardScreen user={user} role={userRole} services={services} dashboardView="services" onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "promotions" && <PromotionsManager onBack={() => setCurrentScreen("home")} />}

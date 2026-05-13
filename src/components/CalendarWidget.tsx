@@ -237,73 +237,147 @@ export function CalendarWidget({
 
   const renderDayView = () => {
     const dayApps = getAppointmentsForDay(currentDate);
-    const hours = Array.from({ length: 14 }, (_, i) => i + 8); // 8 AM to 9 PM
+    const hours = Array.from({ length: 15 }, (_, i) => i + 8); // 8 AM to 10 PM
+    
+    // Calculate overlapping for events
+    const calculateOverlaps = (events: any[]) => {
+      const sorted = [...events].sort((a, b) => {
+        const timeA = a.time.split(':').map(Number);
+        const timeB = b.time.split(':').map(Number);
+        return (timeA[0]*60 + timeA[1]) - (timeB[0]*60 + timeB[1]);
+      });
+
+      const duration = 50; // Assume 50 minutes duration
+      let clusters: any[][] = [];
+      let currentCluster: any[] = [];
+      let currentClusterEnd = 0;
+
+      sorted.forEach(evt => {
+        const [h, m] = evt.time.split(':').map(Number);
+        const start = h * 60 + m;
+        const end = start + duration;
+
+        if (currentCluster.length > 0 && start >= currentClusterEnd) {
+          clusters.push(currentCluster);
+          currentCluster = [];
+          currentClusterEnd = 0;
+        }
+
+        currentCluster.push({ ...evt, start, end });
+        currentClusterEnd = Math.max(currentClusterEnd, end);
+      });
+      if (currentCluster.length > 0) {
+        clusters.push(currentCluster);
+      }
+
+      const positionedEvents: any[] = [];
+
+      clusters.forEach(cluster => {
+        const columns: any[][] = [];
+        cluster.forEach(evt => {
+          let placed = false;
+          for (let i = 0; i < columns.length; i++) {
+            const lastEvt = columns[i][columns[i].length - 1];
+            if (evt.start >= lastEvt.end) {
+              columns[i].push(evt);
+              evt.column = i;
+              placed = true;
+              break;
+            }
+          }
+          if (!placed) {
+            evt.column = columns.length;
+            columns.push([evt]);
+          }
+        });
+
+        cluster.forEach(evt => {
+          evt.width = 100 / columns.length;
+          evt.left = evt.column * evt.width;
+          positionedEvents.push(evt);
+        });
+      });
+
+      return positionedEvents;
+    };
+
+    const positionedApps = calculateOverlaps(dayApps);
 
     return (
-      <div className="max-w-3xl mx-auto mt-8 space-y-4">
-        <div className="bg-neutral-900 p-6 rounded-[2.5rem] border border-white/5 shadow-2xl">
-           <div className="flex items-center justify-between mb-8 pb-4 border-b border-white/5">
+      <div className="max-w-4xl mx-auto mt-8">
+        <div className="bg-[#1C1C1E] p-1 rounded-[2.5rem] border border-white/5 shadow-2xl overflow-hidden">
+           {/* Header */}
+           <div className="flex items-center justify-between p-6 bg-neutral-900 border-b border-black rounded-[2rem] z-20 relative">
               <div className="flex items-center gap-3">
-                 <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
+                 <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center border border-amber-500/20">
                     <Calendar className="w-6 h-6" />
                  </div>
                  <div>
-                    <h3 className="text-xl font-bold text-white leading-none mb-1">{format(currentDate, "eeee, d 'de' MMMM", { locale: ptBR })}</h3>
+                    <h3 className="text-xl font-bold text-white leading-none mb-1 capitalize">{format(currentDate, "EEEE, d 'de' MMMM", { locale: ptBR })}</h3>
                     <p className="text-[10px] text-neutral-500 font-black uppercase tracking-widest">{dayApps.length} Agendamentos</p>
                  </div>
               </div>
-              <div className="flex bg-black p-1 rounded-xl border border-white/5">
-                 <button onClick={() => navigate(-1)} className="p-2 hover:bg-white/5 rounded-lg transition-all text-neutral-500 hover:text-amber-500 shadow-sm"><ChevronLeft className="w-4 h-4" /></button>
-                 <button onClick={() => navigate(1)} className="p-2 hover:bg-white/5 rounded-lg transition-all text-neutral-500 hover:text-amber-500 shadow-sm"><ChevronRight className="w-4 h-4" /></button>
-              </div>
            </div>
 
-           <div className="space-y-2">
-              {hours.map(hour => {
-                const timeStr = `${hour.toString().padStart(2, '0')}:00`;
-                const hourApps = dayApps.filter(a => a.time.startsWith(hour.toString().padStart(2, '0')));
+           {/* Timeline */}
+           <div className="p-4 overflow-y-auto max-h-[600px] no-scrollbar">
+             <div className="relative mt-4" style={{ height: `${hours.length * 80}px` }}>
+                {/* Horizontal lines and time labels */}
+                {hours.map((hour, i) => (
+                  <div key={hour} className="absolute w-full flex" style={{ top: `${i * 80}px`, height: '80px' }}>
+                     <div className="w-14 flex-shrink-0 text-right pr-4 relative -top-2">
+                        <span className="text-[10px] font-bold text-neutral-500">{hour.toString().padStart(2, '0')}:00</span>
+                     </div>
+                     <div className="flex-1 border-t border-white/5 relative">
+                        {/* Half hour line (dashed) */}
+                        <div className="absolute w-full border-t border-dashed border-white/5" style={{ top: '40px' }}></div>
+                     </div>
+                  </div>
+                ))}
                 
-                return (
-                  <div key={hour} className="group flex gap-4 min-h-[50px] border-b border-white/5 last:border-none">
-                     <div className="w-12 pt-0.5 text-right">
-                        <span className="text-[10px] font-bold text-neutral-800 uppercase tracking-tight">{timeStr}</span>
-                     </div>
-                     <div className="flex-1 flex flex-col gap-1 pb-2">
-                          {hourApps.map((app, idx) => (
-                            <motion.div 
-                              key={idx}
-                              initial={{ opacity: 0, x: -10 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              className="bg-black border border-white/5 p-3 rounded-xl flex items-center justify-between hover:border-amber-500/30 transition-all group/card"
-                            >
-                              <div className="flex items-center gap-3">
-                                <div className={`w-1 h-8 rounded-full ${
-                                  app.status === 'completed' ? 'bg-amber-500' : 
-                                  app.status === 'confirmed' ? 'bg-amber-500' : 'bg-red-500'
-                                }`} />
-                                <div>
-                                  <p className="text-xs font-black text-white">{app.clientName}</p>
-                                  <p className="text-[9px] text-neutral-500 font-bold uppercase">{app.serviceName}</p>
-                                </div>
-                              </div>
-                              <div className="flex gap-2">
-                                 {(role === 'manager' || role === 'barber') && app.status === 'pending' && (
-                                   <div className="flex gap-1">
-                                      <button 
-                                        onClick={() => updateStatus(app, 'confirmed')}
-                                        className="bg-amber-500 text-black p-1.5 rounded-lg hover:bg-amber-400"
-                                      >
-                                        <CheckCircle2 className="w-3 h-3" />
-                                      </button>
-                                   </div>
-                                 )}
-                              </div>
-                            </motion.div>
-                          ))}
-                     </div>
-                   </div>
-                );
-              })}
+                {/* Appointments Container */}
+                <div className="absolute top-0 bottom-0 right-4 left-14">
+                  {positionedApps.map((app, idx) => {
+                     const startOffset = ((app.start - (8 * 60)) / 60) * 80;
+                     const heightPixels = (50 / 60) * 80; // 50 mins relative to 80px hour height
+
+                     return (
+                       <motion.div 
+                         initial={{ opacity: 0, scale: 0.95 }}
+                         animate={{ opacity: 1, scale: 1 }}
+                         key={idx} 
+                         className="absolute rounded-xl p-2.5 overflow-hidden group hover:z-50 transition-all flex flex-col shadow-lg backdrop-blur-sm"
+                         style={{ 
+                           top: `${startOffset}px`, 
+                           height: `${heightPixels}px`,
+                           left: `calc(${app.left}% + 4px)`,
+                           width: `calc(${app.width}% - 8px)`,
+                           backgroundColor: app.status === 'completed' ? 'rgba(16, 185, 129, 0.15)' : (app.status === 'confirmed' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(239, 68, 68, 0.15)'),
+                           borderColor: app.status === 'completed' ? 'rgba(16, 185, 129, 0.4)' : (app.status === 'confirmed' ? 'rgba(245, 158, 11, 0.4)' : 'rgba(239, 68, 68, 0.4)'),
+                           borderWidth: '1px',
+                           borderLeftWidth: '4px',
+                           borderLeftColor: app.status === 'completed' ? '#10b981' : (app.status === 'confirmed' ? '#f59e0b' : '#ef4444')
+                         }}
+                       >
+                          <div className="flex items-start justify-between">
+                             <div className="pt-0.5 truncate">
+                               <p className="text-xs font-black text-white truncate">{app.clientName}</p>
+                               <p className="text-[9px] text-white/70 font-bold uppercase truncate">{app.time} - {app.serviceName}</p>
+                             </div>
+                             {(role === 'manager' || role === 'barber') && app.status === 'pending' && (
+                               <button 
+                                 onClick={(e) => { e.stopPropagation(); updateStatus(app, 'confirmed'); }}
+                                 className="bg-black/40 shadow border border-white/10 p-1.5 rounded-lg text-amber-500 hover:text-white hover:bg-amber-500 transition-colors shrink-0"
+                               >
+                                 <CheckCircle2 className="w-4 h-4" />
+                               </button>
+                             )}
+                          </div>
+                       </motion.div>
+                     );
+                  })}
+                </div>
+             </div>
            </div>
         </div>
       </div>
