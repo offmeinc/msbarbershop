@@ -28,7 +28,8 @@ import {
 import { ptBR } from "date-fns/locale";
 import { Timestamp } from "firebase/firestore";
 
-export function AppointmentModal({ appointment, onClose, onUpdate, onEdit, onDelete }: { appointment: any, onClose: () => void, onUpdate: (app: any, status: string) => void, onEdit?: (app: any) => void, onDelete?: (app: any) => void }) {
+export function AppointmentModal({ appointment, onClose, onUpdate, onEdit, onDelete }: { appointment: any, onClose: () => void, onUpdate: (app: any, status: string, extraData?: any) => void, onEdit?: (app: any) => void, onDelete?: (app: any) => void }) {
+  const [payerName, setPayerName] = useState("");
   if (!appointment) return null;
   const d = appointment.date instanceof Timestamp ? appointment.date.toDate() : (typeof appointment.date === 'string' ? parseISO(appointment.date) : appointment.date);
 
@@ -54,9 +55,9 @@ export function AppointmentModal({ appointment, onClose, onUpdate, onEdit, onDel
         </div>
         
         <h2 className="text-2xl font-black italic uppercase mb-2">{appointment.clientName}</h2>
-        <p className="text-amber-500 text-[10px] font-black uppercase tracking-[0.2em] mb-8">{appointment.serviceName}</p>
+        <p className="text-amber-500 text-[10px] font-black uppercase tracking-[0.2em] mb-4">{appointment.serviceName}</p>
 
-        <div className="bg-black/50 p-6 rounded-3xl border border-white/5 space-y-4 mb-8 text-left">
+        <div className="bg-black/50 p-6 rounded-3xl border border-white/5 space-y-4 mb-6 text-left">
             <div className="flex items-center gap-3">
                 <Calendar className="w-4 h-4 text-neutral-500" />
                 <span className="text-sm font-bold text-white/90">{format(d, "dd 'de' MMMM", { locale: ptBR })}</span>
@@ -71,16 +72,31 @@ export function AppointmentModal({ appointment, onClose, onUpdate, onEdit, onDel
             </div>
         </div>
 
+        {appointment.status !== 'completed' && (
+          <div className="mb-6">
+            <input 
+              type="text" 
+              placeholder="Quem pagou? (Opcional)" 
+              value={payerName}
+              onChange={(e) => setPayerName(e.target.value)}
+              className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-xs font-bold text-white placeholder:text-neutral-600 focus:border-amber-500 outline-none transition-all"
+            />
+          </div>
+        )}
+
         <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
-               <button onClick={() => onUpdate(appointment, 'confirmed')} className="py-4 bg-amber-500 text-black rounded-2xl font-black uppercase italic text-xs">CONFIRMAR</button>
+               <button onClick={() => onUpdate(appointment, 'confirmed')} className="py-4 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-2xl font-black uppercase italic text-xs">CONFIRMAR</button>
+               <button onClick={() => onUpdate(appointment, 'completed', { payerName: payerName || appointment.clientName })} className="py-4 bg-amber-500 text-black rounded-2xl font-black uppercase italic text-xs">PAGAR</button>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
                <button onClick={() => onUpdate(appointment, 'cancelled')} className="py-4 bg-red-500/10 text-red-500 border border-red-500/20 rounded-2xl font-black uppercase italic text-xs">CANCELAR</button>
+               {onDelete && (
+                   <button onClick={() => onDelete(appointment)} className="py-4 bg-red-900/20 text-red-500 border border-red-900/50 rounded-2xl font-black uppercase italic text-xs hover:bg-red-900/40 transition-colors">EXCLUIR</button>
+               )}
             </div>
             {onEdit && (
                 <button onClick={() => onEdit(appointment)} className="w-full py-4 bg-white/5 text-white border border-white/10 rounded-2xl font-black uppercase italic text-xs hover:bg-white/10 transition-colors">EDITAR AGENDAMENTO</button>
-            )}
-            {onDelete && (
-                <button onClick={() => onDelete(appointment)} className="w-full py-4 bg-red-900/20 text-red-500 border border-red-900/50 rounded-2xl font-black uppercase italic text-xs hover:bg-red-900/40 transition-colors">EXCLUIR AGENDAMENTO</button>
             )}
         </div>
       </motion.div>

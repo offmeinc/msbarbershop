@@ -112,20 +112,26 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
 
-  const handleStatusUpdate = async (app: any, newStatus: string) => {
+  const handleStatusUpdate = async (app: any, newStatus: string, extraData: any = {}) => {
     try {
-      await updateDoc(doc(db, "appointments", app.id), { status: newStatus });
+      const updatePayload: any = { status: newStatus, ...extraData };
+      if (newStatus === 'completed') {
+        updatePayload.paymentStatus = 'paid';
+        updatePayload.paidAt = serverTimestamp();
+      }
+      
+      await updateDoc(doc(db, "appointments", app.id), updatePayload);
       await addDoc(collection(db, "notifications"), {
         loginCode: app.loginCode,
-        message: `Seu agendamento foi atualizado para: ${newStatus}`,
+        message: `Seu agendamento foi atualizado para: ${newStatus}${newStatus === 'completed' ? ' e o pagamento foi registrado.' : ''}`,
         timestamp: serverTimestamp(),
         read: false
       });
 
       // Staff notification
       await addDoc(collection(db, "staff_notifications"), {
-        type: newStatus === 'cancelled' ? 'cancellation' : 'update',
-        message: `${newStatus === 'cancelled' ? 'Cancelamento' : 'Atualização'}: ${app.clientName} ${newStatus === 'cancelled' ? 'desmarcou' : 'teve o status alterado para ' + newStatus} (${app.serviceName})`,
+        type: newStatus === 'cancelled' ? 'cancellation' : (newStatus === 'completed' ? 'payment' : 'update'),
+        message: `${newStatus === 'cancelled' ? 'Cancelamento' : (newStatus === 'completed' ? 'Pagamento' : 'Atualização')}: ${app.clientName} ${newStatus === 'cancelled' ? 'desmarcou' : (newStatus === 'completed' ? 'pagou o serviço' : 'teve o status alterado para ' + newStatus)} (${app.serviceName})`,
         timestamp: serverTimestamp(),
         read: false,
         clientId: app.clientId,
@@ -134,6 +140,10 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
 
       if (newStatus === 'cancelled') {
         setStatusMsg('Agendamento cancelado com sucesso!');
+        setTimeout(() => setStatusMsg(null), 3000);
+      } else if (newStatus === 'completed') {
+        setStatusMsg('Pagamento registrado com sucesso!');
+        setSelectedAppointment(null);
         setTimeout(() => setStatusMsg(null), 3000);
       }
     } catch (error) {
@@ -449,14 +459,18 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                                       {expandedAppointmentId === app.id && (
                                         <div className="mt-4 pt-4 border-t border-white/10 text-white text-xs space-y-2 uppercase tracking-wider font-bold">
                                             <div className="flex justify-between"><span>Preço Total</span><span className="text-amber-500">R$ {app.price || app.totalPrice || '0,00'}</span></div>
-                                            <div className="flex justify-between"><span>Pagamento</span><span className="text-neutral-400">{app.paymentStatus || 'Pendente'}</span></div>
+                                            <div className="flex justify-between"><span>Pagamento</span><span className="text-neutral-400">{app.paymentStatus === 'paid' ? 'Pago' : 'Pendente'}</span></div>
+                                            {app.payerName && <div className="flex justify-between"><span>Pago por</span><span className="text-amber-500">{app.payerName}</span></div>}
                                         </div>
                                       )}
 
                                       {(role === 'manager' || role === 'barber') && (
                                         <div className="flex gap-2 mt-4" onClick={(e) => e.stopPropagation()}>
-                                            {app.status === 'pending' && <button onClick={() => handleStatusUpdate(app, 'confirmed')} className="bg-green-500/10 text-green-500 text-[10px] font-black uppercase p-2 rounded-lg flex-1">Confirmar</button>}
-                                            {app.status === 'confirmed' && <button onClick={() => handleStatusUpdate(app, 'completed')} className="bg-blue-500/10 text-blue-500 text-[10px] font-black uppercase p-2 rounded-lg flex-1">Concluir</button>}
+                                            {(app.status === 'pending' || !app.status) && <button onClick={() => handleStatusUpdate(app, 'confirmed')} className="bg-green-500/10 text-green-500 text-[10px] font-black uppercase p-2 rounded-lg flex-1">Confirmar</button>}
+                                            {app.status === 'confirmed' && <button onClick={() => {
+                                                const payer = prompt("Quem pagou?", app.clientName);
+                                                handleStatusUpdate(app, 'completed', { payerName: payer || app.clientName });
+                                            }} className="bg-amber-500 text-black text-[10px] font-black uppercase p-2 rounded-lg flex-1">Pagar</button>}
                                             {app.status !== 'cancelled' && app.status !== 'completed' && <button onClick={() => handleStatusUpdate(app, 'cancelled')} className="bg-red-500/10 text-red-500 text-[10px] font-black uppercase p-2 rounded-lg flex-1">Cancelar</button>}
                                             {app.clientPhone && (
                                                 <button 
