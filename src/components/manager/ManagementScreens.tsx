@@ -22,7 +22,9 @@ import {
   doc, 
   Timestamp, 
   where,
-  setDoc
+  setDoc,
+  getDocs,
+  writeBatch
 } from "firebase/firestore";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { auth, db, handleFirestoreError, OperationType } from "../../lib/firebase";
@@ -300,6 +302,18 @@ export function ServicesManagement({ services }: { services: any[] }) {
     setLoading(true);
     try {
       if (editingId) {
+        // Update future appointments for this service
+        const qApps = query(collection(db, "appointments"), where("serviceId", "==", editingId), where("date", ">", Timestamp.now()));
+        const snapshot = await getDocs(qApps);
+        
+        if (!snapshot.empty) {
+            const batch = writeBatch(db);
+            snapshot.docs.forEach(d => {
+                batch.update(d.ref, { serviceDuration: formData.duration });
+            });
+            await batch.commit();
+        }
+
         await updateDoc(doc(db, "services", editingId), formData);
       } else {
         await addDoc(collection(db, "services"), { ...formData, createdAt: Timestamp.now() });
