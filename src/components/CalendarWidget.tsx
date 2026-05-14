@@ -375,7 +375,8 @@ export function CalendarWidget({
                 <div className="absolute top-0 bottom-0 right-4 left-14">
                   {positionedApps.map((app, idx) => {
                      const startOffset = ((app.start - (8 * 60)) / 60) * 80;
-                     const heightPixels = (50 / 60) * 80; // 50 mins relative to 80px hour height
+                     const duration = app.serviceDuration || 50;
+                     const heightPixels = (duration / 60) * 80;
 
                      return (
                        <motion.div 
