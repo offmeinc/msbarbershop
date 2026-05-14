@@ -22,7 +22,8 @@ import {
   User, 
   Clock, 
   ChevronRight, 
-  CheckCircle2 
+  CheckCircle2,
+  Image as ImageIcon
 } from "lucide-react";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
 
@@ -140,6 +141,21 @@ export function ProfessionalHome({ user, role, setCurrentScreen }: ProfessionalH
           </div>
           <div className="space-y-0.5">
             <h3 className="text-3xl font-black text-white tracking-tighter">{stats.appointmentsCount}</h3>
+          </div>
+        </button>
+
+        <button 
+          onClick={() => setCurrentScreen("portfolio")}
+          className="bg-neutral-900 p-5 rounded-[2rem] border border-white/5 space-y-3 text-left relative overflow-hidden group hover:border-pink-500/30 active:scale-95 transition-all"
+        >
+          <div className="flex justify-between items-start">
+            <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">Galeria</p>
+            <div className="w-8 h-8 rounded-full bg-pink-500/10 flex items-center justify-center text-pink-500 group-hover:bg-pink-500/20 transition-colors">
+              <ImageIcon className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="space-y-0.5">
+             <h3 className="text-3xl font-black text-white tracking-tighter">Fotos</h3>
           </div>
         </button>
 

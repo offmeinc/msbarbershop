@@ -13,9 +13,23 @@
         "whatsapp": { "type": "string" },
         "bio": { "type": "string" },
         "photoUrl": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "createdAt": { "type": "string", "format": "date-time" },
+        "referralCode": { "type": "string" },
+        "referredBy": { "type": "string" }
       },
       "required": ["uid", "name", "email", "role"]
+    },
+    "PortfolioItem": {
+      "title": "PortfolioItem",
+      "description": "Image gallery of barber's work.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "caption": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["imageUrl"]
     },
     "Service": {
       "title": "Service",
@@ -137,6 +151,10 @@
     "/promotions/{promoId}": {
       "schema": "Promotion",
       "description": "Storage for promotional codes."
+    },
+    "/portfolio/{itemId}": {
+      "schema": "PortfolioItem",
+      "description": "Storage for portfolio images."
     },
     "/chats/{userId}/messages/{msgId}": {
       "schema": { "type": "object", "properties": { "text": { "type": "string" }, "userId": { "type": "string" }, "sender": { "type": "string" }, "createdAt": { "type": "string", "format": "date-time" } } },

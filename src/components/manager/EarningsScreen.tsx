@@ -21,7 +21,8 @@ import {
   Line
 } from 'recharts';
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
-import { TrendingUp, Users, Star, ArrowLeft, DollarSign } from "lucide-react";
+import { TrendingUp, Users, Star, ArrowLeft, DollarSign, Sparkles, BrainCircuit } from "lucide-react";
+import { getBusinessInsights } from "../../services/geminiService";
 
 interface EarningsScreenProps {
   onBack: () => void;
@@ -30,6 +31,8 @@ interface EarningsScreenProps {
 export const EarningsScreen = ({ onBack }: EarningsScreenProps) => {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [aiInsights, setAiInsights] = useState<string | null>(null);
+  const [loadingInsights, setLoadingInsights] = useState(false);
 
   useEffect(() => {
     // We want all appointments to calculate retention (not just completed ones)
@@ -136,6 +139,19 @@ export const EarningsScreen = ({ onBack }: EarningsScreenProps) => {
     return Object.entries(data).map(([name, value]) => ({ name, value }));
   }, [completedApps, timeRange]);
 
+  useEffect(() => {
+    if (completedApps.length > 5 && !aiInsights && !loadingInsights) {
+      setLoadingInsights(true);
+      getBusinessInsights({
+        ...stats,
+        popularServices: serviceDistribution.map(s => s.name)
+      }).then(insight => {
+          setAiInsights(insight);
+          setLoadingInsights(false);
+      });
+    }
+  }, [stats, serviceDistribution, completedApps, aiInsights, loadingInsights]);
+
   const COLORS = ['#f59e0b', '#3b82f6', '#10b981', '#ef4444', '#8b5cf6'];
 
   if (loading) return <div className="p-12 text-center text-white font-black italic uppercase animate-pulse">Analizando dados...</div>;
@@ -169,6 +185,43 @@ export const EarningsScreen = ({ onBack }: EarningsScreenProps) => {
                     <h3 className="text-2xl font-black italic">{stats.avgRating.toFixed(1)}</h3>
                     <Star className="w-5 h-5 fill-amber-500 text-amber-500 mb-1" />
                 </div>
+            </div>
+        </div>
+
+        {/* AI Insights Card */}
+        <div className="bg-gradient-to-br from-indigo-900/40 to-slate-900/40 border border-indigo-500/20 rounded-[2.5rem] p-8 mb-8 relative overflow-hidden backdrop-blur-xl">
+            <div className="absolute top-0 right-0 p-6 opacity-10">
+                <BrainCircuit className="w-24 h-24 text-indigo-400" />
+            </div>
+            <div className="relative z-10">
+                <div className="flex items-center gap-3 mb-6">
+                    <div className="p-3 bg-indigo-500/20 rounded-2xl">
+                        <Sparkles className="w-5 h-5 text-indigo-400" />
+                    </div>
+                    <div>
+                        <h3 className="text-xs font-black uppercase tracking-widest text-indigo-300">Insights por IA</h3>
+                        <p className="text-[10px] text-indigo-400/60 font-bold uppercase mt-0.5">Gemini Intelligence</p>
+                    </div>
+                </div>
+
+                {loadingInsights ? (
+                    <div className="space-y-3">
+                        <div className="h-4 w-3/4 bg-indigo-500/10 rounded-full animate-pulse" />
+                        <div className="h-4 w-1/2 bg-indigo-500/10 rounded-full animate-pulse" />
+                        <div className="h-4 w-5/6 bg-indigo-500/10 rounded-full animate-pulse" />
+                    </div>
+                ) : aiInsights ? (
+                    <div className="text-neutral-300 text-sm leading-relaxed space-y-4 font-medium italic">
+                        {aiInsights.split('\n').filter(line => line.trim()).map((line, i) => (
+                            <p key={i} className="flex gap-3">
+                                <span className="text-indigo-400 mt-1">•</span>
+                                {line.replace(/^[-*•]\s*/, '')}
+                            </p>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-neutral-500 text-xs italic">Aguardando mais dados para gerar insights precisos...</p>
+                )}
             </div>
         </div>
 

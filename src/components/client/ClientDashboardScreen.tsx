@@ -31,7 +31,10 @@ import {
   Home, 
   Layout, 
   User, 
-  LogOut 
+  LogOut,
+  Share2,
+  Gift,
+  Copy
 } from "lucide-react";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
 import { BookingScreen } from "./BookingScreen";
@@ -52,6 +55,15 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
   const [showReviewModal, setShowReviewModal] = useState<any>(null);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
+  const [referralCode, setReferralCode] = useState(user?.referralCode || "");
+
+  useEffect(() => {
+    if (user?.uid && !user.referralCode && !referralCode) {
+      const newRef = Math.random().toString(36).substring(2, 8).toUpperCase();
+      updateDoc(doc(db, "users", user.uid), { referralCode: newRef })
+        .then(() => setReferralCode(newRef));
+    }
+  }, [user?.uid, user?.referralCode, referralCode]);
 
   useEffect(() => {
     if (!user || !user.email) return;
@@ -224,6 +236,50 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                     <p className="text-[10px] font-black uppercase tracking-widest text-neutral-500 mb-1">Cashback</p>
                     <p className="text-2xl font-black italic text-green-500 leading-none">R$ 0,00</p>
                  </div>
+              </div>
+
+              {/* Referral Section */}
+              <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 p-8 rounded-[3rem] shadow-2xl relative overflow-hidden group">
+                  <div className="absolute -right-4 -bottom-4 text-white/5 group-hover:scale-110 transition-transform duration-700">
+                    <Gift size={160} />
+                  </div>
+                  <div className="relative z-10">
+                    <div className="flex items-center gap-2 mb-4">
+                        <Share2 className="w-4 h-4 text-indigo-200" />
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-100">Convide um amigo</span>
+                    </div>
+                    <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white mb-2 leading-none">Indique e Ganhe</h3>
+                    <p className="text-xs text-indigo-100/70 font-medium mb-6">Compartilhe seu código e ambos ganham 15% de desconto no próximo corte!</p>
+                    
+                    <div className="flex items-center gap-2">
+                        <div className="flex-1 bg-black/30 backdrop-blur-md rounded-2xl p-4 border border-white/10 flex items-center justify-between">
+                            <span className="text-sm font-black tracking-widest text-white">{referralCode || "GERANDO..."}</span>
+                            <button 
+                                onClick={() => {
+                                    navigator.clipboard.writeText(referralCode);
+                                    alert("Código copiado!");
+                                }}
+                                className="text-indigo-300 hover:text-white transition-colors"
+                            >
+                                <Copy className="w-4 h-4" />
+                            </button>
+                        </div>
+                        <button 
+                            onClick={() => {
+                                if (navigator.share) {
+                                    navigator.share({
+                                        title: 'Minha Barbearia Favorita',
+                                        text: `Use meu código ${referralCode} para ganhar 15% de desconto na barbearia!`,
+                                        url: window.location.href
+                                    });
+                                }
+                            }}
+                            className="bg-white text-indigo-600 p-4 rounded-2xl font-black transition-all active:scale-95"
+                        >
+                            <Share2 className="w-5 h-5" />
+                        </button>
+                    </div>
+                  </div>
               </div>
 
               {stats.upcoming && (

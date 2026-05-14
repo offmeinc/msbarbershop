@@ -141,7 +141,9 @@ import {
   deleteDoc
 } from "firebase/firestore";
 
-type Screen = "home" | "booking" | "agenda" | "clients" | "more" | "login" | "collaborators" | "services" | "client-login" | "client-dashboard" | "earnings";
+import { PortfolioManager } from "./components/professional/PortfolioManager";
+
+type Screen = "home" | "booking" | "agenda" | "clients" | "more" | "login" | "collaborators" | "services" | "client-login" | "client-dashboard" | "earnings" | "promotions" | "portfolio";
 
 
 export default function App() {
@@ -616,6 +618,7 @@ export default function App() {
           {currentScreen === "earnings" && <EarningsScreen onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "promotions" && <PromotionsManager onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "clients" && <ClientsScreen onBack={() => setCurrentScreen("home")} />}
+          {currentScreen === "portfolio" && <PortfolioManager onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "more" && (
             <MoreOptionsScreen 
               user={user} 

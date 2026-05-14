@@ -106,6 +106,7 @@ export function AppointmentModal({ appointment, onClose, onUpdate, onEdit, onDel
 
 export function CalendarWidget({ 
   appointments, 
+  services = [],
   mode, 
   onModeChange,
   currentDate, 
@@ -116,6 +117,7 @@ export function CalendarWidget({
   onSelectAppointment
 }: { 
   appointments: any[], 
+  services?: any[],
   mode: "day" | "week" | "month", 
   onModeChange?: (mode: "day" | "week" | "month") => void,
   currentDate: Date, 
@@ -305,7 +307,11 @@ export function CalendarWidget({
         const timeStr = getEventTime(evt);
         const [h, m] = timeStr.split(':').map(Number);
         const start = h * 60 + m;
-        const duration = evt.serviceDuration || 50;
+        
+        // Find service duration
+        const serviceInfo = (services || []).find(s => s.id === evt.serviceId);
+        const duration = evt.serviceDuration || (serviceInfo?.duration) || 30;
+        
         const end = start + duration;
 
         if (currentCluster.length > 0 && start >= currentClusterEnd) {
@@ -314,7 +320,7 @@ export function CalendarWidget({
           currentClusterEnd = 0;
         }
 
-        currentCluster.push({ ...evt, start, end });
+        currentCluster.push({ ...evt, start, end, actualDuration: duration });
         currentClusterEnd = Math.max(currentClusterEnd, end);
       });
       if (currentCluster.length > 0) {
@@ -394,7 +400,7 @@ export function CalendarWidget({
                 <div className="absolute top-0 bottom-0 right-4 left-14">
                   {positionedApps.map((app, idx) => {
                      const startOffset = ((app.start - (8 * 60)) / 60) * 80;
-                     const duration = app.serviceDuration || 50;
+                      const duration = app.actualDuration;
                      const heightPixels = (duration / 60) * 80;
 
                      return (

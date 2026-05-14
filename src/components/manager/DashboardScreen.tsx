@@ -395,6 +395,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
       {currentView === 'agenda' ? (
         <CalendarWidget 
           appointments={appointments.filter(app => selectedBarberId === 'all' || app.barberId === selectedBarberId)}
+          services={services}
           mode={agendaMode}
           onModeChange={setAgendaMode}
           currentDate={currentDate}

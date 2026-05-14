@@ -1,6 +1,6 @@
 {
   "name": "MS BARBER SHOP",
-  "description": "Plataforma completa de agendamento e gestão para MS BARBER SHOP.",
+  "description": "Plataforma completa de agendamento e gestão para MS BARBER SHOP, com Insights por IA (Gemini), Sistema de Indicações e Portfólio de Cortes.",
   "requestFramePermissions": [],
   "majorCapabilities": []
 }

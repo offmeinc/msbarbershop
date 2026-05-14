@@ -1,47 +1,76 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Services
-    match /services/{serviceId} {
-      allow read: if true;
-      allow write: if exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-                      (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'manager' || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'barber');
-    }
-    // Appointments
-    match /appointments/{appointmentId} {
-      allow read, write: if true;
-    }
-    // Users
-    match /users/{userId} {
-      allow read, write: if true;
-    }
-    // Notifications
-    match /notifications/{docId} {
-      allow read, write: if true;
-    }
-    // Blocked Times
-    match /blocked_times/{docId} {
-      allow read: if true;
-      allow write: if false;
-    }
-    // Client Profiles
-    match /client_profiles/{loginCode} {
-      allow read, write: if true;
-    }
-    // Staff Notifications
-    match /staff_notifications/{docId} {
-      allow read, write: if true;
-    }
-    // Promotions
-    match /promotions/{promoId} {
-      allow read: if true;
-      allow write: if exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-                      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'manager';
-    }
-
-    // Fallback
+    // Default Deny
     match /{document=**} {
       allow read, write: if false;
     }
+
+    // Users
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && (request.auth.uid == userId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'manager');
+    }
+
+    // Services
+    match /services/{serviceId} {
+      allow read: if true;
+      allow write: if request.auth != null && 
+                      (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'manager' || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'barber');
+    }
+
+    // Appointments
+    match /appointments/{appointmentId} {
+      allow read, write: if true; // Keeping open for simplicity with login codes, but usually involves auth checks
+    }
+
+    // Working Hours
+    match /workingHours/{workId} {
+      allow read: if true;
+      allow write: if request.auth != null && 
+                      (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'manager' || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'barber');
+    }
+
+    // Reviews
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // Staff Notifications
+    match /staff_notifications/{docId} {
+      allow read, write: if request.auth != null && 
+                      (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'manager' || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'barber');
+    }
+
+    // Internal Chats
+    match /internal_chats/{msgId} {
+      allow read, write: if request.auth != null && 
+                      (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'manager' || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'barber');
+    }
+
+    // Promotions
+    match /promotions/{promoId} {
+      allow read: if true;
+      allow write: if request.auth != null && 
+                      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'manager';
+    }
+
+    // Portfolio
+    match /portfolio/{itemId} {
+      allow read: if true;
+      allow write: if request.auth != null && 
+                      (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'manager' || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'barber');
+    }
+
+    // Client Support Chats
+    match /chats/{userId}/{document=**} {
+      allow read, write: if request.auth != null && (request.auth.uid == userId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'manager' || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'barber');
+    }
+
+    // Legacy/Migration support (Keep for stability)
+    match /client_profiles/{loginCode} { allow read, write: if true; }
+    match /notifications/{docId} { allow read, write: if true; }
+    match /blocked_times/{docId} { allow read: if true; allow write: if false; }
   }
 }

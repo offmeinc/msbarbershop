@@ -211,7 +211,11 @@ export function BookingScreen({ user, role, services, onBack, editAppointment }:
           if (editAppointment && app.id === editAppointment.id) return false; // Ignore self when editing
           const appDate = app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date);
           if (format(appDate, "yyyy-MM-dd") !== format(selectedDate, "yyyy-MM-dd")) return false;
-          const appDuration = app.serviceDuration || 50;
+          
+          // Get duration from appointment or look it up in services list
+          const serviceInfo = services.find(s => s.id === app.serviceId);
+          const appDuration = app.serviceDuration || (serviceInfo?.duration) || 30;
+          
           const appEnd = new Date(appDate.getTime() + appDuration * 60000);
           return slotDate < appEnd && slotEnd > appDate;
         }) || blockedTimes.some(b => {
@@ -246,7 +250,10 @@ export function BookingScreen({ user, role, services, onBack, editAppointment }:
     const isStillBusy = barberAppointments.some(app => {
         if (editAppointment && app.id === editAppointment.id) return false;
         const appDate = app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date);
-        const appDuration = app.serviceDuration || 50;
+        
+        const serviceInfo = services.find(s => s.id === app.serviceId);
+        const appDuration = app.serviceDuration || (serviceInfo?.duration) || 30;
+        
         const appEnd = new Date(appDate.getTime() + appDuration * 60000);
         return finalDate < appEnd && finalDateEnd > appDate;
     });

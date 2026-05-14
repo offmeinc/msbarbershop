@@ -270,16 +270,15 @@ export function ServicesManagement({ services }: { services: any[] }) {
 
   const importServices = async () => {
     const defaultServices = [
-      { name: "Barba completa", duration: 30, price: 30 },
+      { name: "Corte + Barba", duration: 60, price: 60 },
       { name: "Corte Degrade", duration: 30, price: 35 },
-      { name: "Corte fast ( 1 pente )", duration: 20, price: 20 },
+      { name: "Barba completa", duration: 30, price: 30 },
       { name: "Corte Infantil", duration: 30, price: 35 },
       { name: "Corte social", duration: 30, price: 30 },
       { name: "Corte+ sobrancelha", duration: 30, price: 40 },
-      { name: "Corte+barba", duration: 60, price: 60 },
+      { name: "Corte fast ( 1 pente )", duration: 20, price: 20 },
       { name: "Corte+barba+limpeza", duration: 60, price: 80 },
       { name: "Corte+limpeza", duration: 60, price: 60 },
-      { name: "Corte+relaxamento", duration: 60, price: 60 },
       { name: "Luzes", duration: 90, price: 120 },
       { name: "Platinado", duration: 90, price: 150 },
       { name: "Sobrancelhas", duration: 10, price: 10 },
