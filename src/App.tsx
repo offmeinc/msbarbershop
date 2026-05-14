@@ -156,10 +156,15 @@ export default function App() {
 
   useMotionValueEvent(scrollY, "change", (latest) => {
     const previous = scrollY.getPrevious() ?? 0;
-    if (latest > previous && latest > 100) {
-      setHidden(true);
-    } else {
-      setHidden(false);
+    const diff = latest - previous;
+    
+    // Threshold for hiding (scroll down)
+    if (latest > previous && latest > 150) {
+      if (Math.abs(diff) > 5) setHidden(true);
+    } 
+    // Threshold for showing (scroll up)
+    else {
+      if (Math.abs(diff) > 10 || latest < 50) setHidden(false);
     }
   });
   const [dashboardView, setDashboardView] = useState<"list" | "calendar" | "services" | "hours" | "collaborators">("list");
@@ -410,11 +415,15 @@ export default function App() {
     <div className="min-h-screen bg-black text-white font-sans selection:bg-amber-500/30 pb-24 md:pb-0">
       <motion.nav 
         variants={{
-          visible: { y: 0 },
-          hidden: { y: "-100%" },
+          visible: { y: 0, opacity: 1 },
+          hidden: { y: "-100%", opacity: 0 },
         }}
-        animate={hidden ? "hidden" : "visible"}
-        transition={{ duration: 0.35, ease: "easeInOut" }}
+        animate={hidden && !isMenuOpen ? "hidden" : "visible"}
+        transition={{ 
+          duration: 0.4, 
+          ease: [0.33, 1, 0.68, 1], // Custom cubic-bezier for a smoother feel
+          opacity: { duration: 0.25 }
+        }}
         className="fixed top-0 w-full z-50 border-b border-white/5 bg-black/80 backdrop-blur-xl pt-[env(safe-area-inset-top)]"
       >
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
