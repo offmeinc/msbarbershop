@@ -5,6 +5,8 @@ import { BARBERSHOP_NAME, BARBERSHOP_ADDRESS, BARBERSHOP_PHONE, BARBERSHOP_INSTA
 
 export function HomeScreen({ services, onStartBooking }: { services: any[], onStartBooking: () => void, key?: string }) {
   const [locationSelectorOpen, setLocationSelectorOpen] = useState(false);
+  const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
+
   return (
     <div className="max-w-xl mx-auto py-8">
       {/* Hero Section */}
@@ -58,42 +60,80 @@ export function HomeScreen({ services, onStartBooking }: { services: any[], onSt
           <button onClick={onStartBooking} className="text-[10px] font-bold text-amber-500 uppercase tracking-widest hover:underline">Ver Tabela</button>
         </div>
         <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide no-scrollbar -mx-6 px-6">
-           {services.slice(0, 4).map((service, idx) => (
-             <motion.div 
-               key={idx} 
-               initial={{ opacity: 0, x: 20 }}
-               whileInView={{ opacity: 1, x: 0 }}
-               viewport={{ once: true }}
-               transition={{ delay: idx * 0.1 }}
-               whileHover={{ y: -12, scale: 1.02 }}
-               whileTap={{ scale: 0.98, y: -4 }}
-               onClick={onStartBooking}
-               className="flex-shrink-0 w-40 sm:w-48 h-56 sm:h-64 bg-neutral-900/50 backdrop-blur-xl rounded-[2.5rem] border border-white/5 p-5 sm:p-6 flex flex-col justify-between group cursor-pointer hover:border-amber-500/40 active:border-amber-500/40 transition-all shadow-2xl relative overflow-hidden"
-             >
-                <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-3xl rounded-full opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity" />
-                
-                <div className="relative z-10 w-10 sm:w-12 h-10 sm:h-12 rounded-2xl bg-white/5 overflow-hidden flex items-center justify-center group-hover:scale-110 transition-all duration-500 shadow-lg border border-white/5 group-hover:border-amber-500/50">
-                  <img 
-                    src="https://i.ibb.co/LXjzGkFs/cd17f19f-71a4-453e-b9d7-f129a7ecfb2f.jpg" 
-                    alt="Logo"
-                    className="w-full h-full object-cover"
-                    referrerPolicy="no-referrer"
-                  />
-                </div>
+           {services.slice(0, 4).map((service, idx) => {
+             const isSelected = selectedServiceId === (service.id || idx.toString());
+             return (
+               <motion.div 
+                 key={idx} 
+                 initial={{ opacity: 0, x: 20 }}
+                 whileInView={{ opacity: 1, x: 0 }}
+                 viewport={{ once: true }}
+                 transition={{ delay: idx * 0.1 }}
+                 layout
+                 onClick={() => {
+                   if (isSelected) {
+                     onStartBooking();
+                   } else {
+                     setSelectedServiceId(service.id || idx.toString());
+                   }
+                 }}
+                 className={`${
+                   isSelected ? 'w-64 border-amber-500 bg-neutral-900 shadow-amber-500/10' : 'w-40 sm:w-48 border-white/5 bg-neutral-900/50'
+                 } flex-shrink-0 min-h-[14rem] rounded-[2.5rem] border backdrop-blur-xl p-5 sm:p-6 flex flex-col justify-between group cursor-pointer transition-all duration-500 shadow-2xl relative overflow-hidden`}
+               >
+                  <div className={`absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-3xl rounded-full transition-opacity ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} />
+                  
+                  <div className={`relative z-10 w-10 sm:w-12 h-10 sm:h-12 rounded-2xl bg-white/5 overflow-hidden flex items-center justify-center transition-all duration-500 shadow-lg border ${isSelected ? 'border-amber-500 scale-110' : 'border-white/5 group-hover:scale-110 group-hover:border-amber-500/50'}`}>
+                    <img 
+                      src="https://i.ibb.co/LXjzGkFs/cd17f19f-71a4-453e-b9d7-f129a7ecfb2f.jpg" 
+                      alt="Logo"
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
 
-                <div className="relative z-10">
-                   <h4 className="text-white font-black uppercase italic tracking-tighter text-sm sm:text-base mb-1 line-clamp-2 transition-all duration-300 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-white group-hover:to-amber-500 group-active:text-transparent group-active:bg-clip-text group-active:bg-gradient-to-r group-active:from-white group-active:to-amber-500">
-                     {service.name}
-                   </h4>
-                   <div className="flex items-center gap-2">
-                     <div className="h-px w-4 bg-amber-500/30 group-hover:w-8 group-active:w-8 transition-all" />
-                     <p className="text-amber-500 font-extrabold text-xs sm:text-sm tracking-tight group-hover:scale-110 origin-left transition-transform">
-                       R$ {service.price.toFixed(2)}
-                     </p>
-                   </div>
-                </div>
-             </motion.div>
-           ))}
+                  <div className="relative z-10 mt-4">
+                     <h4 className={`font-black uppercase italic tracking-tighter text-sm sm:text-base mb-2 line-clamp-2 transition-all duration-300 ${isSelected ? 'text-amber-500 scale-105 origin-left' : 'text-white'}`}>
+                       {service.name}
+                     </h4>
+                     
+                     <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2">
+                           <div className={`h-px bg-amber-500/30 transition-all ${isSelected ? 'w-12' : 'w-4 group-hover:w-8'}`} />
+                           <p className={`text-amber-500 font-extrabold tracking-tight transition-all duration-500 ${isSelected ? 'text-xl scale-110' : 'text-xs sm:text-sm'}`}>
+                             R$ {service.price.toFixed(2)}
+                           </p>
+                        </div>
+                        
+                        <AnimatePresence>
+                          {isSelected && (
+                            <motion.div 
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: 10 }}
+                              className="mt-2 space-y-3"
+                            >
+                              <div className="flex items-center gap-2 text-[10px] text-neutral-400 font-bold uppercase tracking-widest">
+                                <Clock className="w-3 h-3" />
+                                <span>{service.duration || 30} MINUTOS</span>
+                              </div>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onStartBooking();
+                                }}
+                                className="w-full bg-white text-black py-3 rounded-2xl text-[10px] font-black uppercase italic tracking-wider hover:bg-amber-500 transition-colors"
+                              >
+                                Selecionar Serviço
+                              </button>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                     </div>
+                  </div>
+               </motion.div>
+             );
+           })}
         </div>
       </div>
 
