@@ -141,7 +141,7 @@ import {
   deleteDoc
 } from "firebase/firestore";
 
-type Screen = "home" | "booking" | "agenda" | "clients" | "more" | "login" | "collaborators" | "services" | "client-login" | "client-dashboard";
+type Screen = "home" | "booking" | "agenda" | "clients" | "more" | "login" | "collaborators" | "services" | "client-login" | "client-dashboard" | "earnings";
 
 
 export default function App() {
@@ -613,6 +613,7 @@ export default function App() {
           {currentScreen === "agenda" && <DashboardScreen user={user} role={userRole} services={services} dashboardView="calendar" onBack={() => setCurrentScreen("home")} onNewBooking={() => setCurrentScreen("booking")} onEditBooking={(app) => { setAppointmentToEdit(app); setCurrentScreen("booking"); }} />}
           {currentScreen === "collaborators" && <DashboardScreen user={user} role={userRole} services={services} dashboardView="collaborators" onBack={() => setCurrentScreen("home")} onNewBooking={() => setCurrentScreen("booking")} onEditBooking={(app) => { setAppointmentToEdit(app); setCurrentScreen("booking"); }} />}
           {currentScreen === "services" && <DashboardScreen user={user} role={userRole} services={services} dashboardView="services" onBack={() => setCurrentScreen("home")} onNewBooking={() => setCurrentScreen("booking")} onEditBooking={(app) => { setAppointmentToEdit(app); setCurrentScreen("booking"); }} />}
+          {currentScreen === "earnings" && <EarningsScreen onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "promotions" && <PromotionsManager onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "clients" && <ClientsScreen onBack={() => setCurrentScreen("home")} />}
           {currentScreen === "more" && (
