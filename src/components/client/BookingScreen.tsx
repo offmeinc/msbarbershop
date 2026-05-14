@@ -240,6 +240,23 @@ export function BookingScreen({ user, role, services, onBack, editAppointment }:
     const [hours, minutes] = selectedTime.split(':').map(Number);
     const finalDate = new Date(selectedDate);
     finalDate.setHours(hours, minutes, 0, 0);
+    const finalDateEnd = new Date(finalDate.getTime() + customDuration * 60000);
+    
+    // Final Availability Check
+    const isStillBusy = barberAppointments.some(app => {
+        if (editAppointment && app.id === editAppointment.id) return false;
+        const appDate = app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date);
+        const appDuration = app.serviceDuration || 50;
+        const appEnd = new Date(appDate.getTime() + appDuration * 60000);
+        return finalDate < appEnd && finalDateEnd > appDate;
+    });
+
+    if (isStillBusy) {
+        setError("Este horário não está mais disponível.");
+        setIsBooking(false);
+        return;
+    }
+
     setError(null);
     setIsBooking(true);
     if (finalDate < new Date()) {

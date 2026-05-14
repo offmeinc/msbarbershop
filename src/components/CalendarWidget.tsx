@@ -28,7 +28,7 @@ import {
 import { ptBR } from "date-fns/locale";
 import { Timestamp } from "firebase/firestore";
 
-export function AppointmentModal({ appointment, onClose, onUpdate, onEdit }: { appointment: any, onClose: () => void, onUpdate: (app: any, status: string) => void, onEdit?: (app: any) => void }) {
+export function AppointmentModal({ appointment, onClose, onUpdate, onEdit, onDelete }: { appointment: any, onClose: () => void, onUpdate: (app: any, status: string) => void, onEdit?: (app: any) => void, onDelete?: (app: any) => void }) {
   if (!appointment) return null;
   const d = appointment.date instanceof Timestamp ? appointment.date.toDate() : (typeof appointment.date === 'string' ? parseISO(appointment.date) : appointment.date);
 
@@ -78,6 +78,9 @@ export function AppointmentModal({ appointment, onClose, onUpdate, onEdit }: { a
             </div>
             {onEdit && (
                 <button onClick={() => onEdit(appointment)} className="w-full py-4 bg-white/5 text-white border border-white/10 rounded-2xl font-black uppercase italic text-xs hover:bg-white/10 transition-colors">EDITAR AGENDAMENTO</button>
+            )}
+            {onDelete && (
+                <button onClick={() => onDelete(appointment)} className="w-full py-4 bg-red-900/20 text-red-500 border border-red-900/50 rounded-2xl font-black uppercase italic text-xs hover:bg-red-900/40 transition-colors">EXCLUIR AGENDAMENTO</button>
             )}
         </div>
       </motion.div>

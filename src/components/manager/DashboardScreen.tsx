@@ -141,6 +141,19 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
     }
   };
 
+  const handleDelete = async (app: any) => {
+    try {
+      import("firebase/firestore").then(async ({ deleteDoc, doc }) => {
+        await deleteDoc(doc(db, "appointments", app.id));
+        setSelectedAppointment(null);
+        setStatusMsg('Agendamento excluído com sucesso!');
+        setTimeout(() => setStatusMsg(null), 3000);
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, "appointments");
+    }
+  };
+
   const exportToCSV = () => {
     const headers = ["Cliente", "Serviço", "Data", "Hora", "Barbeiro", "Status"];
     const rows = filteredAppointmentsList.map(app => {
@@ -361,6 +374,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
           appointment={selectedAppointment} 
           onClose={() => setSelectedAppointment(null)} 
           onUpdate={handleStatusUpdate}
+          onDelete={handleDelete}
           onEdit={(app) => {
               setSelectedAppointment(null);
               if (onEditBooking) onEditBooking(app);
