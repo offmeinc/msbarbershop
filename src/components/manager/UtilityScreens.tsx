@@ -50,31 +50,3 @@ export function ReconScreen({ onBack }: { onBack: () => void }) {
   );
 }
 
-export function LinkScreen({ onBack }: { onBack: () => void }) {
-    const publicLink = `${window.location.origin}/profile/${auth.currentUser?.uid || 'seu-perfil'}`;
-    const [copied, setCopied] = useState(false);
-
-    const copyToClipboard = () => {
-        navigator.clipboard.writeText(publicLink);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-    };
-
-    return (
-        <div className="max-w-md mx-auto py-8 px-6">
-            <button onClick={onBack} className="text-neutral-500 mb-4 flex items-center gap-2 hover:text-amber-500">
-               <ChevronLeft className="w-5 h-5" /> Voltar
-            </button>
-            <div className="bg-neutral-900 rounded-[2.5rem] p-8 shadow-2xl border border-white/5 space-y-6 text-center">
-                <h2 className="text-xl font-bold text-white">Link Público</h2>
-                <p className="text-neutral-500 text-sm">Compartilhe seu perfil profissional:</p>
-                <div className="bg-black/20 p-4 rounded-xl border border-white/5 break-all font-mono text-amber-500 text-sm">
-                    {publicLink}
-                </div>
-                <button onClick={copyToClipboard} className="w-full bg-amber-500 text-black py-3 rounded-xl font-bold hover:bg-amber-400 transition-all flex items-center justify-center gap-2">
-                    {copied ? 'Copiado!' : 'Copiar Link'}
-                </button>
-            </div>
-        </div>
-    );
-}

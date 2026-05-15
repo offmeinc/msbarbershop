@@ -66,7 +66,7 @@ import { EarningsScreen } from "./components/manager/EarningsScreen";
 import { BlockScreen } from "./components/manager/BlockScreen";
 import { PromotionsManager } from "./components/manager/PromotionsManager";
 import { HelpScreen, ShareScreen, RecurrenceScreen } from "./components/manager/OtherScreens";
-import { ReconScreen, LinkScreen } from "./components/manager/UtilityScreens";
+import { ReconScreen } from "./components/manager/UtilityScreens";
 import { ProfessionalHome } from "./components/professional/ProfessionalHome";
 import { ClientDashboardScreen } from "./components/client/ClientDashboardScreen";
 import { ProfileEditScreen } from "./components/common/ProfileEditScreen";

@@ -11,7 +11,6 @@ import {
   RefreshCw, 
   Tag, 
   Smartphone, 
-  ExternalLink, 
   MessageSquare, 
   MessageCircle, 
   HelpCircle, 
@@ -21,7 +20,7 @@ import {
 } from "lucide-react";
 import { BlockScreen } from "../manager/BlockScreen";
 import { HelpScreen, ShareScreen, RecurrenceScreen } from "../manager/OtherScreens";
-import { LinkScreen, ReconScreen } from "../manager/UtilityScreens";
+import { ReconScreen } from "../manager/UtilityScreens";
 import { PromotionsManager } from "../manager/PromotionsManager";
 import { ClientDashboardScreen } from "../client/ClientDashboardScreen";
 import { ProfileEditScreen } from "./ProfileEditScreen";
@@ -35,7 +34,7 @@ const MyWeekScreen = ({ user, onBack }: { user: any, onBack: () => void }) => <d
 
 export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotifications, appointments, onClearNotifications }: { user: any, role: string, onLogout: () => void, onBack: () => void, key?: any, staffNotifications: any[], appointments: any[], onClearNotifications: () => void }) {
   const [activeSubScreen, setActiveSubScreen] = useState<
-    'main' | 'profile' | 'dashboard' | 'notif' | 'block' | 'help' | 'share' | 'link' | 'earnings' | 'week' | 'recon' | 'recurrence' | 'support' | 'staff-chat' | 'dark' | 'promotions'
+    'main' | 'profile' | 'dashboard' | 'notif' | 'block' | 'help' | 'share' | 'earnings' | 'week' | 'recon' | 'recurrence' | 'support' | 'staff-chat' | 'dark' | 'promotions'
   >('main');
 
   const unreadCount = staffNotifications.filter(n => !n.read).length;
@@ -65,7 +64,6 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
         { id: 'recurrence', label: 'Recorrências', icon: <RefreshCw className="w-5 h-5" />, onClick: () => setActiveSubScreen('recurrence') },
         ...(role === 'manager' ? [{ id: 'promotions', label: 'Promoções', icon: <Tag className="w-5 h-5" />, onClick: () => setActiveSubScreen('promotions') }] : []),
         { id: 'share', label: 'Divulgar', icon: <Smartphone className="w-5 h-5" />, onClick: () => setActiveSubScreen('share') },
-        { id: 'link', label: 'Link Público', icon: <ExternalLink className="w-5 h-5" />, onClick: () => setActiveSubScreen('link') },
       ]
     },
     {
@@ -99,7 +97,6 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
   if (activeSubScreen === 'block') return <BlockScreen onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'help') return <HelpScreen onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'share') return <ShareScreen onBack={() => setActiveSubScreen('main')} />;
-  if (activeSubScreen === 'link') return <LinkScreen onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'recon') return <ReconScreen onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'recurrence') return <RecurrenceScreen onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'promotions') return <PromotionsManager onBack={() => setActiveSubScreen('main')} />;
