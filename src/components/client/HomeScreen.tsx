@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { ChevronRight, Sparkles, MapPin, Instagram, Phone, Clock, Scissors, Image as ImageIcon } from "lucide-react";
+import { ChevronRight, Sparkles, MapPin, Instagram, Phone, Clock, Scissors, Image as ImageIcon, Star } from "lucide-react";
 import { BARBERSHOP_NAME, BARBERSHOP_ADDRESS, BARBERSHOP_PHONE, BARBERSHOP_INSTAGRAM } from "../../constants";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
 import { collection, query, orderBy, limit, onSnapshot } from "firebase/firestore";
@@ -331,6 +331,24 @@ export function HomeScreen({ services, onStartBooking }: { services: any[], onSt
               <div>
                 <h3 className="text-white font-bold text-sm mb-1 uppercase tracking-tight italic">Siga-nos</h3>
                 <p className="text-neutral-500 text-[11px] font-medium uppercase tracking-wider">@{BARBERSHOP_INSTAGRAM}</p>
+              </div>
+           </div>
+           <ChevronRight className="w-4 h-4 text-neutral-800" />
+        </a>
+
+        <a 
+          href="https://share.google/JxRFqsQpPT543L3n9" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="bg-neutral-950 border border-white/5 p-6 rounded-[2.5rem] flex items-center justify-between group hover:bg-neutral-900 transition-colors"
+        >
+           <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500 flex-shrink-0 group-hover:scale-110 transition-transform">
+                <Star className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-white font-bold text-sm mb-1 uppercase tracking-tight italic">Avaliar no Google</h3>
+                <p className="text-neutral-500 text-[11px] font-medium uppercase tracking-wider">Deixe seu feedback</p>
               </div>
            </div>
            <ChevronRight className="w-4 h-4 text-neutral-800" />
