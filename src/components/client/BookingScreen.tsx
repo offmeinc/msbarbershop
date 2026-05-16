@@ -172,7 +172,7 @@ export function BookingScreen({ user, role, services, onBack, editAppointment }:
       where("date", "<=", Timestamp.fromDate(end))
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      setBarberAppointments(snapshot.docs.map(doc => doc.data()));
+      setBarberAppointments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setLoadingSlots(false);
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, "appointments");
@@ -244,9 +244,10 @@ export function BookingScreen({ user, role, services, onBack, editAppointment }:
     const [hours, minutes] = selectedTime.split(':').map(Number);
     const finalDate = new Date(selectedDate);
     finalDate.setHours(hours, minutes, 0, 0);
-    const finalDateEnd = new Date(finalDate.getTime() + customDuration * 60000);
+    const duration = customDuration || 30;
+    const finalDateEnd = new Date(finalDate.getTime() + duration * 60000);
     
-    // Final Availability Check
+    // Final Availability Check (Real-time data from snapshot)
     const isStillBusy = barberAppointments.some(app => {
         if (editAppointment && app.id === editAppointment.id) return false;
         const appDate = app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date);
@@ -259,8 +260,9 @@ export function BookingScreen({ user, role, services, onBack, editAppointment }:
     });
 
     if (isStillBusy) {
-        setError("Este horário não está mais disponível.");
+        setError("Este horário foi reservado por outra pessoa enquanto você finalizava. Por favor, escolha outro horário.");
         setIsBooking(false);
+        setStep(3); // Go back to calendar
         return;
     }
 
@@ -318,7 +320,7 @@ export function BookingScreen({ user, role, services, onBack, editAppointment }:
 
         // Ensure user exists for later login with phone
         if ((!user || isStaffBooking) && guestPhone) {
-          const userRef = doc(db, "users", cleanPhone); // Use phone as ID to avoid duplicates
+          const userRef = doc(db, "users", cleanPhone);
           const userSnap = await getDoc(userRef);
           if (!userSnap.exists()) {
              await setDoc(userRef, {
@@ -326,23 +328,28 @@ export function BookingScreen({ user, role, services, onBack, editAppointment }:
                name: guestName,
                whatsapp: cleanPhone,
                role: "client",
-               password: "123456", // "Aquela senha padrão"
+               password: "123456",
                createdAt: serverTimestamp()
              });
           }
         }
       }
 
-      // WhatsApp notification
-      const dateFormatted = format(finalDate, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
-      const text = `Agendamento realizado! Serviço: ${service?.name}, Data: ${dateFormatted}. Código: ${loginCode}`;
-      const url = `https://wa.me/${guestPhone.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`;
-      window.open(url, '_blank');
+      // WhatsApp notification (Optional: might fail if popup blocked)
+      try {
+        const dateFormatted = format(finalDate, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+        const text = `Agendamento realizado! Serviço: ${service?.name}, Data: ${dateFormatted}. Código: ${loginCode}`;
+        const url = `https://wa.me/${guestPhone.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`;
+        window.open(url, '_blank');
+      } catch (e) {
+        console.warn("Could not open WhatsApp popup", e);
+      }
 
       setShowConfirmation(true);
     } catch (error) {
       console.error(error);
-      setError("Erro ao processar agendamento.");
+      handleFirestoreError(error, OperationType.WRITE, "appointments");
+      setError("Erro ao processar agendamento. Verifique sua conexão ou permissões.");
     } finally {
       setIsBooking(false);
     }
