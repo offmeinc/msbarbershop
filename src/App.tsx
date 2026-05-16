@@ -59,34 +59,35 @@ import {
   Download,
   LayoutDashboard
 } from "lucide-react";
-import { useState, useEffect, useRef, useMemo, ChangeEvent, FormEvent } from "react";
+import { useState, useEffect, useRef, useMemo, ChangeEvent, FormEvent, lazy, Suspense } from "react";
 import { BrandLogo } from "./components/common/BrandLogo";
-import { NotificationsScreen } from "./components/NotificationsScreen";
-import { EarningsScreen } from "./components/manager/EarningsScreen";
-import { BlockScreen } from "./components/manager/BlockScreen";
-import { PromotionsManager } from "./components/manager/PromotionsManager";
-import { HelpScreen, ShareScreen, RecurrenceScreen } from "./components/manager/OtherScreens";
-import { ReconScreen } from "./components/manager/UtilityScreens";
-import { ProfessionalHome } from "./components/professional/ProfessionalHome";
-import { ClientDashboardScreen } from "./components/client/ClientDashboardScreen";
-import { ProfileEditScreen } from "./components/common/ProfileEditScreen";
-import { BookingScreen } from "./components/client/BookingScreen";
+
+// Lazy-loaded components for better initial loading performance
+const NotificationsScreen = lazy(() => import("./components/NotificationsScreen").then(m => ({ default: m.NotificationsScreen })));
+const EarningsScreen = lazy(() => import("./components/manager/EarningsScreen").then(m => ({ default: m.EarningsScreen })));
+const BlockScreen = lazy(() => import("./components/manager/BlockScreen").then(m => ({ default: m.BlockScreen })));
+const PromotionsManager = lazy(() => import("./components/manager/PromotionsManager").then(m => ({ default: m.PromotionsManager })));
+const HelpScreen = lazy(() => import("./components/manager/OtherScreens").then(m => ({ default: m.HelpScreen })));
+const ShareScreen = lazy(() => import("./components/manager/OtherScreens").then(m => ({ default: m.ShareScreen })));
+const RecurrenceScreen = lazy(() => import("./components/manager/OtherScreens").then(m => ({ default: m.RecurrenceScreen })));
+const ReconScreen = lazy(() => import("./components/manager/UtilityScreens").then(m => ({ default: m.ReconScreen })));
+const ProfessionalHome = lazy(() => import("./components/professional/ProfessionalHome").then(m => ({ default: m.ProfessionalHome })));
+const ClientDashboardScreen = lazy(() => import("./components/client/ClientDashboardScreen").then(m => ({ default: m.ClientDashboardScreen })));
+const ProfileEditScreen = lazy(() => import("./components/common/ProfileEditScreen").then(m => ({ default: m.ProfileEditScreen })));
+const BookingScreen = lazy(() => import("./components/client/BookingScreen").then(m => ({ default: m.BookingScreen })));
+const ClientsScreen = lazy(() => import("./components/manager/ClientsScreen").then(m => ({ default: m.ClientsScreen })));
+const MoreOptionsScreen = lazy(() => import("./components/common/MoreOptionsScreen").then(m => ({ default: m.MoreOptionsScreen })));
+const ClientPortalScreen = lazy(() => import("./components/auth/AuthScreens").then(m => ({ default: m.ClientPortalScreen })));
+const CollaboratorLoginScreen = lazy(() => import("./components/auth/AuthScreens").then(m => ({ default: m.CollaboratorLoginScreen })));
+const PortfolioManager = lazy(() => import("./components/professional/PortfolioManager").then(m => ({ default: m.PortfolioManager })));
+const DashboardScreen = lazy(() => import("./components/manager/DashboardScreen").then(m => ({ default: m.DashboardScreen })));
+
 import { HomeScreen } from "./components/client/HomeScreen";
-import { StaffChatScreen, ChatScreen } from "./components/ChatScreens";
-import { ClientsScreen } from "./components/manager/ClientsScreen";
-import { MoreOptionsScreen } from "./components/common/MoreOptionsScreen";
-import { ClientPortalScreen, CollaboratorLoginScreen } from "./components/auth/AuthScreens";
-import { GuestDashboardScreen } from "./components/client/GuestDashboardScreen";
-import { ReviewModal } from "./components/common/ReviewModal";
-import { DashboardScreen, EarningsDashboard } from "./components/manager/DashboardScreen";
 import { BottomNav } from "./components/common/BottomNav";
-import { CalendarWidget, AppointmentModal } from "./components/CalendarWidget";
-import { CollaboratorsManager, WorkingHoursManager, ServicesManagement } from "./components/manager/ManagementScreens";
 
 // Dummy components
 const DarkScreen = ({ onBack }: { onBack: () => void }) => <div className="p-4">Dark Screen <button onClick={onBack}>Voltar</button></div>;
 const MyWeekScreen = ({ user, onBack }: { user: any, onBack: () => void }) => <div className="p-4">My Week Screen <button onClick={onBack}>Voltar</button></div>;
-import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { 
   format, 
   addMonths, 
@@ -141,7 +142,6 @@ import {
   deleteDoc
 } from "firebase/firestore";
 
-import { PortfolioManager } from "./components/professional/PortfolioManager";
 
 type Screen = "home" | "booking" | "agenda" | "clients" | "more" | "login" | "collaborators" | "services" | "client-login" | "client-dashboard" | "earnings" | "promotions" | "portfolio";
 
@@ -246,38 +246,39 @@ export default function App() {
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
+      setLoading(false); // Set loading to false as soon as auth state is determined
+      
       if (firebaseUser) {
         console.log("Auth state changed: User logged in", firebaseUser.uid);
         if (isSigningUp.current) {
-          setLoading(false);
           return;
         }
         try {
           const userDocRef = doc(db, "users", firebaseUser.uid);
-          const userDoc = await getDoc(userDocRef);
-          
-          if (!userDoc.exists()) {
-            console.log("Creating initial user document for:", firebaseUser.email || firebaseUser.uid);
-            const newUser = {
-              uid: firebaseUser.uid,
-              name: firebaseUser.displayName || "Usuário",
-              email: firebaseUser.email,
-              role: "client", // Default to client
-              createdAt: Timestamp.now(),
-            };
-            await setDoc(userDocRef, newUser);
-            setUserRole("client");
-          } else {
-            const data = userDoc.data();
-            console.log("User document found. Role:", data?.role);
-            // Admin/Manager auto-assignment by phone-based email or legacy email
-            if ((firebaseUser.email === "marley@marley.com" || firebaseUser.email === "51992590046@barbershop.com") && data?.role !== "manager") {
-              await updateDoc(userDocRef, { role: "manager" });
-              setUserRole("manager");
+          // Don't await getDoc here to unlock UI faster
+          getDoc(userDocRef).then(async (userDoc) => {
+            if (!userDoc.exists()) {
+              console.log("Creating initial user document for:", firebaseUser.email || firebaseUser.uid);
+              const newUser = {
+                uid: firebaseUser.uid,
+                name: firebaseUser.displayName || "Usuário",
+                email: firebaseUser.email,
+                role: "client",
+                createdAt: Timestamp.now(),
+              };
+              await setDoc(userDocRef, newUser);
+              setUserRole("client");
             } else {
-              setUserRole(data?.role || "client");
+              const data = userDoc.data();
+              console.log("User document found. Role:", data?.role);
+              if ((firebaseUser.email === "marley@marley.com" || firebaseUser.email === "51992590046@barbershop.com") && data?.role !== "manager") {
+                updateDoc(userDocRef, { role: "manager" });
+                setUserRole("manager");
+              } else {
+                setUserRole(data?.role || "client");
+              }
             }
-          }
+          });
         } catch (error) {
           console.error("Error fetching/creating user data", error);
         }
@@ -285,7 +286,6 @@ export default function App() {
         console.log("Auth state changed: User logged out");
         setUserRole("client");
       }
-      setLoading(false);
     });
     return () => {
       unsubscribeServices();
@@ -412,6 +412,15 @@ export default function App() {
       </div>
     );
   }
+
+  const LoadingFallback = () => (
+    <div className="flex items-center justify-center p-20 min-h-[50vh]">
+      <div className="flex flex-col items-center gap-4">
+        <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-500">Carregando...</p>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-black text-white font-sans selection:bg-amber-500/30 pb-24 md:pb-0">
@@ -602,38 +611,40 @@ export default function App() {
       </motion.nav>
 
       <main className="pt-[calc(5rem+env(safe-area-inset-top))]">
-        <AnimatePresence mode="wait">
-          {currentScreen === "home" && (
-            (['manager', 'barber'].includes(userRole)) 
-            ? <ProfessionalHome user={user} role={userRole} setCurrentScreen={setCurrentScreen} /> 
-            : <HomeScreen services={services} onStartBooking={() => setCurrentScreen("booking")} />
-          )}
-          {currentScreen === "login" && <CollaboratorLoginScreen onLogin={handleLogin} setCurrentScreen={setCurrentScreen} setRequestedRole={setRequestedRole} />}
-          {currentScreen === "client-login" && <ClientPortalScreen onLogin={handleClientLogin} onForgotPassword={handleForgotPassword} onBack={() => setCurrentScreen("home")} />}
-          {currentScreen === "client-dashboard" && <ClientDashboardScreen user={loggedInClient} onBack={() => setCurrentScreen("home")} />}
-          {currentScreen === "booking" && <BookingScreen user={user} role={userRole} services={services} onBack={() => { setCurrentScreen("home"); setAppointmentToEdit(null); }} editAppointment={appointmentToEdit} />}
-          {currentScreen === "agenda" && <DashboardScreen user={user} role={userRole} services={services} dashboardView="calendar" onBack={() => setCurrentScreen("home")} onNewBooking={() => setCurrentScreen("booking")} onEditBooking={(app) => { setAppointmentToEdit(app); setCurrentScreen("booking"); }} />}
-          {currentScreen === "collaborators" && <DashboardScreen user={user} role={userRole} services={services} dashboardView="collaborators" onBack={() => setCurrentScreen("home")} onNewBooking={() => setCurrentScreen("booking")} onEditBooking={(app) => { setAppointmentToEdit(app); setCurrentScreen("booking"); }} />}
-          {currentScreen === "services" && <DashboardScreen user={user} role={userRole} services={services} dashboardView="services" onBack={() => setCurrentScreen("home")} onNewBooking={() => setCurrentScreen("booking")} onEditBooking={(app) => { setAppointmentToEdit(app); setCurrentScreen("booking"); }} />}
-          {currentScreen === "earnings" && <EarningsScreen onBack={() => setCurrentScreen("home")} />}
-          {currentScreen === "promotions" && <PromotionsManager onBack={() => setCurrentScreen("home")} />}
-          {currentScreen === "clients" && <ClientsScreen onBack={() => setCurrentScreen("home")} />}
-          {currentScreen === "portfolio" && <PortfolioManager onBack={() => setCurrentScreen("home")} />}
-          {currentScreen === "more" && (
-            <MoreOptionsScreen 
-              user={user} 
-              role={userRole} 
-              onLogout={handleLogout} 
-              onBack={() => setCurrentScreen("home")}
-              staffNotifications={staffNotifications}
-              appointments={appointments}
-              onClearNotifications={async () => {
-                const unread = staffNotifications.filter(n => !n.read);
-                await Promise.all(unread.map(n => updateDoc(doc(db, "staff_notifications", n.id), { read: true })));
-              }}
-            />
-          )}
-        </AnimatePresence>
+        <Suspense fallback={<LoadingFallback />}>
+          <AnimatePresence mode="wait">
+            {currentScreen === "home" && (
+              (['manager', 'barber'].includes(userRole)) 
+              ? <ProfessionalHome user={user} role={userRole} setCurrentScreen={setCurrentScreen} /> 
+              : <HomeScreen services={services} onStartBooking={() => setCurrentScreen("booking")} />
+            )}
+            {currentScreen === "login" && <CollaboratorLoginScreen onLogin={handleLogin} setCurrentScreen={setCurrentScreen} setRequestedRole={setRequestedRole} />}
+            {currentScreen === "client-login" && <ClientPortalScreen onLogin={handleClientLogin} onForgotPassword={handleForgotPassword} onBack={() => setCurrentScreen("home")} />}
+            {currentScreen === "client-dashboard" && <ClientDashboardScreen user={loggedInClient} onBack={() => setCurrentScreen("home")} />}
+            {currentScreen === "booking" && <BookingScreen user={user} role={userRole} services={services} onBack={() => { setCurrentScreen("home"); setAppointmentToEdit(null); }} editAppointment={appointmentToEdit} />}
+            {currentScreen === "agenda" && <DashboardScreen user={user} role={userRole} services={services} dashboardView="calendar" onBack={() => setCurrentScreen("home")} onNewBooking={() => setCurrentScreen("booking")} onEditBooking={(app) => { setAppointmentToEdit(app); setCurrentScreen("booking"); }} />}
+            {currentScreen === "collaborators" && <DashboardScreen user={user} role={userRole} services={services} dashboardView="collaborators" onBack={() => setCurrentScreen("home")} onNewBooking={() => setCurrentScreen("booking")} onEditBooking={(app) => { setAppointmentToEdit(app); setCurrentScreen("booking"); }} />}
+            {currentScreen === "services" && <DashboardScreen user={user} role={userRole} services={services} dashboardView="services" onBack={() => setCurrentScreen("home")} onNewBooking={() => setCurrentScreen("booking")} onEditBooking={(app) => { setAppointmentToEdit(app); setCurrentScreen("booking"); }} />}
+            {currentScreen === "earnings" && <EarningsScreen onBack={() => setCurrentScreen("home")} />}
+            {currentScreen === "promotions" && <PromotionsManager onBack={() => setCurrentScreen("home")} />}
+            {currentScreen === "clients" && <ClientsScreen onBack={() => setCurrentScreen("home")} />}
+            {currentScreen === "portfolio" && <PortfolioManager onBack={() => setCurrentScreen("home")} />}
+            {currentScreen === "more" && (
+              <MoreOptionsScreen 
+                user={user} 
+                role={userRole} 
+                onLogout={handleLogout} 
+                onBack={() => setCurrentScreen("home")}
+                staffNotifications={staffNotifications}
+                appointments={appointments}
+                onClearNotifications={async () => {
+                  const unread = staffNotifications.filter(n => !n.read);
+                  await Promise.all(unread.map(n => updateDoc(doc(db, "staff_notifications", n.id), { read: true })));
+                }}
+              />
+            )}
+          </AnimatePresence>
+        </Suspense>
       </main>
 
       <BottomNav 
