@@ -422,18 +422,28 @@ export function BookingScreen({ user, role, services, onBack, editAppointment }:
           {step === 2 && (
             <motion.div key="step2" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} className="space-y-6">
                 <div className="grid gap-4">
-                    {barbers.map(b => (
-                        <button key={b.id} onClick={() => { setSelectedBarber(b.id); setStep(3); }} className={`p-5 rounded-[2rem] border flex items-center justify-between transition-all group ${selectedBarber === b.id ? 'border-amber-500 bg-neutral-900 shadow-2xl shadow-amber-500/20' : 'border-white/5 bg-neutral-900/50 hover:border-white/10'}`}>
-                            <div className="flex items-center gap-4">
-                              <img src={b.photoURL || `https://ui-avatars.com/api/?name=${b.name}`} className="w-16 h-16 rounded-[1.5rem] object-cover border-2 border-white/10" alt={b.name} />
-                              <div className="text-left">
-                                <h4 className="font-black text-white text-lg tracking-tight">{b.name}</h4>
-                                <p className="text-[10px] text-amber-500 font-black uppercase tracking-widest">Especialista</p>
+                    {barbers.length === 0 ? (
+                      <div className="py-20 text-center space-y-4 bg-neutral-900/50 rounded-[2.5rem] border border-dashed border-white/10">
+                        <div className="w-16 h-16 bg-neutral-800 rounded-2xl flex items-center justify-center mx-auto text-neutral-600">
+                          <Loader2 className="w-8 h-8 animate-spin" />
+                        </div>
+                        <p className="text-[10px] font-black uppercase text-neutral-500 tracking-widest">Buscando profissionais...</p>
+                        <p className="text-[10px] text-amber-500 px-6">Se demorar, verifique se há colaboradores cadastrados no menu de gestão.</p>
+                      </div>
+                    ) : (
+                      barbers.map(b => (
+                          <button key={b.id} onClick={() => { setSelectedBarber(b.id); setStep(3); }} className={`p-5 rounded-[2rem] border flex items-center justify-between transition-all group ${selectedBarber === b.id ? 'border-amber-500 bg-neutral-900 shadow-2xl shadow-amber-500/20' : 'border-white/5 bg-neutral-900/50 hover:border-white/10'}`}>
+                              <div className="flex items-center gap-4">
+                                <img src={b.photoURL || `https://ui-avatars.com/api/?name=${b.name}`} className="w-16 h-16 rounded-[1.5rem] object-cover border-2 border-white/10" alt={b.name} />
+                                <div className="text-left">
+                                  <h4 className="font-black text-white text-lg tracking-tight">{b.name}</h4>
+                                  <p className="text-[10px] text-amber-500 font-black uppercase tracking-widest">Especialista</p>
+                                </div>
                               </div>
-                            </div>
-                            <ChevronRight className="w-5 h-5 text-neutral-700" />
-                        </button>
-                    ))}
+                              <ChevronRight className="w-5 h-5 text-neutral-700" />
+                          </button>
+                      ))
+                    )}
                 </div>
             </motion.div>
           )}
