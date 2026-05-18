@@ -49,7 +49,8 @@ import {
   doc, 
   updateDoc, 
   addDoc, 
-  serverTimestamp 
+  serverTimestamp,
+  getFirestore
 } from "firebase/firestore";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
 import { CalendarWidget, AppointmentModal } from "../CalendarWidget";
@@ -113,6 +114,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
 
   const handleStatusUpdate = async (app: any, newStatus: string, extraData: any = {}) => {
+    const firestore = db || getFirestore();
     try {
       const updatePayload: any = { status: newStatus, ...extraData };
       if (newStatus === 'completed') {
@@ -120,8 +122,8 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
         updatePayload.paidAt = serverTimestamp();
       }
       
-      await updateDoc(doc(db, "appointments", app.id), updatePayload);
-      await addDoc(collection(db, "notifications"), {
+      await updateDoc(doc(firestore, "appointments", app.id), updatePayload);
+      await addDoc(collection(firestore, "notifications"), {
         loginCode: app.loginCode,
         message: `Seu agendamento foi atualizado para: ${newStatus}${newStatus === 'completed' ? ' e o pagamento foi registrado.' : ''}`,
         timestamp: serverTimestamp(),
@@ -129,7 +131,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
       });
 
       // Staff notification
-      await addDoc(collection(db, "staff_notifications"), {
+      await addDoc(collection(firestore, "staff_notifications"), {
         type: newStatus === 'cancelled' ? 'cancellation' : (newStatus === 'completed' ? 'payment' : 'update'),
         message: `${newStatus === 'cancelled' ? 'Cancelamento' : (newStatus === 'completed' ? 'Pagamento' : 'Atualização')}: ${app.clientName} ${newStatus === 'cancelled' ? 'desmarcou' : (newStatus === 'completed' ? 'pagou o serviço' : 'teve o status alterado para ' + newStatus)} (${app.serviceName})`,
         timestamp: serverTimestamp(),
@@ -152,13 +154,13 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
   };
 
   const handleDelete = async (app: any) => {
+    const firestore = db || getFirestore();
     try {
-      import("firebase/firestore").then(async ({ deleteDoc, doc }) => {
-        await deleteDoc(doc(db, "appointments", app.id));
-        setSelectedAppointment(null);
-        setStatusMsg('Agendamento excluído com sucesso!');
-        setTimeout(() => setStatusMsg(null), 3000);
-      });
+      const { deleteDoc, doc } = await import("firebase/firestore");
+      await deleteDoc(doc(firestore, "appointments", app.id));
+      setSelectedAppointment(null);
+      setStatusMsg('Agendamento excluído com sucesso!');
+      setTimeout(() => setStatusMsg(null), 3000);
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, "appointments");
     }
@@ -208,13 +210,14 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
 
   useEffect(() => {
     if (!user) return;
+    const firestore = db || getFirestore();
     let q;
     if (role === 'manager') {
-      q = query(collection(db, "appointments"), orderBy("date", "asc"));
+      q = query(collection(firestore, "appointments"), orderBy("date", "asc"));
     } else if (role === 'barber') {
-      q = query(collection(db, "appointments"), where("barberId", "==", user.uid), orderBy("date", "asc"));
+      q = query(collection(firestore, "appointments"), where("barberId", "==", user.uid), orderBy("date", "asc"));
     } else {
-      q = query(collection(db, "appointments"), where("clientId", "==", user.uid), orderBy("date", "asc"));
+      q = query(collection(firestore, "appointments"), where("clientId", "==", user.uid), orderBy("date", "asc"));
     }
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -224,7 +227,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
       handleFirestoreError(error, OperationType.LIST, "appointments");
     });
 
-    const qBarbers = query(collection(db, "users"), where("role", "in", ["barber", "manager"]));
+    const qBarbers = query(collection(firestore, "users"), where("role", "in", ["barber", "manager"]));
     const unsubscribeBarbers = onSnapshot(qBarbers, (sn) => {
         setBarbers(sn.docs.map(d => ({ id: d.id, ...d.data() })));
     }, (error) => {

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { collection, query, orderBy, onSnapshot, addDoc, Timestamp } from "firebase/firestore";
+import { collection, query, orderBy, onSnapshot, addDoc, Timestamp, getFirestore } from "firebase/firestore";
 import { db, handleFirestoreError, OperationType } from "../lib/firebase";
 import { ChevronLeft } from "lucide-react";
 
@@ -8,8 +8,9 @@ export function StaffChatScreen({ user, onBack }: { user: any, onBack: () => voi
   const [newMessage, setNewMessage] = useState("");
 
   useEffect(() => {
+    const firestore = db || getFirestore();
     const q = query(
-      collection(db, "internal_chats"),
+      collection(firestore, "internal_chats"),
       orderBy("createdAt", "asc")
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -22,7 +23,8 @@ export function StaffChatScreen({ user, onBack }: { user: any, onBack: () => voi
 
   const sendMessage = async () => {
     if (!newMessage.trim() || !user) return;
-    await addDoc(collection(db, "internal_chats"), {
+    const firestore = db || getFirestore();
+    await addDoc(collection(firestore, "internal_chats"), {
       text: newMessage,
       createdAt: Timestamp.now(),
       senderName: user.displayName || "Staff",
@@ -54,8 +56,9 @@ export function ChatScreen({ user, onBack }: { user: any, onBack: () => void }) 
 
   useEffect(() => {
     if (!user) return;
+    const firestore = db || getFirestore();
     const q = query(
-      collection(db, "chats", user.uid, "messages"),
+      collection(firestore, "chats", user.uid, "messages"),
       orderBy("createdAt", "asc")
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -70,7 +73,8 @@ export function ChatScreen({ user, onBack }: { user: any, onBack: () => void }) 
 
   const sendMessage = async () => {
     if (!newMessage.trim() || !user) return;
-    await addDoc(collection(db, "chats", user.uid, "messages"), {
+    const firestore = db || getFirestore();
+    await addDoc(collection(firestore, "chats", user.uid, "messages"), {
       text: newMessage,
       createdAt: Timestamp.now(),
       userId: user.uid,

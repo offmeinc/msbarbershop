@@ -5,7 +5,8 @@ import {
   orderBy, 
   where, 
   onSnapshot, 
-  Timestamp 
+  Timestamp,
+  getFirestore
 } from "firebase/firestore";
 import { 
   format, 
@@ -39,9 +40,10 @@ export function ProfessionalHome({ user, role, setCurrentScreen }: ProfessionalH
 
   useEffect(() => {
     if (!user) return;
+    const firestore = db || getFirestore();
     const q = role === 'manager' 
-      ? query(collection(db, "appointments"), orderBy("date", "asc"))
-      : query(collection(db, "appointments"), where("barberId", "==", user.uid), orderBy("date", "asc"));
+      ? query(collection(firestore, "appointments"), orderBy("date", "asc"))
+      : query(collection(firestore, "appointments"), where("barberId", "==", user.uid), orderBy("date", "asc"));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setAppointments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));

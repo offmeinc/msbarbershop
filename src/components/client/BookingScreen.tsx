@@ -22,7 +22,8 @@ import {
   addDoc, 
   serverTimestamp, 
   updateDoc, 
-  getDocs 
+  getDocs,
+  getFirestore
 } from "firebase/firestore";
 import { 
   ChevronLeft, 
@@ -139,7 +140,8 @@ export function BookingScreen({ user, role, services, onBack, editAppointment }:
   const [customDuration, setCustomDuration] = useState<number>(editAppointment?.serviceDuration || 0);
 
   useEffect(() => {
-    const q = query(collection(db, "users"), where("role", "in", ["barber", "manager"]));
+    const firestore = db || getFirestore();
+    const q = query(collection(firestore, "users"), where("role", "in", ["barber", "manager"]));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const barberData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setBarbers(barberData);
@@ -150,7 +152,8 @@ export function BookingScreen({ user, role, services, onBack, editAppointment }:
   }, []);
 
   useEffect(() => {
-    const q = query(collection(db, "blocked_times"), orderBy("date", "asc"));
+    const firestore = db || getFirestore();
+    const q = query(collection(firestore, "blocked_times"), orderBy("date", "asc"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setBlockedTimes(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, (error) => {
@@ -164,8 +167,9 @@ export function BookingScreen({ user, role, services, onBack, editAppointment }:
     setLoadingSlots(true);
     const start = startOfDay(selectedDate);
     const end = endOfDay(selectedDate);
+    const firestore = db || getFirestore();
     const q = query(
-      collection(db, "appointments"),
+      collection(firestore, "appointments"),
       where("barberId", "==", selectedBarber),
       where("status", "in", ["pending", "confirmed", "completed"]),
       where("date", ">=", Timestamp.fromDate(start)),
@@ -302,9 +306,10 @@ export function BookingScreen({ user, role, services, onBack, editAppointment }:
         loginCode
       };
       
+      const firestore = db || getFirestore();
       const isEditing = !!editAppointment;
       if (isEditing) {
-        await updateDoc(doc(db, "appointments", editAppointment.id), {
+        await updateDoc(doc(firestore, "appointments", editAppointment.id), {
           ...baseData,
           date: Timestamp.fromDate(finalDate),
           time: selectedTime,
@@ -312,7 +317,7 @@ export function BookingScreen({ user, role, services, onBack, editAppointment }:
           rescheduledBy: isStaffBooking ? 'staff' : 'client'
         });
       } else {
-        await addDoc(collection(db, "appointments"), {
+        await addDoc(collection(firestore, "appointments"), {
           ...baseData,
           date: Timestamp.fromDate(finalDate),
           time: selectedTime
@@ -320,7 +325,7 @@ export function BookingScreen({ user, role, services, onBack, editAppointment }:
 
         // Ensure user exists for later login with phone
         if ((!user || isStaffBooking) && guestPhone) {
-          const userRef = doc(db, "users", cleanPhone);
+          const userRef = doc(firestore, "users", cleanPhone);
           const userSnap = await getDoc(userRef);
           if (!userSnap.exists()) {
              await setDoc(userRef, {
@@ -479,7 +484,7 @@ export function BookingScreen({ user, role, services, onBack, editAppointment }:
                 </div>
                 <div className="grid grid-cols-3 gap-3">
                   {timeSlots.map(({ time, available }) => (
-                    <button key={time} disabled={!available} onClick={() => setSelectedTime(time)} className={`py-4 rounded-2xl text-sm font-black transition-all border ${selectedTime === time ? "bg-amber-500 border-amber-500 text-black" : available ? "bg-neutral-900 border-white/5 text-white" : "bg-neutral-900/30 border-transparent text-neutral-700 opacity-50"}`}>
+                    <button key={time} disabled={!available} onClick={() => { setSelectedTime(time); setStep(4); }} className={`py-4 rounded-2xl text-sm font-black transition-all border ${selectedTime === time ? "bg-amber-500 border-amber-500 text-black" : available ? "bg-neutral-900 border-white/5 text-white" : "bg-neutral-900/30 border-transparent text-neutral-700 opacity-50"}`}>
                       {time}
                     </button>
                   ))}

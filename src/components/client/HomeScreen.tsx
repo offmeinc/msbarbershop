@@ -107,8 +107,11 @@ export function HomeScreen({ services, onStartBooking }: { services: any[], onSt
         </div>
         <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide no-scrollbar -mx-6 px-6">
            {(() => {
-             // Prioritize "Corte + Barba" and "Corte Degrade" for the home screen showcase
-             const featuredServices = [...services].sort((a, b) => {
+             // Filter only active services and prioritize certain ones
+             const activeServices = services.filter(s => s.active !== false);
+             const displayServices = activeServices.length > 0 ? activeServices : services;
+             
+             const featuredServices = [...displayServices].sort((a, b) => {
                const priority = ["Corte + Barba", "Corte Degrade", "Barba completa", "Corte+ sobrancelha"];
                const aIdx = priority.indexOf(a.name);
                const bIdx = priority.indexOf(b.name);
@@ -117,6 +120,15 @@ export function HomeScreen({ services, onStartBooking }: { services: any[], onSt
                if (bIdx !== -1) return 1;
                return 0;
              }).slice(0, 4);
+
+             if (featuredServices.length === 0) {
+               return (
+                 <div className="w-full py-12 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[3rem] opacity-50">
+                    <Scissors className="w-8 h-8 text-neutral-800 mb-2" />
+                    <p className="text-[10px] font-black uppercase tracking-widest text-neutral-600">Serviços não carregados</p>
+                 </div>
+               );
+             }
 
              return featuredServices.map((service, idx) => {
                const isSelected = selectedServiceId === (service.id || idx.toString());
@@ -163,7 +175,7 @@ export function HomeScreen({ services, onStartBooking }: { services: any[], onSt
                           <div className="flex items-center gap-2">
                              <div className={`h-px bg-amber-500/30 transition-all ${isSelected ? 'w-12' : 'w-4 group-hover:w-8'}`} />
                              <p className={`text-amber-500 font-extrabold tracking-tight transition-all duration-500 ${isSelected ? 'text-xl scale-110' : 'text-xs sm:text-sm'}`}>
-                               R$ {service.price.toFixed(2)}
+                               R$ {Number(service.price || 0).toFixed(2)}
                              </p>
                           </div>
                           

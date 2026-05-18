@@ -109,21 +109,6 @@ import {
   parseISO
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { 
-  auth, 
-  db, 
-  handleFirestoreError, 
-  OperationType 
-} from "./lib/firebase";
-import { uploadImage } from "./lib/uploadService";
-import { 
-  onAuthStateChanged,
-  signOut,
-  User as FirebaseUser,
-  updateProfile,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword
-} from "firebase/auth";
 import {
   doc,
   getDoc,
@@ -139,8 +124,24 @@ import {
   onSnapshot,
   limit,
   orderBy,
-  deleteDoc
+  deleteDoc,
+  getFirestore
 } from "firebase/firestore";
+import { 
+  auth, 
+  db, 
+  handleFirestoreError, 
+  OperationType 
+} from "./lib/firebase";
+import { uploadImage } from "./lib/uploadService";
+import { 
+  onAuthStateChanged,
+  signOut,
+  User as FirebaseUser,
+  updateProfile,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword
+} from "firebase/auth";
 
 
 type Screen = "home" | "booking" | "agenda" | "clients" | "more" | "login" | "collaborators" | "services" | "client-login" | "client-dashboard" | "earnings" | "promotions" | "portfolio";
@@ -182,8 +183,12 @@ export default function App() {
   useEffect(() => {
     if (!['manager', 'barber'].includes(userRole)) return;
     
+    // Ensure db is available
+    const firestore = db || getFirestore();
+    if (!firestore) return;
+
     const q = query(
-      collection(db, "staff_notifications"),
+      collection(firestore, "staff_notifications"),
       orderBy("timestamp", "desc"),
       limit(20)
     );
@@ -201,9 +206,12 @@ export default function App() {
   useEffect(() => {
     if (!user || userRole === 'client') return;
     
+    const firestore = db || getFirestore();
+    if (!firestore) return;
+
     const q = userRole === 'manager' 
-      ? query(collection(db, "appointments"), orderBy("date", "desc"), limit(100))
-      : query(collection(db, "appointments"), where("barberId", "==", user.uid), orderBy("date", "desc"), limit(100));
+      ? query(collection(firestore, "appointments"), orderBy("date", "desc"), limit(100))
+      : query(collection(firestore, "appointments"), where("barberId", "==", user.uid), orderBy("date", "desc"), limit(100));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setAppointments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
@@ -238,8 +246,7 @@ export default function App() {
   useEffect(() => {
     const unsubscribeServices = onSnapshot(collection(db, "services"), (snapshot) => {
       const servicesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      const uniqueServices = Array.from(new Map(servicesData.map((item: any) => [item.name, item])).values());
-      setServices(uniqueServices);
+      setServices(servicesData);
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, "services");
     });
@@ -356,13 +363,14 @@ export default function App() {
   const handleClientLogin = async (phone: string, password: string) => {
     // Search by cleaned whatsapp number
     const cleanPhone = phone.replace(/\D/g, '');
-    const userQuery = query(collection(db, "users"), where("whatsapp", "==", cleanPhone), where("password", "==", password));
+    const firestore = db || getFirestore();
+    const userQuery = query(collection(firestore, "users"), where("whatsapp", "==", cleanPhone), where("password", "==", password));
     const userSnapshot = await getDocs(userQuery);
     
     // Try original phone too just in case
     let docs = userSnapshot.docs;
     if (docs.length === 0) {
-      const altQuery = query(collection(db, "users"), where("whatsapp", "==", phone), where("password", "==", password));
+      const altQuery = query(collection(firestore, "users"), where("whatsapp", "==", phone), where("password", "==", password));
       const altSnap = await getDocs(altQuery);
       docs = altSnap.docs;
     }
@@ -382,7 +390,8 @@ export default function App() {
     
     // Look up appointments with this phone
     const cleanPhone = phone.replace(/\D/g, '');
-    const appointmentsQuery = query(collection(db, "appointments"), where("clientPhone", "==", cleanPhone), orderBy("createdAt", "desc"), limit(1));
+    const firestore = db || getFirestore();
+    const appointmentsQuery = query(collection(firestore, "appointments"), where("clientPhone", "==", cleanPhone), orderBy("createdAt", "desc"), limit(1));
     const querySnapshot = await getDocs(appointmentsQuery);
 
     if (querySnapshot.empty) {
@@ -445,9 +454,9 @@ export default function App() {
             <BrandLogo className="w-12 h-12 bg-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.2)] group-hover:scale-105 transition-transform" />
             <div className="hidden sm:block text-left">
               <span className="text-xl font-black tracking-tighter uppercase italic block leading-none">
-                Marley Souza
+                MS
               </span>
-              <span className="text-[10px] text-amber-500 uppercase tracking-[0.3em] font-bold">BARBEARIA</span>
+              <span className="text-[10px] text-amber-500 uppercase tracking-[0.3em] font-bold">BARBER SHOP</span>
             </div>
           </div>
 
@@ -656,9 +665,11 @@ export default function App() {
         isVisible={!hidden}
       />
 
-      <footer className="py-8 text-center border-t border-white/5 text-neutral-600 text-[10px] uppercase tracking-widest font-bold">
-        © 2026 MS BARBER SHOP | Developed by Rulio
-      </footer>
+      {currentScreen === "home" && (
+        <footer className="py-8 text-center border-t border-white/5 text-neutral-600 text-[10px] uppercase tracking-widest font-bold">
+          © 2026 MS BARBER SHOP | Developed by Rulio
+        </footer>
+      )}
 
       {/* Mobile Menu */}
       <AnimatePresence>
