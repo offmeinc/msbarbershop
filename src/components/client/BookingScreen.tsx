@@ -32,7 +32,9 @@ import {
   ChevronRight, 
   Loader2, 
   XCircle, 
-  RefreshCw, 
+  RefreshCw,
+  Search,
+  User,
 } from "lucide-react";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
 
@@ -138,6 +140,77 @@ export function BookingScreen({ user, role, services, onBack, editAppointment }:
   const [couponCode, setCouponCode] = useState(editAppointment?.couponCode || "");
   const [appliedDiscount, setAppliedDiscount] = useState(0);
   const [customDuration, setCustomDuration] = useState<number>(editAppointment?.serviceDuration || 0);
+
+  const [clients, setClients] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<any | null>(null);
+
+  useEffect(() => {
+    const isStaff = role === 'manager' || role === 'barber';
+    if (!isStaff) return;
+
+    const firestore = db || getFirestore();
+    const q = query(collection(firestore, "users"), where("role", "==", "client"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setClients(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, "users");
+    });
+    return () => unsubscribe();
+  }, [role]);
+
+  const filteredClients = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const queryLower = searchQuery.toLowerCase().trim();
+    const queryDigits = queryLower.replace(/\D/g, '');
+
+    return clients.filter(c => {
+      // Name match
+      const nameMatch = c.name && c.name.toLowerCase().includes(queryLower);
+      
+      // Email match
+      const emailMatch = c.email && c.email.toLowerCase().includes(queryLower);
+      
+      // WhatsApp match (digit-only normalized comparison)
+      let phoneMatch = false;
+      if (c.whatsapp && queryDigits) {
+        const clientDigits = c.whatsapp.replace(/\D/g, '');
+        phoneMatch = clientDigits.includes(queryDigits) || queryDigits.includes(clientDigits);
+      }
+      
+      return nameMatch || emailMatch || phoneMatch;
+    });
+  }, [clients, searchQuery]);
+
+  // Real-time matching against direct input phone or exact name
+  const currentClientMatch = useMemo(() => {
+    if (selectedClient) return selectedClient;
+    
+    const cleanGuestPhone = guestPhone.replace(/\D/g, '');
+    const cleanGuestName = guestName.trim().toLowerCase();
+    
+    if (!cleanGuestPhone && !cleanGuestName) return null;
+    
+    return clients.find(c => {
+      // 1. Match by phone digits
+      if (cleanGuestPhone && c.whatsapp) {
+        const clientPhoneDigits = c.whatsapp.replace(/\D/g, '');
+        if (clientPhoneDigits === cleanGuestPhone ||
+            (clientPhoneDigits.length >= 8 && cleanGuestPhone.endsWith(clientPhoneDigits)) ||
+            (cleanGuestPhone.length >= 8 && clientPhoneDigits.endsWith(cleanGuestPhone))) {
+          return true;
+        }
+      }
+      // 2. Exact match by name
+      if (cleanGuestName && c.name) {
+        if (c.name.toLowerCase().trim() === cleanGuestName) {
+          return true;
+        }
+      }
+      return false;
+    });
+  }, [clients, selectedClient, guestName, guestPhone]);
 
   useEffect(() => {
     const firestore = db || getFirestore();
@@ -282,11 +355,16 @@ export function BookingScreen({ user, role, services, onBack, editAppointment }:
       const barber = barbers.find(b => b.id === selectedBarber);
       const loginCode = Math.random().toString(36).substring(2, 8).toUpperCase();
       
+      const linkedClient = currentClientMatch;
       const cleanPhone = guestPhone.replace(/\D/g, '');
-      let effectiveClientId = user && !isStaffBooking ? (user.uid || user.id) : (cleanPhone || "guest");
+      let effectiveClientId = user && !isStaffBooking 
+        ? (user.uid || user.id) 
+        : (linkedClient ? (linkedClient.uid || linkedClient.id) : (cleanPhone || "guest"));
       const clientNameData = user && !isStaffBooking ? (user.displayName || user.name) : guestName;
       const clientEmailData = user && !isStaffBooking ? user.email : guestEmail;
-      const clientPhotoData = user && !isStaffBooking ? (user.photoURL || user.photoUrl) : null;
+      const clientPhotoData = user && !isStaffBooking 
+        ? (user.photoURL || user.photoUrl) 
+        : (linkedClient ? (linkedClient.photoURL || linkedClient.photoUrl) : null);
 
       const baseData = {
         clientId: effectiveClientId,
@@ -497,10 +575,142 @@ export function BookingScreen({ user, role, services, onBack, editAppointment }:
           {step === 4 && (
             <motion.div key="step4" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} className="space-y-6">
                  {(!user || role === 'manager' || role === 'barber') && (
-                    <div className="bg-neutral-900 p-6 rounded-[2rem] border border-white/5 space-y-3">
-                       <input placeholder="Nome do Cliente" className="w-full p-4 bg-black rounded-2xl border border-white/5 text-white" value={guestName} onChange={e => setGuestName(e.target.value)} />
-                       <input placeholder="WhatsApp do Cliente" className="w-full p-4 bg-black rounded-2xl border border-white/5 text-white" value={guestPhone} onChange={e => setGuestPhone(e.target.value)} />
-                       <input placeholder="E-mail (opcional)" className="w-full p-4 bg-black rounded-2xl border border-white/5 text-white" value={guestEmail} onChange={e => setGuestEmail(e.target.value)} />
+                    <div className="bg-neutral-900 p-6 rounded-[2rem] border border-white/5 space-y-4">
+                       {(role === 'manager' || role === 'barber') && (
+                         <div className="space-y-3">
+                           <div className="flex items-center gap-2 mb-1">
+                             <Search className="w-4 h-4 text-amber-500" />
+                             <span className="text-xs font-black uppercase text-neutral-400 tracking-widest">Buscar Cliente Cadastrado</span>
+                           </div>
+                           <div className="relative">
+                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600" />
+                             <input 
+                               type="text"
+                               placeholder="Digite nome ou WhatsApp do cliente..." 
+                               className="w-full pl-11 pr-12 py-4 bg-black rounded-2xl border border-white/5 text-white text-sm focus:border-amber-500 outline-none transition-all"
+                               value={searchQuery}
+                               onChange={e => {
+                                 setSearchQuery(e.target.value);
+                                 setShowDropdown(true);
+                               }}
+                               onFocus={() => setShowDropdown(true)}
+                             />
+                             {searchQuery && (
+                               <button 
+                                 type="button"
+                                 onClick={() => {
+                                   setSearchQuery("");
+                                   setShowDropdown(false);
+                                 }}
+                                 className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-white text-xs font-bold uppercase transition-colors"
+                               >
+                                 Limpar
+                               </button>
+                             )}
+                           </div>
+
+                           {/* Dropdown Options */}
+                           {showDropdown && filteredClients.length > 0 && (
+                             <div className="bg-neutral-950/80 border border-white/5 rounded-2xl overflow-hidden max-h-52 overflow-y-auto divide-y divide-white/5">
+                               {filteredClients.map(client => (
+                                 <button
+                                   key={client.id}
+                                   type="button"
+                                   className="w-full px-4 py-3 text-left hover:bg-white/5 transition-all flex items-center justify-between group"
+                                   onClick={() => {
+                                     setGuestName(client.name || "");
+                                     setGuestPhone(client.whatsapp || "");
+                                     setGuestEmail(client.email || "");
+                                     setSelectedClient(client);
+                                     setSearchQuery("");
+                                     setShowDropdown(false);
+                                   }}
+                                 >
+                                   <div className="flex items-center gap-3">
+                                      <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-xs font-bold text-neutral-400 border border-white/10 overflow-hidden shrink-0">
+                                        {client.photoURL ? (
+                                          <img src={client.photoURL} alt={client.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                        ) : (
+                                          client.name?.[0] || "C"
+                                        )}
+                                      </div>
+                                      <div className="min-w-0">
+                                         <h4 className="font-bold text-white text-xs truncate group-hover:text-amber-500 transition-colors">{client.name}</h4>
+                                         <p className="text-[10px] text-neutral-500 truncate">{client.whatsapp || client.email || "Sem contato"}</p>
+                                      </div>
+                                   </div>
+                                   <span className="text-[9px] text-amber-500 font-black uppercase tracking-widest shrink-0 bg-amber-500/10 px-2 py-1 rounded">Vincular</span>
+                                 </button>
+                               ))}
+                             </div>
+                           )}
+
+                           {showDropdown && searchQuery.trim() && filteredClients.length === 0 && (
+                             <div className="py-3 px-4 bg-neutral-950/50 rounded-2xl border border-white/5 text-center">
+                               <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-wider">Nenhum cliente cadastrado encontrado</p>
+                             </div>
+                           )}
+
+                           <div className="h-[1px] bg-white/5 my-2" />
+                         </div>
+                       )}
+
+                       <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-black uppercase text-neutral-500 tracking-wider">Dados do Agendamento</span>
+                            {/* Visual Indicator of Connection */}
+                            {currentClientMatch && (
+                              <span className="text-[9px] text-green-500 font-black uppercase tracking-widest bg-green-500/10 px-2 py-0.5 rounded-full">Cliente Encontrado (Tempo Real)</span>
+                            )}
+                          </div>
+                          {currentClientMatch && (
+                            <motion.div 
+                              initial={{ opacity: 0, scale: 0.95 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center justify-between text-xs my-1"
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+                                <span className="text-neutral-300 font-medium">Vinculado a <strong className="text-amber-500 font-bold">{currentClientMatch.name}</strong></span>
+                              </div>
+                              <button 
+                                type="button" 
+                                onClick={() => {
+                                  setSelectedClient(null);
+                                  setGuestName("");
+                                  setGuestPhone("");
+                                  setGuestEmail("");
+                                }}
+                                className="text-[9px] text-neutral-400 font-extrabold uppercase hover:text-white transition-colors"
+                              >
+                                Desvincular
+                              </button>
+                            </motion.div>
+                          )}
+                          <input 
+                            placeholder="Nome do Cliente" 
+                            className="w-full p-4 bg-black rounded-2xl border border-white/5 text-white text-sm focus:border-amber-500 outline-none transition-all" 
+                            value={guestName} 
+                            onChange={e => {
+                              setGuestName(e.target.value);
+                              if (selectedClient && selectedClient.name !== e.target.value) {
+                                setSelectedClient(null);
+                              }
+                            }} 
+                          />
+                          <input 
+                            placeholder="WhatsApp do Cliente" 
+                            className="w-full p-4 bg-black rounded-2xl border border-white/5 text-white text-sm focus:border-amber-500 outline-none transition-all" 
+                            value={guestPhone} 
+                            onChange={e => {
+                              setGuestPhone(e.target.value);
+                              if (selectedClient && selectedClient.whatsapp !== e.target.value) {
+                                setSelectedClient(null);
+                              }
+                            }} 
+                          />
+                          <input placeholder="E-mail (opcional)" className="w-full p-4 bg-black rounded-2xl border border-white/5 text-white text-sm focus:border-amber-500 outline-none transition-all" value={guestEmail} onChange={e => setGuestEmail(e.target.value)} />
+                       </div>
                     </div>
                 )}
                 <div className="bg-neutral-900 p-8 rounded-[2.5rem] border border-white/5 space-y-6">
