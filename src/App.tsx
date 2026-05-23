@@ -444,183 +444,179 @@ export default function App() {
           ease: [0.33, 1, 0.68, 1], // Custom cubic-bezier for a smoother feel
           opacity: { duration: 0.25 }
         }}
-        className={`fixed top-0 w-full z-50 bg-black/80 backdrop-blur-xl pt-[env(safe-area-inset-top)] ${
-          (user || loggedInClient) ? "hidden" : "border-b border-white/5"
-        }`}
+        className="fixed top-0 w-full z-50 border-b border-white/5 bg-black/80 backdrop-blur-xl pt-[env(safe-area-inset-top)]"
       >
-        {!(user || loggedInClient) && (
-          <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-            <div 
-              className="flex items-center gap-4 cursor-pointer group"
-              onClick={() => setCurrentScreen("home")}
-            >
-              <BrandLogo className="w-12 h-12 bg-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.2)] group-hover:scale-105 transition-transform" />
-              <div className="hidden sm:block text-left">
-                <span className="text-xl font-black tracking-tighter uppercase italic block leading-none">
-                  MS
-                </span>
-                <span className="text-[10px] text-amber-500 uppercase tracking-[0.3em] font-bold">BARBER SHOP</span>
-              </div>
+        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+          <div 
+            className="flex items-center gap-4 cursor-pointer group"
+            onClick={() => setCurrentScreen("home")}
+          >
+            <BrandLogo className="w-12 h-12 bg-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.2)] group-hover:scale-105 transition-transform" />
+            <div className="hidden sm:block text-left">
+              <span className="text-xl font-black tracking-tighter uppercase italic block leading-none">
+                MS
+              </span>
+              <span className="text-[10px] text-amber-500 uppercase tracking-[0.3em] font-bold">BARBER SHOP</span>
             </div>
+          </div>
 
-            <div className="hidden md:flex items-center gap-8 text-sm font-medium uppercase tracking-widest text-neutral-400">
-              {currentScreen !== "home" && (
-                <button onClick={() => setCurrentScreen("home")} className="hover:text-amber-500 transition-colors">Início</button>
-              )}
-              {currentScreen === "home" && (
-                <>
-                  <a href="#inicio" className="hover:text-amber-500 transition-colors">Início</a>
-                  <a href="#servicos" className="hover:text-amber-500 transition-colors">Serviços</a>
-                  <a href="#unidades" className="hover:text-amber-500 transition-colors">Local</a>
-                </>
-              )}
-              
-              {user ? (
-                <div className="flex items-center gap-6">
-                  <button 
-                    onClick={() => setCurrentScreen("agenda")}
-                    className={`hover:text-white transition-colors flex items-center gap-2 ${currentScreen === "agenda" ? "text-amber-500" : ""}`}
-                  >
-                    {userRole === "manager" ? "Agenda" : "Dashboard"}
-                  </button>
-                  {(userRole === "manager" || userRole === "barber") && (
-                    <>
-                      {userRole === "manager" && (
-                          <button 
-                            onClick={() => setCurrentScreen("collaborators")}
-                            className={`hover:text-white transition-colors flex items-center gap-2 ${currentScreen === "collaborators" ? "text-amber-500" : ""}`}
-                          >
-                            Equipe
-                          </button>
-                      )}
-                      <button 
-                        onClick={() => setCurrentScreen("services")}
-                        className={`hover:text-white transition-colors flex items-center gap-2 ${currentScreen === "services" ? "text-amber-500" : ""}`}
-                      >
-                        Serviços
-                      </button>
-                    </>
-                  )}
-                  <div className="flex items-center gap-3 pl-6 border-l border-white/10">
-                    <div className="text-right">
-                      <p className="text-white text-xs font-bold leading-none">{user.displayName}</p>
-                      <p className="text-[10px] text-amber-500 capitalize font-black">{userRole}</p>
-                    </div>
-                    <div className="relative">
-                      {user.photoURL ? (
-                        <img 
-                          src={user.photoURL} 
-                          className="w-10 h-10 rounded-xl border border-amber-500/50 object-cover" 
-                          referrerPolicy="no-referrer"
-                          alt={user.displayName || "User avatar"}
-                        />
-                      ) : (
-                        <div className="w-10 h-10 rounded-xl border border-white/10 bg-white/5 flex items-center justify-center">
-                          <User className="w-5 h-5 text-neutral-500" />
-                        </div>
-                      )}
-                    </div>
-
-                    {['manager', 'barber'].includes(userRole) && (
-                      <div className="relative">
+          <div className="hidden md:flex items-center gap-8 text-sm font-medium uppercase tracking-widest text-neutral-400">
+            {currentScreen !== "home" && (
+              <button onClick={() => setCurrentScreen("home")} className="hover:text-amber-500 transition-colors">Início</button>
+            )}
+            {currentScreen === "home" && (
+              <>
+                <a href="#inicio" className="hover:text-amber-500 transition-colors">Início</a>
+                <a href="#servicos" className="hover:text-amber-500 transition-colors">Serviços</a>
+                <a href="#unidades" className="hover:text-amber-500 transition-colors">Local</a>
+              </>
+            )}
+            
+            {user ? (
+              <div className="flex items-center gap-6">
+                <button 
+                  onClick={() => setCurrentScreen("agenda")}
+                  className={`hover:text-white transition-colors flex items-center gap-2 ${currentScreen === "agenda" ? "text-amber-500" : ""}`}
+                >
+                  {userRole === "manager" ? "Agenda" : "Dashboard"}
+                </button>
+                {(userRole === "manager" || userRole === "barber") && (
+                  <>
+                    {userRole === "manager" && (
                         <button 
-                          onClick={() => setShowNotifications(!showNotifications)}
-                          className={`p-2 rounded-lg transition-all relative ${showNotifications ? 'bg-amber-500 text-black' : 'bg-white/5 text-neutral-400 hover:bg-amber-500/20 hover:text-amber-500'}`}
+                          onClick={() => setCurrentScreen("collaborators")}
+                          className={`hover:text-white transition-colors flex items-center gap-2 ${currentScreen === "collaborators" ? "text-amber-500" : ""}`}
                         >
-                          <Bell className="w-4 h-4" />
-                          {staffNotifications.filter(n => !n.read).length > 0 && (
-                            <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 text-black text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-black">
-                              {staffNotifications.filter(n => !n.read).length}
-                            </span>
-                          )}
+                          Equipe
                         </button>
-                        
-                        <AnimatePresence>
-                          {showNotifications && (
-                            <motion.div 
-                              initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                              animate={{ opacity: 1, y: 0, scale: 1 }}
-                              exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                              className="absolute right-0 mt-4 w-80 bg-neutral-900 border border-white/10 rounded-2xl shadow-2xl z-50 p-4 max-h-[32rem] flex flex-col"
-                            >
-                              <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white">Notificações</h3>
-                                <button 
-                                  onClick={async () => {
-                                    const unread = staffNotifications.filter(n => !n.read);
-                                    await Promise.all(unread.map(n => updateDoc(doc(db, "staff_notifications", n.id), { read: true })));
-                                  }}
-                                  className="text-[10px] text-amber-500 hover:text-amber-400 font-bold uppercase tracking-wider"
-                                >
-                                  Limpar
-                                </button>
-                              </div>
-                              
-                              <div className="space-y-2 overflow-y-auto pr-1">
-                                {staffNotifications.map(n => (
-                                  <div 
-                                    key={n.id} 
-                                    className={`p-3 rounded-xl border transition-all cursor-pointer ${n.read ? 'bg-transparent border-white/5 opacity-60' : 'bg-white/5 border-amber-500/30 ring-1 ring-amber-500/10'}`}
-                                    onClick={async () => {
-                                      if (!n.read) await updateDoc(doc(db, "staff_notifications", n.id), { read: true });
-                                    }}
-                                  >
-                                    <div className="flex gap-3">
-                                      <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${n.type === 'booking' ? 'bg-green-500' : 'bg-red-500'}`} />
-                                      <div>
-                                        <p className="text-[11px] text-white leading-relaxed">{n.message}</p>
-                                        <p className="text-[9px] text-neutral-500 mt-1 font-bold uppercase tracking-tighter">
-                                          {n.timestamp?.toDate ? format(n.timestamp.toDate(), "HH:mm • dd/MM", { locale: ptBR }) : "Agora"}
-                                        </p>
-                                      </div>
-                                    </div>
-                                  </div>
-                                ))}
-                                {staffNotifications.length === 0 && (
-                                  <div className="py-8 text-center">
-                                    <Bell className="w-8 h-8 text-neutral-800 mx-auto mb-2" />
-                                    <p className="text-[10px] text-neutral-500 uppercase font-black">Sem notifications no momento.</p>
-                                  </div>
-                                )}
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
+                    )}
+                    <button 
+                      onClick={() => setCurrentScreen("services")}
+                      className={`hover:text-white transition-colors flex items-center gap-2 ${currentScreen === "services" ? "text-amber-500" : ""}`}
+                    >
+                      Serviços
+                    </button>
+                  </>
+                )}
+                <div className="flex items-center gap-3 pl-6 border-l border-white/10">
+                  <div className="text-right">
+                    <p className="text-white text-xs font-bold leading-none">{user.displayName}</p>
+                    <p className="text-[10px] text-amber-500 capitalize font-black">{userRole}</p>
+                  </div>
+                  <div className="relative">
+                    {user.photoURL ? (
+                      <img 
+                        src={user.photoURL} 
+                        className="w-10 h-10 rounded-xl border border-amber-500/50 object-cover" 
+                        referrerPolicy="no-referrer"
+                        alt={user.displayName || "User avatar"}
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-xl border border-white/10 bg-white/5 flex items-center justify-center">
+                        <User className="w-5 h-5 text-neutral-500" />
                       </div>
                     )}
-
-                    <button 
-                      onClick={() => setCurrentScreen(currentScreen === "more" ? "home" : "more")} 
-                      className={`p-2 rounded-lg transition-all ${currentScreen === 'more' ? 'bg-amber-500 text-black' : 'bg-white/5 text-neutral-400 hover:bg-amber-500/20 hover:text-amber-500'}`}
-                    >
-                      <Settings className="w-4 h-4" />
-                    </button>
                   </div>
-                </div>
-              ) : (
-                <>
-                  <button 
-                    onClick={() => setCurrentScreen("login")}
-                    className="text-neutral-400 hover:text-white transition-colors uppercase text-sm font-medium tracking-widest"
-                  >
-                    Portal Profissional
-                  </button>
-                  <button 
-                    onClick={() => setCurrentScreen("client-login")}
-                    className="bg-amber-500 text-black px-6 py-2 rounded-full font-bold hover:bg-amber-400 transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(245,158,11,0.2)]"
-                  >
-                    <User className="w-4 h-4" />
-                    ACESSAR PORTAL
-                  </button>
-                </>
-              )}
-            </div>
 
-            <button className="md:hidden text-white" onClick={() => setIsMenuOpen(!isMenuOpen)}>
-              {isMenuOpen ? <X /> : <Menu />}
-            </button>
+                  {['manager', 'barber'].includes(userRole) && (
+                    <div className="relative">
+                      <button 
+                        onClick={() => setShowNotifications(!showNotifications)}
+                        className={`p-2 rounded-lg transition-all relative ${showNotifications ? 'bg-amber-500 text-black' : 'bg-white/5 text-neutral-400 hover:bg-amber-500/20 hover:text-amber-500'}`}
+                      >
+                        <Bell className="w-4 h-4" />
+                        {staffNotifications.filter(n => !n.read).length > 0 && (
+                          <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 text-black text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-black">
+                            {staffNotifications.filter(n => !n.read).length}
+                          </span>
+                        )}
+                      </button>
+                      
+                      <AnimatePresence>
+                        {showNotifications && (
+                          <motion.div 
+                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                            className="absolute right-0 mt-4 w-80 bg-neutral-900 border border-white/10 rounded-2xl shadow-2xl z-50 p-4 max-h-[32rem] flex flex-col"
+                          >
+                            <div className="flex items-center justify-between mb-4">
+                              <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white">Notificações</h3>
+                              <button 
+                                onClick={async () => {
+                                  const unread = staffNotifications.filter(n => !n.read);
+                                  await Promise.all(unread.map(n => updateDoc(doc(db, "staff_notifications", n.id), { read: true })));
+                                }}
+                                className="text-[10px] text-amber-500 hover:text-amber-400 font-bold uppercase tracking-wider"
+                              >
+                                Limpar
+                              </button>
+                            </div>
+                            
+                            <div className="space-y-2 overflow-y-auto pr-1">
+                              {staffNotifications.map(n => (
+                                <div 
+                                  key={n.id} 
+                                  className={`p-3 rounded-xl border transition-all cursor-pointer ${n.read ? 'bg-transparent border-white/5 opacity-60' : 'bg-white/5 border-amber-500/30 ring-1 ring-amber-500/10'}`}
+                                  onClick={async () => {
+                                    if (!n.read) await updateDoc(doc(db, "staff_notifications", n.id), { read: true });
+                                  }}
+                                >
+                                  <div className="flex gap-3">
+                                    <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${n.type === 'booking' ? 'bg-green-500' : 'bg-red-500'}`} />
+                                    <div>
+                                      <p className="text-[11px] text-white leading-relaxed">{n.message}</p>
+                                      <p className="text-[9px] text-neutral-500 mt-1 font-bold uppercase tracking-tighter">
+                                        {n.timestamp?.toDate ? format(n.timestamp.toDate(), "HH:mm • dd/MM", { locale: ptBR }) : "Agora"}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                              {staffNotifications.length === 0 && (
+                                <div className="py-8 text-center">
+                                  <Bell className="w-8 h-8 text-neutral-800 mx-auto mb-2" />
+                                  <p className="text-[10px] text-neutral-500 uppercase font-black">Sem notificações no momento.</p>
+                                </div>
+                              )}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  )}
+
+                  <button 
+                    onClick={() => setCurrentScreen(currentScreen === "more" ? "home" : "more")} 
+                    className={`p-2 rounded-lg transition-all ${currentScreen === 'more' ? 'bg-amber-500 text-black' : 'bg-white/5 text-neutral-400 hover:bg-amber-500/20 hover:text-amber-500'}`}
+                  >
+                    <Settings className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <button 
+                  onClick={() => setCurrentScreen("login")}
+                  className="text-neutral-400 hover:text-white transition-colors uppercase text-sm font-medium tracking-widest"
+                >
+                  Portal Profissional
+                </button>
+                <button 
+                  onClick={() => setCurrentScreen("client-login")}
+                  className="bg-amber-500 text-black px-6 py-2 rounded-full font-bold hover:bg-amber-400 transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(245,158,11,0.2)]"
+                >
+                  <User className="w-4 h-4" />
+                  ACESSAR PORTAL
+                </button>
+              </>
+            )}
           </div>
-        )}
+
+          <button className="md:hidden text-white" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+            {isMenuOpen ? <X /> : <Menu />}
+          </button>
+        </div>
       </motion.nav>
 
       <main className="pt-[calc(5rem+env(safe-area-inset-top))]">
