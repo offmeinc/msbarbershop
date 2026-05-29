@@ -18,6 +18,7 @@ import {
   LogOut, 
   ChevronLeft 
 } from "lucide-react";
+import { setupPushSubscription, getNotificationPermissionState, queryNotificationSupport } from "../../lib/pushRegister";
 import { BlockScreen } from "../manager/BlockScreen";
 import { HelpScreen, ShareScreen, RecurrenceScreen } from "../manager/OtherScreens";
 import { ReconScreen } from "../manager/UtilityScreens";
@@ -81,6 +82,58 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
             }
           }
         }},
+        { 
+          id: 'push', 
+          label: 'Ativar Notificações', 
+          icon: <Bell className="w-5 h-5" />, 
+          onClick: async () => {
+            if (!queryNotificationSupport()) {
+              alert("As notificações push não são suportadas neste navegador.");
+              return;
+            }
+            if (getNotificationPermissionState() === 'granted') {
+              alert("As notificações já estão ativadas para este dispositivo!");
+              return;
+            }
+            const cleanUid = user?.uid || user?.id || "anonymous";
+            const success = await setupPushSubscription(cleanUid, role || "client");
+            if (success) {
+              alert("Sucesso! Notificações de compromissos ativadas neste aparelho.");
+            } else {
+              alert("Não foi possível ativar as notificações. Dica: Permita notificações nas configurações do navegador.");
+            }
+          }
+        },
+        {
+          id: 'push-test',
+          label: 'Testar 2º Plano (5s)',
+          icon: <Bell className="w-5 h-5 animate-bounce" />,
+          onClick: async () => {
+            if (getNotificationPermissionState() !== 'granted') {
+              alert("Por favor, ative as notificações primeiro antes de fazer o teste.");
+              return;
+            }
+            const cleanUid = user?.uid || user?.id || "anonymous";
+            try {
+              const res = await fetch("/api/push-test", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  userId: cleanUid,
+                  title: "Teste em 2º Plano! 🔔",
+                  body: "Excelente! As notificações push de segundo plano estão funcionando perfeitamente.",
+                  delayMs: 5000
+                })
+              });
+              const data = await res.json();
+              if (data.success) {
+                alert("Teste agendado! Minimize o aplicativo ou saia da aba AGORA para receber a notificação em 5 segundos.");
+              }
+            } catch (err) {
+              alert("Não foi possível agendar o teste de segundo plano.");
+            }
+          }
+        },
       ]
     },
     {

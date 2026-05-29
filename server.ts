@@ -5,6 +5,7 @@ import { fileURLToPath } from "url";
 import multer from "multer";
 import axios from "axios";
 import FormData from "form-data";
+import { initVapid, startAppointmentsListener } from "./src/server/pushNotificationService";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -13,7 +14,44 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
   
+  // Support standard JSON body parsing for API routes
+  app.use(express.json());
+  
+  // Initialize Push notifications (generation and registration of VAPID)
+  const vapid = initVapid();
+  startAppointmentsListener();
+  
   const upload = multer({ storage: multer.memoryStorage() });
+
+  // API Route for Push Config (Retrieve VAPID PublicKey)
+  app.get("/api/push-config", (req, res) => {
+    res.json({ publicKey: vapid.publicKey });
+  });
+
+  // API Route for simulating delayed push notifications (perfect for background testing)
+  app.post("/api/push-test", async (req, res) => {
+    const { userId, isCollaborator, delayMs = 5000, title, body } = req.body;
+    res.json({ success: true, message: `Push test scheduled to run in ${delayMs / 1000} seconds.` });
+
+    setTimeout(async () => {
+      try {
+        const { sendPushNotification, sendNotificationToCollaborators } = await import("./src/server/pushNotificationService");
+        const payload = {
+          title: title || "Teste em 2º Plano! 💈",
+          body: body || "Esta é uma notificação simulando o app em segundo plano após 5 segundos.",
+          url: "/"
+        };
+
+        if (isCollaborator) {
+          await sendNotificationToCollaborators(payload);
+        } else if (userId) {
+          await sendPushNotification(userId, payload);
+        }
+      } catch (err: any) {
+        console.error("[Push Test Route] Error delivering delayed push:", err.message);
+      }
+    }, delayMs);
+  });
 
   // API Route for ImgBB Upload
   app.post("/api/upload", upload.single("image"), async (req, res) => {

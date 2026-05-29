@@ -117,12 +117,36 @@
         "serviceIds": { "type": "array", "items": { "type": "string" } }
       },
       "required": ["code", "discountPercentage", "active"]
+    },
+    "PushSubscription": {
+      "title": "PushSubscription",
+      "description": "Browser Web Push subscription metadata.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userRole": { "type": "string" },
+        "endpoint": { "type": "string" },
+        "keys": {
+          "type": "object",
+          "properties": {
+            "p256dh": { "type": "string" },
+            "auth": { "type": "string" }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "endpoint", "keys"]
     }
   },
   "firestore": {
     "/users/{userId}": {
       "schema": "User",
       "description": "Storage for user profiles."
+    },
+    "/push_subscriptions/{subId}": {
+      "schema": "PushSubscription",
+      "description": "Push notification subscriptions mapped to user and role."
     },
     "/staff_notifications/{notifId}": {
       "schema": "StaffNotification",

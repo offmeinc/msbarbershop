@@ -67,6 +67,11 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    // Push Subscriptions
+    match /push_subscriptions/{subId} {
+      allow read, write: if true;
+    }
+
     // Legacy/Migration support (Keep for stability)
     match /client_profiles/{loginCode} { allow read, write: if true; }
     match /notifications/{docId} { allow read, write: if true; }

@@ -35,7 +35,9 @@ import {
   RefreshCw,
   Search,
   User,
+  Bell,
 } from "lucide-react";
+import { setupPushSubscription, getNotificationPermissionState, queryNotificationSupport } from "../../lib/pushRegister";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
 
 function RecurrenceUI({
@@ -77,41 +79,43 @@ function RecurrenceUI({
   );
 }
 
-function ConfirmationModal({ service, date, onConfirm }: any) {
+function ConfirmationModal({ service, date, onConfirm, userId, userRole }: any) {
+  const [pushState, setPushState] = useState(getNotificationPermissionState());
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-2xl flex items-center justify-center p-6"
+      className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-2xl flex items-center justify-center p-6 overflow-y-auto"
     >
-      <div className="max-w-sm w-full text-center space-y-8">
-        <div className="w-24 h-24 bg-green-500 rounded-[2.5rem] flex items-center justify-center mx-auto shadow-2xl shadow-green-500/20">
-          <CheckCircle2 className="w-12 h-12 text-black" strokeWidth={3} />
+      <div className="max-w-sm w-full text-center space-y-6 my-auto py-4">
+        <div className="w-16 h-16 bg-green-500 rounded-[1.8rem] flex items-center justify-center mx-auto shadow-2xl shadow-green-500/20">
+          <CheckCircle2 className="w-8 h-8 text-black" strokeWidth={3} />
         </div>
-        <div className="space-y-2">
-          <h2 className="text-4xl font-black text-white italic uppercase tracking-tighter">
+        <div className="space-y-1">
+          <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter">
             Tudo Pronto!
           </h2>
-          <p className="text-neutral-500 font-bold uppercase text-[10px] tracking-[0.2em]">
+          <p className="text-neutral-500 font-bold uppercase text-[9px] tracking-[0.2em]">
             Seu agendamento foi confirmado
           </p>
         </div>
 
-        <div className="bg-neutral-900/50 p-8 rounded-[3rem] border border-white/5 space-y-4">
-          <div className="space-y-1">
-            <p className="text-[10px] font-black text-neutral-600 uppercase tracking-widest">
+        <div className="bg-neutral-900/50 p-6 rounded-[2.5rem] border border-white/5 space-y-3">
+          <div className="space-y-0.5">
+            <p className="text-[9px] font-black text-neutral-600 uppercase tracking-widest">
               Procedimento
             </p>
-            <p className="text-xl font-black text-white uppercase italic">
+            <p className="text-lg font-black text-white uppercase italic">
               {service?.name}
             </p>
           </div>
           <div className="h-[1px] bg-white/5" />
-          <div className="space-y-1">
-            <p className="text-[10px] font-black text-neutral-600 uppercase tracking-widest">
+          <div className="space-y-0.5">
+            <p className="text-[9px] font-black text-neutral-600 uppercase tracking-widest">
               Data e Hora
             </p>
-            <p className="text-xl font-black text-amber-500 italic uppercase">
+            <p className="text-lg font-black text-amber-500 italic uppercase">
               {format(new Date(date), "dd 'de' MMMM", { locale: ptBR })}
               <br />
               às {format(new Date(date), "HH:mm")}
@@ -119,13 +123,45 @@ function ConfirmationModal({ service, date, onConfirm }: any) {
           </div>
         </div>
 
-        <div className="space-y-4">
-          <p className="text-[10px] text-neutral-600 font-bold uppercase tracking-widest leading-relaxed">
+        {/* Dynamic Push Opt-in for instant user activation */}
+        {pushState !== "granted" && queryNotificationSupport() && (
+          <div className="bg-amber-500/10 border border-amber-500/20 p-5 rounded-[2.5rem] space-y-3 text-left">
+            <div className="flex items-start gap-2.5">
+              <Bell className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
+              <div>
+                <h4 className="text-xs font-black text-white uppercase tracking-wider">
+                  Notificar no Celular? 🔔
+                </h4>
+                <p className="text-neutral-400 text-[10px] font-bold mt-1 leading-normal uppercase">
+                  Ative as notificações para receber atualizações do status do seu agendamento em tempo real neste celular!
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={async () => {
+                const cleanId = userId || "anonymous";
+                const success = await setupPushSubscription(cleanId, userRole || "client");
+                if (success) {
+                  setPushState("granted");
+                  alert("Tudo pronto! Você receberá atualizações do seu agendamento no seu celular.");
+                } else {
+                  alert("Não foi possível habilitar notificações. Por favor, libere a permissão no seu navegador.");
+                }
+              }}
+              className="w-full bg-amber-500 text-black py-3 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest hover:bg-amber-400 active:scale-95 transition-all text-center block"
+            >
+              ATIVAR NOTIFICAÇÕES
+            </button>
+          </div>
+        )}
+
+        <div className="space-y-3">
+          <p className="text-[9px] text-neutral-600 font-bold uppercase tracking-widest leading-relaxed">
             Enviamos um resumo no seu WhatsApp e e-mail.
           </p>
           <button
             onClick={onConfirm}
-            className="w-full bg-white text-black py-6 rounded-[2rem] font-black uppercase italic tracking-widest hover:scale-105 transition-transform"
+            className="w-full bg-white text-black py-5 rounded-[1.8rem] font-black uppercase italic tracking-widest hover:scale-105 transition-transform"
           >
             VOLTAR PARA O INÍCIO
           </button>
@@ -604,6 +640,8 @@ export function BookingScreen({
               d.setHours(h, m, 0, 0);
               return d.toISOString();
             })()}
+            userId={user ? user.uid || user.id || "guest" : (guestPhone || "").replace(/\D/g, "")}
+            userRole={role || "client"}
             onConfirm={onBack}
           />
         )}

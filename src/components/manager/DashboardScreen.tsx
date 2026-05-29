@@ -56,6 +56,7 @@ import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
 import { CalendarWidget, AppointmentModal } from "../CalendarWidget";
 import { ServicesManagement, CollaboratorsManager, WorkingHoursManager } from "./ManagementScreens";
 import { ReviewModal } from "../common/ReviewModal";
+import { setupPushSubscription, getNotificationPermissionState, queryNotificationSupport } from "../../lib/pushRegister";
 
 export function EarningsDashboard({ appointments, services }: { appointments: any[], services: any[] }) {
   const chartData = useMemo(() => {
@@ -100,6 +101,7 @@ export function EarningsDashboard({ appointments, services }: { appointments: an
 }
 
 export function DashboardScreen({ user, role, services, dashboardView, onBack, onNewBooking, onEditBooking }: { user: any, role: string, services: any[], dashboardView?: "agenda" | "list" | "calendar" | "services" | "hours" | "collaborators" | "earnings", onBack: () => void, onNewBooking?: () => void, onEditBooking?: (app: any) => void }) {
+  const [pushPermission, setPushPermission] = useState<NotificationPermission>(getNotificationPermissionState());
   const [appointments, setAppointments] = useState<any[]>([]);
   const [barbers, setBarbers] = useState<any[]>([]);
   const [selectedBarberId, setSelectedBarberId] = useState<string>("all");
@@ -506,6 +508,31 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
               {currentView === 'hours' && <WorkingHoursManager />}
               {reviewAppointment && <ReviewModal appointment={reviewAppointment} onClose={() => setReviewAppointment(null)} />}
           </div>
+      )}
+
+      {/* Floating Action Button for Push Notification Opt-in */}
+      {pushPermission !== "granted" && queryNotificationSupport() && (
+        <button
+          onClick={async () => {
+            const cleanUid = user?.uid || user?.id || "anonymous";
+            const success = await setupPushSubscription(cleanUid, role || "collaborator");
+            if (success) {
+              setPushPermission("granted");
+              alert("Excelente! Notificações push ativadas com sucesso neste dispositivo.");
+            } else {
+              alert("Não foi possível ativar as notificações push. Ative as permissões nas configurações do navegador.");
+            }
+          }}
+          className="fixed bottom-24 right-6 z-40 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:scale-95 text-black p-4 rounded-full shadow-[0_10px_30px_rgba(245,158,11,0.3)] border border-amber-400/20 transition-all flex items-center gap-2 group cursor-pointer"
+          style={{ cursor: "pointer" }}
+          title="Ativar Notificações no Celular"
+          id="dashboard-push-fab"
+        >
+          <Bell className="w-5 h-5 animate-pulse text-black" />
+          <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 ease-in-out text-[10px] font-black uppercase whitespace-nowrap tracking-wider text-black animate-in fade-in">
+            Notificar Celular 🔔
+          </span>
+        </button>
       )}
     </div>
   );
