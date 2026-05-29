@@ -5,7 +5,7 @@ import { fileURLToPath } from "url";
 import multer from "multer";
 import axios from "axios";
 import FormData from "form-data";
-import { initVapid, startAppointmentsListener } from "./src/server/pushNotificationService";
+import { initVapid, startAppointmentsListener, sendPushNotification, sendNotificationToCollaborators } from "./src/server/pushNotificationService";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -35,7 +35,6 @@ async function startServer() {
 
     setTimeout(async () => {
       try {
-        const { sendPushNotification, sendNotificationToCollaborators } = await import("./src/server/pushNotificationService");
         const payload = {
           title: title || "Teste em 2º Plano! 💈",
           body: body || "Esta é uma notificação simulando o app em segundo plano após 5 segundos.",

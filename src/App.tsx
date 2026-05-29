@@ -640,7 +640,7 @@ export default function App() {
             {currentScreen === "portfolio" && <PortfolioManager onBack={() => setCurrentScreen("home")} />}
             {currentScreen === "more" && (
               <MoreOptionsScreen 
-                user={user} 
+                user={user || loggedInClient} 
                 role={userRole} 
                 onLogout={handleLogout} 
                 onBack={() => setCurrentScreen("home")}
