@@ -125,12 +125,19 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
                   delayMs: 5000
                 })
               });
+              
+              if (!res.ok) {
+                throw new Error(`Servidor respondeu com status ${res.status}`);
+              }
+              
               const data = await res.json();
               if (data.success) {
                 alert("Teste agendado! Minimize o aplicativo ou saia da aba AGORA para receber a notificação em 5 segundos.");
+              } else {
+                throw new Error(data.message || "Sucesso falso no retorno da API");
               }
-            } catch (err) {
-              alert("Não foi possível agendar o teste de segundo plano.");
+            } catch (err: any) {
+              alert("Não foi possível agendar o teste de segundo plano. Detalhes: " + (err?.message || err));
             }
           }
         },

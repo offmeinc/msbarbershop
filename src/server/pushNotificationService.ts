@@ -79,19 +79,32 @@ export async function sendPushNotification(
 ) {
   try {
     const cleanUserId = userId.replace(/[\s\-\(\)\+]/g, "");
-    const q = query(
+    
+    // Query both potential formats to ensure seamless compatibility (raw and sanitized)
+    const q1 = query(
       collection(db, "push_subscriptions"),
       where("userId", "==", cleanUserId)
     );
-    const snapshot = await getDocs(q);
+    const q2 = query(
+      collection(db, "push_subscriptions"),
+      where("userId", "==", userId)
+    );
     
-    if (snapshot.empty) {
-      console.log(`[Push Service] No active push subscriptions found for user: ${cleanUserId}`);
+    const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+    
+    // Combine unique document matches
+    const docMap = new Map();
+    snap1.docs.forEach((d) => docMap.set(d.id, d));
+    snap2.docs.forEach((d) => docMap.set(d.id, d));
+    const uniqueDocs = Array.from(docMap.values());
+    
+    if (uniqueDocs.length === 0) {
+      console.log(`[Push Service] No active push subscriptions found for user: ${cleanUserId} or ${userId}`);
       return;
     }
 
-    console.log(`[Push Service] Sending notification to ${snapshot.size} device(s) for user: ${cleanUserId}`);
-    const promises = snapshot.docs.map(async (docSnap) => {
+    console.log(`[Push Service] Sending notification to ${uniqueDocs.length} device(s) for user: ${userId}`);
+    const promises = uniqueDocs.map(async (docSnap) => {
       const data = docSnap.data();
       const subscription = data.subscription;
 
