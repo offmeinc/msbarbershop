@@ -78,18 +78,19 @@ export async function sendPushNotification(
   payload: { title: string; body: string; url?: string }
 ) {
   try {
+    const cleanUserId = userId.replace(/[\s\-\(\)\+]/g, "");
     const q = query(
       collection(db, "push_subscriptions"),
-      where("userId", "==", userId)
+      where("userId", "==", cleanUserId)
     );
     const snapshot = await getDocs(q);
     
     if (snapshot.empty) {
-      console.log(`[Push Service] No active push subscriptions found for user: ${userId}`);
+      console.log(`[Push Service] No active push subscriptions found for user: ${cleanUserId}`);
       return;
     }
 
-    console.log(`[Push Service] Sending notification to ${snapshot.size} device(s) for user: ${userId}`);
+    console.log(`[Push Service] Sending notification to ${snapshot.size} device(s) for user: ${cleanUserId}`);
     const promises = snapshot.docs.map(async (docSnap) => {
       const data = docSnap.data();
       const subscription = data.subscription;
@@ -211,7 +212,8 @@ export function startAppointmentsListener() {
         });
 
         // 2. Notify client (if they registered push, as guest or user)
-        const clientTarget = clientId && clientId !== "guest" ? clientId : clientPhone;
+        const rawTarget = clientId && clientId !== "guest" ? clientId : clientPhone;
+        const clientTarget = rawTarget ? rawTarget.replace(/[\s\-\(\)\+]/g, "") : "";
         if (clientTarget) {
           await sendPushNotification(clientTarget, {
             title: "Agendamento Solicitado! 🎉",
@@ -225,29 +227,32 @@ export function startAppointmentsListener() {
         console.log(`[Push Service] Appointment updated: ${docId}`);
         // Look up the transition of status
         const status = data.status;
-        const clientTarget = clientId && clientId !== "guest" ? clientId : clientPhone;
+        const rawTarget = clientId && clientId !== "guest" ? clientId : clientPhone;
+        const clientTarget = rawTarget ? rawTarget.replace(/[\s\-\(\)\+]/g, "") : "";
 
         const urlPath = "/";
 
-        if (status === "confirmed") {
+        if (status === "confirmed" && clientTarget) {
           await sendPushNotification(clientTarget, {
             title: "Agendamento Confirmado! ✅",
             body: `Excelente! Seu agendamento de ${serviceName} com ${barberName} foi confirmado para ${formattedDateStr}.`,
             url: urlPath
           });
         } else if (status === "cancelled") {
-          await sendPushNotification(clientTarget, {
-            title: "Agendamento Cancelado ❌",
-            body: `Seu agendamento de ${serviceName} para ${formattedDateStr} foi cancelado.`,
-            url: urlPath
-          });
+          if (clientTarget) {
+            await sendPushNotification(clientTarget, {
+              title: "Agendamento Cancelado ❌",
+              body: `Seu agendamento de ${serviceName} para ${formattedDateStr} foi cancelado.`,
+              url: urlPath
+            });
+          }
           // Also notify professional/collaborator
           await sendNotificationToCollaborators({
             title: "Agendamento Cancelado ⚠️",
             body: `${clientName} cancelou o agendamento de ${serviceName} marcado para ${formattedDateStr}`,
             url: "/agenda"
           });
-        } else if (status === "completed") {
+        } else if (status === "completed" && clientTarget) {
           await sendPushNotification(clientTarget, {
             title: "Atendimento Concluído! ⭐",
             body: `Obrigado pela preferência! Avalie seu atendimento e ajude o profissional ${barberName}.`,
