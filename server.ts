@@ -18,7 +18,7 @@ async function startServer() {
   app.use(express.json());
   
   // Initialize Push notifications (generation and registration of VAPID)
-  const vapid = initVapid();
+  const vapid = await initVapid();
   startAppointmentsListener();
   
   const upload = multer({ storage: multer.memoryStorage() });

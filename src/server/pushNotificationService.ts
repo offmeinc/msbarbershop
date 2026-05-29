@@ -23,7 +23,11 @@ interface VapidKeys {
 }
 
 // Ensure VAPID keys are initialized and set up
-export function initVapid(): VapidKeys {
+let loadedVapidKeys: VapidKeys | null = null;
+
+export async function initVapid(): Promise<VapidKeys> {
+  if (loadedVapidKeys) return loadedVapidKeys;
+
   let publicKey = process.env.VAPID_PUBLIC_KEY;
   let privateKey = process.env.VAPID_PRIVATE_KEY;
 
@@ -34,10 +38,32 @@ export function initVapid(): VapidKeys {
       publicKey,
       privateKey
     );
-    return { publicKey, privateKey };
+    loadedVapidKeys = { publicKey, privateKey };
+    return loadedVapidKeys;
   }
 
-  // Check if we have saved keys in file
+  // 1. Try to load persistent keys from Firestore
+  try {
+    const docRef = doc(db, "system_config", "vapid_keys");
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      if (data.publicKey && data.privateKey) {
+        console.log("[Push Service] Using saved stable VAPID keys from Firestore /system_config/vapid_keys.");
+        webpush.setVapidDetails(
+          "mailto:suporte@barbearia.com",
+          data.publicKey,
+          data.privateKey
+        );
+        loadedVapidKeys = { publicKey: data.publicKey, privateKey: data.privateKey };
+        return loadedVapidKeys;
+      }
+    }
+  } catch (error: any) {
+    console.error("[Push Service] Firestore VAPID retrieval failed or skipped:", error.message);
+  }
+
+  // 2. Check if we have saved keys in local file backup
   if (fs.existsSync(VAPID_FILE)) {
     try {
       const keys = JSON.parse(fs.readFileSync(VAPID_FILE, "utf-8")) as VapidKeys;
@@ -48,6 +74,7 @@ export function initVapid(): VapidKeys {
           keys.publicKey,
           keys.privateKey
         );
+        loadedVapidKeys = keys;
         return keys;
       }
     } catch (e: any) {
@@ -55,8 +82,8 @@ export function initVapid(): VapidKeys {
     }
   }
 
-  // Generate new keys and save
-  console.log("[Push Service] Generating new stable VAPID Vey pair...");
+  // 3. Generate new keys, save to file and Firestore
+  console.log("[Push Service] Generating new stable VAPID key pair...");
   const newKeys = webpush.generateVAPIDKeys();
   try {
     fs.writeFileSync(VAPID_FILE, JSON.stringify(newKeys, null, 2), "utf-8");
@@ -64,11 +91,20 @@ export function initVapid(): VapidKeys {
     console.error("[Push Service] Failed to write vapid-keys.json:", e.message);
   }
 
+  try {
+    const { setDoc } = await import("firebase/firestore");
+    await setDoc(doc(db, "system_config", "vapid_keys"), newKeys);
+    console.log("[Push Service] New stable VAPID keys saved inside persistent Firestore.");
+  } catch (e: any) {
+    console.error("[Push Service] Failed to write VAPID keys to Firestore:", e.message);
+  }
+
   webpush.setVapidDetails(
     "mailto:suporte@barbearia.com",
     newKeys.publicKey,
     newKeys.privateKey
   );
+  loadedVapidKeys = newKeys;
   return newKeys;
 }
 
