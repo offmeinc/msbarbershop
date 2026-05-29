@@ -1,3 +1,5 @@
+import { getBackendUrl } from "./pushRegister";
+
 export interface ImgBBResponse {
   data: {
     id: string;
@@ -34,7 +36,7 @@ export async function uploadImage(file: File): Promise<ImgBBResponse> {
   const formData = new FormData();
   formData.append("image", file);
 
-  const response = await fetch("/api/upload", {
+  const response = await fetch(getBackendUrl("/api/upload"), {
     method: "POST",
     body: formData,
   });

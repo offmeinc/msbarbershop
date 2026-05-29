@@ -15,6 +15,24 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return outputArray;
 }
 
+// Dynamically resolve backend URLs to direct API requests to the active Cloud Run container
+// whenever the application is loaded on custom domains (e.g., msbarbershop.com.br)
+export function getBackendUrl(path: string): string {
+  if (typeof window === "undefined") return path;
+  const hostname = window.location.hostname;
+  const isDefaultHost = 
+    hostname.includes("run.app") || 
+    hostname.includes("localhost") || 
+    hostname.includes("127.0.0.1") || 
+    hostname.includes("0.0.0.0");
+    
+  if (!isDefaultHost) {
+    const cleanPath = path.startsWith("/") ? path.substring(1) : path;
+    return `https://ais-pre-g75ihsxfdnknje432j7ycb-486235155545.us-east1.run.app/${cleanPath}`;
+  }
+  return path;
+}
+
 // Check compatibility
 export function queryNotificationSupport(): boolean {
   return (
@@ -55,7 +73,7 @@ export async function setupPushSubscription(userId: string, userRole: string): P
 
     // 3. Fetch VAPID public key from Server
     console.log("[Push Register] Fetching VAPID from server...");
-    const res = await fetch("/api/push-config");
+    const res = await fetch(getBackendUrl("/api/push-config"));
     if (!res.ok) {
       throw new Error(`Failed to fetch VAPID config: ${res.statusText}`);
     }

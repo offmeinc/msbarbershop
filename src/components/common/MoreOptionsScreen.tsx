@@ -18,7 +18,7 @@ import {
   LogOut, 
   ChevronLeft 
 } from "lucide-react";
-import { setupPushSubscription, getNotificationPermissionState, queryNotificationSupport } from "../../lib/pushRegister";
+import { setupPushSubscription, getNotificationPermissionState, queryNotificationSupport, getBackendUrl } from "../../lib/pushRegister";
 import { BlockScreen } from "../manager/BlockScreen";
 import { HelpScreen, ShareScreen, RecurrenceScreen } from "../manager/OtherScreens";
 import { ReconScreen } from "../manager/UtilityScreens";
@@ -115,7 +115,7 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
             }
             const cleanUid = user?.uid || user?.id || "anonymous";
             try {
-              const res = await fetch("/api/push-test", {
+              const res = await fetch(getBackendUrl("/api/push-test"), {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
