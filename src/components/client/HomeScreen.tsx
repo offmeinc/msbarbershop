@@ -36,13 +36,38 @@ export function HomeScreen({ services, onStartBooking }: { services: any[], onSt
           </p>
         </motion.div>
         
-        <div className="mt-8 md:max-w-xs md:mx-auto">
-          <button 
-            onClick={onStartBooking}
-            className="w-full bg-white text-black py-5 rounded-[2rem] font-black uppercase italic tracking-widest text-xs hover:bg-neutral-200 transition-all active:scale-95 shadow-xl shadow-white/5"
-          >
-            Agendar Agora
-          </button>
+        <div className="mt-8 md:max-w-xs md:mx-auto relative group">
+          {/* Backing ambient gold-orange glow pulse */}
+          <div className="absolute inset-0 bg-amber-500/15 rounded-[2rem] blur-xl opacity-75 group-hover:opacity-100 group-hover:scale-110 transition-all duration-500 animate-pulse" />
+          
+          {/* Neon yellow gradient border wrapper */}
+          <div className="p-[2.5px] bg-gradient-to-r from-[#FACC15] via-[#EAB308] to-[#FACC15] rounded-[2rem] relative z-10 transition-all duration-300 shadow-[0_0_15px_rgba(250,204,21,0.25)] group-hover:shadow-[0_0_30px_rgba(250,204,21,0.6)]">
+            <motion.button 
+              onClick={onStartBooking}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              initial={{ scale: 1 }}
+              className="w-full bg-white text-black py-4.5 rounded-[calc(2rem-2px)] font-black uppercase italic tracking-widest text-xs transition-all relative flex items-center justify-center gap-2 overflow-hidden hover:bg-neutral-50"
+            >
+              {/* Self-contained motion shimmer effect */}
+              <motion.div 
+                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent skew-x-12 pointer-events-none"
+                initial={{ left: "-100%" }}
+                animate={{ left: "200%" }}
+                transition={{
+                  repeat: Infinity,
+                  repeatType: "loop",
+                  duration: 2.2,
+                  ease: "linear",
+                  repeatDelay: 1.5
+                }}
+              />
+              
+              <Scissors className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+              <span>Agendar Agora</span>
+              <Scissors className="w-3.5 h-3.5 text-amber-500 shrink-0 -scale-x-100 animate-pulse" />
+            </motion.button>
+          </div>
         </div>
       </div>
 
