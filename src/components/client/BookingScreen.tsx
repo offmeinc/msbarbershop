@@ -42,7 +42,7 @@ import {
   AlertTriangle,
   Sparkles,
 } from "lucide-react";
-import { setupPushSubscription, getNotificationPermissionState, queryNotificationSupport } from "../../lib/pushRegister";
+import { setupPushSubscription, getNotificationPermissionState, queryNotificationSupport, getBackendUrl } from "../../lib/pushRegister";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
 import { signInWithGoogleCalendar, addEventToCalendar, getCalendarAccessToken } from "../../lib/calendar";
 import { toast } from "../ui/Toast";
@@ -164,7 +164,7 @@ function ConfirmationModal({ service, barber, date, onConfirm, userId, userRole,
     if (selectedPixMethod === "mercadopago" && mpData?.payment_id && !paymentSuccess) {
       const interval = setInterval(async () => {
         try {
-          const res = await fetch(`/api/payments/mercado-pago/status/${mpData.payment_id}`);
+          const res = await fetch(getBackendUrl(`/api/payments/mercado-pago/status/${mpData.payment_id}`));
           if (res.ok) {
             const data = await res.json();
             if (data.status === "approved" || data.status === "completed") {
@@ -195,7 +195,7 @@ function ConfirmationModal({ service, barber, date, onConfirm, userId, userRole,
     setMpLoading(true);
     setMpError(null);
     try {
-      const res = await fetch("/api/payments/mercado-pago/create-payment", {
+      const res = await fetch(getBackendUrl("/api/payments/mercado-pago/create-payment"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json"

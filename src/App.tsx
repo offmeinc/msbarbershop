@@ -137,6 +137,7 @@ import {
   OperationType 
 } from "./lib/firebase";
 import { uploadImage } from "./lib/uploadService";
+import { getBackendUrl } from "./lib/pushRegister";
 import { 
   onAuthStateChanged,
   signOut,
@@ -211,7 +212,7 @@ export default function App() {
 
   const subscribeUser = async (reg: ServiceWorkerRegistration) => {
     try {
-      const resp = await fetch('/api/push-config');
+      const resp = await fetch(getBackendUrl('/api/push-config'));
       const { publicKey } = await resp.json();
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
@@ -219,7 +220,7 @@ export default function App() {
       });
       const userId = user?.uid || loggedInClient?.id;
       if (userId) {
-        await fetch('/api/subscribe', {
+        await fetch(getBackendUrl('/api/subscribe'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 

@@ -46,6 +46,7 @@ import {
   MessageCircle
 } from "lucide-react";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
+import { getBackendUrl } from "../../lib/pushRegister";
 import { QRCodeCanvas } from "qrcode.react";
 import { MoreOptionsScreen } from "../common/MoreOptionsScreen";
 import { BookingScreen } from "./BookingScreen";
@@ -115,7 +116,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
     setRechargeStep("pix");
     
     try {
-      const res = await fetch("/api/payments/mercado-pago/create-payment", {
+      const res = await fetch(getBackendUrl("/api/payments/mercado-pago/create-payment"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -192,7 +193,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
     if (isRecharging && rechargeStep === "pix" && rechargeMpData?.payment_id && !rechargeSuccess) {
       const interval = setInterval(async () => {
         try {
-          const res = await fetch(`/api/payments/mercado-pago/status/${rechargeMpData.payment_id}`);
+          const res = await fetch(getBackendUrl(`/api/payments/mercado-pago/status/${rechargeMpData.payment_id}`));
           if (res.ok) {
             const data = await res.json();
             if (data.status === "approved" || data.status === "completed") {

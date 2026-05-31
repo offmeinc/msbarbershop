@@ -14,6 +14,7 @@ import {
   getDocs
 } from "firebase/firestore";
 import { db, handleFirestoreError, OperationType } from "../lib/firebase";
+import { getBackendUrl } from "../lib/pushRegister";
 import { 
   ChevronLeft, 
   Send, 
@@ -134,8 +135,62 @@ export function StaffChatScreen({ user, onBack }: { user: any, onBack: () => voi
 export function ChatScreen({ user, onBack }: { user: any, onBack: () => void }) {
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState("");
+  const [isRecording, setIsRecording] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const clientUid = user ? (user.uid || user.id) : null;
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+      
+      mediaRecorder.addEventListener("dataavailable", (e) => {
+        audioChunksRef.current.push(e.data);
+      });
+      
+      mediaRecorder.addEventListener("stop", async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/ogg; codecs=opus" });
+        const file = new File([audioBlob], "audio.ogg", { type: "audio/ogg" });
+        
+        const formData = new FormData();
+        formData.append("image", file);
+        
+        const response = await fetch(getBackendUrl("/api/upload"), {
+            method: "POST",
+            body: formData
+        });
+        
+        const result = await response.json();
+        if (result.data && result.data.url) {
+            const docData = {
+              audioUrl: result.data.url,
+              text: "🎙️ Mensagem de voz",
+              createdAt: Timestamp.now(),
+              userId: clientUid,
+              sender: "client"
+            };
+            console.log("DEBUG: Data to add (ChatScreen):", docData);
+            await addDoc(collection(db, "chats", clientUid!, "messages"), docData);
+        }
+        
+        stream.getTracks().forEach(track => track.stop());
+      });
+      
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (err) {
+      console.error("Error accessing microphone:", err);
+    }
+  };
+  
+  const stopRecording = () => {
+    mediaRecorderRef.current?.stop();
+    setIsRecording(false);
+  };
 
   useEffect(() => {
     if (!clientUid) return;
@@ -247,6 +302,12 @@ export function ChatScreen({ user, onBack }: { user: any, onBack: () => void }) 
                       {m.imageUrl && (
                           <img src={m.imageUrl} alt="chat" className="max-w-full rounded-lg mb-2" />
                       )}
+                      {m.audioUrl && (
+                        <audio controls className="w-full mb-2">
+                           <source src={m.audioUrl} type="audio/ogg" />
+                           Seu navegador não suporta áudio.
+                        </audio>
+                      )}
                       <p className="text-xs font-semibold leading-relaxed break-words">{m.text}</p>
                       <div className={`flex items-center justify-end gap-1 mt-1.5 ${isClientUser ? "text-neutral-950/60" : "text-neutral-500"}`}>
                         <span className="text-[7px] font-bold uppercase">
@@ -277,7 +338,7 @@ export function ChatScreen({ user, onBack }: { user: any, onBack: () => void }) 
                 const formData = new FormData();
                 formData.append("image", file);
                 
-                const response = await fetch("/api/upload", {
+                const response = await fetch(getBackendUrl("/api/upload"), {
                     method: "POST",
                     body: formData
                 });
@@ -294,6 +355,12 @@ export function ChatScreen({ user, onBack }: { user: any, onBack: () => void }) 
                 }
             }} />
         </label>
+        <button 
+            onClick={isRecording ? stopRecording : startRecording}
+            className={`p-3.5 rounded-xl border ${isRecording ? "border-red-500/50 bg-red-500/20 text-red-500" : "border-white/10 hover:bg-neutral-800 text-neutral-400"}`}
+        >
+            {isRecording ? <Square className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+        </button>
         <input 
           value={newMessage} 
           onChange={e => setNewMessage(e.target.value)} 
@@ -325,11 +392,13 @@ export function ProfessionalClientChatsScreen({ user, onBack, initialClientId, i
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [isRecording, setIsRecording] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   const startRecording = async () => {
+    setErrorMessage("");
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
@@ -347,21 +416,23 @@ export function ProfessionalClientChatsScreen({ user, onBack, initialClientId, i
         const formData = new FormData();
         formData.append("image", file);
         
-        const response = await fetch("/api/upload", {
+        const response = await fetch(getBackendUrl("/api/upload"), {
             method: "POST",
             body: formData
         });
         
         const result = await response.json();
         if (result.data && result.data.url) {
-            await addDoc(collection(db, "chats", activeClientId!, "messages"), {
+            const docData = {
               audioUrl: result.data.url,
               text: "🎙️ Mensagem de voz",
               createdAt: Timestamp.now(),
               sender: "professional",
               senderName: user?.displayName || user?.name || "Suporte",
               senderId: user?.uid || user?.id
-            });
+            };
+            console.log("DEBUG: Data to add:", docData);
+            await addDoc(collection(db, "chats", activeClientId!, "messages"), docData);
         }
         
         stream.getTracks().forEach(track => track.stop());
@@ -371,6 +442,8 @@ export function ProfessionalClientChatsScreen({ user, onBack, initialClientId, i
       setIsRecording(true);
     } catch (err) {
       console.error("Error accessing microphone:", err);
+      setErrorMessage("Permissão de microfone negada ou indisponível.");
+      setTimeout(() => setErrorMessage(""), 5000);
     }
   };
   
@@ -667,6 +740,7 @@ export function ProfessionalClientChatsScreen({ user, onBack, initialClientId, i
               </div>
             ) : (
               messages.map((m) => {
+                try { JSON.stringify(m); } catch (e) { console.error("Circular structure in message:", m); }
                 const isClientMsg = m.sender === "client";
                 return (
                   <div 
@@ -721,6 +795,11 @@ export function ProfessionalClientChatsScreen({ user, onBack, initialClientId, i
             <div ref={messagesEndRef} />
           </div>
 
+          {errorMessage && (
+            <div className="text-[10px] text-red-500 font-bold uppercase text-center mb-2 px-4 py-1.5 bg-red-500/10 rounded-full border border-red-500/20">
+              {errorMessage}
+            </div>
+          )}
           <div className="flex gap-2 border-t border-white/5 pt-4 mt-2">
             <button 
                 onClick={isRecording ? stopRecording : startRecording}
@@ -737,7 +816,7 @@ export function ProfessionalClientChatsScreen({ user, onBack, initialClientId, i
                   const formData = new FormData();
                   formData.append("image", file);
                   
-                  const response = await fetch("/api/upload", {
+                  const response = await fetch(getBackendUrl("/api/upload"), {
                       method: "POST",
                       body: formData
                   });
