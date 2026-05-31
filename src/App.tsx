@@ -745,9 +745,39 @@ export default function App() {
       />
 
       {currentScreen === "home" && (
-        <footer className="py-8 text-center border-t border-white/5 text-neutral-600 text-[10px] uppercase tracking-widest font-bold">
-          © 2026 MS BARBER SHOP | Developed by Rulio
-        </footer>
+        <>
+          <div className="max-w-md mx-auto px-6 pt-8 pb-3 text-center space-y-4">
+            <div className="h-[1px] bg-white/5 w-1/4 mx-auto" />
+            <span className="block text-[8px] text-neutral-500 font-extrabold uppercase tracking-[0.25em] leading-none">
+              Meios de pagamento aceitos
+            </span>
+            <div className="flex items-center justify-center gap-5 text-neutral-400 py-1">
+              <div className="flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest text-neutral-400">
+                <svg 
+                  viewBox="0 0 24 24" 
+                  className="w-3.5 h-3.5 text-emerald-400 fill-current shrink-0"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path d="M12 2L2 12l10 10 10-10L12 2zm0 15.17L5.83 11 12 4.83 18.17 11 12 17.17z m-3.66-6.17l3.66 3.66 3.66-3.66-3.66-3.66-3.66 3.66z"/>
+                </svg>
+                <span>Pix</span>
+              </div>
+              <div className="w-[1px] h-2.5 bg-white/5" />
+              <div className="flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest text-neutral-400">
+                <CreditCard className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                <span>Crédito</span>
+              </div>
+              <div className="w-[1px] h-2.5 bg-white/5" />
+              <div className="flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest text-neutral-400">
+                <CreditCard className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                <span>Débito</span>
+              </div>
+            </div>
+          </div>
+          <footer className="py-8 text-center border-t border-white/5 text-neutral-600 text-[10px] uppercase tracking-widest font-bold">
+            © 2026 MS BARBER SHOP | Developed by Rulio
+          </footer>
+        </>
       )}
 
       {/* Mobile Menu */}

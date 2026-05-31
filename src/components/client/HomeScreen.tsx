@@ -32,7 +32,7 @@ export function HomeScreen({ services, onStartBooking }: { services: any[], onSt
             {BARBERSHOP_NAME}
           </h1>
           <p className="text-neutral-500 text-sm max-w-[280px] md:max-w-xl font-medium leading-relaxed md:mx-auto">
-            Estilo e precisão. Agende seu horário com os melhores profissionais da cidade.
+            Estilo e precisão. Agende seu horário com o melhor profissional da cidade.
           </p>
         </motion.div>
         
@@ -52,7 +52,7 @@ export function HomeScreen({ services, onStartBooking }: { services: any[], onSt
           <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 blur-3xl rounded-full" />
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-amber-500/5 blur-3xl rounded-full" />
           
-          <Sparkles className="w-10 h-10 text-amber-500 mb-8 opacity-50 group-hover:scale-110 group-hover:opacity-100 transition-all" />
+          <Scissors className="w-10 h-10 text-amber-500 mb-8 opacity-50 group-hover:scale-110 group-hover:opacity-100 transition-all" />
           <h2 className="text-4xl md:text-5xl font-black italic uppercase tracking-tighter leading-[0.85] mb-6 animate-gradient-text">
             Sua autoestima <br/>
             em primeiro lugar
@@ -235,7 +235,7 @@ export function HomeScreen({ services, onStartBooking }: { services: any[], onSt
       </div>
 
       {/* Info Cards */}
-      <div className="px-6 grid grid-cols-1 md:grid-cols-3 gap-4 mt-8 pb-12 relative">
+      <div className="px-6 space-y-4 mt-8 pb-12 relative max-w-md mx-auto">
         <button 
           onClick={() => {
             const encodedAddr = encodeURIComponent(BARBERSHOP_ADDRESS);
@@ -330,41 +330,28 @@ export function HomeScreen({ services, onStartBooking }: { services: any[], onSt
           )}
         </AnimatePresence>
 
-        <a 
-          href={`https://instagram.com/${BARBERSHOP_INSTAGRAM}`} 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="bg-neutral-950 border border-white/5 p-6 rounded-[2.5rem] flex items-center justify-between group hover:bg-neutral-900 transition-colors"
-        >
-           <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-pink-500/10 flex items-center justify-center text-pink-500 flex-shrink-0 group-hover:scale-110 transition-transform">
-                <Instagram className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="text-white font-bold text-sm mb-1 uppercase tracking-tight italic">Siga-nos</h3>
-                <p className="text-neutral-500 text-[11px] font-medium uppercase tracking-wider">@{BARBERSHOP_INSTAGRAM}</p>
-              </div>
-           </div>
-           <ChevronRight className="w-4 h-4 text-neutral-800" />
-        </a>
+        {/* Social and Review Buttons - Side by Side */}
+        <div className="flex items-center justify-center gap-4 pt-2">
+          <a 
+            href={`https://instagram.com/${BARBERSHOP_INSTAGRAM}`} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            title="Siga-nos"
+            className="w-14 h-14 bg-neutral-950 border border-white/5 rounded-2xl flex items-center justify-center text-neutral-400 hover:text-pink-500 hover:border-pink-500/20 hover:scale-105 active:scale-95 transition-all"
+          >
+            <Instagram className="w-6 h-6" />
+          </a>
 
-        <a 
-          href={GOOGLE_REVIEW_URL} 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="bg-neutral-950 border border-white/5 p-6 rounded-[2.5rem] flex items-center justify-between group hover:bg-neutral-900 transition-colors"
-        >
-           <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500 flex-shrink-0 group-hover:scale-110 transition-transform">
-                <Star className="w-6 h-6 fill-amber-500/10" />
-               </div>
-               <div>
-                 <h3 className="text-white font-bold text-sm mb-1 uppercase tracking-tight italic">Avalie-nos no Google</h3>
-                 <p className="text-neutral-500 text-[11px] font-medium uppercase tracking-wider">Deixe sua opinião de 5 estrelas</p>
-               </div>
-            </div>
-            <ChevronRight className="w-4 h-4 text-neutral-800" />
-        </a>
+          <a 
+            href={GOOGLE_REVIEW_URL} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            title="Avalie no Google"
+            className="w-14 h-14 bg-neutral-950 border border-white/5 rounded-2xl flex items-center justify-center text-neutral-400 hover:text-amber-500 hover:border-amber-500/20 hover:scale-105 active:scale-95 transition-all"
+          >
+            <Star className="w-6 h-6 fill-transparent hover:fill-amber-500/10" />
+          </a>
+        </div>
 
       </div>
     </div>
