@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { ArrowLeft, Loader2, Calendar, Scissors, Clock } from "lucide-react";
+import { ArrowLeft, Loader2, Calendar, Scissors, Clock, Star } from "lucide-react";
 import { collection, query, where, orderBy, onSnapshot } from "firebase/firestore";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
 
@@ -67,16 +67,37 @@ export function ClientDetailsScreen({ client, onBack }: { client: any, onBack: (
       ) : (
         <div className="space-y-3">
           {completedAppointments.map(app => (
-            <div key={app.id} className="bg-neutral-900 p-4 rounded-2xl border border-white/5 flex items-center justify-between">
-               <div className="flex items-center gap-3">
-                  <div className="bg-white/5 p-3 rounded-xl text-neutral-400">
-                    <Scissors className="w-5 h-5" />
+            <div key={app.id} className="bg-neutral-900 p-5 rounded-[2rem] border border-white/5 flex items-center justify-between group hover:border-amber-500/20 transition-all">
+               <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <div className="bg-white/5 p-4 rounded-2xl text-neutral-400 group-hover:bg-amber-500/10 group-hover:text-amber-500 transition-colors">
+                      <Scissors className="w-5 h-5" />
+                    </div>
+                    {app.reviewPhotoUrl && (
+                      <div className="absolute -top-1 -right-1 w-6 h-6 rounded-lg bg-amber-500 border-2 border-neutral-900 flex items-center justify-center">
+                        <Star className="w-3 h-3 text-black fill-black" />
+                      </div>
+                    )}
                   </div>
                   <div>
-                    <p className="font-bold text-white">{app.serviceName}</p>
-                    <p className="text-xs text-neutral-500">{new Date(app.date.toDate()).toLocaleDateString('pt-BR')}</p>
+                    <div className="flex items-center gap-2">
+                        <p className="font-bold text-white text-sm uppercase italic tracking-tight">{app.serviceName}</p>
+                        {app.rating && (
+                            <div className="flex items-center gap-1">
+                                <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
+                                <span className="text-[10px] font-black text-amber-500">{app.rating}</span>
+                            </div>
+                        )}
+                    </div>
+                    <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mt-0.5">{new Date(app.date.toDate()).toLocaleDateString('pt-BR')}</p>
                   </div>
                </div>
+               
+               {app.reviewPhotoUrl && (
+                <div className="w-12 h-12 rounded-xl overflow-hidden border border-white/10 hover:scale-110 transition-transform">
+                    <img src={app.reviewPhotoUrl} className="w-full h-full object-cover" alt="Review Photo" />
+                </div>
+               )}
             </div>
           ))}
           {completedAppointments.length === 0 && (

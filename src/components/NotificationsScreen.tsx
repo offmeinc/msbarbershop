@@ -74,13 +74,25 @@ export const NotificationsScreen = ({ notifications, appointments, onBack, onCle
                 className={`p-4 rounded-3xl border transition-all ${n.read ? 'bg-neutral-900/30 border-white/5 opacity-60' : 'bg-neutral-900 border-amber-500/30 shadow-lg shadow-amber-500/5'}`}
               >
                 <div className="flex gap-4">
-                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${n.type === 'booking' ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'}`}>
-                    {n.type === 'booking' ? <CalendarCheck className="w-5 h-5" /> : <CalendarX className="w-5 h-5" />}
+                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
+                    n.type === 'booking' ? 'bg-green-500/20 text-green-500' : 
+                    n.type === 'status_update' ? 'bg-amber-500/20 text-amber-500' : 
+                    'bg-red-500/20 text-red-500'
+                  }`}>
+                    {n.type === 'booking' ? <CalendarCheck className="w-5 h-5" /> : 
+                     n.type === 'status_update' ? <Calendar className="w-5 h-5" /> : 
+                     <CalendarX className="w-5 h-5" />}
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center justify-between gap-2 mb-1">
-                      <span className={`text-[10px] font-black uppercase tracking-widest ${n.type === 'booking' ? 'text-green-500' : 'text-red-500'}`}>
-                        {n.type === 'booking' ? 'Novo Agendamento' : 'Cancelamento'}
+                      <span className={`text-[10px] font-black uppercase tracking-widest ${
+                        n.type === 'booking' ? 'text-green-500' : 
+                        n.type === 'status_update' ? 'text-amber-500' : 
+                        'text-red-500'
+                      }`}>
+                        {n.type === 'booking' ? 'Novo Agendamento' : 
+                         n.type === 'status_update' ? 'Atualização' : 
+                         'Cancelamento'}
                       </span>
                       <span className="text-[9px] text-neutral-600 font-bold whitespace-nowrap">
                         {n.timestamp?.toDate ? format(n.timestamp.toDate(), "HH:mm • dd/MM", { locale: ptBR }) : "Agora"}

@@ -37,6 +37,7 @@ import {
   User,
   Bell,
   Copy,
+  Image as ImageIcon,
   Calendar as CalendarIcon,
 } from "lucide-react";
 import { setupPushSubscription, getNotificationPermissionState, queryNotificationSupport } from "../../lib/pushRegister";
@@ -83,6 +84,60 @@ function RecurrenceUI({
         ))}
       </div>
     </div>
+  );
+}
+
+function PortfolioModal({ barber, onClose }: { barber: any, onClose: () => void }) {
+  return (
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[110] bg-black/95 backdrop-blur-2xl flex items-center justify-center p-6"
+    >
+      <div className="max-w-md w-full space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img src={barber.photoURL || `https://ui-avatars.com/api/?name=${barber.name}`} className="w-10 h-10 rounded-xl object-cover border border-white/10" alt="" />
+            <div>
+              <h3 className="text-sm font-black text-white uppercase italic">{barber.name}</h3>
+              <p className="text-[9px] text-amber-500 font-black uppercase tracking-[0.2em]">Portfólio / Trabalhos</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="w-10 h-10 rounded-full bg-neutral-900 flex items-center justify-center text-neutral-500 hover:text-white transition-colors">
+            <XCircle className="w-6 h-6" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto no-scrollbar pr-2">
+          {barber.portfolio && barber.portfolio.length > 0 ? (
+            barber.portfolio.map((img: string, idx: number) => (
+              <motion.div 
+                key={idx}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: idx * 0.05 }}
+                className="aspect-[4/5] rounded-3xl overflow-hidden border border-white/5 bg-neutral-900"
+              >
+                <img src={img} className="w-full h-full object-cover" alt={`Work ${idx}`} />
+              </motion.div>
+            ))
+          ) : (
+            <div className="col-span-2 py-20 text-center space-y-4 bg-neutral-900/50 rounded-[2.5rem] border border-dashed border-white/10">
+              <ImageIcon className="w-8 h-8 text-neutral-800 mx-auto" />
+              <p className="text-[10px] font-black uppercase text-neutral-600 tracking-widest">Nenhuma foto no portfólio ainda</p>
+            </div>
+          )}
+        </div>
+
+        <button 
+          onClick={onClose}
+          className="w-full bg-amber-500 text-black py-5 rounded-[1.8rem] font-black uppercase italic tracking-widest shadow-lg shadow-amber-500/20 active:scale-95 transition-all"
+        >
+          FECHAR GALERIA
+        </button>
+      </div>
+    </motion.div>
   );
 }
 
@@ -339,6 +394,7 @@ export function BookingScreen({
   const [searchQuery, setSearchQuery] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedClient, setSelectedClient] = useState<any | null>(initialClient || null);
+  const [viewingPortfolio, setViewingPortfolio] = useState<any | null>(null);
 
   useEffect(() => {
     const isStaff = role === "manager" || role === "barber";
@@ -752,6 +808,12 @@ export function BookingScreen({
             onConfirm={onBack}
           />
         )}
+        {viewingPortfolio && (
+          <PortfolioModal 
+            barber={viewingPortfolio} 
+            onClose={() => setViewingPortfolio(null)} 
+          />
+        )}
       </AnimatePresence>
 
       <div className="min-h-screen bg-black pb-20">
@@ -852,34 +914,55 @@ export function BookingScreen({
                     </div>
                   ) : (
                     barbers.map((b) => (
-                      <button
-                        key={b.id}
-                        onClick={() => {
-                          setSelectedBarber(b.id);
-                          setStep(3);
-                        }}
-                        className={`p-5 rounded-[2rem] border flex items-center justify-between transition-all group ${selectedBarber === b.id ? "border-amber-500 bg-neutral-900 shadow-2xl shadow-amber-500/20" : "border-white/5 bg-neutral-900/50 hover:border-white/10"}`}
-                      >
-                        <div className="flex items-center gap-4">
-                          <img
-                            src={
-                              b.photoURL ||
-                              `https://ui-avatars.com/api/?name=${b.name}`
-                            }
-                            className="w-16 h-16 rounded-[1.5rem] object-cover border-2 border-white/10"
-                            alt={b.name}
-                          />
-                          <div className="text-left">
-                            <h4 className="font-black text-white text-lg tracking-tight">
-                              {b.name}
-                            </h4>
-                            <p className="text-[10px] text-amber-500 font-black uppercase tracking-widest">
-                              Especialista
-                            </p>
+                      <div key={b.id} className="relative">
+                        <button
+                          onClick={() => {
+                            setSelectedBarber(b.id);
+                            setStep(3);
+                          }}
+                          className={`w-full p-5 rounded-[2rem] border flex items-center justify-between transition-all group ${selectedBarber === b.id ? "border-amber-500 bg-neutral-900 shadow-2xl shadow-amber-500/20" : "border-white/5 bg-neutral-900/50 hover:border-white/10"}`}
+                        >
+                          <div className="flex items-center gap-4">
+                            <img
+                              src={
+                                b.photoURL ||
+                                `https://ui-avatars.com/api/?name=${b.name}`
+                              }
+                              className="w-16 h-16 rounded-[1.5rem] object-cover border-2 border-white/10"
+                              alt={b.name}
+                            />
+                            <div className="text-left">
+                              <h4 className="font-black text-white text-lg tracking-tight">
+                                {b.name}
+                              </h4>
+                              <div className="flex items-center gap-2">
+                                <p className="text-[10px] text-amber-500 font-black uppercase tracking-widest">
+                                  Especialista
+                                </p>
+                                {b.portfolio && b.portfolio.length > 0 && (
+                                    <span className="w-1 h-1 rounded-full bg-neutral-700" />
+                                )}
+                                {b.portfolio && b.portfolio.length > 0 && (
+                                    <p className="text-[9px] text-neutral-500 font-bold uppercase">{b.portfolio.length} Fotos</p>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                        <ChevronRight className="w-5 h-5 text-neutral-700" />
-                      </button>
+                          <ChevronRight className="w-5 h-5 text-neutral-700" />
+                        </button>
+                        
+                        {b.portfolio && b.portfolio.length > 0 && (
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setViewingPortfolio(b);
+                            }}
+                            className="absolute right-14 top-1/2 -translate-y-1/2 p-3 bg-neutral-800 rounded-xl text-neutral-400 hover:text-amber-500 transition-all border border-white/5 hover:border-amber-500/30"
+                          >
+                            <ImageIcon className="w-5 h-5" />
+                          </button>
+                        )}
+                      </div>
                     ))
                   )}
                 </div>

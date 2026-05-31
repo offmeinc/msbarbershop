@@ -26,6 +26,7 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
     bio: "",
     password: "",
     pixKey: "",
+    portfolio: [] as string[],
     specialties: [] as string[]
   });
   const [newSpecialty, setNewSpecialty] = useState("");
@@ -50,6 +51,7 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
           bio: data.bio || "",
           password: data.password || "",
           pixKey: data.pixKey || "",
+          portfolio: data.portfolio || [],
           specialties: data.specialties || []
         });
       }
@@ -84,6 +86,7 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
         bio: profileData.bio,
         password: profileData.password,
         pixKey: profileData.pixKey,
+        portfolio: profileData.portfolio,
         specialties: profileData.specialties,
         updatedAt: Timestamp.now()
       });
@@ -113,11 +116,16 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
     }));
   };
 
-  const handleImageUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: ChangeEvent<HTMLInputElement>, isPortfolio: boolean = false) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setUploadingImage(true);
+    if (isPortfolio) {
+        setLoading(true); // Reuse loading for global state or add specific one
+    } else {
+        setUploadingImage(true);
+    }
+    
     const formData = new FormData();
     formData.append('image', file);
 
@@ -126,6 +134,7 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
       if (!apiKey) {
         toast.error("Configuração de API do ImgBB faltando. Por favor, adicione VITE_IMGBB_API_KEY no arquivo .env");
         setUploadingImage(false);
+        setLoading(false);
         return;
       }
       const response = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
@@ -134,7 +143,11 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
       });
       const data = await response.json();
       if (data.success) {
-        setProfileData(prev => ({ ...prev, photoUrl: data.data.url }));
+        if (isPortfolio) {
+            setProfileData(prev => ({ ...prev, portfolio: [...prev.portfolio, data.data.url] }));
+        } else {
+            setProfileData(prev => ({ ...prev, photoUrl: data.data.url }));
+        }
         toast.success("Imagem carregada!");
       } else {
         toast.error("Erro ao fazer upload da imagem.");
@@ -144,7 +157,15 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
       toast.error("Erro na conexão com ImgBB.");
     } finally {
       setUploadingImage(false);
+      setLoading(false);
     }
+  };
+
+  const removePortfolioImage = (index: number) => {
+    setProfileData(prev => ({
+      ...prev,
+      portfolio: prev.portfolio.filter((_, i) => i !== index)
+    }));
   };
 
   if (fetching) {
@@ -240,17 +261,53 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
             <p className="text-[9px] text-neutral-600 mt-1 uppercase tracking-tight">Esta senha será usada para acessar seu painel pelo WhatsApp.</p>
           </div>
 
-          <div className="space-y-2">
-            <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest">Chave Pix</label>
-            <input 
-              type="text" 
-              value={profileData.pixKey} 
-              onChange={(e) => setProfileData(prev => ({ ...prev, pixKey: e.target.value }))}
-              className="w-full bg-neutral-900 border border-white/5 rounded-2xl p-4 text-sm text-white focus:border-amber-500 transition-all font-bold"
-              placeholder="Sua chave Pix (CPF, E-mail, Celular ou Aleatória)"
-            />
-            <p className="text-[9px] text-neutral-600 mt-1 uppercase tracking-tight">Será exibida como QR Code para pagamento após o cliente confirmar o agendamento.</p>
-          </div>
+          {!isClient && (
+            <div className="space-y-2">
+              <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest">Chave Pix</label>
+              <input 
+                type="text" 
+                value={profileData.pixKey} 
+                onChange={(e) => setProfileData(prev => ({ ...prev, pixKey: e.target.value }))}
+                className="w-full bg-neutral-900 border border-white/5 rounded-2xl p-4 text-sm text-white focus:border-amber-500 transition-all font-bold"
+                placeholder="Sua chave Pix (CPF, E-mail, Celular ou Aleatória)"
+              />
+              <p className="text-[9px] text-neutral-600 mt-1 uppercase tracking-tight">Será exibida como QR Code para pagamento após o cliente confirmar o agendamento.</p>
+            </div>
+          )}
+
+          {!isClient && (
+            <div className="space-y-4">
+              <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest">Galeria de Portfólio</label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {profileData.portfolio.map((img, index) => (
+                  <div key={index} className="relative group aspect-square rounded-2xl overflow-hidden border border-white/5 bg-neutral-900">
+                    <img src={img} alt={`Portfolio ${index}`} className="w-full h-full object-cover" />
+                    <button 
+                      type="button"
+                      onClick={() => removePortfolioImage(index)}
+                      className="absolute top-2 right-2 w-7 h-7 bg-black/80 backdrop-blur-md rounded-lg flex items-center justify-center text-red-500 opacity-0 group-hover:opacity-100 transition-opacity border border-white/10"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+                <label className="aspect-square rounded-2xl border-2 border-dashed border-white/5 bg-neutral-900/50 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-amber-500/50 hover:bg-neutral-900 transition-all group">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500 group-hover:scale-110 transition-transform">
+                    <Plus className="w-6 h-6" />
+                  </div>
+                  <span className="text-[9px] font-black uppercase text-neutral-500">Adicionar Foto</span>
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    onChange={(e) => handleImageUpload(e, true)} 
+                    className="hidden" 
+                    disabled={loading}
+                  />
+                </label>
+              </div>
+              <p className="text-[9px] text-neutral-600 uppercase tracking-tight">Mostre seus melhores cortes para os clientes na hora do agendamento.</p>
+            </div>
+          )}
 
           {!isClient && (
             <div className="space-y-2">

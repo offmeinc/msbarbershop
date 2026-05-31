@@ -1,22 +1,63 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Star, X } from "lucide-react";
+import { Star, X, Camera, Loader2, Image as ImageIcon } from "lucide-react";
 import { updateDoc, doc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../lib/firebase";
+import { toast } from "../ui/Toast";
 
 export function ReviewModal({ appointment, onClose }: { appointment: any, onClose: () => void }) {
-  const [rating, setRating] = useState(5);
+  const [rating, setRating] = useState(appointment.rating || 5);
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState(appointment.reviewPhotoUrl || "");
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      const apiKey = (import.meta as any).env.VITE_IMGBB_API_KEY;
+      if (!apiKey) {
+        toast.error("Configuração de upload pendente.");
+        return;
+      }
+      const response = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
+        method: 'POST',
+        body: formData
+      });
+      const data = await response.json();
+      if (data.success) {
+        setPhotoUrl(data.data.url);
+        toast.success("Foto adicionada!");
+      } else {
+        toast.error("Erro no upload.");
+      }
+    } catch (e) {
+      toast.error("Erro de conexão.");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
       await updateDoc(doc(db, "appointments", appointment.id), {
-        review: { rating, comment, createdAt: serverTimestamp() }
+        rating,
+        review: { rating, comment, createdAt: serverTimestamp() },
+        reviewPhotoUrl: photoUrl
       });
+      toast.success("Avaliação enviada!");
       onClose();
-    } catch (e) { console.error(e); }
+    } catch (e) { 
+      toast.error("Erro ao enviar avaliação.");
+      console.error(e); 
+    }
     finally { setSubmitting(false); }
   };
 
@@ -39,13 +80,37 @@ export function ReviewModal({ appointment, onClose }: { appointment: any, onClos
             value={comment} 
             onChange={e => setComment(e.target.value)} 
             placeholder="Conte-nos o que achou..."
-            className="w-full h-32 bg-black border border-white/5 rounded-2xl p-4 text-white text-sm outline-none focus:border-amber-500 mb-6"
+            className="w-full h-24 bg-black border border-white/5 rounded-2xl p-4 text-white text-sm outline-none focus:border-amber-500 mb-4"
          />
+
+         <div className="mb-8">
+            {photoUrl ? (
+                <div className="relative aspect-[4/3] w-full rounded-2xl overflow-hidden group border border-white/10">
+                    <img src={photoUrl} className="w-full h-full object-cover" alt="Sua avaliação" />
+                    <button 
+                        onClick={() => setPhotoUrl("")}
+                        className="absolute top-2 right-2 p-2 bg-black/60 backdrop-blur-md rounded-xl text-red-500 opacity-0 group-hover:opacity-100 transition-opacity border border-white/5"
+                    >
+                        <X className="w-4 h-4" />
+                    </button>
+                </div>
+            ) : (
+                <label className="flex flex-col items-center justify-center p-6 bg-black/40 border border-dashed border-white/10 rounded-2xl gap-2 cursor-pointer hover:border-amber-500/30 hover:bg-white/5 transition-all group">
+                    <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-neutral-500 group-hover:text-amber-500 transition-colors">
+                        {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
+                    </div>
+                    <span className="text-[9px] font-black text-neutral-500 uppercase tracking-widest group-hover:text-neutral-300">
+                        {uploading ? "Enviando..." : "Foto do Resultado"}
+                    </span>
+                    <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" disabled={uploading} />
+                </label>
+            )}
+         </div>
          
          <button 
            onClick={handleSubmit}
            disabled={submitting}
-           className="w-full bg-amber-500 py-5 rounded-2xl text-black font-black uppercase italic tracking-widest"
+           className="w-full bg-amber-500 py-5 rounded-2xl text-black font-black uppercase italic tracking-widest shadow-lg shadow-amber-500/20 active:scale-95 transition-all"
          >
            {submitting ? 'ENVIANDO...' : 'ENVIAR AVALIAÇÃO'}
          </button>

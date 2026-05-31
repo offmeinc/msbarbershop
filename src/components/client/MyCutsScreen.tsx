@@ -4,8 +4,9 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
 import { updateDoc, doc, Timestamp, collection, query, where, onSnapshot } from "firebase/firestore";
-import { Scissors, Calendar, Clock, CheckCircle, XCircle, Star, ArrowLeft } from "lucide-react";
+import { Scissors, Calendar, Clock, CheckCircle, XCircle, Star, ArrowLeft, Camera, Image as ImageIcon, X, Loader2 } from "lucide-react";
 import { GOOGLE_REVIEW_URL } from "../../constants";
+import { toast } from "../ui/Toast";
 
 interface MyCutsScreenProps {
   user: any;
@@ -16,8 +17,31 @@ interface MyCutsScreenProps {
 
 export function MyCutsScreen({ user, appointments, onBack, onBookAgain }: MyCutsScreenProps) {
   const [ratingLoading, setRatingLoading] = useState<string | null>(null);
+  const [uploadingFor, setUploadingFor] = useState<string | null>(null);
   const [portfolioCuts, setPortfolioCuts] = useState<any[]>([]);
+  const [favorites, setFavorites] = useState<string[]>([]);
   const now = new Date();
+
+  useEffect(() => {
+    if (user?.favorites) {
+      setFavorites(user.favorites);
+    }
+  }, [user]);
+
+  const toggleFavorite = async (itemId: string) => {
+    const userId = user?.uid || user?.id;
+    if (!userId) return;
+
+    const isFav = favorites.includes(itemId);
+    const newFavs = isFav ? favorites.filter(id => id !== itemId) : [...favorites, itemId];
+    
+    setFavorites(newFavs);
+    try {
+      await updateDoc(doc(db, "users", userId), { favorites: newFavs });
+    } catch (e) {
+      console.error("Error updating favorites:", e);
+    }
+  };
 
   useEffect(() => {
     const userId = user?.uid || user?.id;
@@ -70,10 +94,58 @@ export function MyCutsScreen({ user, appointments, onBack, onBookAgain }: MyCuts
     setRatingLoading(appointmentId);
     try {
       await updateDoc(doc(db, "appointments", appointmentId), { rating });
+      toast.success("Avaliação enviada!");
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, "appointments");
     } finally {
       setRatingLoading(null);
+    }
+  };
+
+  const handleReviewPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>, appointmentId: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingFor(appointmentId);
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      const apiKey = (import.meta as any).env.VITE_IMGBB_API_KEY;
+      if (!apiKey) {
+        toast.error("Erro na configuração de upload.");
+        return;
+      }
+      
+      const response = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
+        method: 'POST',
+        body: formData
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        await updateDoc(doc(db, "appointments", appointmentId), { 
+          reviewPhotoUrl: data.data.url 
+        });
+        toast.success("Foto adicionada à avaliação!");
+      } else {
+        toast.error("Erro ao fazer upload.");
+      }
+    } catch (error) {
+      toast.error("Erro na conexão.");
+    } finally {
+      setUploadingFor(null);
+    }
+  };
+
+  const removeReviewPhoto = async (appointmentId: string) => {
+    try {
+      await updateDoc(doc(db, "appointments", appointmentId), { 
+        reviewPhotoUrl: null 
+      });
+      toast.success("Foto removida.");
+    } catch (error) {
+      toast.error("Erro ao remover foto.");
     }
   };
 
@@ -119,30 +191,52 @@ export function MyCutsScreen({ user, appointments, onBack, onBookAgain }: MyCuts
             </div>
             
             <div className="grid grid-cols-2 gap-4">
-              {portfolioCuts.map((item, idx) => (
-                <motion.div 
-                  key={item.id}
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: idx * 0.05 }}
-                  className="relative aspect-square rounded-[2rem] overflow-hidden group border border-white/5 active:scale-95 transition-transform"
-                >
-                  <img 
-                    src={item.imageUrl} 
-                    alt={item.caption} 
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-                    referrerPolicy="no-referrer"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/25 to-transparent p-4 flex flex-col justify-end">
-                    <p className="text-[10px] font-black uppercase text-white truncate">{item.caption || "Top Corte"}</p>
-                    {item.createdAt && (
-                      <p className="text-[8px] font-bold text-neutral-500 uppercase tracking-widest mt-0.5">
-                        {format(item.createdAt instanceof Timestamp ? item.createdAt.toDate() : parseISO(item.createdAt), "dd/MM/yyyy", { locale: ptBR })}
-                      </p>
-                    )}
-                  </div>
-                </motion.div>
-              ))}
+              {portfolioCuts.map((item, idx) => {
+                const isFavorite = favorites.includes(item.id);
+                return (
+                  <motion.div 
+                    key={item.id}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: idx * 0.05 }}
+                    className="relative aspect-square rounded-[2rem] overflow-hidden group border border-white/5 bg-neutral-900"
+                  >
+                    <img 
+                      src={item.imageUrl} 
+                      alt={item.caption} 
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
+                      referrerPolicy="no-referrer"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/20 to-transparent p-4 flex flex-col justify-end">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="overflow-hidden">
+                          <p className="text-[10px] font-black uppercase text-white truncate">{item.caption || "Top Corte"}</p>
+                          {item.createdAt && (
+                            <p className="text-[8px] font-bold text-neutral-500 uppercase tracking-widest mt-0.5">
+                              {format(item.createdAt instanceof Timestamp ? item.createdAt.toDate() : parseISO(item.createdAt), "dd/MM/yyyy", { locale: ptBR })}
+                            </p>
+                          )}
+                        </div>
+                        <button 
+                          onClick={() => toggleFavorite(item.id)}
+                          className={`p-2 rounded-xl border border-white/10 backdrop-blur-md transition-all ${isFavorite ? 'bg-amber-500 text-black border-amber-500' : 'bg-black/60 text-white hover:text-amber-500'}`}
+                        >
+                          <Star className={`w-3 h-3 ${isFavorite ? 'fill-current' : ''}`} />
+                        </button>
+                      </div>
+                      
+                      <div className="mt-3 opacity-0 group-hover:opacity-100 transition-opacity translate-y-4 group-hover:translate-y-0 duration-300">
+                        <button 
+                          onClick={() => onBookAgain?.(item.serviceId || '', item.barberId || '')}
+                          className="w-full bg-amber-500 text-black py-2.5 rounded-xl font-black uppercase italic text-[8px] tracking-widest"
+                        >
+                          Repetir Corte
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
             </div>
           </section>
         )}
@@ -192,7 +286,7 @@ export function MyCutsScreen({ user, appointments, onBack, onBookAgain }: MyCuts
                           </div>
 
                           {isCompleted && (
-                              <div className="pt-4 border-t border-white/5 flex flex-col gap-4">
+                              <div className="pt-4 border-t border-white/5 space-y-4">
                                   <div className="flex items-center justify-between">
                                       <span className="text-[9px] font-black uppercase text-neutral-600 tracking-widest">Sua Avaliação</span>
                                       <div className="flex items-center gap-1.5">
@@ -210,6 +304,40 @@ export function MyCutsScreen({ user, appointments, onBack, onBookAgain }: MyCuts
                                           ))}
                                       </div>
                                   </div>
+
+                                  <div className="space-y-4">
+                                      {app.reviewPhotoUrl ? (
+                                        <div className="relative aspect-[4/5] w-full rounded-2xl overflow-hidden group border border-white/10">
+                                            <img src={app.reviewPhotoUrl} className="w-full h-full object-cover" alt="Sua avaliação" />
+                                            <button 
+                                                onClick={() => removeReviewPhoto(app.id)}
+                                                className="absolute top-3 right-3 p-2 bg-black/60 backdrop-blur-md rounded-xl text-red-500 opacity-0 group-hover:opacity-100 transition-opacity border border-white/5"
+                                            >
+                                                <X className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                      ) : (
+                                        <label className="flex flex-col items-center justify-center p-8 bg-black/40 border border-dashed border-white/10 rounded-[2rem] gap-3 cursor-pointer hover:border-amber-500/30 hover:bg-white/5 transition-all group">
+                                            <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-neutral-500 group-hover:text-amber-500 transition-colors">
+                                                {uploadingFor === app.id ? <Loader2 className="w-5 h-5 animate-spin" /> : <Camera className="w-5 h-5" />}
+                                            </div>
+                                            <div className="text-center">
+                                                <p className="text-[9px] font-black text-neutral-500 uppercase tracking-widest group-hover:text-neutral-300 transition-colors">
+                                                    {uploadingFor === app.id ? "Enviando..." : "Adicionar Foto do Corte"}
+                                                </p>
+                                                <p className="text-[8px] text-neutral-600 font-bold uppercase mt-1">Mostre o resultado!</p>
+                                            </div>
+                                            <input 
+                                                type="file" 
+                                                accept="image/*" 
+                                                onChange={(e) => handleReviewPhotoUpload(e, app.id)} 
+                                                className="hidden" 
+                                                disabled={!!uploadingFor}
+                                            />
+                                        </label>
+                                      )}
+                                  </div>
+
                                   {onBookAgain && (
                                       <button
                                           onClick={() => onBookAgain(app.serviceId, app.barberId)}

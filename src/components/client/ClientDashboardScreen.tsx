@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { 
   format, 
-  parseISO 
+  parseISO,
+  isToday 
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { 
@@ -36,15 +37,22 @@ import {
   Gift,
   Copy,
   Menu,
-  Sparkles
+  ChevronRight,
+  Sparkles,
+  Bell,
+  Clock
 } from "lucide-react";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
 import { MoreOptionsScreen } from "../common/MoreOptionsScreen";
 import { BookingScreen } from "./BookingScreen";
 import { ProfileEditScreen } from "../common/ProfileEditScreen";
 import { MyCutsScreen } from "./MyCutsScreen";
+import { StyleSheet } from "./StyleSheet";
+import { LookbookScreen } from "./LookbookScreen";
 import { PreferencesSummary } from "./PreferencesSummary";
+import { NotificationsScreen } from "../NotificationsScreen";
 import { GOOGLE_REVIEW_URL } from "../../constants";
+import { toast } from "../ui/Toast";
 
 interface ClientDashboardScreenProps {
   user: any;
@@ -53,7 +61,8 @@ interface ClientDashboardScreenProps {
 
 export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenProps) {
   const [appointments, setAppointments] = useState<any[]>([]);
-  const [currentView, setCurrentView] = useState<"home" | "profile" | "booking" | "my-cuts" | "more-options">("home");
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [currentView, setCurrentView] = useState<"home" | "profile" | "booking" | "my-cuts" | "more-options" | "style-sheet" | "notifications" | "lookbook">("home");
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
   const [initialBookingServiceId, setInitialBookingServiceId] = useState<string | undefined>();
   const [initialBookingBarberId, setInitialBookingBarberId] = useState<string | undefined>();
@@ -106,6 +115,29 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
     
     const completedCount = appointments.filter(app => app.status === 'completed').length;
     
+    // Calculate intelligent return reminder
+    let daysToReturn = 21; // Default
+    const completedApps = appointments.filter(app => app.status === 'completed').sort((a,b) => {
+        const dateA = a.date instanceof Timestamp ? a.date.toDate().getTime() : (typeof a.date === 'string' ? parseISO(a.date).getTime() : a.date.getTime());
+        const dateB = b.date instanceof Timestamp ? b.date.toDate().getTime() : (typeof b.date === 'string' ? parseISO(b.date).getTime() : b.date.getTime());
+        return dateB - dateA; // Newest first
+    });
+
+    if (completedApps.length >= 2) {
+        const d1 = completedApps[0].date instanceof Timestamp ? completedApps[0].date.toDate() : parseISO(completedApps[0].date);
+        const d2 = completedApps[1].date instanceof Timestamp ? completedApps[1].date.toDate() : parseISO(completedApps[1].date);
+        const diffDays = Math.ceil(Math.abs(d1.getTime() - d2.getTime()) / (1000 * 60 * 60 * 24));
+        if (diffDays > 7 && diffDays < 60) daysToReturn = diffDays;
+    }
+
+    const lastAppointment = completedApps[0];
+    let nextSuggestedDate = null;
+    if (lastAppointment) {
+        const lastDate = lastAppointment.date instanceof Timestamp ? lastAppointment.date.toDate() : parseISO(lastAppointment.date);
+        nextSuggestedDate = new Date(lastDate);
+        nextSuggestedDate.setDate(nextSuggestedDate.getDate() + daysToReturn);
+    }
+
     const upcoming = appointments
       .filter(app => {
         if (!app.date) return false;
@@ -118,7 +150,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
         return dateA.getTime() - dateB.getTime();
       })[0];
 
-    return { totalSpent, completedCount, upcoming };
+    return { totalSpent, completedCount, upcoming, daysToReturn, nextSuggestedDate };
   }, [appointments]);
 
   const handleCancelAppointment = async (app: any) => {
@@ -189,6 +221,62 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
     }
   };
 
+  useEffect(() => {
+    if (!user || !user.email) return;
+    const q = query(
+      collection(db, "notifications"), 
+      where("clientEmail", "==", user.email), 
+      orderBy("timestamp", "desc")
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const newNotifs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
+      
+      // Check for new notifications to show toast
+      if (notifications.length > 0 && newNotifs.length > notifications.length) {
+        const latest = newNotifs[0];
+        if (!latest.read) {
+          toast.success(latest.message);
+        }
+      }
+      
+      setNotifications(newNotifs);
+    });
+    return unsubscribe;
+  }, [user?.email, notifications.length]);
+
+  // Reminder logic
+  useEffect(() => {
+    if (stats.upcoming) {
+      const appDate = stats.upcoming.date instanceof Timestamp ? stats.upcoming.date.toDate() : parseISO(stats.upcoming.date);
+      const timeParts = stats.upcoming.time.split(':');
+      appDate.setHours(parseInt(timeParts[0]), parseInt(timeParts[1]), 0);
+      
+      const now = new Date();
+      const diffMs = appDate.getTime() - now.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+
+      // Notify if it's in 1 hour
+      if (diffMins > 0 && diffMins <= 60 && !stats.upcoming.reminderSent) {
+        toast.info(`Lembrete: Seu corte ${stats.upcoming.serviceName} é daqui a pouco (${stats.upcoming.time})!`);
+        // We could mark it as sent in firestore to avoid repeats, but client-side session is enough for now
+      }
+    }
+  }, [stats.upcoming]);
+
+  const handleClearNotifications = async () => {
+    try {
+      const batch: any[] = [];
+      notifications.forEach(n => {
+        if (!n.read) {
+          batch.push(updateDoc(doc(db, "notifications", n.id), { read: true }));
+        }
+      });
+      await Promise.all(batch);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   if (!user) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -218,16 +306,18 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                         <p className="text-[10px] text-neutral-500 font-black uppercase tracking-[0.2em] leading-none mb-1">Bem-vind{user?.gender === 'female' ? 'a' : 'o'}</p>
                         <h2 className="text-xl font-black italic uppercase tracking-tighter truncate w-40">{(user?.displayName || 'Cliente').split(' ')[0]}</h2>
                       </div>
+                      <button onClick={() => setCurrentView('notifications')} className="relative p-3 bg-neutral-900 rounded-2xl text-neutral-500 hover:text-white border border-white/5 transition-all">
+                        <Bell className="w-5 h-5" />
+                        {notifications.filter(n => !n.read).length > 0 && (
+                          <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-amber-500 rounded-full border-2 border-black" />
+                        )}
+                      </button>
                       <button onClick={() => setCurrentView('more-options')} className="p-3 bg-neutral-900 rounded-2xl text-neutral-500 hover:text-white border border-white/5 transition-all">
                         <Menu className="w-5 h-5" />
                       </button>
                    </div>
                 </div>
-                 <div className="flex items-center gap-2">
-                  <button onClick={onBack} className="p-3 bg-neutral-900 rounded-2xl text-neutral-500 hover:text-white border border-white/5 transition-all">
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
+
               </div>
             </div>
 
@@ -262,49 +352,195 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                   </div>
                  
                  <div className="bg-[#0A0A0A] p-5 rounded-[2rem] border border-white/5">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-neutral-500 mb-1">Cashback</p>
-                    <p className="text-2xl font-black italic text-green-500 leading-none">R$ 0,00</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-neutral-500 mb-1">Rank</p>
+                    <p className="text-2xl font-black italic text-amber-500 leading-none">
+                      {stats.completedCount >= 20 ? 'GOLD' : stats.completedCount >= 10 ? 'SILVER' : 'BRONZE'}
+                    </p>
                  </div>
               </div>
 
+              {/* Return Reminder Widget */}
+              {!stats.upcoming && stats.nextSuggestedDate && (
+                <div className="bg-neutral-900 border border-white/5 p-8 rounded-[3rem] relative overflow-hidden group shadow-xl">
+                   <div className="absolute right-0 top-0 p-8 opacity-10 group-hover:scale-125 transition-transform duration-1000">
+                       <Calendar className="w-20 h-20 text-amber-500" />
+                   </div>
+                   <div className="relative z-10">
+                       <div className="flex items-center gap-2 mb-4">
+                           <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" />
+                           <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-500">Sugestão de Retorno</span>
+                       </div>
+                       <h4 className="text-xl font-black italic uppercase tracking-tight text-white mb-2">Hora de renovar o visual?</h4>
+                       <p className="text-[10px] text-neutral-500 font-bold uppercase leading-relaxed mb-8 max-w-[200px]">
+                           Baseado no seu histórico, o momento ideal para o próximo corte seria dia <span className="text-amber-500 underline decoration-amber-500/30 underline-offset-4">{format(stats.nextSuggestedDate, "dd 'de' MMMM", { locale: ptBR })}</span>.
+                       </p>
+                       <button 
+                           onClick={() => setCurrentView('booking')}
+                           className="bg-amber-500 text-black text-[10px] font-black uppercase italic tracking-widest px-8 py-4 rounded-2xl shadow-lg shadow-amber-500/20 active:scale-95 transition-all"
+                       >
+                           RESERVAR AGORA
+                       </button>
+                   </div>
+                </div>
+              )}
+
+              {/* Style Sheet Button */}
+              <button 
+                 onClick={() => setCurrentView('style-sheet')}
+                 className="w-full p-8 bg-neutral-900/50 rounded-[3rem] border border-white/5 flex items-center justify-between group hover:border-amber-500/30 transition-all shadow-xl"
+              >
+                 <div className="flex items-center gap-5 text-left">
+                    <div className="w-14 h-14 rounded-[1.5rem] bg-amber-500/10 flex items-center justify-center text-amber-500 border border-amber-500/20 group-hover:bg-amber-500 group-hover:text-black transition-all duration-500">
+                       <Sparkles className="w-6 h-6" />
+                    </div>
+                    <div>
+                       <h4 className="text-white text-lg font-black italic uppercase tracking-tight">Ficha de Estilo</h4>
+                       <p className="text-[10px] text-neutral-500 font-black uppercase tracking-widest">Suas preferências personalizadas</p>
+                    </div>
+                 </div>
+                 <ChevronRight className="w-6 h-6 text-neutral-700 group-hover:text-amber-500 group-hover:translate-x-2 transition-all duration-500" />
+              </button>
+
+              {/* Lookbook Quick Access */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between px-2">
+                  <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white">Explore Tendências</h3>
+                  <button onClick={() => setCurrentView('lookbook')} className="text-[9px] font-black italic uppercase text-amber-500">Ver Lookbook</button>
+                </div>
+                <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
+                  {[
+                    { id: '1', title: 'Textured Crop', src: 'https://images.unsplash.com/photo-1599351431247-f577f5d48c17?q=80&w=300' },
+                    { id: '2', title: 'Mid Fade', src: 'https://images.unsplash.com/photo-1621605815841-28d9446e3a43?q=80&w=300' },
+                    { id: '3', title: 'Pompadour', src: 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?q=80&w=300' }
+                  ].map(trend => (
+                    <motion.button 
+                      key={trend.id}
+                      onClick={() => setCurrentView('lookbook')}
+                      whileTap={{ scale: 0.95 }}
+                      className="flex-shrink-0 w-44 aspect-[4/3] rounded-3xl overflow-hidden relative group border border-white/5"
+                    >
+                      <img src={trend.src} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt={trend.title} />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent p-4 flex flex-col justify-end">
+                        <p className="text-[10px] font-black text-white italic uppercase tracking-tighter">{trend.title}</p>
+                      </div>
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Digital Wallet Card */}
+              <div className="bg-gradient-to-br from-neutral-800 to-neutral-900 border border-white/10 p-8 rounded-[3.5rem] relative overflow-hidden group shadow-2xl">
+                 <div className="absolute -right-8 -top-8 text-amber-500/5 group-hover:scale-110 transition-transform duration-1000 rotate-12">
+                    <Wallet size={200} />
+                 </div>
+                 <div className="relative z-10">
+                    <div className="flex items-center justify-between mb-8">
+                       <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500 border border-amber-500/20">
+                             <Wallet className="w-5 h-5" />
+                          </div>
+                          <div>
+                             <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest leading-none mb-1">Carteira Digital</p>
+                             <h4 className="text-sm font-black text-white uppercase italic tracking-tighter">Planos e Créditos</h4>
+                          </div>
+                       </div>
+                       <span className="bg-neutral-800 text-neutral-400 text-[8px] font-black px-2 py-1 rounded-lg uppercase tracking-tight">VIP</span>
+                    </div>
+
+                    <div className="flex items-end justify-between gap-4">
+                       <div>
+                          <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest mb-1">Saldo Disponível</p>
+                          <div className="flex items-baseline gap-1">
+                             <span className="text-3xl font-black italic text-white tracking-tighter">R$ 0,00</span>
+                          </div>
+                       </div>
+                       <button className="bg-white text-black text-[9px] font-black uppercase italic tracking-widest px-6 py-3 rounded-xl shadow-lg active:scale-95 transition-all">
+                          RECARREGAR
+                       </button>
+                    </div>
+
+                    <div className="mt-8 pt-6 border-t border-white/5 flex gap-4">
+                       <div className="flex-1 bg-black/40 rounded-2xl p-4 border border-white/5">
+                          <p className="text-[8px] font-black text-neutral-500 uppercase tracking-widest mb-1">Cortes Restantes</p>
+                          <p className="text-xl font-black italic text-white">0</p>
+                       </div>
+                       <div className="flex-1 bg-black/40 rounded-2xl p-4 border border-white/5">
+                          <p className="text-[8px] font-black text-neutral-500 uppercase tracking-widest mb-1">Pontos Fidelidade</p>
+                          <p className="text-xl font-black italic text-amber-500">{(stats.completedCount % 10) * 100}</p>
+                       </div>
+                    </div>
+                 </div>
+              </div>
+
+              {/* Loyalty Card UI */}
+              <div className="bg-[#0A0A0A] p-8 rounded-[3rem] border border-white/5 relative overflow-hidden group shadow-2xl">
+                  <div className="absolute top-0 right-0 p-8">
+                      <Sparkles className="w-12 h-12 text-amber-500/20 group-hover:scale-125 transition-transform duration-700" />
+                  </div>
+                  <div className="relative z-10">
+                      <div className="flex items-center gap-2 mb-6">
+                          <Gift className="w-4 h-4 text-amber-500" />
+                          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-500">Cartão Fidelidade Digital</span>
+                          <span className="ml-auto bg-amber-500 text-black text-[8px] font-black px-2 py-0.5 rounded-full uppercase italic tracking-tighter">Em Breve</span>
+                      </div>
+                      
+                      <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white mb-2 leading-none">Seu Próximo Mimo</h3>
+                      <p className="text-xs text-neutral-500 font-bold mb-8 uppercase tracking-tight">Complete 10 cortes e ganhe uma <span className="text-amber-500">Hidratação Premium</span></p>
+                      
+                      <div className="grid grid-cols-5 gap-3">
+                          {[...Array(10)].map((_, i) => {
+                              const progress = stats.completedCount % 10;
+                              const isActive = stats.completedCount > 0 && (i < progress || (progress === 0 && stats.completedCount >= 10 && i < 10));
+                              return (
+                                <div 
+                                    key={i} 
+                                    className={`aspect-square rounded-2xl border-2 flex items-center justify-center transition-all duration-500 ${
+                                        isActive 
+                                        ? "bg-amber-500 border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.4)]" 
+                                        : "bg-neutral-900 border-white/5"
+                                    }`}
+                                >
+                                    {isActive ? (
+                                        <CheckCircle2 className="w-5 h-5 text-black" />
+                                    ) : (
+                                        <span className="text-[10px] font-black text-neutral-700">{i + 1}</span>
+                                    )}
+                                </div>
+                              );
+                          })}
+                      </div>
+
+                      <div className="mt-8 pt-6 border-t border-white/5 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                              <span className="text-[9px] font-black uppercase text-neutral-400">Progresso: {(stats.completedCount % 10) * 10}%</span>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+
               {/* Referral Section */}
-              <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 p-8 rounded-[3rem] shadow-2xl relative overflow-hidden group">
+              <div className="bg-neutral-900 border border-white/5 p-8 rounded-[3rem] shadow-2xl relative overflow-hidden group">
                   <div className="absolute -right-4 -bottom-4 text-white/5 group-hover:scale-110 transition-transform duration-700">
                     <Gift size={160} />
                   </div>
-                  <div className="relative z-10">
+                  <div className="relative z-10 opacity-60">
                     <div className="flex items-center gap-2 mb-4">
-                        <Share2 className="w-4 h-4 text-indigo-200" />
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-100">Convide um amigo</span>
+                        <Share2 className="w-4 h-4 text-neutral-500" />
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-500">Convide um amigo</span>
+                        <span className="ml-auto bg-neutral-800 text-neutral-400 text-[8px] font-black px-2 py-0.5 rounded-full uppercase italic tracking-tighter">Em Breve</span>
                     </div>
                     <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white mb-2 leading-none">Indique e Ganhe</h3>
-                    <p className="text-xs text-indigo-100/70 font-medium mb-6">Compartilhe seu código e ambos ganham 15% de desconto no próximo corte!</p>
+                    <p className="text-xs text-neutral-500 font-medium mb-6">Em breve você poderá indicar amigos e ganhar descontos exclusivos!</p>
                     
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 opacity-30 pointer-events-none">
                         <div className="flex-1 bg-black/30 backdrop-blur-md rounded-2xl p-4 border border-white/10 flex items-center justify-between">
-                            <span className="text-sm font-black tracking-widest text-white">{referralCode || "GERANDO..."}</span>
-                            <button 
-                                onClick={() => {
-                                    navigator.clipboard.writeText(referralCode);
-                                    alert("Código copiado!");
-                                }}
-                                className="text-indigo-300 hover:text-white transition-colors"
-                            >
+                            <span className="text-sm font-black tracking-widest text-white">------</span>
+                            <button disabled className="text-neutral-500">
                                 <Copy className="w-4 h-4" />
                             </button>
                         </div>
-                        <button 
-                            onClick={() => {
-                                if (navigator.share) {
-                                    navigator.share({
-                                        title: 'Minha Barbearia Favorita',
-                                        text: `Use meu código ${referralCode} para ganhar 15% de desconto na barbearia!`,
-                                        url: window.location.href
-                                    });
-                                }
-                            }}
-                            className="bg-white text-indigo-600 p-4 rounded-2xl font-black transition-all active:scale-95"
-                        >
+                        <button disabled className="bg-neutral-800 text-neutral-600 p-4 rounded-2xl font-black">
                             <Share2 className="w-5 h-5" />
                         </button>
                     </div>
@@ -312,6 +548,35 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
               </div>
 
               <PreferencesSummary appointments={appointments} />
+ 
+              {/* My Cuts Gallery (Client's Own Photos) */}
+              {appointments.some(app => app.reviewPhotoUrl) && (
+                <div className="space-y-4">
+                   <div className="flex items-center justify-between px-2">
+                       <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white">Minha Galeria</h3>
+                       <button onClick={() => setCurrentView('my-cuts')} className="text-[9px] font-black italic uppercase text-amber-500">Ver Tudo</button>
+                   </div>
+                   <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
+                       {appointments
+                        .filter(app => app.reviewPhotoUrl)
+                        .slice(0, 6)
+                        .map(app => (
+                          <motion.div 
+                            key={app.id} 
+                            whileTap={{ scale: 0.95 }}
+                            className="flex-shrink-0 w-32 aspect-[3/4] rounded-2xl overflow-hidden border border-white/10 relative group"
+                          >
+                             <img src={app.reviewPhotoUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="Meu Corte" />
+                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent p-3 flex flex-col justify-end">
+                                <p className="text-[8px] font-black text-white italic truncate uppercase">{app.serviceName}</p>
+                                <p className="text-[7px] font-bold text-neutral-400 uppercase">{format(app.date instanceof Timestamp ? app.date.toDate() : parseISO(app.date), "dd/MM/yy")}</p>
+                             </div>
+                          </motion.div>
+                        ))
+                       }
+                   </div>
+                </div>
+              )}
 
               {stats.upcoming && (
                 <div className="bg-amber-500 p-6 rounded-[2.5rem] shadow-2xl shadow-amber-500/20 text-black">
@@ -320,7 +585,12 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                          <CalendarCheck className="w-5 h-5" />
                          <span className="text-[10px] font-black uppercase tracking-[0.2em]">Próximo Agendamento</span>
                       </div>
-                      <span className="bg-black text-amber-500 text-[10px] font-black px-2 py-1 rounded-lg">CONFIRMADO</span>
+                      <div className="flex items-center gap-2">
+                         {isToday(stats.upcoming.date instanceof Timestamp ? stats.upcoming.date.toDate() : parseISO(stats.upcoming.date)) && (
+                           <span className="bg-red-600 text-white text-[10px] font-black px-2 py-1 rounded-lg animate-pulse">É HOJE!</span>
+                         )}
+                         <span className="bg-black text-amber-500 text-[10px] font-black px-2 py-1 rounded-lg">CONFIRMADO</span>
+                      </div>
                    </div>
                    <h4 className="text-2xl font-black uppercase italic tracking-tighter mb-1 leading-tight">{stats.upcoming.serviceName}</h4>
                    <div className="flex items-center gap-4 text-xs font-bold opacity-80 mb-6">
@@ -380,6 +650,9 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
         {currentView === 'profile' && <ProfileEditScreen user={user} onBack={() => setCurrentView('home')} isClient={true} />}
         {currentView === 'booking' && <BookingScreen user={user} services={services} onBack={() => { setCurrentView('home'); setSelectedAppointment(null); setInitialBookingServiceId(undefined); setInitialBookingBarberId(undefined); }} editAppointment={selectedAppointment} initialServiceId={initialBookingServiceId} initialBarberId={initialBookingBarberId} />}
         {currentView === 'my-cuts' && <MyCutsScreen user={user} appointments={appointments} onBack={() => setCurrentView('home')} onBookAgain={(serviceId, barberId) => { setInitialBookingServiceId(serviceId); setInitialBookingBarberId(barberId); setCurrentView('booking'); }} />}
+        {currentView === 'lookbook' && <LookbookScreen onBack={() => setCurrentView('home')} onBook={(style) => { setCurrentView('booking'); setInitialBookingServiceId(undefined); /* Could filter services by style if needed */ }} />}
+        {currentView === 'notifications' && <NotificationsScreen notifications={notifications} appointments={appointments} onClear={handleClearNotifications} onBack={() => setCurrentView('home')} />}
+        {currentView === 'style-sheet' && <StyleSheet user={user} onBack={() => setCurrentView('home')} />}
         {currentView === 'more-options' && (
             <MoreOptionsScreen
                 user={user}

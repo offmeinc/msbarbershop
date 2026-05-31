@@ -18,7 +18,8 @@ import {
   Loader2,
   CheckCircle2,
   CreditCard,
-  Sparkles
+  Sparkles,
+  Star
 } from "lucide-react";
 import { 
   BarChart, 
@@ -133,10 +134,14 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
       
       await updateDoc(doc(firestore, "appointments", app.id), updatePayload);
       await addDoc(collection(firestore, "notifications"), {
+        clientId: app.clientId || "",
+        clientEmail: app.clientEmail || "",
         loginCode: app.loginCode || "",
+        type: 'status_update',
         message: `Seu agendamento foi atualizado para: ${newStatus}${newStatus === 'completed' ? ' e o pagamento foi registrado.' : ''}`,
         timestamp: serverTimestamp(),
-        read: false
+        read: false,
+        appointmentId: app.id
       });
 
       // Staff notification
@@ -694,7 +699,15 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                                                </div>
                                             )}
                                             <div className="text-left">
-                                               <p className="text-sm text-white font-black uppercase tracking-wide leading-none">{app.clientName}</p>
+                                               <div className="flex items-center gap-2">
+                                                  <p className="text-sm text-white font-black uppercase tracking-wide leading-none">{app.clientName}</p>
+                                                  {app.rating && (
+                                                      <div className="px-1.5 py-0.5 bg-amber-500/10 rounded flex items-center gap-1 border border-amber-500/20">
+                                                          <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-500" />
+                                                          <span className="text-[9px] font-black text-amber-500">{app.rating}</span>
+                                                      </div>
+                                                  )}
+                                               </div>
                                                <p className="text-[10px] text-neutral-500 font-bold mt-1 text-left">Profissional: <span className="text-neutral-400 capitalize">{app.barberName}</span></p>
                                             </div>
                                           </div>
@@ -709,6 +722,15 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                                                 transition={{ duration: 0.25, ease: "easeInOut" }}
                                                 className="overflow-hidden border-t border-white/5 pt-4 text-white text-[10px] space-y-2.5 uppercase tracking-widest font-black"
                                               >
+                                                  {app.reviewPhotoUrl && (
+                                                    <div className="mb-4 bg-black/40 p-3 rounded-2xl border border-white/5 space-y-2">
+                                                      <p className="text-neutral-500 uppercase text-[8px] tracking-wider font-bold">Feedback Visual do Cliente:</p>
+                                                      <div className="aspect-[4/3] w-full rounded-xl overflow-hidden border border-white/10 group-hover:border-amber-500/30 transition-colors">
+                                                          <img src={app.reviewPhotoUrl} className="w-full h-full object-cover" alt="Review" />
+                                                      </div>
+                                                    </div>
+                                                  )}
+
                                                   <div className="flex justify-between items-center bg-black/40 px-4 py-2 rounded-xl border border-white/5">
                                                     <span className="text-neutral-500">Preço Total</span>
                                                     <span className="text-emerald-400 text-xs font-black">R$ {app.price || app.totalPrice || '0,00'}</span>
