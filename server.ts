@@ -50,6 +50,28 @@ async function startServer() {
     res.json({ publicKey: vapid.publicKey });
   });
 
+  // API Route for Push Subscription (Save to Firestore)
+  app.post("/api/subscribe", async (req, res) => {
+    const { subscription, userId, userRole } = req.body;
+    if (!subscription || !userId) {
+      return res.status(400).json({ error: "Missing subscription or userId" });
+    }
+    
+    try {
+      const subRef = doc(db, "push_subscriptions", userId);
+      await setDoc(subRef, {
+        userId,
+        userRole: userRole || "client",
+        subscription,
+        createdAt: serverTimestamp()
+      }, { merge: true });
+      res.status(201).json({ success: true });
+    } catch (err: any) {
+      console.error("[Push Service] Error saving subscription:", err.message);
+      res.status(500).json({ error: "Failed to save subscription" });
+    }
+  });
+
   // API Route for simulating delayed push notifications (perfect for background testing)
   app.post("/api/push-test", async (req, res) => {
     const { userId, isCollaborator, delayMs = 5000, title, body } = req.body;

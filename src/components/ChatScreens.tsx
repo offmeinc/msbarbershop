@@ -24,7 +24,10 @@ import {
   MessageCircle, 
   Sparkles,
   Inbox,
-  Plus
+  Plus,
+  Image,
+  Mic,
+  Square
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -134,13 +137,6 @@ export function ChatScreen({ user, onBack }: { user: any, onBack: () => void }) 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const clientUid = user ? (user.uid || user.id) : null;
 
-  // Notification logic
-  useEffect(() => {
-    if (Notification.permission !== "granted") {
-      Notification.requestPermission();
-    }
-  }, []);
-
   useEffect(() => {
     if (!clientUid) return;
     const firestore = db || getFirestore();
@@ -149,17 +145,6 @@ export function ChatScreen({ user, onBack }: { user: any, onBack: () => void }) 
       orderBy("createdAt", "asc")
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      snapshot.docChanges().forEach((change) => {
-        if (change.type === "added") {
-          const msg = { id: change.doc.id, ...change.doc.data() } as any;
-          if (msg.sender !== "client" && Notification.permission === "granted" && document.hidden) {
-            new Notification("Nova mensagem da Barbeira", {
-              body: msg.text,
-              icon: '/logo.png' // Ensure this exists or use a default one
-            });
-          }
-        }
-      });
       setMessages(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, `chats/${clientUid}/messages`);
@@ -209,33 +194,25 @@ export function ChatScreen({ user, onBack }: { user: any, onBack: () => void }) 
   };
 
   return (
-    <div className="max-w-md mx-auto py-6 px-4 flex flex-col h-[550px] animate-in fade-in duration-300">
-      <button 
-        onClick={onBack} 
-        className="mb-4 flex items-center gap-2 text-neutral-500 hover:text-white uppercase text-[10px] font-black tracking-widest transition-colors w-fit"
-      >
-        <ChevronLeft className="w-4 h-4" /> Voltar ao Painel
-      </button>
+    <div className="flex flex-col h-[100dvh] bg-neutral-950 animate-in fade-in duration-300">
+      <div className="flex items-center justify-between p-4 border-b border-white/5 bg-neutral-950">
+        <button 
+          onClick={onBack} 
+          className="flex items-center gap-2 text-neutral-500 hover:text-white uppercase text-[10px] font-black tracking-widest transition-colors"
+        >
+          <ChevronLeft className="w-4 h-4" /> Voltar
+        </button>
+        <span className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">
+          Falar com a Barbearia
+        </span>
+        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+      </div>
 
-      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3.5 bg-neutral-950 rounded-[2rem] border border-white/5 mb-4 no-scrollbar">
-        <div className="text-center py-2.5 border-b border-white/5 flex items-center justify-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">
-            Falar com a Barbearia
-          </span>
-        </div>
-
+      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3.5 no-scrollbar bg-neutral-900/50">
         {messages.length === 0 ? (
-          <div className="flex-grow flex flex-col items-center justify-center text-center p-6 gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500">
-              <MessageCircle className="w-6 h-6 animate-bounce" />
-            </div>
-            <div className="space-y-1">
-              <h4 className="text-xs font-black uppercase text-white tracking-widest">Inicie a conversa</h4>
-              <p className="text-[9px] text-neutral-500 font-bold uppercase leading-relaxed max-w-[200px] mx-auto">
-                Mande uma mensagem direta e nossa equipe irá lhe atender em instantes!
-              </p>
-            </div>
+          <div className="flex-grow flex flex-col items-center justify-center text-center p-6 gap-3 opacity-50">
+            <MessageCircle className="w-12 h-12 text-amber-500 animate-bounce" />
+            <h4 className="text-xs font-black uppercase text-white tracking-widest">Inicie a conversa</h4>
           </div>
         ) : (
           messages.map((m) => {
@@ -247,15 +224,42 @@ export function ChatScreen({ user, onBack }: { user: any, onBack: () => void }) 
                   isClientUser ? "self-end bg-amber-500 text-black rounded-tr-none" : "self-start bg-neutral-900 text-white rounded-tl-none border border-white/5"
                 }`}
               >
-                {!isClientUser && (
-                  <p className="text-[8px] font-black uppercase text-amber-500 mb-1 tracking-wider">
-                    {m.senderName || "Barbeiro / Equipe"}
-                  </p>
-                )}
-                <p className="text-xs font-semibold leading-relaxed break-words">{m.text}</p>
-                <span className={`text-[7px] font-bold uppercase block text-right mt-1.5 ${isClientUser ? "text-neutral-900/60" : "text-neutral-500"}`}>
-                  {m.createdAt instanceof Timestamp ? format(m.createdAt.toDate(), "HH:mm") : ""}
-                </span>
+                <div className={`flex items-end gap-2 ${isClientUser ? "flex-row-reverse" : ""}`}>
+                    {isClientUser ? (
+                      <div className="w-8 h-8 rounded-full bg-neutral-800 flex items-center justify-center border border-white/5 shrink-0">
+                         <User className="w-4 h-4 text-neutral-500" />
+                      </div>
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center shrink-0">
+                          <span className="text-[10px] font-black text-black">B</span>
+                      </div>
+                    )}
+                    <div 
+                      className={`p-3.5 rounded-2xl max-w-[75%] ${
+                        isClientUser ? "bg-amber-500 text-black rounded-tr-none" : "bg-neutral-900 text-white rounded-tl-none border border-white/5"
+                      }`}
+                    >
+                      {!isClientUser && (
+                        <p className="text-[8px] font-black uppercase text-amber-500 mb-1 tracking-wider">
+                          {m.senderName || "Equipe"}
+                        </p>
+                      )}
+                      {m.imageUrl && (
+                          <img src={m.imageUrl} alt="chat" className="max-w-full rounded-lg mb-2" />
+                      )}
+                      <p className="text-xs font-semibold leading-relaxed break-words">{m.text}</p>
+                      <div className={`flex items-center justify-end gap-1 mt-1.5 ${isClientUser ? "text-neutral-950/60" : "text-neutral-500"}`}>
+                        <span className="text-[7px] font-bold uppercase">
+                            {m.createdAt instanceof Timestamp ? format(m.createdAt.toDate(), "HH:mm") : ""}
+                        </span>
+                        {isClientUser && (
+                            <span className="text-[7px] font-bold uppercase">
+                                - {m.status === 'read' ? 'Lida' : 'Entregue'}
+                            </span>
+                        )}
+                      </div>
+                    </div>
+                </div>
               </div>
             );
           })
@@ -263,17 +267,43 @@ export function ChatScreen({ user, onBack }: { user: any, onBack: () => void }) 
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="flex gap-2 bg-neutral-900 border border-white/5 p-2 rounded-2xl">
+      <div className="flex gap-2 bg-neutral-900 border-t border-white/5 p-3 shrink-0">
+        <label className="p-3.5 rounded-xl border border-white/10 hover:bg-neutral-800 cursor-pointer">
+            <Image className="w-4 h-4 text-neutral-400" />
+            <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                
+                const formData = new FormData();
+                formData.append("image", file);
+                
+                const response = await fetch("/api/upload", {
+                    method: "POST",
+                    body: formData
+                });
+                
+                const result = await response.json();
+                if (result.data && result.data.url) {
+                    await addDoc(collection(db, "chats", clientUid, "messages"), {
+                      imageUrl: result.data.url,
+                      text: "📷 Imagem",
+                      createdAt: Timestamp.now(),
+                      userId: clientUid,
+                      sender: "client"
+                    });
+                }
+            }} />
+        </label>
         <input 
           value={newMessage} 
           onChange={e => setNewMessage(e.target.value)} 
           onKeyDown={e => e.key === "Enter" && sendMessage()}
-          className="flex-1 bg-transparent px-3 py-2 text-xs text-white outline-none placeholder:text-neutral-600 placeholder:font-bold placeholder:uppercase placeholder:tracking-wider font-medium" 
-          placeholder="Escreva algo para nós..."
+          className="flex-1 bg-neutral-800 rounded-xl px-4 py-2 text-xs text-white outline-none placeholder:text-neutral-500" 
+          placeholder="Escreva algo..."
         />
         <button 
           onClick={sendMessage} 
-          className="bg-amber-500 hover:bg-amber-400 text-black p-3.5 rounded-xl font-bold transition-all flex items-center justify-center shrink-0 shadow-lg shadow-amber-500/10"
+          className="bg-amber-500 hover:bg-amber-400 text-black p-3.5 rounded-xl font-bold transition-all flex items-center justify-center shrink-0 shadow-lg"
         >
           <Send className="w-4 h-4" />
         </button>
@@ -283,18 +313,77 @@ export function ChatScreen({ user, onBack }: { user: any, onBack: () => void }) 
 }
 
 // NEW Professional Interface to Chat with any Clients
-export function ProfessionalClientChatsScreen({ user, onBack }: { user: any, onBack: () => void }) {
+export function ProfessionalClientChatsScreen({ user, onBack, initialClientId, initialClientName }: { user: any, onBack: () => void, initialClientId?: string, initialClientName?: string }) {
   const [chats, setChats] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeClientId, setActiveClientId] = useState<string | null>(null);
-  const [activeClientName, setActiveClientName] = useState("");
+  const [activeClientId, setActiveClientId] = useState<string | null>(initialClientId || null);
+  const [activeClientName, setActiveClientName] = useState(initialClientName || "");
   const [isSelectingClient, setIsSelectingClient] = useState(false);
   const [allClients, setAllClients] = useState<any[]>([]);
   
   // Detail state
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState("");
+  const [isRecording, setIsRecording] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+      
+      mediaRecorder.addEventListener("dataavailable", (e) => {
+        audioChunksRef.current.push(e.data);
+      });
+      
+      mediaRecorder.addEventListener("stop", async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/ogg; codecs=opus" });
+        const file = new File([audioBlob], "audio.ogg", { type: "audio/ogg" });
+        
+        const formData = new FormData();
+        formData.append("image", file);
+        
+        const response = await fetch("/api/upload", {
+            method: "POST",
+            body: formData
+        });
+        
+        const result = await response.json();
+        if (result.data && result.data.url) {
+            await addDoc(collection(db, "chats", activeClientId!, "messages"), {
+              audioUrl: result.data.url,
+              text: "🎙️ Mensagem de voz",
+              createdAt: Timestamp.now(),
+              sender: "professional",
+              senderName: user?.displayName || user?.name || "Suporte",
+              senderId: user?.uid || user?.id
+            });
+        }
+        
+        stream.getTracks().forEach(track => track.stop());
+      });
+      
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (err) {
+      console.error("Error accessing microphone:", err);
+    }
+  };
+  
+  const stopRecording = () => {
+    mediaRecorderRef.current?.stop();
+    setIsRecording(false);
+  };
+
+  const activeChat = useMemo(() => chats.find(c => c.id === activeClientId), [chats, activeClientId]);
+  const profPhoto = user?.photoURL || user?.photoUrl || "";
+  const profName = user?.displayName || user?.name || "Equipe";
+  const clientPhoto = activeChat?.clientPhoto || "";
+  const clientName = activeClientName;
 
   // Load chats lists
   useEffect(() => {
@@ -327,28 +416,12 @@ export function ProfessionalClientChatsScreen({ user, onBack }: { user: any, onB
   useEffect(() => {
     if (!activeClientId) return;
     
-    // Request permission
-    if (Notification.permission !== "granted") {
-      Notification.requestPermission();
-    }
-
     const firestore = db || getFirestore();
     const q = query(
       collection(firestore, "chats", activeClientId, "messages"),
       orderBy("createdAt", "asc")
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      snapshot.docChanges().forEach((change) => {
-        if (change.type === "added") {
-          const msg = { id: change.doc.id, ...change.doc.data() } as any;
-          if (msg.sender === "client" && Notification.permission === "granted" && document.hidden) {
-            new Notification(`Nova mensagem de ${activeClientName}`, {
-              body: msg.text,
-              icon: '/logo.png' 
-            });
-          }
-        }
-      });
       setMessages(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, `chats/${activeClientId}/messages`);
@@ -358,7 +431,7 @@ export function ProfessionalClientChatsScreen({ user, onBack }: { user: any, onB
     updateDoc(doc(firestore, "chats", activeClientId), { unreadByStaff: false }).catch(() => {});
 
     return unsubscribe;
-  }, [activeClientId, activeClientName]);
+  }, [activeClientId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -598,19 +671,49 @@ export function ProfessionalClientChatsScreen({ user, onBack }: { user: any, onB
                 return (
                   <div 
                     key={m.id} 
-                    className={`p-3.5 rounded-2xl max-w-[85%] ${
-                      !isClientMsg ? "self-end bg-amber-500 text-black rounded-tr-none" : "self-start bg-neutral-900 text-white rounded-tl-none border border-white/5"
-                    }`}
+                    className={`flex items-end gap-2 ${!isClientMsg ? "flex-row-reverse" : ""}`}
                   >
-                    {!isClientMsg && (
-                      <p className="text-[8px] font-black uppercase text-amber-950 mb-1 tracking-wider leading-none">
-                        {m.senderName || "Profissional"}
-                      </p>
+                    {!isClientMsg ? (
+                        profPhoto && typeof profPhoto === 'string' ? (
+                            <img src={profPhoto} alt={profName} className="w-8 h-8 rounded-full object-cover shrink-0" />
+                        ) : (
+                            <div className="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center shrink-0">
+                                <span className="text-[10px] font-black text-black">{profName.charAt(0)}</span>
+                            </div>
+                        )
+                    ) : (
+                       clientPhoto && typeof clientPhoto === 'string' ? (
+                           <img src={clientPhoto} alt={clientName} className="w-8 h-8 rounded-full object-cover shrink-0 border border-white/5" />
+                       ) : (
+                           <div className="w-8 h-8 rounded-full bg-neutral-800 flex items-center justify-center border border-white/5 shrink-0">
+                               <User className="w-4 h-4 text-neutral-500" />
+                           </div>
+                       )
                     )}
-                    <p className="text-xs font-semibold leading-relaxed break-words">{m.text}</p>
-                    <span className={`text-[7px] font-bold uppercase block text-right mt-1.5 ${!isClientMsg ? "text-neutral-950/60" : "text-neutral-500"}`}>
-                      {m.createdAt instanceof Timestamp ? format(m.createdAt.toDate(), "HH:mm") : ""}
-                    </span>
+                    <div 
+                      className={`p-3.5 rounded-2xl max-w-[75%] ${
+                        !isClientMsg ? "bg-amber-500 text-black rounded-tr-none" : "bg-neutral-900 text-white rounded-tl-none border border-white/5"
+                      }`}
+                    >
+                      {isClientMsg && (
+                        <p className="text-[8px] font-black uppercase text-amber-500 mb-1 tracking-wider leading-none">
+                          {m.senderName || activeClientName || "Cliente"}
+                        </p>
+                      )}
+                      {m.imageUrl && (
+                          <img src={m.imageUrl} alt="chat" className="max-w-full rounded-lg mb-2" />
+                      )}
+                      {m.audioUrl && (
+                        <audio controls className="w-full mb-2">
+                           <source src={m.audioUrl} type="audio/ogg" />
+                           Seu navegador não suporta áudio.
+                        </audio>
+                      )}
+                      <p className="text-xs font-semibold leading-relaxed break-words">{m.text}</p>
+                      <span className={`text-[7px] font-bold uppercase block text-right mt-1.5 ${!isClientMsg ? "text-neutral-950/60" : "text-neutral-500"}`}>
+                        {m.createdAt instanceof Timestamp ? format(m.createdAt.toDate(), "HH:mm") : ""}
+                      </span>
+                    </div>
                   </div>
                 );
               })
@@ -619,6 +722,39 @@ export function ProfessionalClientChatsScreen({ user, onBack }: { user: any, onB
           </div>
 
           <div className="flex gap-2 border-t border-white/5 pt-4 mt-2">
+            <button 
+                onClick={isRecording ? stopRecording : startRecording}
+                className={`p-3.5 rounded-2xl border ${isRecording ? "border-red-500/50 bg-red-500/20 text-red-500" : "border-white/10 hover:bg-neutral-800 text-neutral-400"}`}
+            >
+                {isRecording ? <Square className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+            </button>
+            <label className="p-3.5 rounded-2xl border border-white/10 hover:bg-neutral-800 cursor-pointer flex items-center justify-center">
+              <Image className="w-5 h-5 text-neutral-400" />
+              <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file || !activeClientId) return;
+                  
+                  const formData = new FormData();
+                  formData.append("image", file);
+                  
+                  const response = await fetch("/api/upload", {
+                      method: "POST",
+                      body: formData
+                  });
+                  
+                  const result = await response.json();
+                  if (result.data && result.data.url) {
+                      await addDoc(collection(db, "chats", activeClientId, "messages"), {
+                        imageUrl: result.data.url,
+                        text: "📷 Imagem",
+                        createdAt: Timestamp.now(),
+                        sender: "professional",
+                        senderName: user?.displayName || user?.name || "Suporte",
+                        senderId: user?.uid || user?.id
+                      });
+                  }
+              }} />
+            </label>
             <input 
               value={newMessage} 
               onChange={e => setNewMessage(e.target.value)} 

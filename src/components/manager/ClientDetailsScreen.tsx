@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { ArrowLeft, Loader2, Calendar, Scissors, Clock, Star } from "lucide-react";
+import { ArrowLeft, Loader2, Calendar, Scissors, Clock, Star, MessageSquare, Repeat } from "lucide-react";
 import { collection, query, where, orderBy, onSnapshot } from "firebase/firestore";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
 
-export function ClientDetailsScreen({ client, onBack }: { client: any, onBack: () => void }) {
+export function ClientDetailsScreen({ client, onBack, onScheduleClient, onMessageClient }: { client: any, onBack: () => void, onScheduleClient?: (client: any) => void, onMessageClient?: (client: any) => void }) {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -56,6 +56,25 @@ export function ClientDetailsScreen({ client, onBack }: { client: any, onBack: (
               <p className="text-amber-500 text-sm font-bold mt-1">Cliente há {yearsCustomer} anos</p>
             </div>
          </div>
+         <div className="flex gap-3 mt-4">
+              <button 
+                onClick={() => {
+                   onMessageClient?.(client);
+                }}
+                className="flex items-center gap-2 bg-amber-500 text-black px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-amber-400 transition-all"
+              >
+                  <MessageSquare className="w-4 h-4" /> Mensagem
+              </button>
+              <button 
+                onClick={() => {
+                   // Using the existing onScheduleClient prop from the parent
+                   onScheduleClient?.(client);
+                }}
+                className="flex items-center gap-2 bg-neutral-800 text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-neutral-700 transition-all"
+              >
+                  <Repeat className="w-4 h-4" /> Reagendar
+              </button>
+        </div>
       </div>
 
       <h3 className="text-lg font-black text-white mb-4">Histórico de Cortes</h3>

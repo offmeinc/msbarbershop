@@ -192,14 +192,48 @@ export default function App() {
   };
   
   useEffect(() => {
-    const hasAskedPermission = localStorage.getItem('hasAskedNotificationPermission');
-    if (!hasAskedPermission && 'Notification' in window) {
-      Notification.requestPermission().then((permission) => {
-        localStorage.setItem('hasAskedNotificationPermission', 'true');
-        console.log('Notification permission:', permission);
-      });
+    if ('serviceWorker' in navigator && 'PushManager' in window) {
+      navigator.serviceWorker.register('/sw-push.js')
+        .then(async (reg) => {
+          console.log('[App] SW registered', reg);
+          if (Notification.permission === 'granted') {
+             subscribeUser(reg);
+          } else if (Notification.permission !== 'denied') {
+             const permission = await Notification.requestPermission();
+             if (permission === 'granted') {
+               subscribeUser(reg);
+             }
+          }
+        })
+        .catch(err => console.error('[App] SW registration failed', err));
     }
-  }, []);
+  }, [user, loggedInClient]);
+
+  const subscribeUser = async (reg: ServiceWorkerRegistration) => {
+    try {
+      const resp = await fetch('/api/push-config');
+      const { publicKey } = await resp.json();
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: publicKey
+      });
+      const userId = user?.uid || loggedInClient?.id;
+      if (userId) {
+        await fetch('/api/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+             subscription: sub, 
+             userId: userId,
+             userRole: userRole 
+          })
+        });
+        console.log('[App] Subscribed to push notifications');
+      }
+    } catch (err) {
+      console.error('[App] Push subscribe error', err);
+    }
+  };
   
   useEffect(() => {
     if (isDarkMode) {
@@ -724,9 +758,16 @@ export default function App() {
             {currentScreen === "earnings" && <EarningsScreen onBack={() => setCurrentScreen("home")} />}
             {currentScreen === "promotions" && <PromotionsManager onBack={() => setCurrentScreen("home")} />}
             {currentScreen === "clients" && <ClientsScreen onBack={() => setCurrentScreen("home")} onScheduleClient={(client) => { setClientToSchedule(client); setCurrentScreen("booking"); }} onClientClick={(client) => { setSelectedClient(client); setCurrentScreen("client-details"); }} />}
-            {currentScreen === "client-details" && selectedClient && <ClientDetailsScreen client={selectedClient} onBack={() => { setCurrentScreen("clients"); setSelectedClient(null); }} />}
+            {currentScreen === "client-details" && selectedClient && <ClientDetailsScreen client={selectedClient} onBack={() => { setCurrentScreen("clients"); setSelectedClient(null); }} onScheduleClient={(client) => { setClientToSchedule(client); setCurrentScreen("booking"); }} onMessageClient={(client) => { setSelectedClient(client); setCurrentScreen("professional-chat"); }} />}
             {currentScreen === "portfolio" && <PortfolioManager onBack={() => setCurrentScreen("home")} />}
-            {currentScreen === "professional-chat" && <ProfessionalClientChatsScreen user={user} onBack={() => setCurrentScreen("home")} />}
+            {currentScreen === "professional-chat" && (
+              <ProfessionalClientChatsScreen 
+                user={user} 
+                onBack={() => { setCurrentScreen("home"); setSelectedClient(null); }} 
+                initialClientId={selectedClient?.id} 
+                initialClientName={selectedClient?.name} 
+              />
+            )}
             {currentScreen === "more" && (
               <MoreOptionsScreen 
                 user={user || loggedInClient} 
