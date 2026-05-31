@@ -40,6 +40,7 @@ import {
   Image as ImageIcon,
   Calendar as CalendarIcon,
   AlertTriangle,
+  Sparkles,
 } from "lucide-react";
 import { setupPushSubscription, getNotificationPermissionState, queryNotificationSupport } from "../../lib/pushRegister";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
@@ -142,7 +143,7 @@ function PortfolioModal({ barber, onClose }: { barber: any, onClose: () => void 
   );
 }
 
-function ConfirmationModal({ service, barber, date, onConfirm, userId, userRole, duration }: any) {
+function ConfirmationModal({ service, barber, date, onConfirm, userId, userRole, duration, appointmentId }: any) {
   const [pushState, setPushState] = useState(getNotificationPermissionState());
   const [isAddingToCalendar, setIsAddingToCalendar] = useState(false);
   const [addedToCalendar, setAddedToCalendar] = useState(false);
@@ -156,6 +157,28 @@ function ConfirmationModal({ service, barber, date, onConfirm, userId, userRole,
   const [mpLoading, setMpLoading] = useState(false);
   const [mpData, setMpData] = useState<any>(null);
   const [mpError, setMpError] = useState<string | null>(null);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [isSimulatingCheck, setIsSimulatingCheck] = useState(false);
+
+  useEffect(() => {
+    if (selectedPixMethod === "mercadopago" && mpData?.payment_id && !paymentSuccess) {
+      const interval = setInterval(async () => {
+        try {
+          const res = await fetch(`/api/payments/mercado-pago/status/${mpData.payment_id}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.status === "approved" || data.status === "completed") {
+              setPaymentSuccess(true);
+              toast.success("Pagamento Mercado Pago aprovado!");
+            }
+          }
+        } catch (e) {
+          console.error("Erro ao verificar status do pagamento:", e);
+        }
+      }, 4000);
+      return () => clearInterval(interval);
+    }
+  }, [selectedPixMethod, mpData?.payment_id, paymentSuccess]);
 
   const handleCopyPix = (str: string) => {
     navigator.clipboard.writeText(str);
@@ -182,7 +205,7 @@ function ConfirmationModal({ service, barber, date, onConfirm, userId, userRole,
           description: `Serviço: ${service?.name} na barbearia`,
           email: "automatico@msbarbaria.com.br",
           name: barber?.name || "Cliente",
-          appointmentId: "temp-" + Date.now()
+          appointmentId: appointmentId || "temp-" + Date.now()
         })
       });
       if (!res.ok) {
@@ -336,61 +359,22 @@ function ConfirmationModal({ service, barber, date, onConfirm, userId, userRole,
               )
             ) : (
               // Mercado Pago Area
-              <div className="space-y-4">
-                <div className="space-y-1">
-                  <h4 className="text-xs font-black text-white uppercase tracking-wider">Pix Mercado Pago</h4>
+              <div className="space-y-4 py-4 text-center">
+                <div className="w-12 h-12 bg-amber-500/10 border border-amber-500/20 rounded-2xl mx-auto flex items-center justify-center text-amber-500">
+                  <span className="text-xl">⚡</span>
                 </div>
-
-                {mpLoading ? (
-                  <div className="py-8 flex flex-col items-center justify-center gap-3">
-                    <Loader2 className="w-6 h-6 animate-spin text-amber-500" />
-                    <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Gerando cobrança via Mercado Pago...</span>
-                  </div>
-                ) : mpError ? (
-                  <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-2xl text-center space-y-2">
-                    <p className="text-[10px] text-red-500 font-bold uppercase">{mpError}</p>
-                    <button 
-                      onClick={handleGenerateMpPix}
-                      className="text-[9px] font-black uppercase text-amber-500 hover:underline"
-                    >
-                      Tentar Novamente
-                    </button>
-                  </div>
-                ) : mpData ? (
-                  <div className="space-y-4">
-                    <div className="bg-white p-4 rounded-3xl mx-auto w-fit shadow-xl shadow-amber-500/10 relative">
-                      <QRCodeCanvas value={mpData.qr_code || ""} size={120} level="M" />
-                      {mpData.isMock && (
-                        <div className="absolute inset-0 bg-neutral-950/90 rounded-3xl flex items-center justify-center p-4">
-                          <p className="text-[9px] text-amber-500 font-black uppercase tracking-wider leading-relaxed">
-                            EM BREVE!
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                    <button
-                      onClick={() => handleCopyPix(mpData.qr_code)}
-                      className="w-full py-3 bg-white/5 border border-white/10 rounded-[1.2rem] text-[10px] font-black uppercase text-white hover:bg-white/10 transition-colors flex items-center justify-center gap-2"
-                    >
-                      {copiedPix ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-                      {copiedPix ? "Copiado!" : "Copiar Código Pix Mercado Pago"}
-                    </button>
-
-                    {/* Soon notice as explicitly requested by prompt: e na hora de efetuar o pagamento por pix mostre uma mensagem de em breve estara disponivel para o cliente */}
-                    <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl text-left space-y-1.5">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                        <h5 className="text-[9px] font-black uppercase text-amber-500 tracking-wide">
-                          Aviso Importante
-                        </h5>
-                      </div>
-                      <p className="text-[9px] text-neutral-400 font-bold uppercase leading-relaxed">
-                        Em breve estará totalmente integrado e disponível para os clientes efetuarem o pagamento e confirmarem de forma imediata no caixa!
-                      </p>
-                    </div>
-                  </div>
-                ) : null}
+                <div className="space-y-1">
+                  <h4 className="text-xs font-black text-white uppercase tracking-wider">Pagamento via Mercado Pago</h4>
+                  <p className="text-[10px] text-amber-500 font-bold uppercase tracking-widest">Recurso Em Breve!</p>
+                </div>
+                <p className="text-[9px] text-neutral-400 font-medium uppercase leading-relaxed max-w-[260px] mx-auto">
+                  A confirmação automática via Mercado Pago está em fase de homologação e estará disponível em breve para você pagar e confirmar o seu agendamento no mesmo segundo!
+                </p>
+                <div className="pt-2">
+                  <span className="bg-white/5 border border-white/5 text-neutral-500 text-[8px] font-black uppercase px-3 py-1.5 rounded-full tracking-wider">
+                    Fase de Integração
+                  </span>
+                </div>
               </div>
             )}
           </div>
@@ -544,6 +528,7 @@ export function BookingScreen({
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [createdAppointmentId, setCreatedAppointmentId] = useState<string | null>(null);
   const [guestName, setGuestName] = useState(editAppointment?.clientName || initialClient?.name || "");
   const [guestEmail, setGuestEmail] = useState(
     editAppointment?.clientEmail || initialClient?.email || "",
@@ -887,8 +872,10 @@ export function BookingScreen({
 
       const firestore = db || getFirestore();
       const isEditing = !!editAppointment;
+      let appDocId = "";
       if (isEditing) {
-        await updateDoc(doc(firestore, "appointments", editAppointment.id), {
+        appDocId = editAppointment.id;
+        await updateDoc(doc(firestore, "appointments", appDocId), {
           ...baseData,
           date: Timestamp.fromDate(finalDate),
           time: selectedTime,
@@ -896,11 +883,12 @@ export function BookingScreen({
           rescheduledBy: isStaffBooking ? "staff" : "client",
         });
       } else {
-        await addDoc(collection(firestore, "appointments"), {
+        const docRef = await addDoc(collection(firestore, "appointments"), {
           ...baseData,
           date: Timestamp.fromDate(finalDate),
           time: selectedTime,
         });
+        appDocId = docRef.id;
 
         // Ensure user exists for later login with phone
         if ((!user || isStaffBooking) && cleanPhone) {
@@ -919,6 +907,7 @@ export function BookingScreen({
         }
       }
 
+      setCreatedAppointmentId(appDocId);
       setShowConfirmation(true);
     } catch (error) {
       console.error(error);
@@ -963,6 +952,7 @@ export function BookingScreen({
             userId={user ? user.uid || user.id || "guest" : (guestPhone || "").replace(/\D/g, "")}
             userRole={role || "client"}
             onConfirm={onBack}
+            appointmentId={createdAppointmentId}
           />
         )}
         {viewingPortfolio && (

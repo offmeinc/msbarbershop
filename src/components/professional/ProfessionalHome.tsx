@@ -24,7 +24,8 @@ import {
   Clock, 
   ChevronRight, 
   CheckCircle2,
-  Image as ImageIcon
+  Image as ImageIcon,
+  MessageSquare
 } from "lucide-react";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
 
@@ -38,6 +39,18 @@ export function ProfessionalHome({ user, role, setCurrentScreen }: ProfessionalH
   const [appointments, setAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [schedulingClient, setSchedulingClient] = useState<any | null>(null);
+  const [unreadChats, setUnreadChats] = useState(0);
+
+  useEffect(() => {
+    const firestore = db || getFirestore();
+    const q = query(collection(firestore, "chats"), where("unreadByStaff", "==", true));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setUnreadChats(snapshot.size);
+    }, (error) => {
+      console.warn("Unread chats snapshot error", error);
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -178,6 +191,26 @@ export function ProfessionalHome({ user, role, setCurrentScreen }: ProfessionalH
           </div>
           <div className="space-y-0.5">
              <h3 className="text-3xl font-black text-white tracking-tighter">Listar</h3>
+          </div>
+        </button>
+
+        <button 
+          onClick={() => setCurrentScreen("professional-chat")}
+          className="bg-neutral-900 p-5 rounded-[2rem] border border-white/5 space-y-3 text-left relative overflow-hidden group hover:border-amber-500/30 active:scale-95 transition-all"
+        >
+          <div className="flex justify-between items-start">
+            <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">Mensagens Clientes</p>
+            <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-500 group-hover:bg-amber-500/20 transition-colors relative">
+              <MessageSquare className="w-4 h-4" />
+              {unreadChats > 0 && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-500 rounded-full border-2 border-neutral-900 animate-pulse" />
+              )}
+            </div>
+          </div>
+          <div className="space-y-0.5">
+             <h3 className="text-3xl font-black text-white tracking-tighter">
+               {unreadChats > 0 ? `${unreadChats} Pendente` : "Chat"}
+             </h3>
           </div>
         </button>
 

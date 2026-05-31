@@ -7,6 +7,8 @@ import axios from "axios";
 import FormData from "form-data";
 import { initVapid, startAppointmentsListener, sendPushNotification, sendNotificationToCollaborators } from "./src/server/pushNotificationService";
 import { startAppointmentAutoUpdater } from "./src/server/appointmentAutoUpdater";
+import { db } from "./src/lib/firebase";
+import { doc, getDoc, updateDoc, setDoc, collection, addDoc, serverTimestamp, increment, Timestamp } from "firebase/firestore";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -100,30 +102,169 @@ async function startServer() {
     }
   });
 
+  // Helper to process approved payments and perform wallet recharges or appointment confirmations
+  async function processApprovedPayment(paymentDoc: any) {
+    const { appointmentId, amount, userId, email, id: paymentId } = paymentDoc;
+    console.log(`[Payment Processor] Processing approved payment: ${paymentId} for target ${appointmentId}`);
+
+    if (appointmentId && appointmentId.startsWith("wallet-topup-")) {
+      // 1. Wallet Topup Flow
+      const parts = appointmentId.split("-");
+      const parsedUserId = parts.length >= 3 ? parts[1] : userId;
+
+      if (parsedUserId) {
+        try {
+          const userRef = doc(db, "users", parsedUserId);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            const userData = userSnap.data();
+            const currentBalance = Number(userData.walletBalance || 0);
+
+            let bonus = 0;
+            let cutsReward = 0;
+            if (amount >= 200) { bonus = 35; cutsReward = 2; }
+            else if (amount >= 100) { bonus = 15; cutsReward = 1; }
+            else if (amount >= 50) { bonus = 5; }
+
+            const totalToAdd = amount + bonus;
+
+            await updateDoc(userRef, {
+              walletBalance: currentBalance + totalToAdd,
+              cutsBalance: increment(cutsReward),
+              updatedAt: serverTimestamp()
+            });
+
+            // Create collection record of notification
+            await addDoc(collection(db, "notifications"), {
+              clientEmail: email || userData.email || "",
+              message: `Recarga Aprovada! R$ ${totalToAdd.toFixed(2).replace('.', ',')} adicionados à sua Carteira Digital através do Pix Mercado Pago.`,
+              timestamp: serverTimestamp(),
+              read: false
+            });
+
+            // Push notification to user
+            await sendPushNotification(parsedUserId, {
+              title: "Recarga Aprovada! 💰",
+              body: `Seu Pix de R$ ${amount.toFixed(2).replace('.', ',')} foi recebido! R$ ${totalToAdd.toFixed(2).replace('.', ',')} foram adicionados na sua carteira.`,
+              url: "/"
+            });
+
+            console.log(`[Payment Processor] Successfully topped up wallet of user: ${parsedUserId} with R$ ${totalToAdd}`);
+          }
+        } catch (err: any) {
+          console.error(`[Payment Processor] Error during wallet topup: ${err.message}`);
+        }
+      }
+    } else if (appointmentId) {
+      // 2. Barber Appointment Booking Flow
+      try {
+        const appointmentRef = doc(db, "appointments", appointmentId);
+        const appointmentSnap = await getDoc(appointmentRef);
+        if (appointmentSnap.exists()) {
+          const appData = appointmentSnap.data();
+          if (appData.status !== "confirmed" || appData.paymentStatus !== "paid") {
+            await updateDoc(appointmentRef, {
+              status: "confirmed",
+              paymentStatus: "paid",
+              updatedAt: serverTimestamp()
+            });
+
+            const clientName = appData.clientName || "Cliente";
+            const serviceName = appData.serviceName || "Serviço";
+            const barberName = appData.barberName || "Profissional";
+            const clientId = appData.clientId || "guest";
+            const clientPhone = appData.clientPhone || "";
+
+            let formattedDateStr = "";
+            if (appData.date) {
+              try {
+                const dateVal = appData.date instanceof Timestamp ? appData.date.toDate() : new Date(appData.date);
+                formattedDateStr = dateVal.toLocaleString("pt-BR", {
+                  day: "2-digit",
+                  month: "2-digit",
+                  hour: "2-digit",
+                  minute: "2-digit"
+                });
+              } catch {
+                formattedDateStr = String(appData.date);
+              }
+            }
+
+            await sendNotificationToCollaborators({
+              title: "Novo Pagamento Pix Confirmado! 📱",
+              body: `Pix de ${clientName} aprovado para ${serviceName} às ${appData.time} com ${barberName}.`,
+              url: "/agenda"
+            });
+
+            const rawTarget = clientId && clientId !== "guest" ? clientId : clientPhone;
+            const clientTarget = rawTarget ? rawTarget.replace(/[\s\-\(\)\+]/g, "") : "";
+            if (clientTarget) {
+              await sendPushNotification(clientTarget, {
+                title: "Pagamento Confirmado! ✅",
+                body: `Seu Pix foi recebido! Seu agendamento de ${serviceName} para ${formattedDateStr} está confirmado.`,
+                url: "/"
+              });
+            }
+
+            console.log(`[Payment Processor] Confirmed appointment: ${appointmentId} due to payment`);
+          }
+        }
+      } catch (err: any) {
+        console.error(`[Payment Processor] Error during appointment payment confirmation: ${err.message}`);
+      }
+    }
+  }
+
   // API Route for Mercado Pago Pix Payment Creation
   app.post("/api/payments/mercado-pago/create-payment", async (req, res) => {
+    const { transaction_amount, description, email, name, appointmentId } = req.body;
+    const amount = Number(transaction_amount);
+
     try {
-      const { transaction_amount, description, email, name, appointmentId } = req.body;
-      const amount = Number(transaction_amount);
-      
       if (isNaN(amount) || amount <= 0) {
         return res.status(400).json({ error: "Invalid transaction amount" });
+      }
+
+      // Try parsing userId from topup appointmentId
+      let userId = "guest";
+      if (appointmentId && appointmentId.startsWith("wallet-topup-")) {
+        const parts = appointmentId.split("-");
+        if (parts.length >= 3) {
+          userId = parts[1];
+        }
       }
 
       const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
       if (!accessToken || accessToken.trim() === "") {
         console.warn("[Mercado Pago] ACCESS_TOKEN not configured. Returning simulated payment payload.");
-        // Dev Simulation Payload
-        return res.json({
+        const simulatedPaymentId = "mp-sim-" + Math.floor(Math.random() * 900000000 + 100000000).toString();
+        
+        const paymentPayload = {
           success: true,
           isMock: true,
           status: "pending",
           status_detail: "pending_waiting_transfer",
           qr_code: "00020101021226870014br.gov.bcb.pix2572em-breve-mercado-pago-completo-integrado-barbearia-prod",
           qr_code_base64: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
-          payment_id: "mp-模拟-" + Math.floor(Math.random() * 900000000 + 100000000).toString(),
+          payment_id: simulatedPaymentId,
           message: "Em breve estará disponível para o cliente"
+        };
+
+        // Record simulated payment inside Firebase for client interactivity simulation
+        await setDoc(doc(db, "payments", simulatedPaymentId), {
+          id: simulatedPaymentId,
+          appointmentId: appointmentId || null,
+          userId: userId,
+          amount: amount,
+          description: description || "Simulated payment",
+          status: "pending",
+          email: email || "simulation@example.com",
+          name: name || "Cliente de Teste",
+          isMock: true,
+          createdAt: serverTimestamp()
         });
+
+        return res.json(paymentPayload);
       }
 
       // Real integration attempt
@@ -144,6 +285,22 @@ async function startServer() {
         }
       });
 
+      const mpPaymentId = String(response.data.id);
+
+      // Record real payment in Firestore
+      await setDoc(doc(db, "payments", mpPaymentId), {
+        id: mpPaymentId,
+        appointmentId: appointmentId || null,
+        userId: userId,
+        amount: amount,
+        description: description || "Agendamento MS Barbearia",
+        status: response.data.status || "pending",
+        email: email || "payment@example.com",
+        name: name || "Cliente",
+        isMock: false,
+        createdAt: serverTimestamp()
+      });
+
       res.json({
         success: true,
         isMock: false,
@@ -151,11 +308,26 @@ async function startServer() {
         status_detail: response.data.status_detail,
         qr_code: response.data.point_of_integration?.transaction_data?.qr_code,
         qr_code_base64: response.data.point_of_integration?.transaction_data?.qr_code_base64,
-        payment_id: response.data.id
+        payment_id: mpPaymentId
       });
     } catch (error: any) {
       console.error("[Mercado Pago Route Error]:", error.response?.data || error.message);
-      // Return a professional fallback simulation so the application works fine even if MP servers reject the request
+      // Return a professional fallback simulation database-backed so that user testing works
+      const fallbackPaymentId = "mp-fallback-" + Math.floor(Math.random() * 900000000 + 100000000).toString();
+      
+      await setDoc(doc(db, "payments", fallbackPaymentId), {
+        id: fallbackPaymentId,
+        appointmentId: appointmentId || null,
+        userId: "guest",
+        amount: amount,
+        description: description || "Agendamento MS Barbearia",
+        status: "pending",
+        email: email || "payment@example.com",
+        name: name || "Cliente",
+        isMock: true,
+        createdAt: serverTimestamp()
+      });
+
       res.json({
         success: true,
         isMock: true,
@@ -163,9 +335,150 @@ async function startServer() {
         status_detail: "pending_waiting_transfer",
         qr_code: "00020101021226870014br.gov.bcb.pix2572em-breve-mercado-pago-completo-integrado-barbearia-prod",
         qr_code_base64: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
-        payment_id: "mp-fallback-" + Math.floor(Math.random() * 900000000 + 100000000).toString(),
+        payment_id: fallbackPaymentId,
         message: "Mercado Pago offline ou credenciais inválidas. Exibindo simulador."
       });
+    }
+  });
+
+  // GET Polling endpoint to check status of a given payment
+  app.get("/api/payments/mercado-pago/status/:paymentId", async (req, res) => {
+    try {
+      const { paymentId } = req.params;
+      const paymentRef = doc(db, "payments", paymentId);
+      const paymentSnap = await getDoc(paymentRef);
+
+      if (!paymentSnap.exists()) {
+        return res.status(404).json({ error: "Payment not found" });
+      }
+
+      const paymentData = paymentSnap.data();
+
+      // If it's already approved, output directly
+      if (paymentData.status === "approved" || paymentData.status === "completed") {
+        return res.json({ status: "approved" });
+      }
+
+      // If it's a real payment, try fetching latest from Mercado Pago directly to sync state
+      if (!paymentData.isMock && process.env.MERCADO_PAGO_ACCESS_TOKEN) {
+        try {
+          const mpResponse = await axios.get(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+            headers: {
+              "Authorization": `Bearer ${process.env.MERCADO_PAGO_ACCESS_TOKEN}`
+            }
+          });
+
+          const currentMpStatus = mpResponse.data.status;
+          if (currentMpStatus === "approved") {
+            await updateDoc(paymentRef, {
+              status: "approved",
+              updatedAt: serverTimestamp()
+            });
+            await processApprovedPayment({ id: paymentId, ...paymentData, status: "approved" });
+            return res.json({ status: "approved" });
+          }
+        } catch (mpError: any) {
+          console.error("[Polling] Error verifying on MP:", mpError.message);
+        }
+      }
+
+      res.json({ status: paymentData.status });
+    } catch (e: any) {
+      console.error("[Polling Error]:", e.message);
+      res.status(500).json({ error: "Failed to check status" });
+    }
+  });
+
+  // POST endpoint to manually trigger a payment simulation (ideal for dev experience)
+  app.post("/api/payments/mercado-pago/simulate-payment", async (req, res) => {
+    try {
+      const { paymentId } = req.body;
+      if (!paymentId) {
+        return res.status(400).json({ error: "Missing paymentId" });
+      }
+
+      const paymentRef = doc(db, "payments", paymentId);
+      const paymentSnap = await getDoc(paymentRef);
+
+      if (!paymentSnap.exists()) {
+        return res.status(404).json({ error: "Payment not found in log" });
+      }
+
+      const paymentData = paymentSnap.data();
+      if (paymentData.status === "approved" || paymentData.status === "completed") {
+        return res.json({ success: true, alreadyPaid: true });
+      }
+
+      // Transition to approved and trigger automation
+      await updateDoc(paymentRef, {
+        status: "approved",
+        updatedAt: serverTimestamp()
+      });
+
+      await processApprovedPayment({ id: paymentId, ...paymentData, status: "approved" });
+
+      res.json({ success: true });
+    } catch (e: any) {
+      console.error("[Simulation Error]:", e.message);
+      res.status(500).json({ error: "Failed to simulate payment" });
+    }
+  });
+
+  // POST webhook receiver for Mercado Pago instant notifications
+  app.post("/api/payments/mercado-pago/webhook", async (req, res) => {
+    try {
+      // Mercado Pago Webhooks usually send either topic/id as query params or action/data inside body
+      const paymentId = req.query.id || req.body.data?.id;
+      const topic = req.query.topic || req.body.type;
+
+      if ((topic === "payment" || topic === "payment.updated") && paymentId) {
+        console.log(`[MP Webhook] Received payment update notification for: ${paymentId}`);
+        const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
+        
+        if (accessToken) {
+          const mpResponse = await axios.get(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+            headers: {
+              "Authorization": `Bearer ${accessToken}`
+            }
+          });
+
+          if (mpResponse.data.status === "approved") {
+            const paymentRef = doc(db, "payments", String(paymentId));
+            const paymentSnap = await getDoc(paymentRef);
+
+            if (paymentSnap.exists()) {
+              const paymentData = paymentSnap.data();
+              if (paymentData.status !== "approved" && paymentData.status !== "completed") {
+                await updateDoc(paymentRef, {
+                  status: "approved",
+                  updatedAt: serverTimestamp()
+                });
+                await processApprovedPayment({ id: String(paymentId), ...paymentData, status: "approved" });
+              }
+            } else {
+              // Even if not found in db, try to record and run
+              console.warn(`[MP Webhook] Received webhook for unrecorded payment ${paymentId}. Creating record...`);
+              const payload = {
+                id: String(paymentId),
+                appointmentId: null,
+                userId: "guest",
+                amount: mpResponse.data.transaction_amount,
+                status: "approved",
+                email: mpResponse.data.payer?.email || "",
+                name: mpResponse.data.payer?.first_name || "",
+                isMock: false,
+                createdAt: serverTimestamp()
+              };
+              await setDoc(paymentRef, payload);
+              await processApprovedPayment(payload);
+            }
+          }
+        }
+      }
+      res.sendStatus(200);
+    } catch (e: any) {
+      console.error("[MP Webhook Error]:", e.message);
+      res.sendStatus(200); // Always respond 200 to Mercado Pago to acknowledge recept of callback
     }
   });
 

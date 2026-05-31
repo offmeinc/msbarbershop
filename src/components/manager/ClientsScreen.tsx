@@ -7,6 +7,7 @@ import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
 export function ClientsScreen({ onBack, onScheduleClient, onClientClick }: { onBack: () => void, onScheduleClient?: (client: any) => void, onClientClick?: (client: any) => void, key?: any }) {
   const [clients, setClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     const q = query(collection(db, "users"), where("role", "==", "client"), limit(50));
@@ -18,6 +19,12 @@ export function ClientsScreen({ onBack, onScheduleClient, onClientClick }: { onB
     });
     return () => unsubscribe();
   }, []);
+
+  const filteredClients = clients.filter(client => 
+    (client.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (client.whatsapp || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (client.email || "").toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <motion.div 
@@ -33,6 +40,8 @@ export function ClientsScreen({ onBack, onScheduleClient, onClientClick }: { onB
           <input 
             type="text" 
             placeholder="Buscar cliente..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
             className="bg-neutral-900 border border-white/10 rounded-full pl-10 pr-4 py-2 text-sm text-white outline-none focus:border-amber-500 transition-all"
           />
         </div>
@@ -44,7 +53,7 @@ export function ClientsScreen({ onBack, onScheduleClient, onClientClick }: { onB
         </div>
       ) : (
         <div className="space-y-3">
-          {clients.map(client => (
+          {filteredClients.map(client => (
             <div key={client.id} onClick={() => onClientClick?.(client)} className="bg-neutral-900 p-4 rounded-3xl border border-white/5 flex items-center justify-between hover:border-white/10 transition-all cursor-pointer">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-neutral-500 font-bold overflow-hidden border border-white/10">

@@ -16,7 +16,8 @@ import {
   updateDoc, 
   addDoc, 
   serverTimestamp, 
-  Timestamp 
+  Timestamp,
+  getFirestore
 } from "firebase/firestore";
 import { 
   X, 
@@ -40,7 +41,9 @@ import {
   ChevronRight,
   Sparkles,
   Bell,
-  Clock
+  Clock,
+  MessageSquare,
+  MessageCircle
 } from "lucide-react";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
 import { QRCodeCanvas } from "qrcode.react";
@@ -52,6 +55,7 @@ import { StyleSheet } from "./StyleSheet";
 import { LookbookScreen } from "./LookbookScreen";
 import { PreferencesSummary } from "./PreferencesSummary";
 import { NotificationsScreen } from "../NotificationsScreen";
+import { ChatScreen } from "../ChatScreens";
 import { GOOGLE_REVIEW_URL } from "../../constants";
 import { toast } from "../ui/Toast";
 
@@ -63,7 +67,8 @@ interface ClientDashboardScreenProps {
 export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenProps) {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
-  const [currentView, setCurrentView] = useState<"home" | "profile" | "booking" | "my-cuts" | "more-options" | "style-sheet" | "notifications" | "lookbook" | "wallet">("home");
+  const [unreadChat, setUnreadChat] = useState(false);
+  const [currentView, setCurrentView] = useState<"home" | "profile" | "booking" | "my-cuts" | "more-options" | "style-sheet" | "notifications" | "lookbook" | "wallet" | "chat">("home");
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
   const [initialBookingServiceId, setInitialBookingServiceId] = useState<string | undefined>();
   const [initialBookingBarberId, setInitialBookingBarberId] = useState<string | undefined>();
@@ -74,6 +79,19 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const [referralCode, setReferralCode] = useState(user?.referralCode || "");
+
+  // Live tracking of unread chats
+  useEffect(() => {
+    const clientUid = user?.uid || user?.id;
+    if (!clientUid) return;
+    const firestore = db || getFirestore();
+    const unsubscribe = onSnapshot(doc(firestore, "chats", clientUid), (snapshot) => {
+      if (snapshot.exists()) {
+        setUnreadChat(snapshot.data()?.unreadByClient || false);
+      }
+    });
+    return unsubscribe;
+  }, [user]);
 
   // Recharge / Digital Wallet states
   const [isRecharging, setIsRecharging] = useState(false);
@@ -86,6 +104,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
   const [rechargeMpData, setRechargeMpData] = useState<any>(null);
   const [rechargeError, setRechargeError] = useState<string | null>(null);
   const [rechargeSuccess, setRechargeSuccess] = useState(false);
+  const [isRechargeSimulating, setIsRechargeSimulating] = useState(false);
 
   const handleGenerateRechargePix = async (amount: number, bonus: number, cutsReward: number) => {
     setRechargeLoading(true);
@@ -106,7 +125,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
           description: `Recarga de Créditos Carteira - MS Barbearia`,
           email: user?.email || "carteira@msbarbaria.com.br",
           name: user?.name || "Cliente VIP",
-          appointmentId: "wallet-topup-" + Date.now()
+          appointmentId: "wallet-topup-" + (user?.uid || user?.id || "anon") + "-" + Date.now()
         })
       });
       if (!res.ok) {
@@ -168,6 +187,25 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
         .then(() => setReferralCode(newRef));
     }
   }, [user?.uid, user?.referralCode, referralCode]);
+
+  useEffect(() => {
+    if (isRecharging && rechargeStep === "pix" && rechargeMpData?.payment_id && !rechargeSuccess) {
+      const interval = setInterval(async () => {
+        try {
+          const res = await fetch(`/api/payments/mercado-pago/status/${rechargeMpData.payment_id}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.status === "approved" || data.status === "completed") {
+              setRechargeSuccess(true);
+            }
+          }
+        } catch (e) {
+          console.error("Erro ao verificar status da recarga:", e);
+        }
+      }, 4000);
+      return () => clearInterval(interval);
+    }
+  }, [isRecharging, rechargeStep, rechargeMpData?.payment_id, rechargeSuccess]);
 
   useEffect(() => {
     if (!user || !user.email) return;
@@ -397,6 +435,12 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                           <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-amber-500 rounded-full border-2 border-black" />
                         )}
                       </button>
+                      <button onClick={() => setCurrentView('chat')} className="relative p-3 bg-neutral-900 rounded-2xl text-neutral-500 hover:text-white border border-white/5 transition-all" title="Chat com Profissional">
+                        <MessageSquare className="w-5 h-5" />
+                        {unreadChat && (
+                          <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-amber-500 rounded-full border-2 border-black animate-pulse" />
+                        )}
+                      </button>
                       <button onClick={() => setCurrentView('more-options')} className="p-3 bg-neutral-900 rounded-2xl text-neutral-500 hover:text-white border border-white/5 transition-all">
                         <Menu className="w-5 h-5" />
                       </button>
@@ -607,6 +651,28 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                   </div>
               </div>
 
+              {/* Live Chat Card */}
+              <div className="bg-neutral-900 border border-white/5 p-8 rounded-[3.5rem] shadow-2xl relative overflow-hidden group">
+                  <div className="absolute -right-4 -bottom-4 text-amber-500/5 group-hover:scale-110 transition-transform duration-700">
+                    <MessageSquare size={160} />
+                  </div>
+                  <div className="relative z-10 flex flex-col justify-between h-full pt-1">
+                    <div className="flex items-center gap-2 mb-4">
+                        <MessageCircle className="w-4 h-4 text-amber-500 animate-pulse" />
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-500">Suporte & Dúvidas</span>
+                    </div>
+                    <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white mb-2 leading-none">Chat com Profissional</h3>
+                    <p className="text-xs text-neutral-500 font-medium mb-6">Fale agora com o seu profissional para tirar dúvidas ou fazer solicitações especiais!</p>
+                    
+                    <button 
+                        onClick={() => setCurrentView('chat')}
+                        className="w-fit bg-amber-500/10 border border-amber-500/20 text-text-amber-500 hover:text-amber-500 text-amber-500 text-[10px] font-black uppercase italic tracking-widest px-6 py-3 rounded-xl hover:bg-amber-500 hover:text-black transition-all active:scale-95"
+                    >
+                        ABRIR CONVERSA
+                    </button>
+                  </div>
+              </div>
+
               <PreferencesSummary appointments={appointments} />
  
               {/* My Cuts Gallery (Client's Own Photos) */}
@@ -679,6 +745,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
 
         {currentView === 'profile' && <ProfileEditScreen user={user} onBack={() => setCurrentView('home')} isClient={true} />}
         {currentView === 'booking' && <BookingScreen user={user} services={services} onBack={() => { setCurrentView('home'); setSelectedAppointment(null); setInitialBookingServiceId(undefined); setInitialBookingBarberId(undefined); }} editAppointment={selectedAppointment} initialServiceId={initialBookingServiceId} initialBarberId={initialBookingBarberId} />}
+        {currentView === 'chat' && <ChatScreen user={user} onBack={() => setCurrentView('home')} />}
         {currentView === 'my-cuts' && (
           <MyCutsScreen 
             user={user} 
@@ -900,7 +967,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
               <div className="bg-neutral-900 border border-white/10 p-8 rounded-[3rem] w-full max-w-sm text-center relative overflow-hidden my-auto shadow-2xl">
                 <button 
                   onClick={() => setIsRecharging(false)}
-                  className="absolute top-6 right-6 text-neutral-500 hover:text-white transition-colors"
+                  className="absolute top-6 right-6 text-neutral-500 hover:text-white transition-colors z-20"
                 >
                   <X className="w-5 h-5" />
                 </button>

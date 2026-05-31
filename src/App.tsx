@@ -83,6 +83,7 @@ const ClientPortalScreen = lazy(() => import("./components/auth/AuthScreens").th
 const CollaboratorLoginScreen = lazy(() => import("./components/auth/AuthScreens").then(m => ({ default: m.CollaboratorLoginScreen })));
 const PortfolioManager = lazy(() => import("./components/professional/PortfolioManager").then(m => ({ default: m.PortfolioManager })));
 const DashboardScreen = lazy(() => import("./components/manager/DashboardScreen").then(m => ({ default: m.DashboardScreen })));
+const ProfessionalClientChatsScreen = lazy(() => import("./components/ChatScreens").then(m => ({ default: m.ProfessionalClientChatsScreen })));
 
 import { HomeScreen } from "./components/client/HomeScreen";
 import { BottomNav } from "./components/common/BottomNav";
@@ -146,7 +147,7 @@ import {
 } from "firebase/auth";
 
 
-type Screen = "home" | "booking" | "agenda" | "clients" | "client-details" | "more" | "login" | "collaborators" | "services" | "client-login" | "client-dashboard" | "earnings" | "promotions" | "portfolio";
+type Screen = "home" | "booking" | "agenda" | "clients" | "client-details" | "more" | "login" | "collaborators" | "services" | "client-login" | "client-dashboard" | "earnings" | "promotions" | "portfolio" | "professional-chat";
 
 
 export default function App() {
@@ -715,6 +716,7 @@ export default function App() {
             {currentScreen === "clients" && <ClientsScreen onBack={() => setCurrentScreen("home")} onScheduleClient={(client) => { setClientToSchedule(client); setCurrentScreen("booking"); }} onClientClick={(client) => { setSelectedClient(client); setCurrentScreen("client-details"); }} />}
             {currentScreen === "client-details" && selectedClient && <ClientDetailsScreen client={selectedClient} onBack={() => { setCurrentScreen("clients"); setSelectedClient(null); }} />}
             {currentScreen === "portfolio" && <PortfolioManager onBack={() => setCurrentScreen("home")} />}
+            {currentScreen === "professional-chat" && <ProfessionalClientChatsScreen user={user} onBack={() => setCurrentScreen("home")} />}
             {currentScreen === "more" && (
               <MoreOptionsScreen 
                 user={user || loggedInClient} 
