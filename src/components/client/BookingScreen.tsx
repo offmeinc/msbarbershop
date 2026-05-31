@@ -39,6 +39,7 @@ import {
   Copy,
   Image as ImageIcon,
   Calendar as CalendarIcon,
+  AlertTriangle,
 } from "lucide-react";
 import { setupPushSubscription, getNotificationPermissionState, queryNotificationSupport } from "../../lib/pushRegister";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
@@ -145,6 +146,7 @@ function ConfirmationModal({ service, barber, date, onConfirm, userId, userRole,
   const [pushState, setPushState] = useState(getNotificationPermissionState());
   const [isAddingToCalendar, setIsAddingToCalendar] = useState(false);
   const [addedToCalendar, setAddedToCalendar] = useState(false);
+  const [calendarError, setCalendarError] = useState<string | null>(null);
   const [copiedPix, setCopiedPix] = useState(false);
   
   // Payment option: 'manual' (the original barber pix key) or 'mercadopago' (automated dynamic pix)
@@ -202,6 +204,7 @@ function ConfirmationModal({ service, barber, date, onConfirm, userId, userRole,
 
   const handleAddToCalendar = async () => {
     setIsAddingToCalendar(true);
+    setCalendarError(null);
     try {
       let token = await getCalendarAccessToken();
       if (!token) {
@@ -222,7 +225,18 @@ function ConfirmationModal({ service, barber, date, onConfirm, userId, userRole,
       }
     } catch (e: any) {
       console.error(e?.message || e);
-      toast.error('Não foi possível adicionar ao calendário.');
+      const errorMsg = e?.message || String(e);
+      const isPopupClosed = errorMsg.includes("popup-closed-by-user") || 
+                            errorMsg.includes("popup_closed_by_user") || 
+                            errorMsg.includes("cancelled-popup-request") ||
+                            errorMsg.includes("closed by user") ||
+                            e?.code === "auth/popup-closed-by-user" ||
+                            e?.code === "auth/cancelled-popup-request";
+      if (isPopupClosed) {
+        setCalendarError("popblock");
+      } else {
+        toast.error('Não foi possível adicionar ao calendário.');
+      }
     } finally {
       setIsAddingToCalendar(false);
     }
@@ -445,6 +459,26 @@ function ConfirmationModal({ service, barber, date, onConfirm, userId, userRole,
               </>
             )}
           </button>
+
+          {calendarError === "popblock" && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-amber-500/10 border border-amber-500/20 rounded-[1.8rem] p-5 text-left space-y-2.5"
+            >
+              <div className="flex items-center gap-2 text-amber-500">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <h5 className="text-[10px] font-black uppercase tracking-wider">Acesso ao Google Bloqueado</h5>
+              </div>
+              <p className="text-[10px] text-neutral-400 font-bold leading-normal uppercase">
+                Seu navegador bloqueou o pop-up de login porque o aplicativo está sendo exibido dentro do painel do <span className="text-white">AI Studio (iframe)</span>.
+              </p>
+              <div className="h-[1px] bg-white/5 my-1" />
+              <p className="text-[10px] text-amber-500 font-black uppercase tracking-wide leading-normal">
+                👉 Como resolver: Clique no botão <span className="text-white">"Abrir em nova aba" ↗</span> no topo do painel à direita e faça login por lá!
+              </p>
+            </motion.div>
+          )}
 
           <button
             onClick={onConfirm}

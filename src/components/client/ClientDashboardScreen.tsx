@@ -241,8 +241,6 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
   }, [appointments]);
 
   const handleCancelAppointment = async (app: any) => {
-    if (!confirm("Tem certeza que deseja cancelar este agendamento?")) return;
-    
     try {
       await updateDoc(doc(db, "appointments", app.id), {
         status: 'cancelled',
@@ -259,7 +257,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
         appointmentId: app.id
       });
 
-      alert("Agendamento cancelado com sucesso.");
+      toast.success("Agendamento cancelado com sucesso.");
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, "appointments");
     }
