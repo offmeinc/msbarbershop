@@ -61,6 +61,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect, useRef, useMemo, ChangeEvent, FormEvent, lazy, Suspense } from "react";
 import { BrandLogo } from "./components/common/BrandLogo";
+import { Toaster, toast } from "./components/ui/Toast";
 
 // Lazy-loaded components for better initial loading performance
 const NotificationsScreen = lazy(() => import("./components/NotificationsScreen").then(m => ({ default: m.NotificationsScreen })));
@@ -353,7 +354,7 @@ export default function App() {
            await signInWithEmailAndPassword(auth, email, password);
         }
       } else {
-        alert("Número de telefone e senha são obrigatórios.");
+        toast.error("Número de telefone e senha são obrigatórios.");
       }
       
       setCurrentScreen("home");
@@ -365,7 +366,7 @@ export default function App() {
       if (error.code === 'auth/user-not-found') message = "Usuário não encontrado.";
       if (error.code === 'auth/invalid-email') message = "Número de telefone inválido.";
       if (error.code === 'auth/weak-password') message = "A senha deve ter pelo menos 6 caracteres.";
-      alert(message);
+      toast.error(message);
     } finally {
       isSigningUp.current = false;
       setLoading(false);
@@ -393,7 +394,7 @@ export default function App() {
     }
 
     if (docs.length === 0) {
-        alert("Telefone ou senha inválidos.");
+        toast.error("Telefone ou senha inválidos.");
         return;
     }
     
@@ -412,7 +413,7 @@ export default function App() {
     const querySnapshot = await getDocs(appointmentsQuery);
 
     if (querySnapshot.empty) {
-        alert("Nenhum agendamento encontrado para este número.");
+        toast.error("Nenhum agendamento encontrado para este número.");
         return;
     }
 
@@ -420,9 +421,9 @@ export default function App() {
     const code = doc.data().loginCode;
 
     if (code) {
-        alert("Seu código de acesso é: " + code);
+        toast.info("Seu código de acesso é: " + code);
     } else {
-        alert("Código não encontrado.");
+        toast.error("Código não encontrado.");
     }
   };
 
@@ -970,6 +971,7 @@ export default function App() {
           </>
         )}
       </AnimatePresence>
+      <Toaster />
     </div>
   );
 }

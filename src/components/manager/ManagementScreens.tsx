@@ -28,6 +28,7 @@ import {
 } from "firebase/firestore";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { auth, db, handleFirestoreError, OperationType } from "../../lib/firebase";
+import { toast } from "../ui/Toast";
 
 export function CollaboratorsManager() {
   const [barbers, setBarbers] = useState<any[]>([]);
@@ -62,10 +63,10 @@ export function CollaboratorsManager() {
       setName("");
       setEmail("");
       setPassword("");
-      alert("Colaborador criado com sucesso!");
+      toast.success("Colaborador criado com sucesso!");
     } catch (error) {
       console.error(error);
-      alert("Erro ao criar colaborador.");
+      toast.error("Erro ao criar colaborador.");
     } finally {
       setLoading(false);
     }
@@ -75,10 +76,10 @@ export function CollaboratorsManager() {
     if (!window.confirm("Deseja realmente remover este colaborador da listagem? (Isso não exclui a conta de acesso, apenas remove o perfil)")) return;
     try {
       await updateDoc(doc(db, "users", id), { role: 'inactive_barber' });
-      alert("Colaborador removido com sucesso!");
+      toast.success("Colaborador removido com sucesso!");
     } catch (error) {
       console.error(error);
-      alert("Erro ao remover colaborador.");
+      toast.error("Erro ao remover colaborador.");
     }
   };
 
@@ -288,7 +289,7 @@ export function ServicesManagement({ services }: { services: any[] }) {
       await Promise.all(defaultServices.map(service => 
         addDoc(collection(db, "services"), { ...service, active: true, createdAt: Timestamp.now() })
       ));
-      alert("Serviços importados!");
+      toast.success("Serviços importados com sucesso!");
     } catch (error) {
        handleFirestoreError(error, OperationType.CREATE, "services");
     } finally {

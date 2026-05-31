@@ -39,7 +39,7 @@ export const signInWithGoogleCalendar = async (): Promise<{ user: User; accessTo
         cachedAccessToken = credential.accessToken;
         return { user: result.user, accessToken: cachedAccessToken };
     } catch (error: any) {
-        console.error('Sign in error:', error);
+        console.error('Sign in error:', error?.message || error);
         throw error;
     } finally {
         isSigningIn = false;

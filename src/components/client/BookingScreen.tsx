@@ -36,11 +36,16 @@ import {
   Search,
   User,
   Bell,
+  Copy,
   Calendar as CalendarIcon,
 } from "lucide-react";
 import { setupPushSubscription, getNotificationPermissionState, queryNotificationSupport } from "../../lib/pushRegister";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
 import { signInWithGoogleCalendar, addEventToCalendar, getCalendarAccessToken } from "../../lib/calendar";
+import { toast } from "../ui/Toast";
+
+import { QRCodeCanvas } from "qrcode.react";
+import { generatePixString } from "../../lib/pix";
 
 function RecurrenceUI({
   userRole,
@@ -81,10 +86,21 @@ function RecurrenceUI({
   );
 }
 
-function ConfirmationModal({ service, date, onConfirm, userId, userRole, duration }: any) {
+function ConfirmationModal({ service, barber, date, onConfirm, userId, userRole, duration }: any) {
   const [pushState, setPushState] = useState(getNotificationPermissionState());
   const [isAddingToCalendar, setIsAddingToCalendar] = useState(false);
   const [addedToCalendar, setAddedToCalendar] = useState(false);
+  const [copiedPix, setCopiedPix] = useState(false);
+
+  const handleCopyPix = (str: string) => {
+    navigator.clipboard.writeText(str);
+    setCopiedPix(true);
+    setTimeout(() => setCopiedPix(false), 2000);
+    toast.success("Código Copia e Cola copiado!");
+  };
+
+  const hasPix = barber?.pixKey;
+  const pixString = hasPix ? generatePixString(barber.pixKey, barber.name, "Brasil", service?.price ? Number(service.price) : undefined) : "";
 
   const handleAddToCalendar = async () => {
     setIsAddingToCalendar(true);
@@ -106,9 +122,9 @@ function ConfirmationModal({ service, date, onConfirm, userId, userRole, duratio
         );
         setAddedToCalendar(true);
       }
-    } catch (e) {
-      console.error(e);
-      alert('Não foi possível adicionar ao calendário.');
+    } catch (e: any) {
+      console.error(e?.message || e);
+      toast.error('Não foi possível adicionar ao calendário.');
     } finally {
       setIsAddingToCalendar(false);
     }
@@ -155,6 +171,27 @@ function ConfirmationModal({ service, date, onConfirm, userId, userRole, duratio
           </div>
         </div>
 
+        {hasPix && (
+          <div className="bg-neutral-900/50 p-6 rounded-[2.5rem] border border-white/5 space-y-4 text-center">
+            <div className="space-y-1">
+              <h4 className="text-sm font-black text-white uppercase tracking-wider">Pagar com Pix</h4>
+              <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">Agilize o pagamento do seu corte</p>
+            </div>
+            
+            <div className="bg-white p-4 rounded-3xl mx-auto w-fit shadow-xl shadow-amber-500/10">
+              <QRCodeCanvas value={pixString} size={140} level="M" />
+            </div>
+            
+            <button
+              onClick={() => handleCopyPix(pixString)}
+              className="w-full py-3 bg-white/5 border border-white/10 rounded-[1.5rem] text-[10px] font-black uppercase text-white hover:bg-white/10 transition-colors flex items-center justify-center gap-2"
+            >
+              {copiedPix ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+              {copiedPix ? "Copiado!" : "Copiar Código Pix"}
+            </button>
+          </div>
+        )}
+
         {/* Dynamic Push Opt-in for instant user activation */}
         {pushState !== "granted" && queryNotificationSupport() && (
           <div className="bg-amber-500/10 border border-amber-500/20 p-5 rounded-[2.5rem] space-y-3 text-left">
@@ -175,9 +212,9 @@ function ConfirmationModal({ service, date, onConfirm, userId, userRole, duratio
                 const success = await setupPushSubscription(cleanId, userRole || "client");
                 if (success) {
                   setPushState("granted");
-                  alert("Tudo pronto! Você receberá atualizações do seu agendamento no seu celular.");
+                  toast.success("Tudo pronto! Você receberá atualizações do seu agendamento no seu celular.");
                 } else {
-                  alert("Não foi possível habilitar notificações. Por favor, libere a permissão no seu navegador.");
+                  toast.error("Não foi possível habilitar notificações. Por favor, libere a permissão no seu navegador.");
                 }
               }}
               className="w-full bg-amber-500 text-black py-3 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest hover:bg-amber-400 active:scale-95 transition-all text-center block"
@@ -702,6 +739,7 @@ export function BookingScreen({
         {showConfirmation && (
           <ConfirmationModal
             service={services.find((s) => s.id === selectedService)}
+            barber={barbers.find((b) => b.id === selectedBarber)}
             date={(() => {
               const [h, m] = (selectedTime || "00:00").split(":").map(Number);
               const d = new Date(selectedDate);

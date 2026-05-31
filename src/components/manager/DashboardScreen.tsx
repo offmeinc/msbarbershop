@@ -214,8 +214,15 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
     });
     
     const completed = listApps.filter(app => app.status === 'completed' && app.status !== 'cancelled');
+    const scheduled = listApps.filter(app => (app.status === 'confirmed' || app.status === 'pending') && app.status !== 'cancelled');
     
     const totalValue = completed.reduce((sum, app) => {
+      const rawPrice = app.totalPrice || app.price || 0;
+      const price = typeof rawPrice === 'string' ? parseFloat(rawPrice.replace(/[^0-9.-]+/g, "")) : rawPrice;
+      return sum + (Number(price) || 0);
+    }, 0);
+
+    const projectedValue = scheduled.reduce((sum, app) => {
       const rawPrice = app.totalPrice || app.price || 0;
       const price = typeof rawPrice === 'string' ? parseFloat(rawPrice.replace(/[^0-9.-]+/g, "")) : rawPrice;
       return sum + (Number(price) || 0);
@@ -227,7 +234,8 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
     return {
       totalValue,
       totalCuts,
-      avgValue
+      avgValue,
+      projectedValue
     };
   }, [appointments, selectedBarberId]);
 
@@ -497,7 +505,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                       </div>
 
                       {/* Gorgeous Key Metrics Row */}
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                         {/* Faturamento Card */}
                         <motion.div 
                           initial={{ opacity: 0, y: 10 }}
@@ -517,6 +525,28 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                               R$ {statsForListMode.totalValue.toFixed(2)}
                             </h3>
                             <p className="text-[8px] text-neutral-500 font-bold uppercase mt-1">Concluído</p>
+                          </div>
+                        </motion.div>
+
+                        {/* Receita Futura Card */}
+                        <motion.div 
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.08 }}
+                          whileHover={{ y: -4, borderColor: "rgba(245, 158, 11, 0.25)" }}
+                          className="bg-neutral-900 border border-white/5 rounded-2xl p-3.5 space-y-2 relative overflow-hidden group shadow-xl"
+                        >
+                          <div className="flex justify-between items-center">
+                            <p className="text-[9px] font-black text-neutral-500 uppercase tracking-widest">Previsão</p>
+                            <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-400 group-hover:scale-110 transition-transform">
+                              <DollarSign className="w-3.5 h-3.5" />
+                            </div>
+                          </div>
+                          <div>
+                            <h3 className="text-sm sm:text-base font-black text-blue-400 tracking-tight leading-none">
+                              R$ {statsForListMode.projectedValue.toFixed(2)}
+                            </h3>
+                            <p className="text-[8px] text-neutral-500 font-bold uppercase mt-1">Agendado</p>
                           </div>
                         </motion.div>
 

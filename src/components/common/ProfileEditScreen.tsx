@@ -16,6 +16,7 @@ import {
   X 
 } from "lucide-react";
 import { db } from "../../lib/firebase";
+import { toast } from "../ui/Toast";
 
 export function ProfileEditScreen({ user, onBack, isClient = false }: { user: any, onBack: () => void, isClient?: boolean }) {
   const [profileData, setProfileData] = useState({
@@ -24,6 +25,7 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
     whatsapp: "",
     bio: "",
     password: "",
+    pixKey: "",
     specialties: [] as string[]
   });
   const [newSpecialty, setNewSpecialty] = useState("");
@@ -47,6 +49,7 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
           whatsapp: data.whatsapp || "",
           bio: data.bio || "",
           password: data.password || "",
+          pixKey: data.pixKey || "",
           specialties: data.specialties || []
         });
       }
@@ -80,14 +83,15 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
         whatsapp: profileData.whatsapp,
         bio: profileData.bio,
         password: profileData.password,
+        pixKey: profileData.pixKey,
         specialties: profileData.specialties,
         updatedAt: Timestamp.now()
       });
       
-      alert("Perfil atualizado com sucesso! ✨");
+      toast.success("Perfil atualizado com sucesso! ✨");
     } catch (error) {
       console.error(error);
-      alert("Erro ao atualizar perfil.");
+      toast.error("Erro ao atualizar perfil.");
     }
     setLoading(false);
   };
@@ -120,7 +124,7 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
     try {
       const apiKey = (import.meta as any).env.VITE_IMGBB_API_KEY;
       if (!apiKey) {
-        alert("Configuração de API do ImgBB faltando. Por favor, adicione VITE_IMGBB_API_KEY no arquivo .env");
+        toast.error("Configuração de API do ImgBB faltando. Por favor, adicione VITE_IMGBB_API_KEY no arquivo .env");
         setUploadingImage(false);
         return;
       }
@@ -131,12 +135,13 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
       const data = await response.json();
       if (data.success) {
         setProfileData(prev => ({ ...prev, photoUrl: data.data.url }));
+        toast.success("Imagem carregada!");
       } else {
-        alert("Erro ao fazer upload da imagem.");
+        toast.error("Erro ao fazer upload da imagem.");
       }
     } catch (error) {
       console.error("Upload error:", error);
-      alert("Erro na conexão com ImgBB.");
+      toast.error("Erro na conexão com ImgBB.");
     } finally {
       setUploadingImage(false);
     }
@@ -233,6 +238,18 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
               placeholder="Senha de 4 dígitos ou mais"
             />
             <p className="text-[9px] text-neutral-600 mt-1 uppercase tracking-tight">Esta senha será usada para acessar seu painel pelo WhatsApp.</p>
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest">Chave Pix</label>
+            <input 
+              type="text" 
+              value={profileData.pixKey} 
+              onChange={(e) => setProfileData(prev => ({ ...prev, pixKey: e.target.value }))}
+              className="w-full bg-neutral-900 border border-white/5 rounded-2xl p-4 text-sm text-white focus:border-amber-500 transition-all font-bold"
+              placeholder="Sua chave Pix (CPF, E-mail, Celular ou Aleatória)"
+            />
+            <p className="text-[9px] text-neutral-600 mt-1 uppercase tracking-tight">Será exibida como QR Code para pagamento após o cliente confirmar o agendamento.</p>
           </div>
 
           {!isClient && (

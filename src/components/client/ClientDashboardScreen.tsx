@@ -82,8 +82,8 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
         .filter((app: any) => app.hiddenByClient !== true)
       );
       setLoading(false);
-    }, (error) => {
-      console.error("Error fetching appointments:", error);
+    }, (error: any) => {
+      console.error("Error fetching appointments:", error?.message || error);
       setLoading(false);
     });
     return unsubscribe;
