@@ -192,6 +192,16 @@ export default function App() {
   };
   
   useEffect(() => {
+    const hasAskedPermission = localStorage.getItem('hasAskedNotificationPermission');
+    if (!hasAskedPermission && 'Notification' in window) {
+      Notification.requestPermission().then((permission) => {
+        localStorage.setItem('hasAskedNotificationPermission', 'true');
+        console.log('Notification permission:', permission);
+      });
+    }
+  }, []);
+  
+  useEffect(() => {
     if (isDarkMode) {
         document.documentElement.classList.add('dark');
     } else {
