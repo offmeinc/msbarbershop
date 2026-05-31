@@ -87,7 +87,7 @@ export function AppointmentModal({ appointment, onClose, onUpdate, onEdit, onDel
         <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
                <button onClick={() => onUpdate(appointment, 'confirmed')} className="py-4 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-2xl font-black uppercase italic text-xs">CONFIRMAR</button>
-               <button onClick={() => onUpdate(appointment, 'completed', { payerName: payerName || appointment.clientName })} className="py-4 bg-amber-500 text-black rounded-2xl font-black uppercase italic text-xs">PAGAR</button>
+               <button onClick={() => onUpdate(appointment, 'completed', { payerName: payerName || appointment.clientName })} className="py-4 bg-green-500 hover:bg-green-600 text-black rounded-2xl font-black uppercase italic text-xs transition-colors" title="Registra o comparecimento e atualiza os ganhos automaticamente">COMPARECEU ✅</button>
             </div>
             <div className="grid grid-cols-2 gap-3">
                <button onClick={() => onUpdate(appointment, 'cancelled')} className="py-4 bg-red-500/10 text-red-500 border border-red-500/20 rounded-2xl font-black uppercase italic text-xs">CANCELAR</button>

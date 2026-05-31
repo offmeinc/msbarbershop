@@ -13,6 +13,12 @@ export default defineConfig(({ mode }) => {
       VitePWA({
         registerType: 'autoUpdate',
         includeAssets: ['favicon.ico', 'logo.png', 'apple-touch-icon.png'],
+        workbox: {
+          globPatterns: ['**/*.{js,css,html,png,jpg,jpeg,svg,ico}'],
+          cleanupOutdatedCaches: true,
+          clientsClaim: true,
+          skipWaiting: true
+        },
         manifest: {
           name: 'MS BARBER SHOP',
           short_name: 'MS Barber',

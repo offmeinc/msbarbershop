@@ -1,19 +1,48 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
-import { updateDoc, doc, Timestamp } from "firebase/firestore";
+import { updateDoc, doc, Timestamp, collection, query, where, onSnapshot } from "firebase/firestore";
 import { Scissors, Calendar, Clock, CheckCircle, XCircle, Star, ArrowLeft } from "lucide-react";
+import { GOOGLE_REVIEW_URL } from "../../constants";
 
 interface MyCutsScreenProps {
+  user: any;
   appointments: any[];
   onBack: () => void;
+  onBookAgain?: (serviceId: string, barberId: string) => void;
 }
 
-export function MyCutsScreen({ appointments, onBack }: MyCutsScreenProps) {
+export function MyCutsScreen({ user, appointments, onBack, onBookAgain }: MyCutsScreenProps) {
   const [ratingLoading, setRatingLoading] = useState<string | null>(null);
+  const [portfolioCuts, setPortfolioCuts] = useState<any[]>([]);
   const now = new Date();
+
+  useEffect(() => {
+    const userId = user?.uid || user?.id;
+    if (!userId) return;
+
+    const q = query(
+      collection(db, "portfolio"),
+      where("clientId", "==", userId)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetched = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      // Sort client-side to make index creation optional
+      const sorted = fetched.sort((a: any, b: any) => {
+        const timeA = a.createdAt?.toDate?.()?.getTime() || 0;
+        const timeB = b.createdAt?.toDate?.()?.getTime() || 0;
+        return timeB - timeA;
+      });
+      setPortfolioCuts(sorted);
+    }, (err) => {
+      console.error("[MyCutsScreen] Error fetching client portfolio cuts:", err);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
   
   const futureAppointments = appointments
     .filter(app => {
@@ -82,8 +111,61 @@ export function MyCutsScreen({ appointments, onBack }: MyCutsScreenProps) {
           </section>
         )}
 
+        {portfolioCuts.length > 0 && (
+          <section className="animate-in fade-in duration-500">
+            <div className="flex items-center justify-between mb-5 px-2">
+              <h3 className="text-xs font-black uppercase tracking-[0.2em] text-neutral-500">Minha Galeria de Cortes</h3>
+              <span className="text-[10px] font-bold text-amber-500 uppercase">{portfolioCuts.length} fotos</span>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              {portfolioCuts.map((item, idx) => (
+                <motion.div 
+                  key={item.id}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: idx * 0.05 }}
+                  className="relative aspect-square rounded-[2rem] overflow-hidden group border border-white/5 active:scale-95 transition-transform"
+                >
+                  <img 
+                    src={item.imageUrl} 
+                    alt={item.caption} 
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/25 to-transparent p-4 flex flex-col justify-end">
+                    <p className="text-[10px] font-black uppercase text-white truncate">{item.caption || "Top Corte"}</p>
+                    {item.createdAt && (
+                      <p className="text-[8px] font-bold text-neutral-500 uppercase tracking-widest mt-0.5">
+                        {format(item.createdAt instanceof Timestamp ? item.createdAt.toDate() : parseISO(item.createdAt), "dd/MM/yyyy", { locale: ptBR })}
+                      </p>
+                    )}
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </section>
+        )}
+
         <section>
           <h3 className="text-xs font-black uppercase tracking-[0.2em] text-neutral-500 mb-5 px-2">Histórico & Avaliações</h3>
+          
+          {/* Google Review Prompt Card */}
+          <div className="bg-gradient-to-br from-amber-500/10 to-neutral-900/40 border border-amber-500/20 rounded-[2.5rem] p-6 mb-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-center sm:text-left space-y-1">
+              <h4 className="text-sm font-black uppercase tracking-wider text-amber-500 italic">Curtiu seu Corte?</h4>
+              <p className="text-[9px] text-neutral-400 font-bold uppercase tracking-wider">Avalie-nos com 5 estrelas no Google para nos ajudar!</p>
+            </div>
+            <a 
+              href={GOOGLE_REVIEW_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-5 py-3.5 bg-amber-500 hover:bg-amber-600 text-black font-black uppercase text-[9px] tracking-widest rounded-2xl transition-colors shrink-0 text-center"
+            >
+              Avaliar no Google
+            </a>
+          </div>
+
           <div className="space-y-4">
               {pastAppointments.map(app => {
                   const isCompleted = app.status === 'completed';
@@ -96,31 +178,46 @@ export function MyCutsScreen({ appointments, onBack }: MyCutsScreenProps) {
                                     </div>
                                   <div>
                                       <h4 className="text-sm font-bold uppercase italic">{app.serviceName}</h4>
-                                      <p className="text-[10px] text-neutral-500 uppercase font-black tracking-widest">
+                                      <p className="text-[10px] text-neutral-500 uppercase font-black tracking-widest mt-1">
                                           {format(app.date instanceof Timestamp ? app.date.toDate() : parseISO(app.date), "dd/MM/yyyy", { locale: ptBR })}
                                       </p>
+                                      {app.barberName && (
+                                        <p className="text-[10px] text-amber-500 uppercase font-bold tracking-widest mt-0.5">
+                                            {app.barberName}
+                                        </p>
+                                      )}
                                   </div>
                               </div>
                               <p className="text-sm font-black text-white italic">R${(Number(app.totalPrice) || 0).toFixed(2)}</p>
                           </div>
 
                           {isCompleted && (
-                              <div className="pt-4 border-t border-white/5 flex items-center justify-between">
-                                  <span className="text-[9px] font-black uppercase text-neutral-600 tracking-widest">Sua Avaliação</span>
-                                  <div className="flex items-center gap-1.5">
-                                      {[1, 2, 3, 4, 5].map((star) => (
-                                          <button 
-                                              key={star}
-                                              disabled={ratingLoading === app.id}
-                                              onClick={() => handleRate(app.id, star)}
-                                              className="p-1 transition-transform active:scale-125"
-                                          >
-                                              <Star 
-                                                  className={`w-4 h-4 transition-colors ${star <= (app.rating || 0) ? 'fill-amber-500 text-amber-500' : 'text-neutral-800 hover:text-amber-500/50'}`} 
-                                              />
-                                          </button>
-                                      ))}
+                              <div className="pt-4 border-t border-white/5 flex flex-col gap-4">
+                                  <div className="flex items-center justify-between">
+                                      <span className="text-[9px] font-black uppercase text-neutral-600 tracking-widest">Sua Avaliação</span>
+                                      <div className="flex items-center gap-1.5">
+                                          {[1, 2, 3, 4, 5].map((star) => (
+                                              <button 
+                                                  key={star}
+                                                  disabled={ratingLoading === app.id}
+                                                  onClick={() => handleRate(app.id, star)}
+                                                  className="p-1 transition-transform active:scale-125"
+                                              >
+                                                  <Star 
+                                                      className={`w-4 h-4 transition-colors ${star <= (app.rating || 0) ? 'fill-amber-500 text-amber-500' : 'text-neutral-800 hover:text-amber-500/50'}`} 
+                                                  />
+                                              </button>
+                                          ))}
+                                      </div>
                                   </div>
+                                  {onBookAgain && (
+                                      <button
+                                          onClick={() => onBookAgain(app.serviceId, app.barberId)}
+                                          className="w-full bg-white/5 hover:bg-white/10 text-neutral-300 font-black uppercase text-[10px] tracking-widest py-3 rounded-2xl transition-colors border border-white/5"
+                                      >
+                                          Agendar Novamente
+                                      </button>
+                                  )}
                               </div>
                           )}
                       </div>

@@ -3,7 +3,7 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore, doc, getDocFromServer, initializeFirestore } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
-const app = initializeApp(firebaseConfig);
+export const app = initializeApp(firebaseConfig);
 
 // Initialize Firestore
 // Use the specific database ID if provided in the config

@@ -4,7 +4,7 @@ import { Search, Loader2, ChevronRight, User } from "lucide-react";
 import { collection, query, where, limit, onSnapshot } from "firebase/firestore";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
 
-export function ClientsScreen({ onBack }: { onBack: () => void, key?: any }) {
+export function ClientsScreen({ onBack, onScheduleClient, onClientClick }: { onBack: () => void, onScheduleClient?: (client: any) => void, onClientClick?: (client: any) => void, key?: any }) {
   const [clients, setClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -45,7 +45,7 @@ export function ClientsScreen({ onBack }: { onBack: () => void, key?: any }) {
       ) : (
         <div className="space-y-3">
           {clients.map(client => (
-            <div key={client.id} className="bg-neutral-900 p-4 rounded-3xl border border-white/5 flex items-center justify-between hover:border-white/10 transition-all">
+            <div key={client.id} onClick={() => onClientClick?.(client)} className="bg-neutral-900 p-4 rounded-3xl border border-white/5 flex items-center justify-between hover:border-white/10 transition-all cursor-pointer">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-neutral-500 font-bold overflow-hidden border border-white/10">
                   {client.photoURL ? <img src={client.photoURL} alt={client.name} className="w-full h-full object-cover" /> : client.name?.[0]}
@@ -55,9 +55,19 @@ export function ClientsScreen({ onBack }: { onBack: () => void, key?: any }) {
                   <p className="text-xs text-neutral-500 uppercase font-medium">{client.whatsapp || client.email}</p>
                 </div>
               </div>
-              <button className="p-2 text-neutral-500 hover:text-amber-500 transition-colors">
-                <ChevronRight className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                {onScheduleClient && (
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); onScheduleClient(client); }}
+                    className="px-4 py-2 bg-amber-500 text-black font-black text-[10px] uppercase rounded-full hover:bg-amber-400 transition-colors"
+                  >
+                    Agendar
+                  </button>
+                )}
+                <button className="p-2 text-neutral-500 hover:text-amber-500 transition-colors">
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
             </div>
           ))}
         </div>

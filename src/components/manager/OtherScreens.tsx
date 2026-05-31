@@ -204,7 +204,9 @@ export function ShareScreen({ onBack }: { onBack: () => void }) {
                     Baixar Imagem para Story
                   </button>
                   {slots.length === 0 && (
-                    <p className="text-center text-[10px] text-red-500 font-bold uppercase tracking-widest mt-4">Nenhum horário disponível para este dia.</p>
+                    <p className="text-center text-[10px] text-red-500 font-bold uppercase tracking-widest mt-4">
+                      {selectedDate.getDay() === 0 ? "Não funcionamos aos domingos!" : "Nenhum horário disponível para este dia."}
+                    </p>
                   )}
                 </div>
               </div>

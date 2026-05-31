@@ -76,6 +76,7 @@ const ClientDashboardScreen = lazy(() => import("./components/client/ClientDashb
 const ProfileEditScreen = lazy(() => import("./components/common/ProfileEditScreen").then(m => ({ default: m.ProfileEditScreen })));
 const BookingScreen = lazy(() => import("./components/client/BookingScreen").then(m => ({ default: m.BookingScreen })));
 const ClientsScreen = lazy(() => import("./components/manager/ClientsScreen").then(m => ({ default: m.ClientsScreen })));
+const ClientDetailsScreen = lazy(() => import("./components/manager/ClientDetailsScreen").then(m => ({ default: m.ClientDetailsScreen })));
 const MoreOptionsScreen = lazy(() => import("./components/common/MoreOptionsScreen").then(m => ({ default: m.MoreOptionsScreen })));
 const ClientPortalScreen = lazy(() => import("./components/auth/AuthScreens").then(m => ({ default: m.ClientPortalScreen })));
 const CollaboratorLoginScreen = lazy(() => import("./components/auth/AuthScreens").then(m => ({ default: m.CollaboratorLoginScreen })));
@@ -144,7 +145,7 @@ import {
 } from "firebase/auth";
 
 
-type Screen = "home" | "booking" | "agenda" | "clients" | "more" | "login" | "collaborators" | "services" | "client-login" | "client-dashboard" | "earnings" | "promotions" | "portfolio";
+type Screen = "home" | "booking" | "agenda" | "clients" | "client-details" | "more" | "login" | "collaborators" | "services" | "client-login" | "client-dashboard" | "earnings" | "promotions" | "portfolio";
 
 
 export default function App() {
@@ -178,7 +179,23 @@ export default function App() {
   const [staffNotifications, setStaffNotifications] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [appointmentToEdit, setAppointmentToEdit] = useState<any>(null);
+  const [clientToSchedule, setClientToSchedule] = useState<any | null>(null);
+  const [selectedClient, setSelectedClient] = useState<any | null>(null);
   const isSigningUp = useRef(false);
+
+  const [isDarkMode, setIsDarkMode] = useState(true);
+  const toggleTheme = () => {
+    console.log("toggleTheme called. Current state:", isDarkMode);
+    setIsDarkMode(!isDarkMode);
+  };
+  
+  useEffect(() => {
+    if (isDarkMode) {
+        document.documentElement.classList.add('dark');
+    } else {
+        document.documentElement.classList.remove('dark');
+    }
+  }, [isDarkMode]);
 
   useEffect(() => {
     if (!['manager', 'barber'].includes(userRole)) return;
@@ -475,11 +492,25 @@ export default function App() {
             {user ? (
               <div className="flex items-center gap-6">
                 <button 
-                  onClick={() => setCurrentScreen("agenda")}
-                  className={`hover:text-white transition-colors flex items-center gap-2 ${currentScreen === "agenda" ? "text-amber-500" : ""}`}
+                  onClick={() => {
+                    setDashboardView("calendar");
+                    setCurrentScreen("agenda");
+                  }}
+                  className={`hover:text-amber-500 transition-colors flex items-center gap-2 uppercase text-[10px] font-black tracking-widest leading-none ${currentScreen === "agenda" && dashboardView === "calendar" ? "text-amber-500" : "text-neutral-400"}`}
                 >
-                  {userRole === "manager" ? "Agenda" : "Dashboard"}
+                  Agenda
                 </button>
+                {(userRole === "manager" || userRole === "barber") && (
+                  <button 
+                    onClick={() => {
+                      setDashboardView("list");
+                      setCurrentScreen("agenda");
+                    }}
+                    className={`hover:text-amber-500 transition-colors flex items-center gap-2 uppercase text-[10px] font-black tracking-widest leading-none ${currentScreen === "agenda" && dashboardView === "list" ? "text-amber-500" : "text-neutral-400"}`}
+                  >
+                    Atendimentos
+                  </button>
+                )}
                 {(userRole === "manager" || userRole === "barber") && (
                   <>
                     {userRole === "manager" && (
@@ -594,6 +625,41 @@ export default function App() {
                   </button>
                 </div>
               </div>
+            ) : loggedInClient ? (
+              <div className="flex items-center gap-6">
+                <button 
+                  onClick={() => setCurrentScreen("client-dashboard")}
+                  className={`hover:text-amber-500 transition-colors flex items-center gap-2 uppercase text-[10px] font-black tracking-widest leading-none ${currentScreen === "client-dashboard" ? "text-amber-500" : "text-neutral-400"}`}
+                >
+                  Meu Painel
+                </button>
+                <div className="flex items-center gap-3 pl-6 border-l border-white/10">
+                  <div className="text-right">
+                    <p className="text-white text-xs font-bold leading-none">{loggedInClient.name?.split(' ')[0]}</p>
+                    <p className="text-[10px] text-amber-500 capitalize font-black">Cliente</p>
+                  </div>
+                  <div className="relative">
+                    {loggedInClient.photoURL ? (
+                      <img 
+                        src={loggedInClient.photoURL} 
+                        className="w-10 h-10 rounded-xl border border-amber-500/50 object-cover" 
+                        referrerPolicy="no-referrer"
+                        alt={loggedInClient.name}
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-xl border border-white/10 bg-white/5 flex items-center justify-center">
+                        <User className="w-5 h-5 text-neutral-500" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <button 
+                  onClick={() => { setLoggedInClient(null); setCurrentScreen("home"); }}
+                  className={`p-2 rounded-lg transition-all bg-white/5 text-neutral-400 hover:bg-red-500/20 hover:text-red-500`}
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
             ) : (
               <>
                 <button 
@@ -624,19 +690,29 @@ export default function App() {
           <AnimatePresence mode="wait">
             {currentScreen === "home" && (
               (['manager', 'barber'].includes(userRole)) 
-              ? <ProfessionalHome user={user} role={userRole} setCurrentScreen={setCurrentScreen} /> 
+              ? <ProfessionalHome 
+                  user={user} 
+                  role={userRole} 
+                  setCurrentScreen={(screen) => {
+                    if (screen === "agenda") {
+                      setDashboardView("list");
+                    }
+                    setCurrentScreen(screen);
+                  }} 
+                /> 
               : <HomeScreen services={services} onStartBooking={() => setCurrentScreen("booking")} />
             )}
             {currentScreen === "login" && <CollaboratorLoginScreen onLogin={handleLogin} setCurrentScreen={setCurrentScreen} setRequestedRole={setRequestedRole} />}
             {currentScreen === "client-login" && <ClientPortalScreen onLogin={handleClientLogin} onForgotPassword={handleForgotPassword} onBack={() => setCurrentScreen("home")} />}
             {currentScreen === "client-dashboard" && <ClientDashboardScreen user={loggedInClient} onBack={() => setCurrentScreen("home")} />}
-            {currentScreen === "booking" && <BookingScreen user={user} role={userRole} services={services} onBack={() => { setCurrentScreen("home"); setAppointmentToEdit(null); }} editAppointment={appointmentToEdit} />}
-            {currentScreen === "agenda" && <DashboardScreen user={user} role={userRole} services={services} dashboardView="calendar" onBack={() => setCurrentScreen("home")} onNewBooking={() => setCurrentScreen("booking")} onEditBooking={(app) => { setAppointmentToEdit(app); setCurrentScreen("booking"); }} />}
+            {currentScreen === "booking" && <BookingScreen user={user} role={userRole} services={services} onBack={() => { setCurrentScreen("home"); setAppointmentToEdit(null); setClientToSchedule(null); }} editAppointment={appointmentToEdit} initialClient={clientToSchedule} />}
+            {currentScreen === "agenda" && <DashboardScreen user={user} role={userRole} services={services} dashboardView={dashboardView} onBack={() => setCurrentScreen("home")} onNewBooking={() => setCurrentScreen("booking")} onEditBooking={(app) => { setAppointmentToEdit(app); setCurrentScreen("booking"); }} />}
             {currentScreen === "collaborators" && <DashboardScreen user={user} role={userRole} services={services} dashboardView="collaborators" onBack={() => setCurrentScreen("home")} onNewBooking={() => setCurrentScreen("booking")} onEditBooking={(app) => { setAppointmentToEdit(app); setCurrentScreen("booking"); }} />}
             {currentScreen === "services" && <DashboardScreen user={user} role={userRole} services={services} dashboardView="services" onBack={() => setCurrentScreen("home")} onNewBooking={() => setCurrentScreen("booking")} onEditBooking={(app) => { setAppointmentToEdit(app); setCurrentScreen("booking"); }} />}
             {currentScreen === "earnings" && <EarningsScreen onBack={() => setCurrentScreen("home")} />}
             {currentScreen === "promotions" && <PromotionsManager onBack={() => setCurrentScreen("home")} />}
-            {currentScreen === "clients" && <ClientsScreen onBack={() => setCurrentScreen("home")} />}
+            {currentScreen === "clients" && <ClientsScreen onBack={() => setCurrentScreen("home")} onScheduleClient={(client) => { setClientToSchedule(client); setCurrentScreen("booking"); }} onClientClick={(client) => { setSelectedClient(client); setCurrentScreen("client-details"); }} />}
+            {currentScreen === "client-details" && selectedClient && <ClientDetailsScreen client={selectedClient} onBack={() => { setCurrentScreen("clients"); setSelectedClient(null); }} />}
             {currentScreen === "portfolio" && <PortfolioManager onBack={() => setCurrentScreen("home")} />}
             {currentScreen === "more" && (
               <MoreOptionsScreen 
@@ -650,6 +726,8 @@ export default function App() {
                   const unread = staffNotifications.filter(n => !n.read);
                   await Promise.all(unread.map(n => updateDoc(doc(db, "staff_notifications", n.id), { read: true })));
                 }}
+                onToggleTheme={toggleTheme}
+                isDarkMode={isDarkMode}
               />
             )}
           </AnimatePresence>
@@ -674,51 +752,222 @@ export default function App() {
       {/* Mobile Menu */}
       <AnimatePresence>
         {isMenuOpen && (
-          <motion.div 
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 20 }}
-            className="fixed inset-0 z-40 bg-black flex flex-col items-center justify-center gap-6 text-xl font-black uppercase italic"
-          >
-            <button onClick={() => { setCurrentScreen("home"); setIsMenuOpen(false); }}>Início</button>
-            
-            {user ? (
-              <>
-                {userRole === "manager" && (
-                  <>
-                    <button onClick={() => { setCurrentScreen("agenda"); setIsMenuOpen(false); }}>Painel Gestor</button>
-                    <button onClick={() => { setCurrentScreen("collaborators"); setIsMenuOpen(false); }}>Time/Equipe</button>
-                    <button onClick={() => { setCurrentScreen("services"); setIsMenuOpen(false); }}>Serviços</button>
-                  </>
-                )}
-                {userRole === "barber" && (
-                  <>
-                    <button onClick={() => { setCurrentScreen("agenda"); setIsMenuOpen(false); }}>Minha Agenda</button>
-                    <button onClick={() => { setCurrentScreen("services"); setIsMenuOpen(false); }}>Serviços</button>
-                  </>
-                )}
-                {userRole === "client" && (
-                  <>
-                    <button onClick={() => { setCurrentScreen("booking"); setIsMenuOpen(false); }}>Agendar</button>
-                    <button onClick={() => { setCurrentScreen("agenda"); setIsMenuOpen(false); }}>Meus Agendamentos</button>
-                  </>
-                )}
+          <>
+            {/* Backdrop overlay */}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMenuOpen(false)}
+              className="fixed inset-0 z-40 bg-black/70 backdrop-blur-md"
+            />
+
+            {/* Sidebar Drawer */}
+            <motion.div 
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 220 }}
+              className="fixed top-0 right-0 h-full w-[85%] max-w-[340px] z-50 bg-neutral-950/95 backdrop-blur-2xl border-l border-white/5 flex flex-col justify-between shadow-2xl p-6"
+            >
+              {/* Drawer Header */}
+              <div className="flex items-center justify-between border-b border-white/5 pb-5">
+                <div className="flex items-center gap-3">
+                  <BrandLogo className="w-10 h-10 bg-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.2)]" />
+                  <div className="text-left">
+                    <span className="text-sm font-black tracking-tighter uppercase italic block leading-none text-white">
+                      MS
+                    </span>
+                    <span className="text-[9px] text-amber-500 uppercase tracking-widest font-black">BARBER MENU</span>
+                  </div>
+                </div>
+
                 <button 
-                  onClick={() => { handleLogout(); setIsMenuOpen(false); }}
-                  className="text-red-500"
+                  onClick={() => setIsMenuOpen(false)} 
+                  className="p-2 bg-white/5 rounded-full text-neutral-400 hover:text-white border border-white/5 transition-all hover:rotate-90 duration-200"
                 >
-                  Sair
+                  <X className="w-4 h-4" />
                 </button>
-              </>
-            ) : (
-              <>
-                <a href="#servicos" onClick={() => setIsMenuOpen(false)}>Serviços</a>
-                <button onClick={() => { setCurrentScreen("login"); setIsMenuOpen(false); }}>Portal Profissional</button>
-                <button onClick={() => { setCurrentScreen("client-login"); setIsMenuOpen(false); }}>Painel do Cliente</button>
-              </>
-            )}
-            <button onClick={() => setIsMenuOpen(false)} className="absolute top-24 right-6"><X /></button>
-          </motion.div>
+              </div>
+
+              {/* Drawer Content (Navigation List) */}
+              <div className="flex-1 py-8 overflow-y-auto space-y-4 pr-1">
+                <p className="text-[9px] font-black uppercase text-neutral-500 tracking-widest pl-2">Navegação</p>
+                
+                <div className="space-y-2.5">
+                  {(() => {
+                    const menuItems = [];
+                    
+                    // Base Home item
+                    menuItems.push({
+                      label: "Início",
+                      icon: <Home className="w-4 h-4" />,
+                      onClick: () => { setCurrentScreen("home"); setIsMenuOpen(false); },
+                      isActive: currentScreen === "home"
+                    });
+
+                    // Conditional items
+                    if (user) {
+                      if (userRole === "manager") {
+                        menuItems.push({
+                          label: "Agenda",
+                          icon: <Calendar className="w-4 h-4" />,
+                          onClick: () => { setDashboardView("calendar"); setCurrentScreen("agenda"); setIsMenuOpen(false); },
+                          isActive: currentScreen === "agenda" && dashboardView === "calendar"
+                        });
+                        menuItems.push({
+                          label: "Atendimentos",
+                          icon: <Scissors className="w-4 h-4" />,
+                          onClick: () => { setDashboardView("list"); setCurrentScreen("agenda"); setIsMenuOpen(false); },
+                          isActive: currentScreen === "agenda" && dashboardView === "list"
+                        });
+                        menuItems.push({
+                          label: "Time de Profissionais",
+                          icon: <User className="w-4 h-4" />,
+                          onClick: () => { setCurrentScreen("collaborators"); setIsMenuOpen(false); },
+                          isActive: currentScreen === "collaborators"
+                        });
+                        menuItems.push({
+                          label: "Serviços",
+                          icon: <Scissors className="w-4 h-4" />,
+                          onClick: () => { setCurrentScreen("services"); setIsMenuOpen(false); },
+                          isActive: currentScreen === "services"
+                        });
+                      } else if (userRole === "barber") {
+                        menuItems.push({
+                          label: "Minha Agenda",
+                          icon: <Calendar className="w-4 h-4" />,
+                          onClick: () => { setDashboardView("calendar"); setCurrentScreen("agenda"); setIsMenuOpen(false); },
+                          isActive: currentScreen === "agenda" && dashboardView === "calendar"
+                        });
+                        menuItems.push({
+                          label: "Atendimentos",
+                          icon: <Scissors className="w-4 h-4" />,
+                          onClick: () => { setDashboardView("list"); setCurrentScreen("agenda"); setIsMenuOpen(false); },
+                          isActive: currentScreen === "agenda" && dashboardView === "list"
+                        });
+                        menuItems.push({
+                          label: "Serviços",
+                          icon: <Scissors className="w-4 h-4" />,
+                          onClick: () => { setCurrentScreen("services"); setIsMenuOpen(false); },
+                          isActive: currentScreen === "services"
+                        });
+                      } else if (userRole === "client") {
+                        menuItems.push({
+                          label: "Agendar",
+                          icon: <Plus className="w-4 h-4" />,
+                          onClick: () => { setCurrentScreen("booking"); setIsMenuOpen(false); },
+                          isActive: currentScreen === "booking"
+                        });
+                        menuItems.push({
+                          label: "Meus Cortes",
+                          icon: <CalendarCheck className="w-4 h-4" />,
+                          onClick: () => { setCurrentScreen("agenda"); setIsMenuOpen(false); },
+                          isActive: currentScreen === "agenda"
+                        });
+                      }
+                    } else if (loggedInClient) {
+                      menuItems.push({
+                        label: "Meu Painel",
+                        icon: <User className="w-4 h-4" />,
+                        onClick: () => { setCurrentScreen("client-dashboard"); setIsMenuOpen(false); },
+                        isActive: currentScreen === "client-dashboard"
+                      });
+                      menuItems.push({
+                        label: "Sair",
+                        icon: <LogOut className="w-4 h-4" />,
+                        onClick: () => { setLoggedInClient(null); setCurrentScreen("home"); setIsMenuOpen(false); },
+                        isActive: false
+                      });
+                    } else {
+                      // Guest view
+                      menuItems.push({
+                        label: "Nossos Serviços",
+                        icon: <Scissors className="w-4 h-4" />,
+                        onClick: () => { 
+                          setIsMenuOpen(false);
+                          if (currentScreen !== "home") {
+                            setCurrentScreen("home");
+                          }
+                          setTimeout(() => {
+                            const el = document.getElementById("servicos");
+                            if (el) el.scrollIntoView({ behavior: "smooth" });
+                          }, 300);
+                        },
+                        isActive: false
+                      });
+                      menuItems.push({
+                        label: "Portal Profissional",
+                        icon: <Lock className="w-4 h-4" />,
+                        onClick: () => { setCurrentScreen("login"); setIsMenuOpen(false); },
+                        isActive: currentScreen === "login"
+                      });
+                      menuItems.push({
+                        label: "Painel do Cliente",
+                        icon: <User className="w-4 h-4" />,
+                        onClick: () => { setCurrentScreen("client-login"); setIsMenuOpen(false); },
+                        isActive: currentScreen === "client-login"
+                      });
+                    }
+
+                    return menuItems.map((item, idx) => {
+                      const isActive = item.isActive;
+                      return (
+                        <motion.button
+                          key={idx}
+                          initial={{ opacity: 0, x: 20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: idx * 0.05 }}
+                          onClick={item.onClick}
+                          className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all group active:scale-95 duration-200 border ${isActive ? "bg-amber-500 border-amber-500 text-black shadow-lg shadow-amber-500/10" : "bg-white/5 border-white/5 text-neutral-400 hover:text-white hover:bg-white/10"}`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-xl transition-all ${isActive ? "bg-black/10 text-black" : "bg-black/40 text-amber-500 group-hover:scale-110 group-hover:rotate-6 duration-300"}`}>
+                              {item.icon}
+                            </div>
+                            <span className="text-[11px] font-black uppercase tracking-wider italic">{item.label}</span>
+                          </div>
+                          <ChevronRight className={`w-4 h-4 transition-transform group-hover:translate-x-1 duration-200 ${isActive ? "text-black" : "text-neutral-600 group-hover:text-amber-500"}`} />
+                        </motion.button>
+                      );
+                    });
+                  })()}
+                </div>
+              </div>
+
+              {/* Drawer Footer */}
+              <div className="border-t border-white/5 pt-5 mt-auto">
+                {user ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3 p-3 bg-white/5 rounded-2xl border border-white/5">
+                      {user.photoURL ? (
+                        <img src={user.photoURL} className="w-10 h-10 rounded-xl object-cover border border-amber-500/30" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500 border border-amber-500/20">
+                          <User className="w-5 h-5" />
+                        </div>
+                      )}
+                      <div className="text-left overflow-hidden">
+                        <h4 className="text-xs font-black uppercase text-white truncate italic tracking-wide">{user.displayName || user.name || "Profissional"}</h4>
+                        <p className="text-[9px] text-amber-500/80 font-black uppercase tracking-widest mt-0.5">{userRole}</p>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => { handleLogout(); setIsMenuOpen(false); }}
+                      className="w-full bg-red-500/10 hover:bg-red-500 border border-red-500/20 hover:text-white text-red-500 py-4 rounded-2xl font-black uppercase tracking-widest text-[9px] flex items-center justify-center gap-2 transition-all active:scale-95 duration-200"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                      Sair da Conta
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-center text-[9px] text-neutral-600 uppercase tracking-widest font-black py-4">
+                    Estilo & Tradição • MS Barber
+                  </p>
+                )}
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </div>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { ChevronRight, Sparkles, MapPin, Instagram, Phone, Clock, Scissors, Image as ImageIcon } from "lucide-react";
-import { BARBERSHOP_NAME, BARBERSHOP_ADDRESS, BARBERSHOP_PHONE, BARBERSHOP_INSTAGRAM } from "../../constants";
+import { ChevronRight, Sparkles, MapPin, Instagram, Phone, Clock, Scissors, Image as ImageIcon, Star } from "lucide-react";
+import { BARBERSHOP_NAME, BARBERSHOP_ADDRESS, BARBERSHOP_PHONE, BARBERSHOP_INSTAGRAM, GOOGLE_REVIEW_URL } from "../../constants";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
 import { collection, query, orderBy, limit, onSnapshot } from "firebase/firestore";
 
@@ -19,24 +19,24 @@ export function HomeScreen({ services, onStartBooking }: { services: any[], onSt
   }, []);
 
   return (
-    <div className="max-w-xl mx-auto py-8">
+    <div className="max-w-xl md:max-w-4xl lg:max-w-5xl mx-auto py-8 animate-in fade-in duration-500">
       {/* Hero Section */}
       <div className="relative px-6 mb-12">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative z-10"
+          className="relative z-10 md:text-center md:max-w-2xl md:mx-auto"
         >
           <p className="text-amber-500 font-bold uppercase tracking-[0.3em] text-[10px] mb-3">Bem vindo a</p>
-          <h1 className="text-5xl font-black italic uppercase tracking-tighter leading-none mb-4 animate-gradient-text">
+          <h1 className="text-5xl font-black italic uppercase tracking-tighter leading-none mb-4 animate-gradient-text md:text-6xl">
             {BARBERSHOP_NAME}
           </h1>
-          <p className="text-neutral-500 text-sm max-w-[280px] font-medium leading-relaxed">
+          <p className="text-neutral-500 text-sm max-w-[280px] md:max-w-xl font-medium leading-relaxed md:mx-auto">
             Estilo e precisão. Agende seu horário com os melhores profissionais da cidade.
           </p>
         </motion.div>
         
-        <div className="mt-8">
+        <div className="mt-8 md:max-w-xs md:mx-auto">
           <button 
             onClick={onStartBooking}
             className="w-full bg-white text-black py-5 rounded-[2rem] font-black uppercase italic tracking-widest text-xs hover:bg-neutral-200 transition-all active:scale-95 shadow-xl shadow-white/5"
@@ -48,12 +48,12 @@ export function HomeScreen({ services, onStartBooking }: { services: any[], onSt
 
       {/* Autoestima Section */}
       <div className="px-6 mb-12">
-        <div className="bg-neutral-900 border border-white/5 rounded-[3rem] p-12 flex flex-col items-center text-center relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-3xl rounded-full" />
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-amber-500/5 blur-3xl rounded-full" />
+        <div className="bg-neutral-900 border border-white/5 rounded-[3rem] p-12 md:py-16 flex flex-col items-center text-center relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 blur-3xl rounded-full" />
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-amber-500/5 blur-3xl rounded-full" />
           
           <Sparkles className="w-10 h-10 text-amber-500 mb-8 opacity-50 group-hover:scale-110 group-hover:opacity-100 transition-all" />
-          <h2 className="text-4xl font-black italic uppercase tracking-tighter leading-[0.85] mb-6 animate-gradient-text">
+          <h2 className="text-4xl md:text-5xl font-black italic uppercase tracking-tighter leading-[0.85] mb-6 animate-gradient-text">
             Sua autoestima <br/>
             em primeiro lugar
           </h2>
@@ -66,46 +66,46 @@ export function HomeScreen({ services, onStartBooking }: { services: any[], onSt
 
       {/* Portfolio Gallery */}
       {portfolio.length > 0 && (
-        <div className="px-6 mb-12">
-            <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xs font-black uppercase tracking-[0.2em] text-neutral-500">Nossos Trabalhos</h2>
-                <div className="flex gap-1.5">
-                    <div className="w-1 h-1 rounded-full bg-amber-500" />
-                    <div className="w-1 h-1 rounded-full bg-neutral-800" />
-                    <div className="w-1 h-1 rounded-full bg-neutral-800" />
-                </div>
-            </div>
-            <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar -mx-6 px-6">
-                {portfolio.map((item, idx) => (
-                    <motion.div 
-                        key={item.id}
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        whileInView={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: idx * 0.1 }}
-                        className="flex-shrink-0 w-48 aspect-[3/4] rounded-[2.5rem] overflow-hidden relative group border border-white/5"
-                    >
-                        <img 
-                            src={item.imageUrl} 
-                            alt={item.caption} 
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
-                            referrerPolicy="no-referrer"
-                        />
-                        <div className="absolute inset-x-0 bottom-0 p-6 bg-gradient-to-t from-black/90 via-black/20 to-transparent">
-                            <p className="text-[10px] font-black uppercase text-white tracking-widest leading-tight">{item.caption || "Top Styles"}</p>
-                        </div>
-                    </motion.div>
-                ))}
-            </div>
-        </div>
+          <div className="px-6 mb-12">
+              <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xs font-black uppercase tracking-[0.2em] text-neutral-500">Nossos Trabalhos</h2>
+                  <div className="flex gap-1.5 md:hidden">
+                      <div className="w-1 h-1 rounded-full bg-amber-500" />
+                      <div className="w-1 h-1 rounded-full bg-neutral-800" />
+                      <div className="w-1 h-1 rounded-full bg-neutral-800" />
+                  </div>
+              </div>
+              <div className="flex md:grid gap-4 overflow-x-auto md:overflow-x-visible pb-4 no-scrollbar -mx-6 px-6 md:mx-0 md:px-0 md:grid-cols-4">
+                  {portfolio.map((item, idx) => (
+                      <motion.div 
+                          key={item.id}
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          whileInView={{ opacity: 1, scale: 1 }}
+                          transition={{ delay: idx * 0.1 }}
+                          className="flex-shrink-0 md:flex-shrink w-48 md:w-full aspect-[3/4] rounded-[2.5rem] overflow-hidden relative group border border-white/5"
+                      >
+                          <img 
+                              src={item.imageUrl} 
+                              alt={item.caption} 
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
+                              referrerPolicy="no-referrer"
+                          />
+                          <div className="absolute inset-x-0 bottom-0 p-6 bg-gradient-to-t from-black/90 via-black/20 to-transparent">
+                              <p className="text-[10px] font-black uppercase text-white tracking-widest leading-tight">{item.caption || "Top Styles"}</p>
+                          </div>
+                      </motion.div>
+                  ))}
+              </div>
+          </div>
       )}
 
       {/* Services Preview */}
-      <div className="px-6 mb-12">
+      <div id="servicos" className="px-6 mb-12 scroll-mt-24">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xs font-black uppercase tracking-[0.2em] text-neutral-500">Nossos Serviços</h2>
           <button onClick={onStartBooking} className="text-[10px] font-bold text-amber-500 uppercase tracking-widest hover:underline">Ver Tabela</button>
         </div>
-        <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide no-scrollbar -mx-6 px-6">
+        <div className="flex md:grid gap-4 overflow-x-auto md:overflow-x-visible pb-4 scrollbar-hide no-scrollbar -mx-6 px-6 md:mx-0 md:px-0 md:grid-cols-4">
            {(() => {
              // Filter only active services and prioritize certain ones
              const activeServices = services.filter(s => s.active !== false);
@@ -152,8 +152,8 @@ export function HomeScreen({ services, onStartBooking }: { services: any[], onSt
                      }
                    }}
                    className={`${
-                     isSelected ? 'w-64 border-amber-500 bg-neutral-900 shadow-amber-500/10' : 'w-40 sm:w-48 border-white/5 bg-neutral-900/50'
-                   } flex-shrink-0 min-h-[14rem] rounded-[2.5rem] border backdrop-blur-xl p-5 sm:p-6 flex flex-col justify-between group cursor-pointer transition-all duration-500 shadow-2xl relative overflow-hidden`}
+                     isSelected ? 'w-64 md:w-full border-amber-500 bg-neutral-900 shadow-amber-500/10' : 'w-40 sm:w-48 md:w-full border-white/5 bg-neutral-900/50'
+                   } flex-shrink-0 md:flex-shrink min-h-[14rem] rounded-[2.5rem] border backdrop-blur-xl p-5 sm:p-6 flex flex-col justify-between group cursor-pointer transition-all duration-500 shadow-2xl relative overflow-hidden`}
                  >
                     <div className={`absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-3xl rounded-full transition-opacity ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} />
                     
@@ -185,10 +185,10 @@ export function HomeScreen({ services, onStartBooking }: { services: any[], onSt
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: 10 }}
-                                className="mt-2 space-y-3"
+                                className="mt-2 space-y-3 animate-in fade-in"
                               >
                                 <div className="flex items-center gap-2 text-[10px] text-neutral-400 font-bold uppercase tracking-widest">
-                                  <Clock className="w-3 h-3" />
+                                  <Clock className="w-3" />
                                   <span>{displayDuration} MINUTOS</span>
                                 </div>
                                 <button 
@@ -235,7 +235,7 @@ export function HomeScreen({ services, onStartBooking }: { services: any[], onSt
       </div>
 
       {/* Info Cards */}
-      <div className="px-6 grid grid-cols-1 gap-4 mt-8 pb-12 relative">
+      <div className="px-6 grid grid-cols-1 md:grid-cols-3 gap-4 mt-8 pb-12 relative">
         <button 
           onClick={() => {
             const encodedAddr = encodeURIComponent(BARBERSHOP_ADDRESS);
@@ -290,8 +290,8 @@ export function HomeScreen({ services, onStartBooking }: { services: any[], onSt
                 className="fixed bottom-0 left-0 right-0 bg-[#0a0a0a] border-t border-white/5 rounded-t-[2.5rem] p-8 z-[70] pb-[calc(2rem+env(safe-area-inset-bottom))]"
               >
                 <div className="w-12 h-1.5 bg-neutral-800 rounded-full mx-auto mb-8" />
-                <h3 className="text-xl font-black uppercase italic italic text-white mb-6 text-center">Escolha seu Mapa</h3>
-                <div className="grid gap-3">
+                <h3 className="text-xl font-black uppercase italic text-white mb-6 text-center">Escolha seu Mapa</h3>
+                <div className="grid gap-3 animate-in fade-in slide-in-from-bottom-6">
                   {(() => {
                     const encodedAddr = encodeURIComponent(BARBERSHOP_ADDRESS);
                     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
@@ -346,6 +346,24 @@ export function HomeScreen({ services, onStartBooking }: { services: any[], onSt
               </div>
            </div>
            <ChevronRight className="w-4 h-4 text-neutral-800" />
+        </a>
+
+        <a 
+          href={GOOGLE_REVIEW_URL} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="bg-neutral-950 border border-white/5 p-6 rounded-[2.5rem] flex items-center justify-between group hover:bg-neutral-900 transition-colors"
+        >
+           <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500 flex-shrink-0 group-hover:scale-110 transition-transform">
+                <Star className="w-6 h-6 fill-amber-500/10" />
+               </div>
+               <div>
+                 <h3 className="text-white font-bold text-sm mb-1 uppercase tracking-tight italic">Avalie-nos no Google</h3>
+                 <p className="text-neutral-500 text-[11px] font-medium uppercase tracking-wider">Deixe sua opinião de 5 estrelas</p>
+               </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-neutral-800" />
         </a>
 
       </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { format, subDays, isAfter } from "date-fns";
+import { format, subDays, isSameDay, isSameWeek, isSameMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { 
   query, 
@@ -21,8 +21,7 @@ import {
   Line
 } from 'recharts';
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
-import { TrendingUp, Users, Star, ArrowLeft, DollarSign, Sparkles, BrainCircuit } from "lucide-react";
-import { getBusinessInsights } from "../../services/geminiService";
+import { TrendingUp, Users, Star, ArrowLeft, DollarSign } from "lucide-react";
 
 interface EarningsScreenProps {
   onBack: () => void;
@@ -31,8 +30,7 @@ interface EarningsScreenProps {
 export const EarningsScreen = ({ onBack }: EarningsScreenProps) => {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [aiInsights, setAiInsights] = useState<string | null>(null);
-  const [loadingInsights, setLoadingInsights] = useState(false);
+  const [timeRange, setTimeRange] = useState<"day" | "week" | "month">("day");
 
   useEffect(() => {
     // We want all appointments to calculate retention (not just completed ones)
@@ -48,13 +46,23 @@ export const EarningsScreen = ({ onBack }: EarningsScreenProps) => {
     return () => unsubscribe();
   }, []);
 
-  const completedApps = useMemo(() => appointments.filter(a => a.status === 'completed'), [appointments]);
+  const completedApps = useMemo(() => appointments.filter(a => a.status === 'completed' && a.paymentStatus === 'paid' && a.status !== 'cancelled'), [appointments]);
 
   const stats = useMemo(() => {
-    const totalRevenue = completedApps.reduce((acc, app) => acc + (parseFloat(app.totalPrice || app.price) || 0), 0);
-    const avgRating = completedApps.filter(a => a.rating).reduce((acc, app, _, arr) => acc + (app.rating / arr.length), 0);
+    const now = new Date();
     
-    // Retention calculation
+    const filteredForRange = completedApps.filter(app => {
+      const date = app.date instanceof Timestamp ? app.date.toDate() : new Date(app.date);
+      if (timeRange === "day") return isSameDay(date, now);
+      if (timeRange === "week") return isSameWeek(date, now, { weekStartsOn: 0, locale: ptBR });
+      if (timeRange === "month") return isSameMonth(date, now);
+      return true;
+    });
+
+    const totalRevenue = filteredForRange.reduce((acc, app) => acc + (parseFloat(app.totalPrice || app.price) || 0), 0);
+    const avgRating = filteredForRange.filter(a => a.rating).reduce((acc, app, _, arr) => acc + (app.rating / arr.length), 0);
+    
+    // Retention calculation based on all time or current range? Usually all time is better for retention.
     const clientVisitCounts: Record<string, number> = {};
     completedApps.forEach(app => {
       const clientId = app.clientId || app.loginCode;
@@ -64,8 +72,8 @@ export const EarningsScreen = ({ onBack }: EarningsScreenProps) => {
     const returningClients = Object.values(clientVisitCounts).filter(count => count > 1).length;
     const retentionRate = totalClients === 0 ? 0 : (returningClients / totalClients) * 100;
 
-    return { totalRevenue, avgRating, totalClients, retentionRate };
-  }, [completedApps]);
+    return { totalRevenue, avgRating, retentionRate };
+  }, [completedApps, timeRange]);
 
   const dailyEarnings = useMemo(() => {
     const data: Record<string, number> = {};
@@ -94,8 +102,6 @@ export const EarningsScreen = ({ onBack }: EarningsScreenProps) => {
       .slice(0, 5)
       .map(([name, value]) => ({ name, value }));
   }, [completedApps]);
-
-  const [timeRange, setTimeRange] = useState<"day" | "week" | "month">("day");
 
   const chartData = useMemo(() => {
     const data: Record<string, number> = {};
@@ -139,19 +145,6 @@ export const EarningsScreen = ({ onBack }: EarningsScreenProps) => {
     return Object.entries(data).map(([name, value]) => ({ name, value }));
   }, [completedApps, timeRange]);
 
-  useEffect(() => {
-    if (completedApps.length > 5 && !aiInsights && !loadingInsights) {
-      setLoadingInsights(true);
-      getBusinessInsights({
-        ...stats,
-        popularServices: serviceDistribution.map(s => s.name)
-      }).then(insight => {
-          setAiInsights(insight);
-          setLoadingInsights(false);
-      });
-    }
-  }, [stats, serviceDistribution, completedApps, aiInsights, loadingInsights]);
-
   const COLORS = ['#f59e0b', '#3b82f6', '#10b981', '#ef4444', '#8b5cf6'];
 
   if (loading) return <div className="p-12 text-center text-white font-black italic uppercase animate-pulse">Analizando dados...</div>;
@@ -166,6 +159,19 @@ export const EarningsScreen = ({ onBack }: EarningsScreenProps) => {
             </button>
             <h2 className="text-3xl font-black italic uppercase tracking-tighter">Business Analytics</h2>
         </header>
+
+        {/* Time Range Selector */}
+        <div className="flex bg-neutral-900/50 p-1 rounded-2xl border border-white/5 mb-8 w-fit mx-auto">
+            {(["day", "week", "month"] as const).map((r) => (
+                <button 
+                    key={r}
+                    onClick={() => setTimeRange(r)}
+                    className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${timeRange === r ? 'bg-amber-500 text-black shadow-lg' : 'text-neutral-500 hover:text-white'}`}
+                >
+                    {r === 'day' ? 'Hoje' : r === 'week' ? 'Semana' : 'Mês'}
+                </button>
+            ))}
+        </div>
 
         {/* Highlight Cards */}
         <div className="grid grid-cols-2 gap-4 mb-8">
@@ -188,43 +194,6 @@ export const EarningsScreen = ({ onBack }: EarningsScreenProps) => {
             </div>
         </div>
 
-        {/* AI Insights Card */}
-        <div className="bg-gradient-to-br from-indigo-900/40 to-slate-900/40 border border-indigo-500/20 rounded-[2.5rem] p-8 mb-8 relative overflow-hidden backdrop-blur-xl">
-            <div className="absolute top-0 right-0 p-6 opacity-10">
-                <BrainCircuit className="w-24 h-24 text-indigo-400" />
-            </div>
-            <div className="relative z-10">
-                <div className="flex items-center gap-3 mb-6">
-                    <div className="p-3 bg-indigo-500/20 rounded-2xl">
-                        <Sparkles className="w-5 h-5 text-indigo-400" />
-                    </div>
-                    <div>
-                        <h3 className="text-xs font-black uppercase tracking-widest text-indigo-300">Insights por IA</h3>
-                        <p className="text-[10px] text-indigo-400/60 font-bold uppercase mt-0.5">Gemini Intelligence</p>
-                    </div>
-                </div>
-
-                {loadingInsights ? (
-                    <div className="space-y-3">
-                        <div className="h-4 w-3/4 bg-indigo-500/10 rounded-full animate-pulse" />
-                        <div className="h-4 w-1/2 bg-indigo-500/10 rounded-full animate-pulse" />
-                        <div className="h-4 w-5/6 bg-indigo-500/10 rounded-full animate-pulse" />
-                    </div>
-                ) : aiInsights ? (
-                    <div className="text-neutral-300 text-sm leading-relaxed space-y-4 font-medium italic">
-                        {aiInsights.split('\n').filter(line => line.trim()).map((line, i) => (
-                            <p key={i} className="flex gap-3">
-                                <span className="text-indigo-400 mt-1">•</span>
-                                {line.replace(/^[-*•]\s*/, '')}
-                            </p>
-                        ))}
-                    </div>
-                ) : (
-                    <p className="text-neutral-500 text-xs italic">Aguardando mais dados para gerar insights precisos...</p>
-                )}
-            </div>
-        </div>
-
         {/* Charts Container */}
         <div className="space-y-6">
           {/* Revenue Chart */}
@@ -233,18 +202,6 @@ export const EarningsScreen = ({ onBack }: EarningsScreenProps) => {
                 <div>
                    <h3 className="text-xs font-black uppercase tracking-widest text-neutral-400">Rendimento</h3>
                    <p className="text-[10px] text-neutral-600 font-bold uppercase mt-1">Visão Geral de Fluxo</p>
-                </div>
-                
-                <div className="flex bg-black/40 p-1 rounded-2xl border border-white/5">
-                    {(["day", "week", "month"] as const).map((r) => (
-                        <button 
-                            key={r}
-                            onClick={() => setTimeRange(r)}
-                            className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${timeRange === r ? 'bg-amber-500 text-black shadow-lg' : 'text-neutral-500 hover:text-white'}`}
-                        >
-                            {r === 'day' ? 'Dia' : r === 'week' ? 'Semana' : 'Mês'}
-                        </button>
-                    ))}
                 </div>
             </div>
 

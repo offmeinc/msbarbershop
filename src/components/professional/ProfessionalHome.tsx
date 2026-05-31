@@ -37,6 +37,7 @@ interface ProfessionalHomeProps {
 export function ProfessionalHome({ user, role, setCurrentScreen }: ProfessionalHomeProps) {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [schedulingClient, setSchedulingClient] = useState<any | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -63,7 +64,11 @@ export function ProfessionalHome({ user, role, setCurrentScreen }: ProfessionalH
 
     const completedToday = todayApps.filter(a => a.status === 'completed');
     
-    const earnings = completedToday.reduce((acc, a) => acc + (a.totalPrice || 0), 0);
+    const earnings = completedToday.reduce((acc, a) => {
+      const p = a.totalPrice || a.price || 0;
+      const parsed = typeof p === 'string' ? parseFloat(p.replace(/[^0-9.-]+/g, "")) : p;
+      return acc + (Number(parsed) || 0);
+    }, 0);
     const uniqueClients = new Set(todayApps.map(a => a.clientId)).size;
     
     const totalConsidered = completedToday.length + todayApps.filter(a => a.status === 'cancelled').length;
@@ -100,7 +105,7 @@ export function ProfessionalHome({ user, role, setCurrentScreen }: ProfessionalH
   };
 
   return (
-    <div className="max-w-xl mx-auto py-8 px-6 space-y-8 animate-in fade-in duration-500">
+    <div className="max-w-xl md:max-w-4xl lg:max-w-5xl mx-auto py-8 px-6 space-y-8 animate-in fade-in duration-500">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-black text-white">{getTimeGreeting()}, {user?.displayName?.split(' ')[0] || "Profissional"}! 👋</h1>
@@ -115,7 +120,7 @@ export function ProfessionalHome({ user, role, setCurrentScreen }: ProfessionalH
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <button 
           onClick={() => setCurrentScreen("earnings")}
           className="bg-neutral-900 p-5 rounded-[2rem] border border-neutral-800 space-y-3 text-left relative overflow-hidden group hover:border-amber-500/30 active:scale-95 transition-all"
@@ -158,6 +163,36 @@ export function ProfessionalHome({ user, role, setCurrentScreen }: ProfessionalH
           </div>
           <div className="space-y-0.5">
              <h3 className="text-3xl font-black text-white tracking-tighter">Fotos</h3>
+          </div>
+        </button>
+
+        <button 
+          onClick={() => setCurrentScreen("clients")}
+          className="bg-neutral-900 p-5 rounded-[2rem] border border-white/5 space-y-3 text-left relative overflow-hidden group hover:border-green-500/30 active:scale-95 transition-all"
+        >
+          <div className="flex justify-between items-start">
+            <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">Clientes</p>
+            <div className="w-8 h-8 rounded-full bg-green-500/10 flex items-center justify-center text-green-500 group-hover:bg-green-500/20 transition-colors">
+              <User className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="space-y-0.5">
+             <h3 className="text-3xl font-black text-white tracking-tighter">Listar</h3>
+          </div>
+        </button>
+
+        <button 
+          onClick={() => setCurrentScreen("promotions")}
+          className="bg-neutral-900 p-5 rounded-[2rem] border border-white/5 space-y-3 text-left relative overflow-hidden group hover:border-purple-500/30 active:scale-95 transition-all"
+        >
+          <div className="flex justify-between items-start">
+            <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">Promoções</p>
+            <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center text-purple-500 group-hover:bg-purple-500/20 transition-colors">
+              <Sparkles className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="space-y-0.5">
+             <h3 className="text-3xl font-black text-white tracking-tighter">Gerir</h3>
           </div>
         </button>
 
@@ -205,7 +240,7 @@ export function ProfessionalHome({ user, role, setCurrentScreen }: ProfessionalH
           </button>
         </div>
 
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {stats.upcoming.length === 0 ? (
             <div className="p-8 text-center text-neutral-600 font-bold uppercase text-xs border border-dashed border-white/5 rounded-3xl">
               Nenhum agendamento futuro

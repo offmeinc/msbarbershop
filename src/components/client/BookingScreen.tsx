@@ -36,9 +36,11 @@ import {
   Search,
   User,
   Bell,
+  Calendar as CalendarIcon,
 } from "lucide-react";
 import { setupPushSubscription, getNotificationPermissionState, queryNotificationSupport } from "../../lib/pushRegister";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
+import { signInWithGoogleCalendar, addEventToCalendar, getCalendarAccessToken } from "../../lib/calendar";
 
 function RecurrenceUI({
   userRole,
@@ -79,8 +81,38 @@ function RecurrenceUI({
   );
 }
 
-function ConfirmationModal({ service, date, onConfirm, userId, userRole }: any) {
+function ConfirmationModal({ service, date, onConfirm, userId, userRole, duration }: any) {
   const [pushState, setPushState] = useState(getNotificationPermissionState());
+  const [isAddingToCalendar, setIsAddingToCalendar] = useState(false);
+  const [addedToCalendar, setAddedToCalendar] = useState(false);
+
+  const handleAddToCalendar = async () => {
+    setIsAddingToCalendar(true);
+    try {
+      let token = await getCalendarAccessToken();
+      if (!token) {
+        const result = await signInWithGoogleCalendar();
+        token = result?.accessToken || null;
+      }
+
+      if (token) {
+        const start = new Date(date);
+        const end = new Date(start.getTime() + (duration || 30) * 60000);
+        await addEventToCalendar(
+          `Corte: ${service?.name}`,
+          `Agendamento de ${service?.name} na barbearia.`,
+          start,
+          end
+        );
+        setAddedToCalendar(true);
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Não foi possível adicionar ao calendário.');
+    } finally {
+      setIsAddingToCalendar(false);
+    }
+  };
 
   return (
     <motion.div
@@ -159,6 +191,34 @@ function ConfirmationModal({ service, date, onConfirm, userId, userRole }: any) 
           <p className="text-[9px] text-neutral-600 font-bold uppercase tracking-widest leading-relaxed">
             Enviamos um resumo no seu WhatsApp e e-mail.
           </p>
+
+          <button
+            onClick={handleAddToCalendar}
+            disabled={isAddingToCalendar || addedToCalendar}
+            className={`w-full py-4 rounded-[1.8rem] text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 border transition-all ${
+              addedToCalendar 
+                ? "bg-green-500/10 border-green-500/30 text-green-500" 
+                : "bg-neutral-900 border-white/5 text-neutral-400 hover:text-white hover:border-white/10"
+            }`}
+          >
+            {isAddingToCalendar ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
+                ADICIONANDO...
+              </>
+            ) : addedToCalendar ? (
+              <>
+                <CheckCircle2 className="w-4 h-4" />
+                ADICIONADO AO SEU GOOGLE AGENDA
+              </>
+            ) : (
+              <>
+                <CalendarIcon className="w-4 h-4" />
+                ADICIONAR AO GOOGLE AGENDA
+              </>
+            )}
+          </button>
+
           <button
             onClick={onConfirm}
             className="w-full bg-white text-black py-5 rounded-[1.8rem] font-black uppercase italic tracking-widest hover:scale-105 transition-transform"
@@ -177,6 +237,9 @@ interface BookingScreenProps {
   services: any[];
   onBack: () => void;
   editAppointment?: any;
+  initialClient?: any;
+  initialServiceId?: string;
+  initialBarberId?: string;
 }
 
 export function BookingScreen({
@@ -185,13 +248,18 @@ export function BookingScreen({
   services,
   onBack,
   editAppointment,
+  initialClient,
+  initialServiceId,
+  initialBarberId,
 }: BookingScreenProps) {
-  const [step, setStep] = useState(editAppointment ? 3 : 1);
+  const [step, setStep] = useState(
+    editAppointment ? 3 : initialServiceId && initialBarberId ? 3 : initialServiceId ? 2 : 1,
+  );
   const [selectedService, setSelectedService] = useState<string | null>(
-    editAppointment?.serviceId || null,
+    editAppointment?.serviceId || initialServiceId || null,
   );
   const [selectedBarber, setSelectedBarber] = useState<string | null>(
-    editAppointment?.barberId || null,
+    editAppointment?.barberId || initialBarberId || null,
   );
   const [barbers, setBarbers] = useState<any[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(
@@ -215,12 +283,12 @@ export function BookingScreen({
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
-  const [guestName, setGuestName] = useState(editAppointment?.clientName || "");
+  const [guestName, setGuestName] = useState(editAppointment?.clientName || initialClient?.name || "");
   const [guestEmail, setGuestEmail] = useState(
-    editAppointment?.clientEmail || "",
+    editAppointment?.clientEmail || initialClient?.email || "",
   );
   const [guestPhone, setGuestPhone] = useState(
-    editAppointment?.clientPhone || "",
+    editAppointment?.clientPhone || initialClient?.whatsapp || "",
   );
   const [couponCode, setCouponCode] = useState(
     editAppointment?.couponCode || "",
@@ -233,7 +301,7 @@ export function BookingScreen({
   const [clients, setClients] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
-  const [selectedClient, setSelectedClient] = useState<any | null>(null);
+  const [selectedClient, setSelectedClient] = useState<any | null>(initialClient || null);
 
   useEffect(() => {
     const isStaff = role === "manager" || role === "barber";
@@ -640,6 +708,7 @@ export function BookingScreen({
               d.setHours(h, m, 0, 0);
               return d.toISOString();
             })()}
+            duration={customDuration || services.find((s) => s.id === selectedService)?.duration || 30}
             userId={user ? user.uid || user.id || "guest" : (guestPhone || "").replace(/\D/g, "")}
             userRole={role || "client"}
             onConfirm={onBack}
@@ -651,7 +720,7 @@ export function BookingScreen({
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="max-w-xl mx-auto py-8 px-6"
+          className="max-w-xl md:max-w-4xl lg:max-w-5xl mx-auto py-8 px-6"
         >
           <div className="flex items-center justify-between mb-10">
             <button
@@ -685,7 +754,7 @@ export function BookingScreen({
                 exit={{ x: -20, opacity: 0 }}
                 className="space-y-4"
               >
-                <div className="grid gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {services
                     .filter((s) => s.active !== false)
                     .map((s) => (
@@ -729,7 +798,7 @@ export function BookingScreen({
                 exit={{ x: -20, opacity: 0 }}
                 className="space-y-6"
               >
-                <div className="grid gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {barbers.length === 0 ? (
                     <div className="py-20 text-center space-y-4 bg-neutral-900/50 rounded-[2.5rem] border border-dashed border-white/10">
                       <div className="w-16 h-16 bg-neutral-800 rounded-2xl flex items-center justify-center mx-auto text-neutral-600">
@@ -830,33 +899,53 @@ export function BookingScreen({
                     })}
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-3">
-                  {timeSlots.map(({ time, available }) => (
-                    <button
-                      key={time}
-                      disabled={!available}
-                      onClick={() => {
-                        setSelectedTime(time);
-                        setStep(4);
-                      }}
-                      className={`py-4 rounded-2xl text-sm font-black transition-all border ${selectedTime === time ? "bg-amber-500 border-amber-500 text-black" : available ? "bg-neutral-900 border-white/5 text-white" : "bg-neutral-900/30 border-transparent text-neutral-700 opacity-50"}`}
-                    >
-                      {time}
-                    </button>
-                  ))}
-                </div>
+                {selectedDate.getDay() === 0 ? (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="p-8 bg-amber-500/5 border border-amber-500/10 rounded-[2rem] text-center space-y-4"
+                  >
+                    <div className="w-14 h-14 bg-amber-500/10 rounded-2xl flex items-center justify-center text-amber-500 mx-auto border border-amber-500/20">
+                      <XCircle className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black uppercase text-amber-500 tracking-wider">Barbearia Fechada</h4>
+                      <p className="text-xs text-neutral-400 mt-2 font-bold leading-relaxed px-4">
+                        Não temos funcionamento aos domingos. Que tal escolher outro dia maravilhoso para cuidar do seu estilo?
+                      </p>
+                    </div>
+                  </motion.div>
+                ) : (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
+                    {timeSlots.map(({ time, available }) => (
+                      <button
+                        key={time}
+                        disabled={!available}
+                        onClick={() => {
+                          setSelectedTime(time);
+                          setStep(4);
+                        }}
+                        className={`py-4 rounded-2xl text-sm font-black transition-all border ${selectedTime === time ? "bg-amber-500 border-amber-500 text-black" : available ? "bg-neutral-900 border-white/5 text-white" : "bg-neutral-900/30 border-transparent text-neutral-700 opacity-50"}`}
+                      >
+                        {time}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <RecurrenceUI
                   userRole={user?.role || "client"}
                   recurrence={recurrence}
                   setRecurrence={setRecurrence}
                 />
-                <button
-                  disabled={!selectedTime}
-                  onClick={() => setStep(4)}
-                  className="w-full bg-white text-black py-5 rounded-2xl font-black uppercase italic tracking-widest flex items-center justify-center gap-2"
-                >
-                  Próximo Passo <ChevronRight className="w-4 h-4" />
-                </button>
+                {selectedDate.getDay() !== 0 && (
+                  <button
+                    disabled={!selectedTime}
+                    onClick={() => setStep(4)}
+                    className="w-full bg-white text-black py-5 rounded-2xl font-black uppercase italic tracking-widest flex items-center justify-center gap-2"
+                  >
+                    Próximo Passo <ChevronRight className="w-4 h-4" />
+                  </button>
+                )}
               </motion.div>
             )}
 

@@ -6,6 +6,7 @@ import multer from "multer";
 import axios from "axios";
 import FormData from "form-data";
 import { initVapid, startAppointmentsListener, sendPushNotification, sendNotificationToCollaborators } from "./src/server/pushNotificationService";
+import { startAppointmentAutoUpdater } from "./src/server/appointmentAutoUpdater";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -38,6 +39,7 @@ async function startServer() {
   // Initialize Push notifications (generation and registration of VAPID)
   const vapid = await initVapid();
   startAppointmentsListener();
+  startAppointmentAutoUpdater();
   
   const upload = multer({ storage: multer.memoryStorage() });
 

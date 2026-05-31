@@ -11,32 +11,33 @@ import {
   RefreshCw, 
   Tag, 
   Smartphone, 
-  MessageSquare, 
-  MessageCircle, 
-  HelpCircle, 
   Moon, 
   LogOut, 
-  ChevronLeft 
+  ChevronLeft,
+  Star,
+  Package
 } from "lucide-react";
 import { setupPushSubscription, getNotificationPermissionState, queryNotificationSupport, getBackendUrl } from "../../lib/pushRegister";
 import { BlockScreen } from "../manager/BlockScreen";
 import { HelpScreen, ShareScreen, RecurrenceScreen } from "../manager/OtherScreens";
 import { ReconScreen } from "../manager/UtilityScreens";
 import { PromotionsManager } from "../manager/PromotionsManager";
+import { InventoryScreen } from "../manager/InventoryScreen";
 import { ClientDashboardScreen } from "../client/ClientDashboardScreen";
 import { ProfileEditScreen } from "./ProfileEditScreen";
 import { NotificationsScreen } from "../NotificationsScreen";
 import { EarningsScreen } from "../manager/EarningsScreen";
 import { StaffChatScreen, ChatScreen } from "../ChatScreens";
+import { GOOGLE_REVIEW_URL } from "../../constants";
 
 // Dummy components
 const DarkScreen = ({ onBack }: { onBack: () => void }) => <div className="p-4">Dark Screen <button onClick={onBack}>Voltar</button></div>;
 const MyWeekScreen = ({ user, onBack }: { user: any, onBack: () => void }) => <div className="p-4">My Week Screen <button onClick={onBack}>Voltar</button></div>;
 
-export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotifications, appointments, onClearNotifications }: { user: any, role: string, onLogout: () => void, onBack: () => void, key?: any, staffNotifications: any[], appointments: any[], onClearNotifications: () => void }) {
+export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotifications, appointments, onClearNotifications, onToggleTheme, isDarkMode }: { user: any, role: string, onLogout: () => void, onBack: () => void, key?: any, staffNotifications: any[], appointments: any[], onClearNotifications: () => void, onToggleTheme: () => void, isDarkMode: boolean }) {
   const [activeSubScreen, setActiveSubScreen] = useState<
-    'main' | 'profile' | 'dashboard' | 'notif' | 'block' | 'help' | 'share' | 'earnings' | 'week' | 'recon' | 'recurrence' | 'support' | 'staff-chat' | 'dark' | 'promotions'
-  >('main');
+    'main' | 'profile' | 'dashboard' | 'notif' | 'block' | 'share' | 'earnings' | 'week' | 'recon' | 'recurrence' | 'promotions' | 'inventory'
+>('main');
 
   const unreadCount = staffNotifications.filter(n => !n.read).length;
 
@@ -45,7 +46,7 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
       title: "Perfil e Conta",
       items: [
         { id: 'profile', label: 'Meu Perfil', icon: <User className="w-5 h-5" />, onClick: () => setActiveSubScreen('profile') },
-        { id: 'dashboard', label: 'Painel Cliente', icon: <CreditCard className="w-5 h-5" />, onClick: () => setActiveSubScreen('dashboard') },
+        ...(role === 'client' ? [] : [{ id: 'dashboard', label: 'Painel Cliente', icon: <CreditCard className="w-5 h-5" />, onClick: () => setActiveSubScreen('dashboard') }]),
         { 
           id: 'notif', 
           label: 'Notificações', 
@@ -56,17 +57,20 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
         ...(role === 'barber' || role === 'manager' ? [{ id: 'earnings', label: 'Meus Ganhos', icon: <Wallet className="w-5 h-5" />, onClick: () => setActiveSubScreen('earnings') }] : []),
       ]
     },
-    {
+    ...(role !== 'client' ? [{
       title: "Agenda e Gestão",
       items: [
         { id: 'week', label: 'Minha Semana', icon: <Calendar className="w-5 h-5" />, onClick: () => setActiveSubScreen('week') },
         { id: 'block', label: 'Bloqueios', icon: <Lock className="w-5 h-5" />, onClick: () => setActiveSubScreen('block') },
         { id: 'recon', label: 'Reconciliação', icon: <CheckCircle2 className="w-5 h-5" />, onClick: () => setActiveSubScreen('recon') },
         { id: 'recurrence', label: 'Recorrências', icon: <RefreshCw className="w-5 h-5" />, onClick: () => setActiveSubScreen('recurrence') },
-        ...(role === 'manager' ? [{ id: 'promotions', label: 'Promoções', icon: <Tag className="w-5 h-5" />, onClick: () => setActiveSubScreen('promotions') }] : []),
+        ...(role === 'manager' ? [
+          { id: 'promotions', label: 'Promoções', icon: <Tag className="w-5 h-5" />, onClick: () => setActiveSubScreen('promotions') },
+          { id: 'inventory', label: 'Estoque', icon: <Package className="w-5 h-5" />, onClick: () => setActiveSubScreen('inventory') }
+        ] : []),
         { id: 'share', label: 'Divulgar', icon: <Smartphone className="w-5 h-5" />, onClick: () => setActiveSubScreen('share') },
       ]
-    },
+    }] : []),
     {
       title: "Aplicativo",
       items: [
@@ -82,99 +86,36 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
             }
           }
         }},
-        { 
-          id: 'push', 
-          label: 'Ativar Notificações', 
-          icon: <Bell className="w-5 h-5" />, 
-          onClick: async () => {
-            if (!queryNotificationSupport()) {
-              alert("As notificações push não são suportadas neste navegador.");
-              return;
-            }
-            if (getNotificationPermissionState() === 'granted') {
-              alert("As notificações já estão ativadas para este dispositivo!");
-              return;
-            }
-            const cleanUid = user?.uid || user?.id || "anonymous";
-            const success = await setupPushSubscription(cleanUid, role || "client");
-            if (success) {
-              alert("Sucesso! Notificações de compromissos ativadas neste aparelho.");
-            } else {
-              alert("Não foi possível ativar as notificações. Dica: Permita notificações nas configurações do navegador.");
-            }
-          }
-        },
-        {
-          id: 'push-test',
-          label: 'Testar 2º Plano (5s)',
-          icon: <Bell className="w-5 h-5 animate-bounce" />,
-          onClick: async () => {
-            if (getNotificationPermissionState() !== 'granted') {
-              alert("Por favor, ative as notificações primeiro antes de fazer o teste.");
-              return;
-            }
-            const cleanUid = user?.uid || user?.id || "anonymous";
-            try {
-              const res = await fetch(getBackendUrl("/api/push-test"), {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  userId: cleanUid,
-                  title: "Teste em 2º Plano! 🔔",
-                  body: "Excelente! As notificações push de segundo plano estão funcionando perfeitamente.",
-                  delayMs: 5000
-                })
-              });
-              
-              if (!res.ok) {
-                throw new Error(`Servidor respondeu com status ${res.status}`);
-              }
-              
-              const data = await res.json();
-              if (data.success) {
-                alert("Teste agendado! Minimize o aplicativo ou saia da aba AGORA para receber a notificação em 5 segundos.");
-              } else {
-                throw new Error(data.message || "Sucesso falso no retorno da API");
-              }
-            } catch (err: any) {
-              alert("Não foi possível agendar o teste de segundo plano. Detalhes: " + (err?.message || err));
-            }
-          }
-        },
       ]
     },
     {
-      title: "Suporte e Outros",
+      title: "Outros",
       items: [
-        ...(role === 'barber' || role === 'manager' ? [{ id: 'staff-chat', label: 'Chat Equipe', icon: <MessageSquare className="w-5 h-5" />, onClick: () => setActiveSubScreen('staff-chat') }] : []),
-        { id: 'support', label: 'Suporte', icon: <MessageCircle className="w-5 h-5" />, onClick: () => setActiveSubScreen('support') },
-        { id: 'help', label: 'Ajuda', icon: <HelpCircle className="w-5 h-5" />, onClick: () => setActiveSubScreen('help') },
-        { id: 'dark', label: 'Tema Escuro', icon: <Moon className="w-5 h-5" />, onClick: () => setActiveSubScreen('dark') },
+        { id: 'theme', label: isDarkMode ? 'Tema Light' : 'Tema Dark', icon: <Moon className="w-5 h-5" />, onClick: onToggleTheme },
+        { id: 'google-review', label: 'Avaliar no Google', icon: <Star className="w-5 h-5 cursor-pointer text-amber-500 fill-amber-500/10" />, onClick: () => window.open(GOOGLE_REVIEW_URL, "_blank") },
       ]
     }
   ];
 
   if (activeSubScreen === 'block') return <BlockScreen onBack={() => setActiveSubScreen('main')} />;
-  if (activeSubScreen === 'help') return <HelpScreen onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'share') return <ShareScreen onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'recon') return <ReconScreen onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'recurrence') return <RecurrenceScreen onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'promotions') return <PromotionsManager onBack={() => setActiveSubScreen('main')} />;
+  if (activeSubScreen === 'inventory') return <InventoryScreen onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'dashboard') return <ClientDashboardScreen user={user} onBack={() => setActiveSubScreen('main')} />;
-  if (activeSubScreen === 'dark') return <DarkScreen onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'profile') return <ProfileEditScreen user={user} onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'notif') return <NotificationsScreen notifications={staffNotifications} appointments={appointments} onClear={onClearNotifications} onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'earnings') return <EarningsScreen onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'week') return <MyWeekScreen user={user} onBack={() => setActiveSubScreen('main')} />;
-  if (activeSubScreen === 'staff-chat') return <StaffChatScreen user={user} onBack={() => setActiveSubScreen('main')} />;
-  if (activeSubScreen === 'support') return <ChatScreen user={user} onBack={() => setActiveSubScreen('main')} />;
+
 
   return (
     <motion.div 
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 20 }}
-      className="max-w-md mx-auto py-8 px-6 min-h-screen pb-32"
+      className="max-w-md md:max-w-4xl lg:max-w-5xl mx-auto py-8 px-6 min-h-screen pb-32"
     >
       <div className="flex items-center justify-between mb-8">
         <h2 className="text-2xl font-black text-white uppercase tracking-tighter italic">Mais Opções</h2>
@@ -187,7 +128,7 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
         {sections.map((section, idx) => (
           <div key={idx} className="space-y-4">
             <h3 className="text-[10px] font-black text-neutral-500 uppercase tracking-widest ml-1">{section.title}</h3>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               {section.items.map((item) => (
                 <button 
                   key={item.id} 

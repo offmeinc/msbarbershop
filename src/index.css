@@ -26,10 +26,15 @@
 }
 
 body {
-  background: radial-gradient(circle at center top, #1a1a1a, #000000);
-  background-attachment: fixed;
-  color: #FFFFFF;
+  @apply transition-colors duration-300;
+  background: radial-gradient(circle at center top, #f3f4f6, #e5e7eb);
+  color: #000000;
   margin: 0;
   font-family: var(--font-sans);
+}
+
+.dark body {
+  background: radial-gradient(circle at center top, #1a1a1a, #000000);
+  color: #FFFFFF;
 }
 

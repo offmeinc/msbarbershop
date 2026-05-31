@@ -34,12 +34,17 @@ import {
   LogOut,
   Share2,
   Gift,
-  Copy
+  Copy,
+  Menu,
+  Sparkles
 } from "lucide-react";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
+import { MoreOptionsScreen } from "../common/MoreOptionsScreen";
 import { BookingScreen } from "./BookingScreen";
 import { ProfileEditScreen } from "../common/ProfileEditScreen";
 import { MyCutsScreen } from "./MyCutsScreen";
+import { PreferencesSummary } from "./PreferencesSummary";
+import { GOOGLE_REVIEW_URL } from "../../constants";
 
 interface ClientDashboardScreenProps {
   user: any;
@@ -48,11 +53,14 @@ interface ClientDashboardScreenProps {
 
 export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenProps) {
   const [appointments, setAppointments] = useState<any[]>([]);
-  const [currentView, setCurrentView] = useState<"home" | "profile" | "booking" | "my-cuts">("home");
+  const [currentView, setCurrentView] = useState<"home" | "profile" | "booking" | "my-cuts" | "more-options">("home");
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
+  const [initialBookingServiceId, setInitialBookingServiceId] = useState<string | undefined>();
+  const [initialBookingBarberId, setInitialBookingBarberId] = useState<string | undefined>();
   const [loading, setLoading] = useState(true);
   const [services, setServices] = useState<any[]>([]);
   const [showReviewModal, setShowReviewModal] = useState<any>(null);
+  const [reviewSubmitted, setReviewSubmitted] = useState(false);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const [referralCode, setReferralCode] = useState(user?.referralCode || "");
@@ -93,7 +101,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
     if (!appointments) return { totalSpent: 0, completedCount: 0, upcoming: null };
     
     const totalSpent = appointments
-      .filter(app => app.status === 'completed')
+      .filter(app => app.status === 'completed' && app.status !== 'cancelled')
       .reduce((sum, app) => sum + (Number(app.totalPrice) || 0), 0);
     
     const completedCount = appointments.filter(app => app.status === 'completed').length;
@@ -168,10 +176,14 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
         appointmentId: showReviewModal.id
       });
 
-      setShowReviewModal(null);
-      setComment("");
-      setRating(5);
-      alert("Obrigado pela sua avaliação!");
+      if (rating >= 4) {
+        setReviewSubmitted(true);
+      } else {
+        setShowReviewModal(null);
+        setComment("");
+        setRating(5);
+        alert("Obrigado pela sua avaliação! Vamos trabalhar para melhorar cada vez mais.");
+      }
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, "appointments");
     }
@@ -201,18 +213,35 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                    <div className="w-12 h-12 rounded-2xl bg-amber-500 overflow-hidden border-2 border-amber-500 shadow-xl">
                       <img src={user?.photoURL || user?.photoUrl || `https://ui-avatars.com/api/?name=${user?.displayName || user?.name || 'Cliente'}&background=f59e0b&color=000`} alt="Avatar" className="w-full h-full object-cover" />
                    </div>
-                   <div>
-                      <p className="text-[10px] text-neutral-500 font-black uppercase tracking-[0.2em] leading-none mb-1">Bem-vind{user?.gender === 'female' ? 'a' : 'o'}</p>
-                      <h2 className="text-xl font-black italic uppercase tracking-tighter truncate w-40">{(user?.displayName || 'Cliente').split(' ')[0]}</h2>
+                   <div className="flex items-center gap-2">
+                      <div>
+                        <p className="text-[10px] text-neutral-500 font-black uppercase tracking-[0.2em] leading-none mb-1">Bem-vind{user?.gender === 'female' ? 'a' : 'o'}</p>
+                        <h2 className="text-xl font-black italic uppercase tracking-tighter truncate w-40">{(user?.displayName || 'Cliente').split(' ')[0]}</h2>
+                      </div>
+                      <button onClick={() => setCurrentView('more-options')} className="p-3 bg-neutral-900 rounded-2xl text-neutral-500 hover:text-white border border-white/5 transition-all">
+                        <Menu className="w-5 h-5" />
+                      </button>
                    </div>
                 </div>
-                <button onClick={onBack} className="p-3 bg-neutral-900 rounded-2xl text-neutral-500 hover:text-white border border-white/5 transition-all">
-                  <X className="w-5 h-5" />
-                </button>
+                 <div className="flex items-center gap-2">
+                  <button onClick={onBack} className="p-3 bg-neutral-900 rounded-2xl text-neutral-500 hover:text-white border border-white/5 transition-all">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
             </div>
 
             <div className="px-6 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="w-full">
+                <button
+                  onClick={() => setCurrentView('booking')}
+                  className="w-full bg-amber-500 text-black py-5 rounded-[2rem] font-black italic uppercase tracking-widest text-lg shadow-[0_0_40px_rgba(245,158,11,0.3)] hover:scale-[1.02] transition-all flex items-center justify-center gap-3"
+                >
+                  <CalendarCheck className="w-6 h-6" />
+                  AGENDAR HORÁRIO
+                </button>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                  <div className="col-span-2 bg-[#0A0A0A] p-6 rounded-[2.5rem] border border-white/5 relative overflow-hidden group">
                     <div className="absolute -right-2 -bottom-2 text-amber-500/10 group-hover:scale-110 transition-transform duration-700">
@@ -282,6 +311,8 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                   </div>
               </div>
 
+              <PreferencesSummary appointments={appointments} />
+
               {stats.upcoming && (
                 <div className="bg-amber-500 p-6 rounded-[2.5rem] shadow-2xl shadow-amber-500/20 text-black">
                    <div className="flex items-center justify-between mb-4">
@@ -347,8 +378,21 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
         )}
 
         {currentView === 'profile' && <ProfileEditScreen user={user} onBack={() => setCurrentView('home')} isClient={true} />}
-        {currentView === 'booking' && <BookingScreen user={user} services={services} onBack={() => { setCurrentView('home'); setSelectedAppointment(null); }} editAppointment={selectedAppointment} />}
-        {currentView === 'my-cuts' && <MyCutsScreen appointments={appointments} onBack={() => setCurrentView('home')} />}
+        {currentView === 'booking' && <BookingScreen user={user} services={services} onBack={() => { setCurrentView('home'); setSelectedAppointment(null); setInitialBookingServiceId(undefined); setInitialBookingBarberId(undefined); }} editAppointment={selectedAppointment} initialServiceId={initialBookingServiceId} initialBarberId={initialBookingBarberId} />}
+        {currentView === 'my-cuts' && <MyCutsScreen user={user} appointments={appointments} onBack={() => setCurrentView('home')} onBookAgain={(serviceId, barberId) => { setInitialBookingServiceId(serviceId); setInitialBookingBarberId(barberId); setCurrentView('booking'); }} />}
+        {currentView === 'more-options' && (
+            <MoreOptionsScreen
+                user={user}
+                role="client"
+                onLogout={onBack}
+                onBack={() => setCurrentView('home')}
+                staffNotifications={[]}
+                appointments={appointments}
+                onClearNotifications={() => {}}
+                onToggleTheme={() => {}}
+                isDarkMode={true}
+            />
+        )}
       </AnimatePresence>
 
       <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-[#0A0A0A]/95 border border-white/10 backdrop-blur-3xl rounded-[2.5rem] p-1.5 flex items-center gap-1.5 z-50 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
@@ -362,15 +406,69 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
       <AnimatePresence>
         {showReviewModal && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-xl flex items-center justify-center p-6">
-             <div className="bg-neutral-900 border border-white/10 p-8 rounded-[3rem] w-full max-w-sm text-center">
-                <Star className="w-10 h-10 text-amber-500 mx-auto mb-4" />
-                <h2 className="text-2xl font-black italic uppercase mb-2">Avaliar Serviço</h2>
-                <div className="flex justify-center gap-2 mb-8">
-                  {[1,2,3,4,5].map(s => <button key={s} onClick={() => setRating(s)}><Star className={`w-8 h-8 ${rating >= s ? 'text-amber-500 fill-amber-500' : 'text-neutral-700'}`} /></button>)}
-                </div>
-                <textarea value={comment} onChange={e => setComment(e.target.value)} placeholder="Comentário (opcional)" className="w-full bg-black border border-white/10 rounded-2xl p-4 text-xs mb-6" />
-                <button onClick={handleSubmitReview} className="w-full bg-amber-500 text-black py-4 rounded-2xl font-black uppercase italic">Enviar Avaliação</button>
-             </div>
+              <div className="bg-neutral-900 border border-white/10 p-8 rounded-[3rem] w-full max-w-sm text-center relative overflow-hidden">
+                <button 
+                  onClick={() => {
+                    setShowReviewModal(null);
+                    setReviewSubmitted(false);
+                    setComment("");
+                    setRating(5);
+                  }}
+                  className="absolute top-6 right-6 text-neutral-500 hover:text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+
+                {!reviewSubmitted ? (
+                  <>
+                    <Star className="w-10 h-10 text-amber-500 mx-auto mb-4" />
+                    <h2 className="text-2xl font-black italic uppercase mb-2">Avaliar Serviço</h2>
+                    <p className="text-[10px] text-neutral-500 uppercase tracking-widest font-black mb-6">{showReviewModal.serviceName}</p>
+                    <div className="flex justify-center gap-2 mb-8">
+                      {[1,2,3,4,5].map(s => (
+                        <button key={s} onClick={() => setRating(s)} className="p-1 transition-transform active:scale-125">
+                          <Star className={`w-8 h-8 ${rating >= s ? 'text-amber-500 fill-amber-500' : 'text-neutral-700'}`} />
+                        </button>
+                      ))}
+                    </div>
+                    <textarea value={comment} onChange={e => setComment(e.target.value)} placeholder="Comentário (opcional)" className="w-full bg-black border border-white/10 rounded-2xl p-4 text-xs mb-6 text-white outline-none focus:border-amber-500" />
+                    <button onClick={handleSubmitReview} className="w-full bg-amber-500 hover:bg-amber-600 text-black py-4 rounded-2xl font-black uppercase italic transition-colors">Enviar Avaliação</button>
+                  </>
+                ) : (
+                  <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="space-y-6 py-4 flex flex-col items-center">
+                    <div className="w-16 h-16 bg-amber-500/10 rounded-2xl flex items-center justify-center text-amber-500 border border-amber-500/20 mb-2">
+                      <CheckCircle2 className="w-8 h-8" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-black italic uppercase text-white mb-2">Obrigado!</h2>
+                      <p className="text-xs text-neutral-400 font-bold leading-relaxed px-2">
+                        Sua avaliação foi registrada internamente. Que tal nos ajudar ainda mais deixando sua avaliação no Google?
+                      </p>
+                    </div>
+                    <div className="w-full space-y-3 pt-2">
+                      <a 
+                        href={GOOGLE_REVIEW_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full bg-amber-500 hover:bg-amber-600 text-black py-4 rounded-2xl font-black uppercase italic tracking-widest flex items-center justify-center gap-2 transition-colors text-xs text-center block"
+                      >
+                        Avaliar no Google ⭐
+                      </a>
+                      <button 
+                        onClick={() => {
+                          setShowReviewModal(null);
+                          setReviewSubmitted(false);
+                          setComment("");
+                          setRating(5);
+                        }}
+                        className="w-full bg-neutral-800 hover:bg-neutral-700 text-neutral-300 py-4 rounded-2xl font-black uppercase italic tracking-widest transition-colors text-xs"
+                      >
+                        Agora Não
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
           </motion.div>
         )}
       </AnimatePresence>
