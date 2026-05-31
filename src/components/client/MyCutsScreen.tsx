@@ -4,7 +4,7 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
 import { updateDoc, doc, Timestamp, collection, query, where, onSnapshot } from "firebase/firestore";
-import { Scissors, Calendar, Clock, CheckCircle, XCircle, Star, ArrowLeft, Camera, Image as ImageIcon, X, Loader2 } from "lucide-react";
+import { Scissors, Calendar, Clock, CheckCircle, XCircle, Star, ArrowLeft, Camera, Image as ImageIcon, X, Loader2, User, CalendarCheck } from "lucide-react";
 import { GOOGLE_REVIEW_URL } from "../../constants";
 import { toast } from "../ui/Toast";
 
@@ -13,9 +13,11 @@ interface MyCutsScreenProps {
   appointments: any[];
   onBack: () => void;
   onBookAgain?: (serviceId: string, barberId: string) => void;
+  onReschedule?: (app: any) => void;
+  onCancel?: (app: any) => void;
 }
 
-export function MyCutsScreen({ user, appointments, onBack, onBookAgain }: MyCutsScreenProps) {
+export function MyCutsScreen({ user, appointments, onBack, onBookAgain, onReschedule, onCancel }: MyCutsScreenProps) {
   const [ratingLoading, setRatingLoading] = useState<string | null>(null);
   const [uploadingFor, setUploadingFor] = useState<string | null>(null);
   const [portfolioCuts, setPortfolioCuts] = useState<any[]>([]);
@@ -167,16 +169,84 @@ export function MyCutsScreen({ user, appointments, onBack, onBookAgain }: MyCuts
             <h3 className="text-xs font-black uppercase tracking-[0.2em] text-neutral-500 mb-5 px-2">Próximos Agendamentos</h3>
             <div className="space-y-4">
                 {futureAppointments.map(app => (
-                    <div key={app.id} className="p-6 bg-neutral-900 rounded-[2rem] border border-white/5 flex items-center justify-between">
-                        <div className="flex items-center gap-5">
-                            <div className="bg-amber-500/10 p-4 rounded-3xl text-amber-500"><Calendar className="w-6 h-6"/></div>
-                            <div>
-                                <h4 className="text-sm font-bold uppercase italic">{app.serviceName}</h4>
-                                <p className="text-[10px] text-neutral-500 uppercase font-black tracking-widest mt-1">
-                                    {format(app.date instanceof Timestamp ? app.date.toDate() : parseISO(app.date), "dd/MM/yyyy • HH:mm", { locale: ptBR })}
-                                </p>
+                    <div 
+                      key={app.id} 
+                      className={`p-6 bg-gradient-to-br rounded-[2.5rem] border relative overflow-hidden group shadow-2xl transition-all ${
+                        app.status === 'confirmed' 
+                          ? 'from-amber-500/10 to-neutral-900/40 border-amber-500/20 text-white' 
+                          : 'from-neutral-800 to-neutral-900 border-white/10 text-white'
+                      }`}
+                    >
+                      <div className="absolute -right-8 -top-8 text-amber-500/5 group-hover:scale-110 transition-transform duration-1000 rotate-12">
+                         <CalendarCheck size={160} />
+                      </div>
+
+                      <div className="relative z-10 space-y-4">
+                         <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                               <CalendarCheck className={`w-4 h-4 ${app.status === 'confirmed' ? 'text-amber-500' : 'text-neutral-500'}`} />
+                               <span className="text-[9px] font-black uppercase tracking-[0.2em] text-neutral-400">Status</span>
                             </div>
-                        </div>
+                            <div className="flex items-center gap-2">
+                               {app.status === 'confirmed' ? (
+                                 <span className="bg-amber-500 text-black text-[9px] font-black px-2.5 py-1 rounded-lg uppercase tracking-tight">CONFIRMADO</span>
+                               ) : (
+                                 <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[9px] font-black px-2.5 py-1 rounded-lg animate-pulse uppercase tracking-tight">Pendente</span>
+                               )}
+                            </div>
+                         </div>
+
+                         <div className="text-left">
+                            <h4 className="text-xl font-black uppercase italic tracking-tighter mb-1 leading-none">{app.serviceName}</h4>
+                            {app.barberName && (
+                              <p className="text-[10px] text-amber-500 font-bold uppercase tracking-widest mt-1.5">
+                                Barbeiro: {app.barberName}
+                              </p>
+                            )}
+                         </div>
+
+                         <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-neutral-400">
+                            <div className="flex items-center gap-1.5 bg-black/30 px-3 py-1.5 rounded-xl border border-white/5">
+                               <Calendar className="w-3.5 h-3.5 text-amber-500" />
+                               <span>
+                                 {format(app.date instanceof Timestamp ? app.date.toDate() : parseISO(app.date), "dd 'de' MMMM", { locale: ptBR })}
+                               </span>
+                            </div>
+                            <div className="flex items-center gap-1.5 bg-black/30 px-3 py-1.5 rounded-xl border border-white/5">
+                               <Clock className="w-3.5 h-3.5 text-amber-500" />
+                               <span>{app.time}</span>
+                            </div>
+                            {app.totalPrice && (
+                              <div className="flex items-center gap-1.5 bg-black/30 px-3 py-1.5 rounded-xl border border-white/5 font-mono text-white">
+                                 <span>R$ {Number(app.totalPrice).toFixed(2).replace('.', ',')}</span>
+                              </div>
+                            )}
+                         </div>
+
+                         {/* Action Buttons */}
+                         <div className="flex gap-2.5 pt-2">
+                            <button 
+                              onClick={() => {
+                                if (onReschedule) {
+                                  onReschedule(app);
+                                } else if (onBookAgain && app.serviceId && app.barberId) {
+                                  onBookAgain(app.serviceId, app.barberId);
+                                }
+                              }} 
+                              className="flex-1 bg-white hover:bg-amber-500 hover:text-black text-black py-3.5 rounded-2xl text-[10px] font-black uppercase italic tracking-widest transition-all duration-300"
+                            >
+                              REAGENDAR
+                            </button>
+                            {onCancel && (
+                              <button 
+                                onClick={() => onCancel(app)} 
+                                className="px-5 bg-red-600/10 text-red-500 hover:bg-red-600 hover:text-white border border-red-500/20 font-black uppercase italic py-3.5 rounded-2xl text-[10px] tracking-widest transition-all duration-300"
+                              >
+                                CANCELAR
+                              </button>
+                            )}
+                         </div>
+                      </div>
                     </div>
                 ))}
             </div>

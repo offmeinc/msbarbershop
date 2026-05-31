@@ -43,6 +43,7 @@ import {
   Clock
 } from "lucide-react";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
+import { QRCodeCanvas } from "qrcode.react";
 import { MoreOptionsScreen } from "../common/MoreOptionsScreen";
 import { BookingScreen } from "./BookingScreen";
 import { ProfileEditScreen } from "../common/ProfileEditScreen";
@@ -62,7 +63,7 @@ interface ClientDashboardScreenProps {
 export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenProps) {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
-  const [currentView, setCurrentView] = useState<"home" | "profile" | "booking" | "my-cuts" | "more-options" | "style-sheet" | "notifications" | "lookbook">("home");
+  const [currentView, setCurrentView] = useState<"home" | "profile" | "booking" | "my-cuts" | "more-options" | "style-sheet" | "notifications" | "lookbook" | "wallet">("home");
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
   const [initialBookingServiceId, setInitialBookingServiceId] = useState<string | undefined>();
   const [initialBookingBarberId, setInitialBookingBarberId] = useState<string | undefined>();
@@ -73,6 +74,92 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const [referralCode, setReferralCode] = useState(user?.referralCode || "");
+
+  // Recharge / Digital Wallet states
+  const [isRecharging, setIsRecharging] = useState(false);
+  const [rechargeStep, setRechargeStep] = useState<"select" | "pix">("select");
+  const [rechargeAmount, setRechargeAmount] = useState<number | null>(null);
+  const [rechargeBonus, setRechargeBonus] = useState<number>(0);
+  const [rechargeCutsReward, setRechargeCutsReward] = useState<number>(0);
+  const [copiedRechargePix, setCopiedRechargePix] = useState(false);
+  const [rechargeLoading, setRechargeLoading] = useState(false);
+  const [rechargeMpData, setRechargeMpData] = useState<any>(null);
+  const [rechargeError, setRechargeError] = useState<string | null>(null);
+  const [rechargeSuccess, setRechargeSuccess] = useState(false);
+
+  const handleGenerateRechargePix = async (amount: number, bonus: number, cutsReward: number) => {
+    setRechargeLoading(true);
+    setRechargeError(null);
+    setRechargeAmount(amount);
+    setRechargeBonus(bonus);
+    setRechargeCutsReward(cutsReward);
+    setRechargeStep("pix");
+    
+    try {
+      const res = await fetch("/api/payments/mercado-pago/create-payment", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          transaction_amount: amount,
+          description: `Recarga de Créditos Carteira - MS Barbearia`,
+          email: user?.email || "carteira@msbarbaria.com.br",
+          name: user?.name || "Cliente VIP",
+          appointmentId: "wallet-topup-" + Date.now()
+        })
+      });
+      if (!res.ok) {
+        throw new Error("Erro de processamento da API de Recarga");
+      }
+      const data = await res.json();
+      if (data.success) {
+        setRechargeMpData(data);
+      } else {
+        throw new Error(data.error || "Falha desconhecida");
+      }
+    } catch (err: any) {
+      console.error(err);
+      setRechargeError("Não foi possível conectar ao Mercado Pago. Mas sinta-se à vontade para simular a conclusão do pagamento abaixo!");
+    } finally {
+      setRechargeLoading(false);
+    }
+  };
+
+  const handleCompleteRechargeSimulation = async () => {
+    if (!rechargeAmount) return;
+    try {
+      const totalToAdd = rechargeAmount + rechargeBonus;
+      const currentBalance = Number(user?.walletBalance || 0);
+      const currentCuts = Number(user?.cutsBalance || 0);
+
+      const finalUserId = user?.uid || user?.id;
+      if (!finalUserId) {
+         alert("Usuário não autenticado ou inválido.");
+         return;
+      }
+
+      await updateDoc(doc(db, "users", finalUserId), {
+        walletBalance: currentBalance + totalToAdd,
+        cutsBalance: currentCuts + rechargeCutsReward,
+        updatedAt: serverTimestamp()
+      });
+
+      // Add notification
+      await addDoc(collection(db, "notifications"), {
+         clientEmail: user.email,
+         message: `Recarga Concluída! R$ ${totalToAdd.toFixed(2).replace('.', ',')} adicionados à sua Carteira Digital. Por estar em fase inicial, o valor foi simulado com sucesso!`,
+         timestamp: serverTimestamp(),
+         read: false
+      });
+
+      setRechargeSuccess(true);
+      toast.success("Recarga efetuada com sucesso!");
+    } catch (err: any) {
+      console.error("Error saving topup:", err);
+      alert("Houve um problema ao salvar seus créditos. Tente novamente.");
+    }
+  };
 
   useEffect(() => {
     if (user?.uid && !user.referralCode && !referralCode) {
@@ -322,7 +409,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
             </div>
 
             <div className="px-6 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <div className="w-full">
+              <div className="w-full space-y-4">
                 <button
                   onClick={() => setCurrentView('booking')}
                   className="w-full bg-amber-500 text-black py-5 rounded-[2rem] font-black italic uppercase tracking-widest text-lg shadow-[0_0_40px_rgba(245,158,11,0.3)] hover:scale-[1.02] transition-all flex items-center justify-center gap-3"
@@ -330,6 +417,58 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                   <CalendarCheck className="w-6 h-6" />
                   AGENDAR HORÁRIO
                 </button>
+
+                {stats.upcoming && (
+                  <div className={`p-6 rounded-[2.5rem] shadow-2xl transition-all ${
+                    stats.upcoming.status === 'confirmed' 
+                      ? 'bg-amber-500 text-black shadow-amber-500/20' 
+                      : 'bg-neutral-900 border border-amber-500/30 text-white shadow-black/80'
+                  }`}>
+                     <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                           <CalendarCheck className={`w-5 h-5 ${stats.upcoming.status === 'confirmed' ? 'text-black' : 'text-amber-500'}`} />
+                           <span className="text-[10px] font-black uppercase tracking-[0.2em]">Próximo Agendamento</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                           {isToday(stats.upcoming.date instanceof Timestamp ? stats.upcoming.date.toDate() : parseISO(stats.upcoming.date)) && (
+                             <span className="bg-red-600 text-white text-[10px] font-black px-2 py-1 rounded-lg animate-pulse">É HOJE!</span>
+                           )}
+                           {stats.upcoming.status === 'confirmed' ? (
+                             <span className="bg-black text-amber-500 text-[10px] font-black px-2 py-1 rounded-lg">CONFIRMADO</span>
+                           ) : (
+                             <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[9px] font-black px-2 py-1 rounded-lg animate-pulse">Aguardando a confirmação do barbeiro.</span>
+                           )}
+                        </div>
+                     </div>
+                     <h4 className="text-2xl font-black uppercase italic tracking-tighter mb-1 leading-tight">{stats.upcoming.serviceName}</h4>
+                     <div className="flex items-center gap-4 text-xs font-bold opacity-80 mb-6">
+                        <p>{(() => {
+                           const d = stats.upcoming.date instanceof Timestamp ? stats.upcoming.date.toDate() : parseISO(stats.upcoming.date);
+                           return format(d, "dd 'de' MMMM", { locale: ptBR });
+                        })()}</p>
+                        <div className={`w-1 h-1 rounded-full ${stats.upcoming.status === 'confirmed' ? 'bg-black' : 'bg-white/40'}`} />
+                        <p>{stats.upcoming.time}</p>
+                     </div>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => { setSelectedAppointment(stats.upcoming); setCurrentView('booking'); }} 
+                          className={`flex-1 font-black uppercase italic py-4 rounded-2xl text-[10px] tracking-widest transition-colors ${
+                            stats.upcoming.status === 'confirmed' 
+                              ? 'bg-black text-white hover:bg-neutral-900' 
+                              : 'bg-amber-500 text-black hover:bg-amber-600'
+                          }`}
+                        >
+                          REAGENDAR
+                        </button>
+                        <button 
+                          onClick={() => handleCancelAppointment(stats.upcoming)} 
+                          className="px-6 bg-red-600 text-white font-black uppercase italic py-4 rounded-2xl text-[10px] tracking-widest hover:bg-red-700 transition-colors"
+                        >
+                          CANCELAR
+                        </button>
+                      </div>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -384,140 +523,63 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                 </div>
               )}
 
-              {/* Style Sheet Button */}
-              <button 
-                 onClick={() => setCurrentView('style-sheet')}
-                 className="w-full p-8 bg-neutral-900/50 rounded-[3rem] border border-white/5 flex items-center justify-between group hover:border-amber-500/30 transition-all shadow-xl"
-              >
-                 <div className="flex items-center gap-5 text-left">
-                    <div className="w-14 h-14 rounded-[1.5rem] bg-amber-500/10 flex items-center justify-center text-amber-500 border border-amber-500/20 group-hover:bg-amber-500 group-hover:text-black transition-all duration-500">
-                       <Sparkles className="w-6 h-6" />
-                    </div>
-                    <div>
-                       <h4 className="text-white text-lg font-black italic uppercase tracking-tight">Ficha de Estilo</h4>
-                       <p className="text-[10px] text-neutral-500 font-black uppercase tracking-widest">Suas preferências personalizadas</p>
-                    </div>
-                 </div>
-                 <ChevronRight className="w-6 h-6 text-neutral-700 group-hover:text-amber-500 group-hover:translate-x-2 transition-all duration-500" />
-              </button>
 
-              {/* Lookbook Quick Access */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between px-2">
-                  <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white">Explore Tendências</h3>
-                  <button onClick={() => setCurrentView('lookbook')} className="text-[9px] font-black italic uppercase text-amber-500">Ver Lookbook</button>
-                </div>
-                <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
-                  {[
-                    { id: '1', title: 'Textured Crop', src: 'https://images.unsplash.com/photo-1599351431247-f577f5d48c17?q=80&w=300' },
-                    { id: '2', title: 'Mid Fade', src: 'https://images.unsplash.com/photo-1621605815841-28d9446e3a43?q=80&w=300' },
-                    { id: '3', title: 'Pompadour', src: 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?q=80&w=300' }
-                  ].map(trend => (
-                    <motion.button 
-                      key={trend.id}
-                      onClick={() => setCurrentView('lookbook')}
-                      whileTap={{ scale: 0.95 }}
-                      className="flex-shrink-0 w-44 aspect-[4/3] rounded-3xl overflow-hidden relative group border border-white/5"
-                    >
-                      <img src={trend.src} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt={trend.title} />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent p-4 flex flex-col justify-end">
-                        <p className="text-[10px] font-black text-white italic uppercase tracking-tighter">{trend.title}</p>
-                      </div>
-                    </motion.button>
-                  ))}
-                </div>
-              </div>
 
               {/* Digital Wallet Card */}
               <div className="bg-gradient-to-br from-neutral-800 to-neutral-900 border border-white/10 p-8 rounded-[3.5rem] relative overflow-hidden group shadow-2xl">
                  <div className="absolute -right-8 -top-8 text-amber-500/5 group-hover:scale-110 transition-transform duration-1000 rotate-12">
                     <Wallet size={200} />
-                 </div>
-                 <div className="relative z-10">
-                    <div className="flex items-center justify-between mb-8">
-                       <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500 border border-amber-500/20">
-                             <Wallet className="w-5 h-5" />
-                          </div>
-                          <div>
-                             <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest leading-none mb-1">Carteira Digital</p>
-                             <h4 className="text-sm font-black text-white uppercase italic tracking-tighter">Planos e Créditos</h4>
-                          </div>
-                       </div>
-                       <span className="bg-neutral-800 text-neutral-400 text-[8px] font-black px-2 py-1 rounded-lg uppercase tracking-tight">VIP</span>
-                    </div>
-
-                    <div className="flex items-end justify-between gap-4">
-                       <div>
-                          <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest mb-1">Saldo Disponível</p>
-                          <div className="flex items-baseline gap-1">
-                             <span className="text-3xl font-black italic text-white tracking-tighter">R$ 0,00</span>
-                          </div>
-                       </div>
-                       <button className="bg-white text-black text-[9px] font-black uppercase italic tracking-widest px-6 py-3 rounded-xl shadow-lg active:scale-95 transition-all">
-                          RECARREGAR
-                       </button>
-                    </div>
-
-                    <div className="mt-8 pt-6 border-t border-white/5 flex gap-4">
-                       <div className="flex-1 bg-black/40 rounded-2xl p-4 border border-white/5">
-                          <p className="text-[8px] font-black text-neutral-500 uppercase tracking-widest mb-1">Cortes Restantes</p>
-                          <p className="text-xl font-black italic text-white">0</p>
-                       </div>
-                       <div className="flex-1 bg-black/40 rounded-2xl p-4 border border-white/5">
-                          <p className="text-[8px] font-black text-neutral-500 uppercase tracking-widest mb-1">Pontos Fidelidade</p>
-                          <p className="text-xl font-black italic text-amber-500">{(stats.completedCount % 10) * 100}</p>
-                       </div>
-                    </div>
-                 </div>
-              </div>
-
-              {/* Loyalty Card UI */}
-              <div className="bg-[#0A0A0A] p-8 rounded-[3rem] border border-white/5 relative overflow-hidden group shadow-2xl">
-                  <div className="absolute top-0 right-0 p-8">
-                      <Sparkles className="w-12 h-12 text-amber-500/20 group-hover:scale-125 transition-transform duration-700" />
                   </div>
                   <div className="relative z-10">
-                      <div className="flex items-center gap-2 mb-6">
-                          <Gift className="w-4 h-4 text-amber-500" />
-                          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-500">Cartão Fidelidade Digital</span>
-                          <span className="ml-auto bg-amber-500 text-black text-[8px] font-black px-2 py-0.5 rounded-full uppercase italic tracking-tighter">Em Breve</span>
-                      </div>
-                      
-                      <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white mb-2 leading-none">Seu Próximo Mimo</h3>
-                      <p className="text-xs text-neutral-500 font-bold mb-8 uppercase tracking-tight">Complete 10 cortes e ganhe uma <span className="text-amber-500">Hidratação Premium</span></p>
-                      
-                      <div className="grid grid-cols-5 gap-3">
-                          {[...Array(10)].map((_, i) => {
-                              const progress = stats.completedCount % 10;
-                              const isActive = stats.completedCount > 0 && (i < progress || (progress === 0 && stats.completedCount >= 10 && i < 10));
-                              return (
-                                <div 
-                                    key={i} 
-                                    className={`aspect-square rounded-2xl border-2 flex items-center justify-center transition-all duration-500 ${
-                                        isActive 
-                                        ? "bg-amber-500 border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.4)]" 
-                                        : "bg-neutral-900 border-white/5"
-                                    }`}
-                                >
-                                    {isActive ? (
-                                        <CheckCircle2 className="w-5 h-5 text-black" />
-                                    ) : (
-                                        <span className="text-[10px] font-black text-neutral-700">{i + 1}</span>
-                                    )}
-                                </div>
-                              );
-                          })}
-                      </div>
+                     <div className="flex items-center justify-between mb-8">
+                        <div className="flex items-center gap-3">
+                           <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500 border border-amber-500/20">
+                              <Wallet className="w-5 h-5" />
+                           </div>
+                           <div>
+                              <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest leading-none mb-1">Carteira Digital</p>
+                              <h4 className="text-sm font-black text-white uppercase italic tracking-tighter">Planos e Créditos</h4>
+                           </div>
+                        </div>
+                        <span className="bg-neutral-800 text-neutral-400 text-[8px] font-black px-2 py-1 rounded-lg uppercase tracking-tight">VIP</span>
+                     </div>
 
-                      <div className="mt-8 pt-6 border-t border-white/5 flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                              <span className="text-[9px] font-black uppercase text-neutral-400">Progresso: {(stats.completedCount % 10) * 10}%</span>
-                          </div>
-                      </div>
+                     <div className="flex items-end justify-between gap-4">
+                        <div>
+                           <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest mb-1">Saldo Disponível</p>
+                           <div className="flex items-baseline gap-1">
+                              <span className="text-3xl font-black italic text-white tracking-tighter">
+                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(user?.walletBalance || 0)}
+                              </span>
+                           </div>
+                        </div>
+                        <button 
+                          onClick={() => {
+                            setIsRecharging(true);
+                            setRechargeStep("select");
+                            setRechargeSuccess(false);
+                            setRechargeAmount(null);
+                            setRechargeMpData(null);
+                          }}
+                          className="bg-white hover:bg-amber-500 hover:text-black text-black text-[9px] font-black uppercase italic tracking-widest px-6 py-3 rounded-xl shadow-lg active:scale-95 transition-all"
+                        >
+                           RECARREGAR
+                        </button>
+                     </div>
+
+                     <div className="mt-8 pt-6 border-t border-white/5 flex gap-4">
+                        <div className="flex-1 bg-black/40 rounded-2xl p-4 border border-white/5">
+                           <p className="text-[8px] font-black text-neutral-500 uppercase tracking-widest mb-1">Cortes Restantes</p>
+                           <p className="text-xl font-black italic text-white">{user?.cutsBalance || 0}</p>
+                        </div>
+                        <div className="flex-1 bg-black/40 rounded-2xl p-4 border border-white/5">
+                           <p className="text-[8px] font-black text-neutral-500 uppercase tracking-widest mb-1">Pontos Fidelidade</p>
+                           <p className="text-xl font-black italic text-amber-500">{(stats.completedCount % 10) * 100}</p>
+                        </div>
+                     </div>
                   </div>
               </div>
+
 
               {/* Referral Section */}
               <div className="bg-neutral-900 border border-white/5 p-8 rounded-[3rem] shadow-2xl relative overflow-hidden group">
@@ -578,36 +640,6 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                 </div>
               )}
 
-              {stats.upcoming && (
-                <div className="bg-amber-500 p-6 rounded-[2.5rem] shadow-2xl shadow-amber-500/20 text-black">
-                   <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-2">
-                         <CalendarCheck className="w-5 h-5" />
-                         <span className="text-[10px] font-black uppercase tracking-[0.2em]">Próximo Agendamento</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                         {isToday(stats.upcoming.date instanceof Timestamp ? stats.upcoming.date.toDate() : parseISO(stats.upcoming.date)) && (
-                           <span className="bg-red-600 text-white text-[10px] font-black px-2 py-1 rounded-lg animate-pulse">É HOJE!</span>
-                         )}
-                         <span className="bg-black text-amber-500 text-[10px] font-black px-2 py-1 rounded-lg">CONFIRMADO</span>
-                      </div>
-                   </div>
-                   <h4 className="text-2xl font-black uppercase italic tracking-tighter mb-1 leading-tight">{stats.upcoming.serviceName}</h4>
-                   <div className="flex items-center gap-4 text-xs font-bold opacity-80 mb-6">
-                      <p>{(() => {
-                         const d = stats.upcoming.date instanceof Timestamp ? stats.upcoming.date.toDate() : parseISO(stats.upcoming.date);
-                         return format(d, "dd 'de' MMMM", { locale: ptBR });
-                      })()}</p>
-                      <div className="w-1 h-1 bg-black rounded-full" />
-                      <p>{stats.upcoming.time}</p>
-                   </div>
-                    <div className="flex gap-2">
-                      <button onClick={() => { setSelectedAppointment(stats.upcoming); setCurrentView('booking'); }} className="flex-1 bg-black text-white font-black uppercase italic py-4 rounded-2xl text-[10px] tracking-widest">REAGENDAR</button>
-                      <button onClick={() => handleCancelAppointment(stats.upcoming)} className="px-6 bg-red-600 text-white font-black uppercase italic py-4 rounded-2xl text-[10px] tracking-widest">CANCELAR</button>
-                    </div>
-                </div>
-              )}
-
               <div className="space-y-4">
                 <div className="flex items-center justify-between px-2">
                   <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white">Histórico Recente</h3>
@@ -649,10 +681,129 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
 
         {currentView === 'profile' && <ProfileEditScreen user={user} onBack={() => setCurrentView('home')} isClient={true} />}
         {currentView === 'booking' && <BookingScreen user={user} services={services} onBack={() => { setCurrentView('home'); setSelectedAppointment(null); setInitialBookingServiceId(undefined); setInitialBookingBarberId(undefined); }} editAppointment={selectedAppointment} initialServiceId={initialBookingServiceId} initialBarberId={initialBookingBarberId} />}
-        {currentView === 'my-cuts' && <MyCutsScreen user={user} appointments={appointments} onBack={() => setCurrentView('home')} onBookAgain={(serviceId, barberId) => { setInitialBookingServiceId(serviceId); setInitialBookingBarberId(barberId); setCurrentView('booking'); }} />}
+        {currentView === 'my-cuts' && (
+          <MyCutsScreen 
+            user={user} 
+            appointments={appointments} 
+            onBack={() => setCurrentView('home')} 
+            onBookAgain={(serviceId, barberId) => { 
+              setInitialBookingServiceId(serviceId); 
+              setInitialBookingBarberId(barberId); 
+              setCurrentView('booking'); 
+            }}
+            onReschedule={(app) => {
+              setSelectedAppointment(app);
+              setCurrentView('booking');
+            }}
+            onCancel={handleCancelAppointment}
+          />
+        )}
         {currentView === 'lookbook' && <LookbookScreen onBack={() => setCurrentView('home')} onBook={(style) => { setCurrentView('booking'); setInitialBookingServiceId(undefined); /* Could filter services by style if needed */ }} />}
         {currentView === 'notifications' && <NotificationsScreen notifications={notifications} appointments={appointments} onClear={handleClearNotifications} onBack={() => setCurrentView('home')} />}
         {currentView === 'style-sheet' && <StyleSheet user={user} onBack={() => setCurrentView('home')} />}
+        {currentView === 'wallet' && (
+          <motion.div
+            key="wallet"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.3 }}
+            className="px-6 pt-12 pb-24 max-w-md mx-auto space-y-8 min-h-[85vh]"
+          >
+             {/* Header */}
+             <div className="flex items-center justify-between pb-4 border-b border-white/5">
+                <button 
+                  onClick={() => setCurrentView('home')} 
+                  className="flex items-center gap-1.5 text-xs font-black uppercase text-amber-500 hover:text-white transition-colors"
+                >
+                   ← VOLTAR
+                </button>
+                <h2 className="text-xl font-black italic uppercase text-white tracking-widest">MINHA CARTEIRA</h2>
+                <div className="w-12 h-6" /> {/* alignment spacer */}
+             </div>
+
+             {/* Digital Wallet Card */}
+             <div className="bg-gradient-to-br from-neutral-800 to-neutral-900 border border-white/10 p-8 rounded-[3.5rem] relative overflow-hidden group shadow-2xl text-left">
+                <div className="absolute -right-8 -top-8 text-amber-500/5 rotate-12">
+                   <Wallet size={200} />
+                </div>
+                <div className="relative z-10">
+                   <div className="flex items-center justify-between mb-8">
+                      <div className="flex items-center gap-3">
+                         <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500 border border-amber-500/20">
+                            <Wallet className="w-5 h-5" />
+                         </div>
+                         <div>
+                            <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest leading-none mb-1">Carteira Digital</p>
+                            <h4 className="text-sm font-black text-white uppercase italic tracking-tighter">Planos e Créditos</h4>
+                         </div>
+                      </div>
+                      <span className="bg-neutral-800 text-neutral-400 text-[8px] font-black px-2 py-1 rounded-lg uppercase tracking-tight">VIP</span>
+                   </div>
+
+                   <div className="flex items-end justify-between gap-4">
+                      <div>
+                         <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest mb-1">Saldo Disponível</p>
+                         <div className="flex items-baseline gap-1">
+                            <span className="text-3xl font-black italic text-white tracking-tighter">
+                              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(user?.walletBalance || 0)}
+                            </span>
+                         </div>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          setIsRecharging(true);
+                          setRechargeStep("select");
+                          setRechargeSuccess(false);
+                          setRechargeAmount(null);
+                          setRechargeMpData(null);
+                        }}
+                        className="bg-amber-500 hover:bg-amber-600 text-black text-[10px] font-black uppercase italic tracking-widest px-6 py-3 rounded-xl shadow-lg active:scale-95 transition-all shadow-amber-500/10"
+                      >
+                         RECARREGAR
+                      </button>
+                   </div>
+
+                   <div className="mt-8 pt-6 border-t border-white/5 flex gap-4">
+                      <div className="flex-1 bg-black/40 rounded-2xl p-4 border border-white/5">
+                         <p className="text-[8px] font-black text-neutral-500 uppercase tracking-widest mb-1">Cortes Restantes</p>
+                         <p className="text-xl font-black italic text-white">{user?.cutsBalance || 0}</p>
+                      </div>
+                      <div className="flex-1 bg-black/40 rounded-2xl p-4 border border-white/5">
+                         <p className="text-[8px] font-black text-neutral-500 uppercase tracking-widest mb-1">Pontos Fidelidade</p>
+                         <p className="text-xl font-black italic text-amber-500">{(stats.completedCount % 10) * 100}</p>
+                      </div>
+                   </div>
+                </div>
+             </div>
+
+             {/* Description Banner */}
+             <div className="bg-neutral-900 border border-white/5 p-6 rounded-[2.5rem] text-left space-y-4">
+               <h3 className="text-sm font-black uppercase italic tracking-wider text-amber-500">Vantagens de Adicionar Créditos</h3>
+               <div className="space-y-3">
+                 <div className="flex items-start gap-3">
+                   <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 flex-shrink-0" />
+                   <p className="text-xs text-neutral-400 font-bold uppercase leading-relaxed">
+                     <span className="text-white">Pagamento sem Fricção:</span> Pague seus cortes de forma automática pelo saldo da carteira com apenas 1 clique no estabelecimento.
+                   </p>
+                 </div>
+                 <div className="flex items-start gap-3">
+                   <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 flex-shrink-0" />
+                   <p className="text-xs text-neutral-400 font-bold uppercase leading-relaxed">
+                     <span className="text-white">Cortes de Recompensa:</span> Ao recarregar valores específicos, ganhe cortes inteiros extras em seu saldo virtual!
+                   </p>
+                 </div>
+                 <div className="flex items-start gap-3">
+                   <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 flex-shrink-0" />
+                   <p className="text-xs text-neutral-400 font-bold uppercase leading-relaxed">
+                     <span className="text-white">Agilidade Máxima:</span> Sem necessidade de levar cartão ou celular na hora do atendimento, tudo já está controlado no seu perfil.
+                   </p>
+                 </div>
+               </div>
+             </div>
+          </motion.div>
+        )}
+
         {currentView === 'more-options' && (
             <MoreOptionsScreen
                 user={user}
@@ -671,6 +822,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
       <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-[#0A0A0A]/95 border border-white/10 backdrop-blur-3xl rounded-[2.5rem] p-1.5 flex items-center gap-1.5 z-50 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
          <button onClick={() => setCurrentView('home')} className={`px-5 py-3.5 rounded-full ${currentView === 'home' ? 'bg-amber-500 text-black' : 'text-neutral-500'}`}><Home className="w-4 h-4" /></button>
          <button onClick={() => setCurrentView('my-cuts')} className={`px-5 py-3.5 rounded-full ${currentView === 'my-cuts' ? 'bg-amber-500 text-black' : 'text-neutral-500'}`}><Scissors className="w-4 h-4" /></button>
+         <button onClick={() => setCurrentView('wallet')} className={`px-5 py-3.5 rounded-full ${currentView === 'wallet' ? 'bg-amber-500 text-black' : 'text-neutral-500'}`}><Wallet className="w-4 h-4" /></button>
          <button onClick={() => setCurrentView('profile')} className={`px-5 py-3.5 rounded-full ${currentView === 'profile' ? 'bg-amber-500 text-black' : 'text-neutral-500'}`}><User className="w-4 h-4" /></button>
          <div className="w-[1px] h-4 bg-white/10 mx-1" />
          <button onClick={onBack} className="p-4 text-neutral-600 hover:text-red-500 uppercase"><LogOut className="w-4 h-4" /></button>
@@ -741,6 +893,47 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                     </div>
                   </motion.div>
                 )}
+              </div>
+          </motion.div>
+        )}
+
+        {isRecharging && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6">
+              <div className="bg-neutral-900 border border-white/10 p-8 rounded-[3rem] w-full max-w-sm text-center relative overflow-hidden my-auto shadow-2xl">
+                <button 
+                  onClick={() => setIsRecharging(false)}
+                  className="absolute top-6 right-6 text-neutral-500 hover:text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+
+                <div className="space-y-6 py-4 flex flex-col items-center">
+                  <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500 border border-amber-500/20 mb-2 relative">
+                    <Wallet className="w-8 h-8" />
+                    <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-amber-500"></span>
+                    </span>
+                  </div>
+                  <div>
+                    <span className="bg-amber-500 text-black text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider font-sans mb-3 inline-block">
+                      Em Breve!
+                    </span>
+                    <h2 className="text-xl font-black italic uppercase text-white mb-2 leading-tight">
+                      Recargas via Pix
+                    </h2>
+                    <p className="text-xs text-neutral-400 font-bold leading-relaxed px-2 uppercase tracking-tight">
+                      A possibilidade de recarregar sua carteira digital diretamente no app para adquirir créditos e bônus exclusivos estará disponível em breve!
+                    </p>
+                  </div>
+                  
+                  <button 
+                    onClick={() => setIsRecharging(false)}
+                    className="w-full bg-amber-500 hover:bg-amber-600 text-black py-4 rounded-2xl font-black uppercase italic tracking-widest transition-colors text-xs mt-2"
+                  >
+                    Entendido
+                  </button>
+                </div>
               </div>
           </motion.div>
         )}

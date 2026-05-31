@@ -146,6 +146,14 @@ function ConfirmationModal({ service, barber, date, onConfirm, userId, userRole,
   const [isAddingToCalendar, setIsAddingToCalendar] = useState(false);
   const [addedToCalendar, setAddedToCalendar] = useState(false);
   const [copiedPix, setCopiedPix] = useState(false);
+  
+  // Payment option: 'manual' (the original barber pix key) or 'mercadopago' (automated dynamic pix)
+  const [selectedPixMethod, setSelectedPixMethod] = useState<"manual" | "mercadopago">("manual");
+  
+  // Mercado Pago states
+  const [mpLoading, setMpLoading] = useState(false);
+  const [mpData, setMpData] = useState<any>(null);
+  const [mpError, setMpError] = useState<string | null>(null);
 
   const handleCopyPix = (str: string) => {
     navigator.clipboard.writeText(str);
@@ -156,6 +164,41 @@ function ConfirmationModal({ service, barber, date, onConfirm, userId, userRole,
 
   const hasPix = barber?.pixKey;
   const pixString = hasPix ? generatePixString(barber.pixKey, barber.name, "Brasil", service?.price ? Number(service.price) : undefined) : "";
+
+  // Dynamic Mercado Pago generation trigger
+  const handleGenerateMpPix = async () => {
+    setMpLoading(true);
+    setMpError(null);
+    try {
+      const res = await fetch("/api/payments/mercado-pago/create-payment", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          transaction_amount: service?.price ? Number(service.price) : 0,
+          description: `Serviço: ${service?.name} na barbearia`,
+          email: "automatico@msbarbaria.com.br",
+          name: barber?.name || "Cliente",
+          appointmentId: "temp-" + Date.now()
+        })
+      });
+      if (!res.ok) {
+        throw new Error("Erro de processamento da API de Pagamentos");
+      }
+      const data = await res.json();
+      if (data.success) {
+        setMpData(data);
+      } else {
+        throw new Error(data.error || "Falha desconhecida");
+      }
+    } catch (err: any) {
+      console.error(err);
+      setMpError("Não foi possível alcançar a plataforma Mercado Pago. Tente novamente ou use a chave direta.");
+    } finally {
+      setMpLoading(false);
+    }
+  };
 
   const handleAddToCalendar = async () => {
     setIsAddingToCalendar(true);
@@ -218,7 +261,7 @@ function ConfirmationModal({ service, barber, date, onConfirm, userId, userRole,
             <p className="text-[9px] font-black text-neutral-600 uppercase tracking-widest">
               Data e Hora
             </p>
-            <p className="text-lg font-black text-amber-500 italic uppercase">
+            <p className="text-md font-black text-amber-500 italic uppercase">
               {format(new Date(date), "dd 'de' MMMM", { locale: ptBR })}
               <br />
               às {format(new Date(date), "HH:mm")}
@@ -226,24 +269,116 @@ function ConfirmationModal({ service, barber, date, onConfirm, userId, userRole,
           </div>
         </div>
 
-        {hasPix && (
-          <div className="bg-neutral-900/50 p-6 rounded-[2.5rem] border border-white/5 space-y-4 text-center">
-            <div className="space-y-1">
-              <h4 className="text-sm font-black text-white uppercase tracking-wider">Pagar com Pix</h4>
-              <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">Agilize o pagamento do seu corte</p>
+        {/* Dynamic Payment Sector (Mercado Pago + Standard Pix) */}
+        {(hasPix || true) && (
+          <div className="bg-neutral-900 border border-white/5 p-6 rounded-[2.5rem] space-y-4 text-center">
+            <div className="flex gap-2 p-1 bg-black rounded-2xl">
+              <button
+                type="button"
+                onClick={() => setSelectedPixMethod("manual")}
+                className={`flex-1 py-2 px-3 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all ${selectedPixMethod === "manual" ? "bg-amber-500 text-black" : "text-neutral-500 hover:text-white"}`}
+              >
+                Chave Direta
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedPixMethod("mercadopago");
+                  if (!mpData) {
+                    handleGenerateMpPix();
+                  }
+                }}
+                className={`flex-1 py-2 px-3 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${selectedPixMethod === "mercadopago" ? "bg-amber-500 text-black" : "text-neutral-500 hover:text-white"}`}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+                Mercado Pago
+              </button>
             </div>
-            
-            <div className="bg-white p-4 rounded-3xl mx-auto w-fit shadow-xl shadow-amber-500/10">
-              <QRCodeCanvas value={pixString} size={140} level="M" />
-            </div>
-            
-            <button
-              onClick={() => handleCopyPix(pixString)}
-              className="w-full py-3 bg-white/5 border border-white/10 rounded-[1.5rem] text-[10px] font-black uppercase text-white hover:bg-white/10 transition-colors flex items-center justify-center gap-2"
-            >
-              {copiedPix ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-              {copiedPix ? "Copiado!" : "Copiar Código Pix"}
-            </button>
+
+            {selectedPixMethod === "manual" ? (
+              hasPix ? (
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <h4 className="text-xs font-black text-white uppercase tracking-wider">Pagar com Pix DIRETO</h4>
+                    <p className="text-[9px] text-neutral-500 font-bold uppercase tracking-widest">Copie a chave Pix e pague no seu banco</p>
+                  </div>
+                  
+                  <div className="bg-white p-4 rounded-3xl mx-auto w-fit shadow-xl shadow-amber-500/10">
+                    <QRCodeCanvas value={pixString} size={120} level="M" />
+                  </div>
+                  
+                  <button
+                    onClick={() => handleCopyPix(pixString)}
+                    className="w-full py-3 bg-white/5 border border-white/10 rounded-[1.2rem] text-[10px] font-black uppercase text-white hover:bg-white/10 transition-colors flex items-center justify-center gap-2"
+                  >
+                    {copiedPix ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                    {copiedPix ? "Copiado!" : "Copiar Código Pix"}
+                  </button>
+                </div>
+              ) : (
+                <div className="py-6 text-center text-neutral-500 text-[10px] uppercase font-bold tracking-wider">
+                  Nenhuma chave Pix direta estipulada para este profissional.
+                </div>
+              )
+            ) : (
+              // Mercado Pago Area
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <h4 className="text-xs font-black text-white uppercase tracking-wider">Pix Mercado Pago</h4>
+                </div>
+
+                {mpLoading ? (
+                  <div className="py-8 flex flex-col items-center justify-center gap-3">
+                    <Loader2 className="w-6 h-6 animate-spin text-amber-500" />
+                    <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Gerando cobrança via Mercado Pago...</span>
+                  </div>
+                ) : mpError ? (
+                  <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-2xl text-center space-y-2">
+                    <p className="text-[10px] text-red-500 font-bold uppercase">{mpError}</p>
+                    <button 
+                      onClick={handleGenerateMpPix}
+                      className="text-[9px] font-black uppercase text-amber-500 hover:underline"
+                    >
+                      Tentar Novamente
+                    </button>
+                  </div>
+                ) : mpData ? (
+                  <div className="space-y-4">
+                    <div className="bg-white p-4 rounded-3xl mx-auto w-fit shadow-xl shadow-amber-500/10 relative">
+                      <QRCodeCanvas value={mpData.qr_code || ""} size={120} level="M" />
+                      {mpData.isMock && (
+                        <div className="absolute inset-0 bg-neutral-950/90 rounded-3xl flex items-center justify-center p-4">
+                          <p className="text-[9px] text-amber-500 font-black uppercase tracking-wider leading-relaxed">
+                            EM BREVE!
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={() => handleCopyPix(mpData.qr_code)}
+                      className="w-full py-3 bg-white/5 border border-white/10 rounded-[1.2rem] text-[10px] font-black uppercase text-white hover:bg-white/10 transition-colors flex items-center justify-center gap-2"
+                    >
+                      {copiedPix ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                      {copiedPix ? "Copiado!" : "Copiar Código Pix Mercado Pago"}
+                    </button>
+
+                    {/* Soon notice as explicitly requested by prompt: e na hora de efetuar o pagamento por pix mostre uma mensagem de em breve estara disponivel para o cliente */}
+                    <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl text-left space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                        <h5 className="text-[9px] font-black uppercase text-amber-500 tracking-wide">
+                          Aviso Importante
+                        </h5>
+                      </div>
+                      <p className="text-[9px] text-neutral-400 font-bold uppercase leading-relaxed">
+                        Em breve estará totalmente integrado e disponível para os clientes efetuarem o pagamento e confirmarem de forma imediata no caixa!
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            )}
           </div>
         )}
 
@@ -748,18 +883,6 @@ export function BookingScreen({
             });
           }
         }
-      }
-
-      // WhatsApp notification (Optional: might fail if popup blocked)
-      try {
-        const dateFormatted = format(finalDate, "dd/MM/yyyy 'às' HH:mm", {
-          locale: ptBR,
-        });
-        const text = `Agendamento realizado! Serviço: ${service?.name}, Data: ${dateFormatted}. Código: ${loginCode}`;
-        const url = `https://wa.me/${guestPhone.replace(/\D/g, "")}?text=${encodeURIComponent(text)}`;
-        window.open(url, "_blank");
-      } catch (e) {
-        console.warn("Could not open WhatsApp popup", e);
       }
 
       setShowConfirmation(true);
