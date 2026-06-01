@@ -3,11 +3,17 @@ import { db } from "./firebase";
 
 // Helper to convert base64 VAPID key to Uint8Array
 export function urlBase64ToUint8Array(base64String: string): Uint8Array {
-  if (!base64String) {
-    throw new Error("VAPID public key is missing");
+  if (!base64String || typeof base64String !== 'string') {
+    console.error("[Push Register] VAPID key is missing or not a string", base64String);
+    throw new Error("VAPID public key is missing or invalid");
   }
-  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/\-/g, "+").replace(/_/g, "/");
+
+  // Sanitize: trim extra spaces, remove surrounding quotes often present in env vars
+  let sanitized = base64String.trim().replace(/^["']|["']$/g, "");
+  
+  // Standard Base64 vs Base64URL conversion
+  const padding = "=".repeat((4 - (sanitized.length % 4)) % 4);
+  const base64 = (sanitized + padding).replace(/-/g, "+").replace(/_/g, "/");
 
   try {
     const rawData = window.atob(base64);
@@ -18,8 +24,8 @@ export function urlBase64ToUint8Array(base64String: string): Uint8Array {
     }
     return outputArray;
   } catch (e) {
-    console.error("Failed to decode base64 VAPID key", e);
-    throw new Error("Invalid VAPID public key format");
+    console.error("[Push Register] Failed to decode base64 VAPID key. Input was:", base64String, "Sanitized base64 was:", base64);
+    throw new Error("The string did not match the expected pattern. (Invalid VAPID format)");
   }
 }
 
@@ -28,11 +34,17 @@ export function urlBase64ToUint8Array(base64String: string): Uint8Array {
 export function getBackendUrl(path: string): string {
   if (typeof window === "undefined") return path;
   
-  // Ensure the path starts with a single slash for relative resolution
   const cleanPath = path.startsWith("/") ? path : `/${path}`;
   
-  // Using relative paths is the most compatible way for PWAs on both 
-  // custom domains and default domains.
+  // Use VITE_BACKEND_URL if provided, otherwise default to relative path
+  // This is crucial for custom domains that don't proxy /api requests
+  const backendUrl = (import.meta as any).env.VITE_BACKEND_URL;
+  
+  if (backendUrl) {
+    const baseUrl = backendUrl.endsWith("/") ? backendUrl.slice(0, -1) : backendUrl;
+    return `${baseUrl}${cleanPath}`;
+  }
+  
   return cleanPath;
 }
 
@@ -104,7 +116,9 @@ export async function setupPushSubscription(userId: string, userRole: string): P
       throw new Error("Invalid subscription object retrieved.");
     }
 
-    const endpointHash = btoa(subJson.endpoint).replace(/[^a-zA-Z0-9]/g, "").substring(0, 50);
+    // Use a safer way to generate a unique ID for the subscription that doesn't involve unsafe btoa
+    // We can use a simple hash or just a sanitized version of the endpoint
+    const endpointHash = subJson.endpoint.split("/").pop() || "sub-" + Date.now();
 
     const subscriptionData = {
       userId,

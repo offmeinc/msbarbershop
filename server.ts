@@ -125,14 +125,19 @@ async function startServer() {
           ...formData.getHeaders(),
         },
         maxContentLength: Infinity,
-        maxBodyLength: Infinity
+        maxBodyLength: Infinity,
+        timeout: 30000 // 30 seconds timeout for large uploads
       });
 
-      res.json(response.data);
+      if (response.data && response.data.success) {
+        res.json(response.data);
+      } else {
+        throw new Error(response.data?.error?.message || "ImgBB returned success:false");
+      }
     } catch (error: any) {
       const errorMsg = error.response?.data?.error?.message || error.message;
-      console.error("ImgBB Upload error details:", error.response?.data || error.message);
-      res.status(500).json({ error: errorMsg || "Erro ao processar upload na MS Barbearia" });
+      console.error("[ImgBB] Upload failure:", errorMsg);
+      res.status(500).json({ error: `Falha no upload: ${errorMsg}` });
     }
   });
 
