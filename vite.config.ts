@@ -51,6 +51,8 @@ export default defineConfig(({ mode }) => {
     ],
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
+      'process.env.VITE_IMGBB_API_KEY': JSON.stringify(env.VITE_IMGBB_API_KEY || env.IMGBB_API_KEY),
+      'import.meta.env.VITE_IMGBB_API_KEY': JSON.stringify(env.VITE_IMGBB_API_KEY || env.IMGBB_API_KEY),
     },
     resolve: {
       alias: {

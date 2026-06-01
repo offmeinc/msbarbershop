@@ -32,12 +32,14 @@ export interface ImgBBResponse {
 }
 
 export async function uploadImage(file: File): Promise<ImgBBResponse> {
-  // Detector de chave direta do Vite
-  const apiKey = import.meta.env.VITE_IMGBB_API_KEY;
+  // Detector de chave ultra-agressivo
+  const apiKey = (import.meta as any).env?.VITE_IMGBB_API_KEY || 
+                 (typeof process !== 'undefined' ? process.env?.VITE_IMGBB_API_KEY : null) ||
+                 (typeof window !== 'undefined' ? (window as any).VITE_IMGBB_API_KEY : null);
 
-  if (!apiKey || apiKey === "undefined" || apiKey === "") {
-    console.error("[Upload] VITE_IMGBB_API_KEY não encontrada no import.meta.env");
-    throw new Error("A chave VITE_IMGBB_API_KEY não foi detectada. Verifique se ela está salva nas configurações do projeto com o prefixo VITE_ e recarregue a página.");
+  if (!apiKey || apiKey === "undefined" || apiKey === "null" || apiKey === "") {
+    console.error("[Upload] VITE_IMGBB_API_KEY não encontrada.");
+    throw new Error("Chave VITE_IMGBB_API_KEY não encontrada no App. Por favor, recarregue a página (F5). Se o erro persistir, verifique se salvou a chave exatamente como VITE_IMGBB_API_KEY.");
   }
 
   const formData = new FormData();
