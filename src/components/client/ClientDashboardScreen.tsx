@@ -298,37 +298,31 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
   }, [appointments]);
 
   const handleCancelAppointment = async (app: any) => {
+    if (!confirm("Deseja realmente cancelar este agendamento?")) return;
+    
     try {
-      // Refund if paid
-      if (app.paymentStatus === 'paid' && app.price > 0) {
-        const clientUid = app.clientId;
-        if (clientUid && clientUid !== "guest") {
-          await updateDoc(doc(db, "users", clientUid), {
-            walletBalance: increment(app.price),
-            updatedAt: serverTimestamp()
-          });
-          toast.success(`R$ ${app.price.toFixed(2)} estornados para sua carteira.`);
-        }
+      const res = await fetch(getBackendUrl("/api/appointments/cancel"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          appointmentId: app.id,
+          userId: user?.uid || user?.id
+        })
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Erro ao cancelar agendamento");
       }
 
-      await updateDoc(doc(db, "appointments", app.id), {
-        status: 'cancelled',
-        cancelledBy: 'client',
-        updatedAt: serverTimestamp()
-      });
-
-      await addDoc(collection(db, "staff_notifications"), {
-        type: 'cancellation',
-        message: `Agendamento Cancelado: ${app.clientName} cancelou ${app.serviceName} marcado para ${format(app.date instanceof Timestamp ? app.date.toDate() : parseISO(app.date), "dd/MM 'às' HH:mm", { locale: ptBR })}`,
-        timestamp: serverTimestamp(),
-        read: false,
-        clientId: app.clientId,
-        appointmentId: app.id
-      });
-
-      toast.success("Agendamento cancelado com sucesso.");
-    } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, "appointments");
+      const data = await res.json();
+      if (data.refundedAmount > 0) {
+        toast.success(`Cancelado! R$ ${data.refundedAmount.toFixed(2)} foram devolvidos à sua carteira.`);
+      } else {
+        toast.success("Agendamento cancelado com sucesso.");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao solicitar cancelamento.");
     }
   };
 

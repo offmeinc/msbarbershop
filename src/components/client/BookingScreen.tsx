@@ -25,6 +25,7 @@ import {
   getDocs,
   getFirestore,
   increment,
+  runTransaction
 } from "firebase/firestore";
 import {
   ChevronLeft,
@@ -161,6 +162,7 @@ function ConfirmationModal({ service, barber, date, onConfirm, userId, userRole,
   const [isSimulatingCheck, setIsSimulatingCheck] = useState(false);
 
   const [walletBalance, setWalletBalance] = useState(0);
+  const [cutsBalance, setCutsBalance] = useState(0);
 
   useEffect(() => {
     if (userId && userId !== "guest") {
@@ -168,6 +170,7 @@ function ConfirmationModal({ service, barber, date, onConfirm, userId, userRole,
       getDoc(userRef).then(snap => {
         if (snap.exists()) {
           setWalletBalance(Number(snap.data().walletBalance || 0));
+          setCutsBalance(Number(snap.data().cutsBalance || 0));
         }
       });
     }
@@ -175,33 +178,107 @@ function ConfirmationModal({ service, barber, date, onConfirm, userId, userRole,
 
   const servicePrice = service?.price ? Number(service.price) : 0;
   const canUseWallet = walletBalance > 0 && servicePrice > 0;
+  const canUseCut = cutsBalance > 0;
+  const [useCut, setUseCut] = useState(false);
+
   const walletCoverage = Math.min(walletBalance, servicePrice);
-  const remainingPrice = Math.max(0, servicePrice - (useWallet ? walletCoverage : 0));
+  const remainingPrice = useCut ? 0 : Math.max(0, servicePrice - (useWallet ? walletCoverage : 0));
 
   const handleWalletFullPayment = async () => {
+    if (mpLoading) return;
     setMpLoading(true);
     try {
       const firestore = db || getFirestore();
       
-      // 1. Update wallet balance
-      await updateDoc(doc(firestore, "users", userId), {
-        walletBalance: increment(-servicePrice),
-        updatedAt: serverTimestamp()
-      });
-
-      // 2. Update appointment
-      await updateDoc(doc(firestore, "appointments", appointmentId), {
-        status: "confirmed",
-        paymentStatus: "paid",
-        paidVia: "wallet",
-        updatedAt: serverTimestamp()
+      await runTransaction(firestore, async (transaction) => {
+        const userRef = doc(firestore, "users", userId);
+        const appRef = doc(firestore, "appointments", appointmentId);
+        
+        const userSnap = await transaction.get(userRef);
+        const appSnap = await transaction.get(appRef);
+        
+        if (!userSnap.exists()) throw new Error("Usuário não encontrado.");
+        if (!appSnap.exists()) throw new Error("Agendamento não encontrado.");
+        
+        const userData = userSnap.data();
+        const appData = appSnap.data();
+        
+        if (appData.paymentStatus === "paid") {
+          throw new Error("Agendamento já está pago.");
+        }
+        
+        const currentBalance = Number(userData.walletBalance || 0);
+        if (currentBalance < servicePrice) {
+          throw new Error("Saldo insuficiente na carteira.");
+        }
+        
+        // Atomic deduction and confirmation
+        transaction.update(userRef, {
+          walletBalance: currentBalance - servicePrice,
+          updatedAt: serverTimestamp()
+        });
+        
+        transaction.update(appRef, {
+          status: "confirmed",
+          paymentStatus: "paid",
+          paidVia: "wallet",
+          updatedAt: serverTimestamp()
+        });
       });
 
       setPaymentSuccess(true);
       toast.success("Pagamento realizado com saldo da carteira!");
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      toast.error("Erro ao processar pagamento com carteira.");
+      toast.error(err.message || "Erro ao processar pagamento com carteira.");
+    } finally {
+      setMpLoading(false);
+    }
+  };
+
+  const handleCutPayment = async () => {
+    if (mpLoading) return;
+    setMpLoading(true);
+    try {
+      const firestore = db || getFirestore();
+      
+      await runTransaction(firestore, async (transaction) => {
+        const userRef = doc(firestore, "users", userId);
+        const appRef = doc(firestore, "appointments", appointmentId);
+        
+        const userSnap = await transaction.get(userRef);
+        const appSnap = await transaction.get(appRef);
+        
+        if (!userSnap.exists()) throw new Error("Usuário não encontrado.");
+        if (!appSnap.exists()) throw new Error("Agendamento não encontrado.");
+        
+        const userData = userSnap.data();
+        const appData = appSnap.data();
+        
+        if (appData.paymentStatus === "paid") throw new Error("Referência já paga.");
+        
+        const currentCuts = Number(userData.cutsBalance || 0);
+        if (currentCuts <= 0) throw new Error("Você não possui cortes disponíveis.");
+        
+        transaction.update(userRef, {
+          cutsBalance: currentCuts - 1,
+          updatedAt: serverTimestamp()
+        });
+        
+        transaction.update(appRef, {
+          status: "confirmed",
+          paymentStatus: "paid",
+          paidVia: "cuts_balance",
+          totalPrice: 0,
+          updatedAt: serverTimestamp()
+        });
+      });
+
+      setPaymentSuccess(true);
+      toast.success("Agendamento confirmado usando seus créditos de cortes!");
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Erro ao processar uso do corte.");
     } finally {
       setMpLoading(false);
     }
@@ -372,11 +449,30 @@ function ConfirmationModal({ service, barber, date, onConfirm, userId, userRole,
               </div>
               <h4 className="text-sm font-black text-white uppercase tracking-wider mb-2">Deseja deixar pago pelo App?</h4>
               
-              {canUseWallet && (
-                 <button 
-                  onClick={() => setUseWallet(!useWallet)}
-                  className={`w-full p-4 rounded-2xl border transition-all flex items-center justify-between gap-3 text-left ${useWallet ? 'bg-amber-500/20 border-amber-500/40 text-amber-500' : 'bg-white/5 border-white/10 text-neutral-400'}`}
-                 >
+              <div className="space-y-4">
+                {canUseCut && (
+                  <button 
+                    onClick={() => { setUseCut(!useCut); if (!useCut) setUseWallet(false); }}
+                    className={`w-full p-4 rounded-2xl border transition-all flex items-center justify-between gap-3 text-left ${useCut ? 'bg-amber-500/20 border-amber-500/40 text-amber-500' : 'bg-white/5 border-white/10 text-neutral-400'}`}
+                  >
+                    <div className="flex items-center gap-3">
+                       <span className="text-xl">✂️</span>
+                       <div>
+                          <p className="text-[10px] font-black uppercase tracking-widest leading-none mb-1">Usar 1 Crédito de Corte</p>
+                          <p className="text-[9px] font-bold opacity-70">Disponível: {cutsBalance}</p>
+                       </div>
+                    </div>
+                    <div className={`w-10 h-5 rounded-full relative transition-colors ${useCut ? 'bg-amber-500' : 'bg-neutral-800'}`}>
+                       <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${useCut ? 'right-1' : 'left-1'}`} />
+                    </div>
+                  </button>
+                )}
+
+                {canUseWallet && !useCut && (
+                  <button 
+                    onClick={() => setUseWallet(!useWallet)}
+                    className={`w-full p-4 rounded-2xl border transition-all flex items-center justify-between gap-3 text-left ${useWallet ? 'bg-amber-500/20 border-amber-500/40 text-amber-500' : 'bg-white/5 border-white/10 text-neutral-400'}`}
+                  >
                     <div className="flex items-center gap-3">
                        <span className="text-xl">💰</span>
                        <div>
@@ -387,22 +483,27 @@ function ConfirmationModal({ service, barber, date, onConfirm, userId, userRole,
                     <div className={`w-10 h-5 rounded-full relative transition-colors ${useWallet ? 'bg-amber-500' : 'bg-neutral-800'}`}>
                        <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${useWallet ? 'right-1' : 'left-1'}`} />
                     </div>
-                 </button>
-              )}
+                  </button>
+                )}
+              </div>
 
               <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest mb-4">
-                {useWallet 
-                  ? (remainingPrice <= 0 
-                      ? "Seu saldo cobre o valor total! Deseja confirmar o pagamento agora?" 
-                      : `Seu saldo abate R$ ${walletCoverage.toFixed(2)}. Restante: R$ ${remainingPrice.toFixed(2)} via Pix.`)
-                  : "Você pode pagar agora via Pix ou deixar para pagar na barbearia. É opcional!"}
+                {useCut 
+                  ? "Seu crédito de corte cobre o valor total! Confirmar agora?"
+                  : useWallet 
+                    ? (remainingPrice <= 0 
+                        ? "Seu saldo cobre o valor total! Deseja confirmar o pagamento agora?" 
+                        : `Seu saldo abate R$ ${walletCoverage.toFixed(2)}. Restante: R$ ${remainingPrice.toFixed(2)} via Pix.`)
+                    : "Você pode pagar agora via Pix ou deixar para pagar na barbearia. É opcional!"}
               </p>
               
               <div className="space-y-2">
                 <button
                   type="button"
                   onClick={() => {
-                    if (useWallet && remainingPrice <= 0) {
+                    if (useCut) {
+                      handleCutPayment();
+                    } else if (useWallet && remainingPrice <= 0) {
                       handleWalletFullPayment();
                     } else {
                       setWantsToPayNow(true);
@@ -411,7 +512,7 @@ function ConfirmationModal({ service, barber, date, onConfirm, userId, userRole,
                   }}
                   className="w-full py-4 rounded-[1.5rem] bg-amber-500 text-black text-[10px] font-black uppercase tracking-widest hover:bg-amber-400 active:scale-95 transition-all text-center block"
                 >
-                  {useWallet && remainingPrice <= 0 ? "CONFIRMAR PAGAMENTO TOTAL" : "SIM, QUERO PAGAR AGORA"}
+                  {useCut ? "CONFIRMAR USANDO CORTE" : (useWallet && remainingPrice <= 0 ? "CONFIRMAR PAGAMENTO TOTAL" : "SIM, QUERO PAGAR AGORA")}
                 </button>
                 <button
                   type="button"
@@ -1005,13 +1106,7 @@ export function BookingScreen({
                const referrerSnap = await getDocs(referrerQuery);
                if (!referrerSnap.empty) {
                   referrerDocId = referrerSnap.docs[0].id;
-                  initialBalance = 5; // Referree initial bonus
-
-                  const referrerDoc = referrerSnap.docs[0];
-                  const currentBalance = Number(referrerDoc.data().walletBalance || 0);
-                  await updateDoc(doc(firestore, "users", referrerDocId), {
-                     walletBalance: currentBalance + 5
-                  });
+                  initialBalance = 5; // Referree initial bonus still granted to make it attractive
                }
             }
 
