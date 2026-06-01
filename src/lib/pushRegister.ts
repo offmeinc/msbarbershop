@@ -19,18 +19,28 @@ export function urlBase64ToUint8Array(base64String: string): Uint8Array {
 // whenever the application is loaded on custom domains (e.g., msbarbershop.com.br)
 export function getBackendUrl(path: string): string {
   if (typeof window === "undefined") return path;
+  
+  const origin = window.location.origin;
+  const cleanPath = path.startsWith("/") ? path : `/${path}`;
+  
+  // If we're on a custom domain, we might need to hit the Cloud Run URL directly 
+  // if the custom domain proxy is restrictive. 
+  // But usually, relative to origin is best for PWAs.
   const hostname = window.location.hostname;
-  const isDefaultHost = 
-    hostname.includes("run.app") || 
-    hostname.includes("localhost") || 
-    hostname.includes("127.0.0.1") || 
-    hostname.includes("0.0.0.0");
-    
-  if (!isDefaultHost) {
-    const cleanPath = path.startsWith("/") ? path.substring(1) : path;
-    return `https://ais-pre-g75ihsxfdnknje432j7ycb-486235155545.us-east1.run.app/${cleanPath}`;
+  const isCustomDomain = 
+    !hostname.includes("run.app") && 
+    !hostname.includes("localhost") && 
+    !hostname.includes("127.0.0.1") && 
+    !hostname.includes("0.0.0.0") &&
+    !hostname.includes(".aistudio.google");
+
+  if (isCustomDomain) {
+    // If you have a specific backend URL you want to prioritize for custom domains, 
+    // you could put it here. Otherwise, target the same origin.
+    return `${origin}${cleanPath}`;
   }
-  return path;
+
+  return `${origin}${cleanPath}`;
 }
 
 // Check compatibility

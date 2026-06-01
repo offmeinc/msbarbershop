@@ -18,7 +18,8 @@ async function startServer() {
   const PORT = 3000;
   
   // Support standard JSON body parsing for API routes
-  app.use(express.json());
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
   // Custom CORS middleware to support custom domains like msbarbershop.com.br
   app.use((req, res, next) => {
@@ -28,9 +29,10 @@ async function startServer() {
     } else {
       res.setHeader("Access-Control-Allow-Origin", "*");
     }
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, DELETE");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, DELETE, PATCH");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin");
     res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Access-Control-Max-Age", "86400"); // 24 hours
 
     if (req.method === "OPTIONS") {
       return res.sendStatus(200);
@@ -43,7 +45,10 @@ async function startServer() {
   startAppointmentsListener();
   startAppointmentAutoUpdater();
   
-  const upload = multer({ storage: multer.memoryStorage() });
+  const upload = multer({ 
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit
+  });
 
   // API Route for Push Config (Retrieve VAPID PublicKey)
   app.get("/api/push-config", (req, res) => {
@@ -109,18 +114,25 @@ async function startServer() {
       }
 
       const formData = new FormData();
-      formData.append("image", req.file.buffer.toString("base64"));
+      // Send the buffer directly as a file to ImgBB
+      formData.append("image", req.file.buffer, {
+        filename: req.file.originalname || "image.jpg",
+        contentType: req.file.mimetype || "image/jpeg",
+      });
 
       const response = await axios.post(`https://api.imgbb.com/1/upload?key=${apiKey}`, formData, {
         headers: {
           ...formData.getHeaders(),
         },
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity
       });
 
       res.json(response.data);
     } catch (error: any) {
-      console.error("Upload error:", error.response?.data || error.message);
-      res.status(500).json({ error: "Failed to upload image" });
+      const errorMsg = error.response?.data?.error?.message || error.message;
+      console.error("ImgBB Upload error details:", error.response?.data || error.message);
+      res.status(500).json({ error: errorMsg || "Erro ao processar upload na MS Barbearia" });
     }
   });
 

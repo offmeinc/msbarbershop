@@ -390,7 +390,8 @@ var __dirname = import_path2.default.dirname(__filename);
 async function startServer() {
   const app2 = (0, import_express.default)();
   const PORT = 3e3;
-  app2.use(import_express.default.json());
+  app2.use(import_express.default.json({ limit: "50mb" }));
+  app2.use(import_express.default.urlencoded({ limit: "50mb", extended: true }));
   app2.use((req, res, next) => {
     const origin = req.headers.origin;
     if (origin) {
@@ -398,9 +399,10 @@ async function startServer() {
     } else {
       res.setHeader("Access-Control-Allow-Origin", "*");
     }
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, DELETE");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, DELETE, PATCH");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin");
     res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Access-Control-Max-Age", "86400");
     if (req.method === "OPTIONS") {
       return res.sendStatus(200);
     }
@@ -409,7 +411,11 @@ async function startServer() {
   const vapid = await initVapid();
   startAppointmentsListener();
   startAppointmentAutoUpdater();
-  const upload = (0, import_multer.default)({ storage: import_multer.default.memoryStorage() });
+  const upload = (0, import_multer.default)({
+    storage: import_multer.default.memoryStorage(),
+    limits: { fileSize: 50 * 1024 * 1024 }
+    // 50MB limit
+  });
   app2.get("/api/push-config", (req, res) => {
     res.json({ publicKey: vapid.publicKey });
   });
@@ -462,16 +468,22 @@ async function startServer() {
         return res.status(400).json({ error: "No image provided" });
       }
       const formData = new import_form_data.default();
-      formData.append("image", req.file.buffer.toString("base64"));
+      formData.append("image", req.file.buffer, {
+        filename: req.file.originalname || "image.jpg",
+        contentType: req.file.mimetype || "image/jpeg"
+      });
       const response = await import_axios.default.post(`https://api.imgbb.com/1/upload?key=${apiKey}`, formData, {
         headers: {
           ...formData.getHeaders()
-        }
+        },
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity
       });
       res.json(response.data);
     } catch (error) {
-      console.error("Upload error:", error.response?.data || error.message);
-      res.status(500).json({ error: "Failed to upload image" });
+      const errorMsg = error.response?.data?.error?.message || error.message;
+      console.error("ImgBB Upload error details:", error.response?.data || error.message);
+      res.status(500).json({ error: errorMsg || "Erro ao processar upload na MS Barbearia" });
     }
   });
   async function processApprovedPayment(paymentDoc) {
