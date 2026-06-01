@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { motion } from "motion/react";
+import { motion } from "framer-motion";
 import { 
   User, 
   CreditCard, 
@@ -15,7 +15,8 @@ import {
   LogOut, 
   ChevronLeft,
   Star,
-  Package
+  Package,
+  Camera
 } from "lucide-react";
 import { setupPushSubscription, getNotificationPermissionState, queryNotificationSupport, getBackendUrl } from "../../lib/pushRegister";
 import { BlockScreen } from "../manager/BlockScreen";
@@ -23,6 +24,7 @@ import { HelpScreen, ShareScreen, RecurrenceScreen } from "../manager/OtherScree
 import { ReconScreen } from "../manager/UtilityScreens";
 import { PromotionsManager } from "../manager/PromotionsManager";
 import { InventoryScreen } from "../manager/InventoryScreen";
+import { PortfolioManager } from "../professional/PortfolioManager";
 import { ClientDashboardScreen } from "../client/ClientDashboardScreen";
 import { ProfileEditScreen } from "./ProfileEditScreen";
 import { NotificationsScreen } from "../NotificationsScreen";
@@ -36,7 +38,7 @@ const MyWeekScreen = ({ user, onBack }: { user: any, onBack: () => void }) => <d
 
 export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotifications, appointments, onClearNotifications, onToggleTheme, isDarkMode }: { user: any, role: string, onLogout: () => void, onBack: () => void, key?: any, staffNotifications: any[], appointments: any[], onClearNotifications: () => void, onToggleTheme: () => void, isDarkMode: boolean }) {
   const [activeSubScreen, setActiveSubScreen] = useState<
-    'main' | 'profile' | 'dashboard' | 'notif' | 'block' | 'share' | 'earnings' | 'week' | 'recon' | 'recurrence' | 'promotions' | 'inventory'
+    'main' | 'profile' | 'dashboard' | 'notif' | 'block' | 'share' | 'earnings' | 'week' | 'recon' | 'recurrence' | 'promotions' | 'inventory' | 'portfolio'
 >('main');
 
   const unreadCount = staffNotifications.filter(n => !n.read).length;
@@ -63,6 +65,7 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
         { id: 'week', label: 'Minha Semana', icon: <Calendar className="w-5 h-5" />, onClick: () => setActiveSubScreen('week') },
         { id: 'block', label: 'Bloqueios', icon: <Lock className="w-5 h-5" />, onClick: () => setActiveSubScreen('block') },
         { id: 'recon', label: 'Reconciliação', icon: <CheckCircle2 className="w-5 h-5" />, onClick: () => setActiveSubScreen('recon') },
+        { id: 'portfolio', label: 'Portfólio', icon: <Camera className="w-5 h-5" />, onClick: () => setActiveSubScreen('portfolio') },
         { id: 'recurrence', label: 'Recorrências', icon: <RefreshCw className="w-5 h-5" />, onClick: () => setActiveSubScreen('recurrence') },
         ...(role === 'manager' ? [
           { id: 'promotions', label: 'Promoções', icon: <Tag className="w-5 h-5" />, onClick: () => setActiveSubScreen('promotions') },
@@ -103,6 +106,7 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
   if (activeSubScreen === 'recurrence') return <RecurrenceScreen onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'promotions') return <PromotionsManager onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'inventory') return <InventoryScreen onBack={() => setActiveSubScreen('main')} />;
+  if (activeSubScreen === 'portfolio') return <PortfolioManager onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'dashboard') return <ClientDashboardScreen user={user} onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'profile') return <ProfileEditScreen user={user} onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'notif') return <NotificationsScreen notifications={staffNotifications} appointments={appointments} onClear={onClearNotifications} onBack={() => setActiveSubScreen('main')} />;

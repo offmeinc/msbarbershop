@@ -4,7 +4,7 @@
  */
 
 import { BARBERSHOP_ADDRESS, BARBERSHOP_NAME } from "./constants";
-import { motion, AnimatePresence, useScroll, useMotionValueEvent } from "motion/react";
+import { motion, AnimatePresence, useScroll, useMotionValueEvent } from "framer-motion";
 import { 
   Scissors,
   Tag,
@@ -137,7 +137,6 @@ import {
   OperationType,
   safeStringify
 } from "./lib/firebase";
-import { uploadImage } from "./lib/uploadService";
 import { getBackendUrl, urlBase64ToUint8Array } from "./lib/pushRegister";
 import { safeFetch } from "./lib/api";
 import { 
@@ -390,7 +389,7 @@ export default function App() {
     };
   }, []);
 
-  const handleLogin = async (role: string = "client", phone?: string, password?: string, isSignUp?: boolean, name?: string, whatsapp?: string) => {
+  const handleLogin = async (role: string = "client", phone?: string, password?: string, isSignUp?: boolean, name?: string, whatsapp?: string, photoURL?: string) => {
     isSigningUp.current = isSignUp || false;
     setRequestedRole(role);
     
@@ -408,8 +407,11 @@ export default function App() {
         if (isSignUp) {
           console.log("HandleLogin: Creating user with email:", email);
           const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-          if (name) {
-            await updateProfile(userCredential.user, { displayName: name });
+          if (name || photoURL) {
+            await updateProfile(userCredential.user, { 
+              displayName: name || userCredential.user.displayName,
+              photoURL: photoURL || userCredential.user.photoURL
+            });
           }
           
           await setDoc(doc(db, "users", userCredential.user.uid), {
@@ -418,6 +420,7 @@ export default function App() {
              email: email,
              role: role,
              whatsapp: finalWhatsapp,
+             photoURL: photoURL || "",
              createdAt: Timestamp.now(),
            });
 

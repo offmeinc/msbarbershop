@@ -14,7 +14,6 @@ import {
   getDocs
 } from "firebase/firestore";
 import { db, handleFirestoreError, OperationType } from "../lib/firebase";
-import { uploadImage } from "../lib/uploadService";
 import { 
   ChevronLeft, 
   Send, 
@@ -32,6 +31,7 @@ import {
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { uploadImage } from "../lib/uploadService";
 
 // Existing Staff (internal) Chat - kept and polished
 export function StaffChatScreen({ user, onBack }: { user: any, onBack: () => void }) {
@@ -156,21 +156,20 @@ export function ChatScreen({ user, onBack }: { user: any, onBack: () => void }) 
         const audioBlob = new Blob(audioChunksRef.current, { type: "audio/ogg; codecs=opus" });
         const file = new File([audioBlob], "audio.ogg", { type: "audio/ogg" });
         
-        const formData = new FormData();
-        formData.append("image", file);
-        
-        const result = await uploadImage(file);
-        
-        if (result.data && result.data.url) {
-            const docData = {
-              audioUrl: result.data.url,
-              text: "🎙️ Mensagem de voz",
-              createdAt: Timestamp.now(),
-              userId: clientUid,
-              sender: "client"
-            };
-            console.log("DEBUG: Data to add (ChatScreen):", docData);
-            await addDoc(collection(db, "chats", clientUid!, "messages"), docData);
+        try {
+            const result = await uploadImage(file);
+            if (result.success && result.data.url) {
+                const docData = {
+                  audioUrl: result.data.url,
+                  text: "🎙️ Mensagem de voz",
+                  createdAt: Timestamp.now(),
+                  userId: clientUid,
+                  sender: "client"
+                };
+                await addDoc(collection(db, "chats", clientUid!, "messages"), docData);
+            }
+        } catch (err) {
+            console.error("Audio upload failed:", err);
         }
         
         stream.getTracks().forEach(track => track.stop());
@@ -329,21 +328,21 @@ export function ChatScreen({ user, onBack }: { user: any, onBack: () => void }) 
             <Image className="w-4 h-4 text-neutral-400" />
             <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
                 const file = e.target.files?.[0];
-                if (!file) return;
+                if (!file || !clientUid) return;
                 
-                const formData = new FormData();
-                formData.append("image", file);
-                
-                const result = await uploadImage(file);
-                
-                if (result.data && result.data.url) {
-                    await addDoc(collection(db, "chats", clientUid, "messages"), {
-                      imageUrl: result.data.url,
-                      text: "📷 Imagem",
-                      createdAt: Timestamp.now(),
-                      userId: clientUid,
-                      sender: "client"
-                    });
+                try {
+                  const result = await uploadImage(file);
+                  if (result.success && result.data.url) {
+                      await addDoc(collection(db, "chats", clientUid, "messages"), {
+                        imageUrl: result.data.url,
+                        text: "📷 Imagem",
+                        createdAt: Timestamp.now(),
+                        userId: clientUid,
+                        sender: "client"
+                      });
+                  }
+                } catch (err) {
+                  console.error("Image upload failed:", err);
                 }
             }} />
         </label>
@@ -351,7 +350,7 @@ export function ChatScreen({ user, onBack }: { user: any, onBack: () => void }) 
             onClick={isRecording ? stopRecording : startRecording}
             className={`p-3.5 rounded-xl border ${isRecording ? "border-red-500/50 bg-red-500/20 text-red-500" : "border-white/10 hover:bg-neutral-800 text-neutral-400"}`}
         >
-            {isRecording ? <Square className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+            {isRecording ? <Square className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
         </button>
         <input 
           value={newMessage} 
@@ -388,7 +387,7 @@ export function ProfessionalClientChatsScreen({ user, onBack, initialClientId, i
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  
+
   const startRecording = async () => {
     setErrorMessage("");
     try {
@@ -405,22 +404,21 @@ export function ProfessionalClientChatsScreen({ user, onBack, initialClientId, i
         const audioBlob = new Blob(audioChunksRef.current, { type: "audio/ogg; codecs=opus" });
         const file = new File([audioBlob], "audio.ogg", { type: "audio/ogg" });
         
-        const formData = new FormData();
-        formData.append("image", file);
-        
-        const result = await uploadImage(file);
-        
-        if (result.data && result.data.url) {
-            const docData = {
-              audioUrl: result.data.url,
-              text: "🎙️ Mensagem de voz",
-              createdAt: Timestamp.now(),
-              sender: "professional",
-              senderName: user?.displayName || user?.name || "Suporte",
-              senderId: user?.uid || user?.id
-            };
-            console.log("DEBUG: Data to add:", docData);
-            await addDoc(collection(db, "chats", activeClientId!, "messages"), docData);
+        try {
+            const result = await uploadImage(file);
+            if (result.success && result.data.url) {
+                const docData = {
+                  audioUrl: result.data.url,
+                  text: "🎙️ Mensagem de voz",
+                  createdAt: Timestamp.now(),
+                  sender: "professional",
+                  senderName: user?.displayName || user?.name || "Suporte",
+                  senderId: user?.uid || user?.id
+                };
+                await addDoc(collection(db, "chats", activeClientId!, "messages"), docData);
+            }
+        } catch (err) {
+            console.error("Professional audio upload failed:", err);
         }
         
         stream.getTracks().forEach(track => track.stop());
@@ -800,20 +798,20 @@ export function ProfessionalClientChatsScreen({ user, onBack, initialClientId, i
                   const file = e.target.files?.[0];
                   if (!file || !activeClientId) return;
                   
-                  const formData = new FormData();
-                  formData.append("image", file);
-                  
-                  const result = await uploadImage(file);
-                  
-                  if (result.data && result.data.url) {
-                      await addDoc(collection(db, "chats", activeClientId, "messages"), {
-                        imageUrl: result.data.url,
-                        text: "📷 Imagem",
-                        createdAt: Timestamp.now(),
-                        sender: "professional",
-                        senderName: user?.displayName || user?.name || "Suporte",
-                        senderId: user?.uid || user?.id
-                      });
+                  try {
+                    const result = await uploadImage(file);
+                    if (result.success && result.data.url) {
+                        await addDoc(collection(db, "chats", activeClientId, "messages"), {
+                          imageUrl: result.data.url,
+                          text: "📷 Imagem",
+                          createdAt: Timestamp.now(),
+                          sender: "professional",
+                          senderName: user?.displayName || user?.name || "Suporte",
+                          senderId: user?.uid || user?.id
+                        });
+                    }
+                  } catch (err) {
+                    console.error("Professional image upload failed:", err);
                   }
               }} />
             </label>

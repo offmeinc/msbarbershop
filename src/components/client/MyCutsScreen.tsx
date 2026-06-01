@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence } from "framer-motion";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
 import { updateDoc, doc, Timestamp, collection, query, where, onSnapshot } from "firebase/firestore";
-import { Scissors, Calendar, Clock, CheckCircle, XCircle, Star, ArrowLeft, Camera, Image as ImageIcon, X, Loader2, User, CalendarCheck } from "lucide-react";
+import { Scissors, Calendar, Clock, CheckCircle, XCircle, Star, ArrowLeft, Image as ImageIcon, X, Loader2, User, CalendarCheck, Camera } from "lucide-react";
 import { GOOGLE_REVIEW_URL } from "../../constants";
 import { toast } from "../ui/Toast";
 import { uploadImage } from "../../lib/uploadService";
@@ -20,7 +20,7 @@ interface MyCutsScreenProps {
 
 export function MyCutsScreen({ user, appointments, onBack, onBookAgain, onReschedule, onCancel }: MyCutsScreenProps) {
   const [ratingLoading, setRatingLoading] = useState<string | null>(null);
-  const [uploadingFor, setUploadingFor] = useState<string | null>(null);
+  const [isPhotoUploading, setIsPhotoUploading] = useState<string | null>(null);
   const [portfolioCuts, setPortfolioCuts] = useState<any[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [appToCancel, setAppToCancel] = useState<any | null>(null);
@@ -107,28 +107,21 @@ export function MyCutsScreen({ user, appointments, onBack, onBookAgain, onResche
     }
   };
 
-  const handleReviewPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>, appointmentId: string) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setUploadingFor(appointmentId);
-    const formData = new FormData();
-    formData.append('image', file);
-
+  const handleReviewPhotoUpload = async (appointmentId: string, file: File) => {
+    setIsPhotoUploading(appointmentId);
     try {
-      const data = await uploadImage(file);
-      if (data.success) {
-        await updateDoc(doc(db, "appointments", appointmentId), { 
-          reviewPhotoUrl: data.data.url 
+      const result = await uploadImage(file);
+      if (result.success && result.data.url) {
+        await updateDoc(doc(db, "appointments", appointmentId), {
+          reviewPhotoUrl: result.data.url
         });
-        toast.success("Foto adicionada à avaliação!");
-      } else {
-        toast.error("Erro ao fazer upload.");
+        toast.success("Foto do corte adicionada! ✨");
       }
     } catch (error: any) {
-      toast.error(error.message || "Erro na conexão.");
+      console.error("Review photo upload error:", error);
+      toast.error("Erro ao subir foto do corte.");
     } finally {
-      setUploadingFor(null);
+      setIsPhotoUploading(null);
     }
   };
 
@@ -367,6 +360,7 @@ export function MyCutsScreen({ user, appointments, onBack, onBookAgain, onResche
                                       </div>
                                   </div>
 
+                                  {/* Photo upload functionality removed */}
                                   <div className="space-y-4">
                                       {app.reviewPhotoUrl ? (
                                         <div className="relative aspect-[4/5] w-full rounded-2xl overflow-hidden group border border-white/10">
@@ -379,22 +373,24 @@ export function MyCutsScreen({ user, appointments, onBack, onBookAgain, onResche
                                             </button>
                                         </div>
                                       ) : (
-                                        <label className="flex flex-col items-center justify-center p-8 bg-black/40 border border-dashed border-white/10 rounded-[2rem] gap-3 cursor-pointer hover:border-amber-500/30 hover:bg-white/5 transition-all group">
-                                            <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-neutral-500 group-hover:text-amber-500 transition-colors">
-                                                {uploadingFor === app.id ? <Loader2 className="w-5 h-5 animate-spin" /> : <Camera className="w-5 h-5" />}
+                                        <label className={`w-full aspect-video border-2 border-dashed border-white/5 bg-black/40 rounded-3xl flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-amber-500/30 hover:bg-amber-500/5 transition-all group ${isPhotoUploading === app.id ? 'opacity-50 pointer-events-none' : ''}`}>
+                                            <div className="w-12 h-12 bg-neutral-900 border border-white/5 rounded-2xl flex items-center justify-center text-neutral-500 group-hover:text-amber-500 group-hover:scale-110 transition-all">
+                                                {isPhotoUploading === app.id ? <Loader2 className="w-6 h-6 animate-spin" /> : <Camera className="w-6 h-6" />}
                                             </div>
                                             <div className="text-center">
-                                                <p className="text-[9px] font-black text-neutral-500 uppercase tracking-widest group-hover:text-neutral-300 transition-colors">
-                                                    {uploadingFor === app.id ? "Enviando..." : "Adicionar Foto do Corte"}
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-white mb-1">
+                                                    {isPhotoUploading === app.id ? 'Subindo Foto...' : 'Adicionar Foto do Corte'}
                                                 </p>
-                                                <p className="text-[8px] text-neutral-600 font-bold uppercase mt-1">Mostre o resultado!</p>
+                                                <p className="text-[8px] font-bold uppercase text-neutral-600 tracking-tighter">Mostre seu visual na galeria</p>
                                             </div>
                                             <input 
                                                 type="file" 
                                                 accept="image/*" 
-                                                onChange={(e) => handleReviewPhotoUpload(e, app.id)} 
                                                 className="hidden" 
-                                                disabled={!!uploadingFor}
+                                                onChange={(e) => {
+                                                    const file = e.target.files?.[0];
+                                                    if (file) handleReviewPhotoUpload(app.id, file);
+                                                }}
                                             />
                                         </label>
                                       )}

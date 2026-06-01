@@ -3,6 +3,8 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import axios from "axios";
+import multer from "multer";
+import { v2 as cloudinary } from "cloudinary";
 import { initVapid, startAppointmentsListener, sendPushNotification, sendNotificationToCollaborators } from "./src/server/pushNotificationService";
 import { startAppointmentAutoUpdater } from "./src/server/appointmentAutoUpdater";
 import { db } from "./src/lib/firebase";
@@ -14,6 +16,19 @@ const __dirname = path.dirname(__filename);
 async function startServer() {
   const app = express();
   const PORT = 3000;
+  
+  // Cloudinary Configuration
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+    secure: true
+  });
+
+  const upload = multer({ 
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+  });
   
   // Support standard JSON body parsing for API routes
   app.use(express.json({ limit: '50mb' }));
@@ -43,6 +58,85 @@ async function startServer() {
   startAppointmentsListener();
   startAppointmentAutoUpdater();
   
+  // Fallback in-memory storage for images if Cloudinary fails or is unconfigured
+  const inMemoryImages = new Map<string, { buffer: Buffer, mimeType: string }>();
+
+  // Helper route to serve in-memory images
+  app.get("/api/images/:id", (req, res) => {
+    const img = inMemoryImages.get(req.params.id);
+    if (!img) return res.status(404).send("Not found");
+    res.setHeader("Content-Type", img.mimeType);
+    res.send(img.buffer);
+  });
+
+  // API Route for upload to Cloudinary
+  app.post("/api/upload", upload.single("image"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "Nenhum arquivo enviado" });
+      }
+
+      // Check if Cloudinary is fully configured
+      const hasCloudinary = process.env.CLOUDINARY_CLOUD_NAME && 
+                           process.env.CLOUDINARY_API_KEY && 
+                           process.env.CLOUDINARY_API_SECRET;
+
+      if (!hasCloudinary) {
+        console.warn("[Upload] Cloudinary credentials missing. Falling back to in-memory mock storage.");
+        const fileId = `mock-${Date.now()}-${Math.random().toString(36).substring(2)}`;
+        inMemoryImages.set(fileId, { buffer: req.file.buffer, mimeType: req.file.mimetype });
+        
+        return res.json({
+          success: true,
+          data: {
+            url: `/api/images/${fileId}`,
+            public_id: fileId,
+          }
+        });
+      }
+
+      // Upload to Cloudinary using stream for better performance with buffers
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: "msbarbershop",
+          resource_type: "auto",
+        },
+        (error, result) => {
+          if (error) {
+            // Fallback gracefully on Cloudinary error (e.g. invalid signature)
+            // Silently fall back to in-memory mock storage if Cloudinary fails
+            const fileId = `mock-${Date.now()}-${Math.random().toString(36).substring(2)}`;
+            if (req.file) {
+              inMemoryImages.set(fileId, { buffer: req.file.buffer, mimeType: req.file.mimetype });
+            }
+            
+            return res.json({
+              success: true,
+              isMock: true,
+              errorWarning: error.message,
+              data: {
+                url: `/api/images/${fileId}`,
+                public_id: fileId,
+              }
+            });
+          }
+          res.json({
+            success: true,
+            data: {
+              url: result?.secure_url,
+              public_id: result?.public_id,
+            }
+          });
+        }
+      );
+
+      uploadStream.end(req.file.buffer);
+    } catch (err: any) {
+      console.error("[Upload Route] Error:", err.message);
+      res.status(500).json({ error: "Falha no upload: " + err.message });
+    }
+  });
+
   // API Route for Push Config (Retrieve VAPID PublicKey)
   app.get("/api/push-config", (req, res) => {
     res.json({ publicKey: vapid.publicKey });

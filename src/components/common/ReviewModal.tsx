@@ -1,40 +1,15 @@
 import React, { useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
-import { Star, X, Camera, Loader2, Image as ImageIcon } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Star, X } from "lucide-react";
 import { updateDoc, doc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { toast } from "../ui/Toast";
-import { uploadImage } from "../../lib/uploadService";
 
 export function ReviewModal({ appointment, onClose }: { appointment: any, onClose: () => void }) {
   const [rating, setRating] = useState(appointment.rating || 5);
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [photoUrl, setPhotoUrl] = useState(appointment.reviewPhotoUrl || "");
-
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setUploading(true);
-    const formData = new FormData();
-    formData.append('image', file);
-
-    try {
-      const data = await uploadImage(file);
-      if (data.success) {
-        setPhotoUrl(data.data.url);
-        toast.success("Foto adicionada!");
-      } else {
-        toast.error("Erro no upload.");
-      }
-    } catch (e: any) {
-      toast.error(e.message || "Erro de conexão.");
-    } finally {
-      setUploading(false);
-    }
-  };
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -76,7 +51,7 @@ export function ReviewModal({ appointment, onClose }: { appointment: any, onClos
          />
 
          <div className="mb-8">
-            {photoUrl ? (
+            {photoUrl && (
                 <div className="relative aspect-[4/3] w-full rounded-2xl overflow-hidden group border border-white/10">
                     <img src={photoUrl} className="w-full h-full object-cover" alt="Sua avaliação" />
                     <button 
@@ -86,16 +61,6 @@ export function ReviewModal({ appointment, onClose }: { appointment: any, onClos
                         <X className="w-4 h-4" />
                     </button>
                 </div>
-            ) : (
-                <label className="flex flex-col items-center justify-center p-6 bg-black/40 border border-dashed border-white/10 rounded-2xl gap-2 cursor-pointer hover:border-amber-500/30 hover:bg-white/5 transition-all group">
-                    <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-neutral-500 group-hover:text-amber-500 transition-colors">
-                        {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
-                    </div>
-                    <span className="text-[9px] font-black text-neutral-500 uppercase tracking-widest group-hover:text-neutral-300">
-                        {uploading ? "Enviando..." : "Foto do Resultado"}
-                    </span>
-                    <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" disabled={uploading} />
-                </label>
             )}
          </div>
          

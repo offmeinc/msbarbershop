@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { motion } from "motion/react";
+import { motion } from "framer-motion";
 import { Loader2, Key, Mail, Lock, User, Phone, Sparkles, LogIn, ChevronLeft } from "lucide-react";
 import { BARBERSHOP_NAME } from "../../constants";
 
@@ -76,12 +76,15 @@ export function ClientPortalScreen({ onLogin, onForgotPassword, onBack }: { onLo
   );
 }
 
-export function CollaboratorLoginScreen({ onLogin, setCurrentScreen, setRequestedRole }: { onLogin: (role: string, phone?: string, password?: string, isSignUp?: boolean, name?: string, whatsapp?: string) => void, setCurrentScreen: (screen: string) => void, setRequestedRole: (role: string) => void }) {
+import { ImageUpload } from "../common/ImageUpload";
+
+export function CollaboratorLoginScreen({ onLogin, setCurrentScreen, setRequestedRole }: { onLogin: (role: string, phone?: string, password?: string, isSignUp?: boolean, name?: string, whatsapp?: string, photoURL?: string) => void, setCurrentScreen: (screen: string) => void, setRequestedRole: (role: string) => void }) {
   const [isSignUp, setIsSignUp] = useState(false);
   const [role, setRole] = useState<"manager" | "barber">("barber");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [photoURL, setPhotoURL] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -89,7 +92,7 @@ export function CollaboratorLoginScreen({ onLogin, setCurrentScreen, setRequeste
     setLoading(true);
     setRequestedRole(role);
     try {
-      await onLogin(role, phone, password, isSignUp, name, phone);
+      await onLogin(role, phone, password, isSignUp, name, phone, photoURL);
     } catch (err) {
       console.error(err);
     } finally {
@@ -132,22 +135,31 @@ export function CollaboratorLoginScreen({ onLogin, setCurrentScreen, setRequeste
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-6">
         {isSignUp && (
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest ml-4">Nome Completo</label>
-            <div className="relative group">
-              <User className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-600 group-focus-within:text-amber-500 transition-colors" />
-              <input 
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full bg-neutral-950 border border-white/5 rounded-[2rem] p-5 pl-14 text-sm text-white focus:border-amber-500 outline-none transition-all"
-                placeholder="Seu nome"
-                required
-              />
+          <>
+            <ImageUpload 
+              onUpload={setPhotoURL} 
+              currentUrl={photoURL} 
+              label="Sua Foto de Perfil"
+              folder="barbers"
+            />
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest ml-4">Nome Completo</label>
+              <div className="relative group">
+                <User className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-600 group-focus-within:text-amber-500 transition-colors" />
+                <input 
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full bg-neutral-950 border border-white/5 rounded-[2rem] p-5 pl-14 text-sm text-white focus:border-amber-500 outline-none transition-all"
+                  placeholder="Seu nome"
+                  required
+                />
+              </div>
             </div>
-          </div>
+          </>
         )}
 
         <div className="space-y-2">

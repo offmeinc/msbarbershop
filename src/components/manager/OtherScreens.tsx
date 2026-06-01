@@ -227,7 +227,7 @@ export function ShareScreen({ onBack }: { onBack: () => void }) {
               <div className="w-full text-center space-y-12 relative z-10 pt-12">
                 <div className="w-48 h-48 bg-white/5 rounded-[4rem] border border-white/10 flex items-center justify-center mx-auto shadow-2xl relative overflow-hidden">
                     <img 
-                      src="https://i.ibb.co/LXjzGkFs/cd17f19f-71a4-453e-b9d7-f129a7ecfb2f.jpg" 
+                      src="/logo.png" 
                       alt="Logo"
                       className="w-full h-full object-cover opacity-90"
                     />

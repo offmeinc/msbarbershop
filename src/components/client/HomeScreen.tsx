@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, Sparkles, MapPin, Instagram, Phone, Clock, Scissors, Image as ImageIcon, Star } from "lucide-react";
 import { BARBERSHOP_NAME, BARBERSHOP_ADDRESS, BARBERSHOP_PHONE, BARBERSHOP_INSTAGRAM, GOOGLE_REVIEW_URL } from "../../constants";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
@@ -184,7 +184,7 @@ export function HomeScreen({ services, onStartBooking }: { services: any[], onSt
                     
                     <div className={`relative z-10 w-10 sm:w-12 h-10 sm:h-12 rounded-2xl bg-white/5 overflow-hidden flex items-center justify-center transition-all duration-500 shadow-lg border ${isSelected ? 'border-amber-500 scale-110' : 'border-white/5 group-hover:scale-110 group-hover:border-amber-500/50'}`}>
                       <img 
-                        src="https://i.ibb.co/LXjzGkFs/cd17f19f-71a4-453e-b9d7-f129a7ecfb2f.jpg" 
+                        src="/logo.png" 
                         alt="Logo"
                         className="w-full h-full object-cover"
                         referrerPolicy="no-referrer"
