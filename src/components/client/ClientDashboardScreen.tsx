@@ -17,7 +17,8 @@ import {
   addDoc, 
   serverTimestamp, 
   Timestamp,
-  getFirestore
+  getFirestore,
+  increment
 } from "firebase/firestore";
 import { 
   X, 
@@ -298,6 +299,18 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
 
   const handleCancelAppointment = async (app: any) => {
     try {
+      // Refund if paid
+      if (app.paymentStatus === 'paid' && app.price > 0) {
+        const clientUid = app.clientId;
+        if (clientUid && clientUid !== "guest") {
+          await updateDoc(doc(db, "users", clientUid), {
+            walletBalance: increment(app.price),
+            updatedAt: serverTimestamp()
+          });
+          toast.success(`R$ ${app.price.toFixed(2)} estornados para sua carteira.`);
+        }
+      }
+
       await updateDoc(doc(db, "appointments", app.id), {
         status: 'cancelled',
         cancelledBy: 'client',

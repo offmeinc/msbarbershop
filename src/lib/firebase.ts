@@ -59,7 +59,17 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     operationType,
     path
   }
-  const errorJson = JSON.stringify(errInfo);
+  let errorJson = "";
+  try {
+    errorJson = JSON.stringify(errInfo);
+  } catch (e) {
+    errorJson = JSON.stringify({
+      error: errInfo.error,
+      operationType: errInfo.operationType,
+      path: errInfo.path,
+      message: "Could not stringify full error info due to circularity"
+    });
+  }
   console.error('Firestore Error: ', errorJson);
   throw new Error(errorJson);
 }

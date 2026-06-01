@@ -24,6 +24,7 @@ import {
   updateDoc,
   getDocs,
   getFirestore,
+  increment,
 } from "firebase/firestore";
 import {
   ChevronLeft,
@@ -143,7 +144,7 @@ function PortfolioModal({ barber, onClose }: { barber: any, onClose: () => void 
   );
 }
 
-function ConfirmationModal({ service, barber, date, onConfirm, userId, userRole, duration, appointmentId }: any) {
+function ConfirmationModal({ service, barber, date, onConfirm, userId, userRole, duration, appointmentId, user }: any) {
   const [pushState, setPushState] = useState(getNotificationPermissionState());
   const [isAddingToCalendar, setIsAddingToCalendar] = useState(false);
   const [addedToCalendar, setAddedToCalendar] = useState(false);
@@ -151,12 +152,70 @@ function ConfirmationModal({ service, barber, date, onConfirm, userId, userRole,
   const [copiedPix, setCopiedPix] = useState(false);
   
   const [wantsToPayNow, setWantsToPayNow] = useState<boolean | null>(null);
+  const [useWallet, setUseWallet] = useState(false);
   
   const [mpLoading, setMpLoading] = useState(false);
   const [mpData, setMpData] = useState<any>(null);
   const [mpError, setMpError] = useState<string | null>(null);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [isSimulatingCheck, setIsSimulatingCheck] = useState(false);
+
+  const [walletBalance, setWalletBalance] = useState(0);
+
+  useEffect(() => {
+    if (userId && userId !== "guest") {
+      const userRef = doc(db, "users", userId);
+      getDoc(userRef).then(snap => {
+        if (snap.exists()) {
+          setWalletBalance(Number(snap.data().walletBalance || 0));
+        }
+      });
+    }
+  }, [userId]);
+
+  const servicePrice = service?.price ? Number(service.price) : 0;
+  const canUseWallet = walletBalance > 0 && servicePrice > 0;
+  const walletCoverage = Math.min(walletBalance, servicePrice);
+  const remainingPrice = Math.max(0, servicePrice - (useWallet ? walletCoverage : 0));
+
+  const handleWalletFullPayment = async () => {
+    setMpLoading(true);
+    try {
+      const firestore = db || getFirestore();
+      
+      // 1. Update wallet balance
+      await updateDoc(doc(firestore, "users", userId), {
+        walletBalance: increment(-servicePrice),
+        updatedAt: serverTimestamp()
+      });
+
+      // 2. Update appointment
+      await updateDoc(doc(firestore, "appointments", appointmentId), {
+        status: "confirmed",
+        paymentStatus: "paid",
+        paidVia: "wallet",
+        updatedAt: serverTimestamp()
+      });
+
+      setPaymentSuccess(true);
+      toast.success("Pagamento realizado com saldo da carteira!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao processar pagamento com carteira.");
+    } finally {
+      setMpLoading(false);
+    }
+  };
+
+  const handleCopyPix = (str: string) => {
+    navigator.clipboard.writeText(str);
+    setCopiedPix(true);
+    setTimeout(() => setCopiedPix(false), 2000);
+    toast.success("Código Copia e Cola copiado!");
+  };
+
+  const hasPix = barber?.pixKey;
+  const pixString = hasPix ? generatePixString(barber.pixKey, barber.name, "Brasil", remainingPrice) : "";
 
   useEffect(() => {
     if (mpData?.payment_id && !paymentSuccess) {
@@ -178,33 +237,33 @@ function ConfirmationModal({ service, barber, date, onConfirm, userId, userRole,
     }
   }, [mpData?.payment_id, paymentSuccess]);
 
-  const handleCopyPix = (str: string) => {
-    navigator.clipboard.writeText(str);
-    setCopiedPix(true);
-    setTimeout(() => setCopiedPix(false), 2000);
-    toast.success("Código Copia e Cola copiado!");
-  };
-
-  const hasPix = barber?.pixKey;
-  const pixString = hasPix ? generatePixString(barber.pixKey, barber.name, "Brasil", service?.price ? Number(service.price) : undefined) : "";
-
-  // Dynamic Mercado Pago generation trigger
   const handleGenerateMpPix = async () => {
     setMpLoading(true);
     setMpError(null);
     try {
+      const amountToPay = remainingPrice;
+      let requestBody = "";
+      try {
+        requestBody = JSON.stringify({
+          transaction_amount: amountToPay,
+          description: `Serviço: ${service?.name}${useWallet ? ' (Parcial Carteira)' : ''}`,
+          email: user?.email || "automatico@msbarbaria.com.br",
+          name: user?.displayName || user?.name || "Cliente",
+          appointmentId: appointmentId || "temp-" + Date.now(),
+          walletAmountToDeduct: useWallet ? walletCoverage : 0,
+          userId: userId !== "guest" ? userId : null
+        });
+      } catch (stringifyErr) {
+        console.error("Stringify error in handleGenerateMpPix:", stringifyErr);
+        throw new Error("Erro ao preparar dados da transação.");
+      }
+
       const res = await fetch(getBackendUrl("/api/payments/mercado-pago/create-payment"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({
-          transaction_amount: service?.price ? Number(service.price) : 0,
-          description: `Serviço: ${service?.name} na barbearia`,
-          email: "automatico@msbarbaria.com.br",
-          name: barber?.name || "Cliente",
-          appointmentId: appointmentId || "temp-" + Date.now()
-        })
+        body: requestBody
       });
       if (!res.ok) {
         throw new Error("Erro de processamento da API de Pagamentos");
@@ -312,20 +371,47 @@ function ConfirmationModal({ service, barber, date, onConfirm, userId, userRole,
                 <Sparkles className="w-6 h-6 text-amber-500" />
               </div>
               <h4 className="text-sm font-black text-white uppercase tracking-wider mb-2">Deseja deixar pago pelo App?</h4>
-              <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest mb-4">Você pode pagar agora ou deixar para pagar na barbearia. É opcional!</p>
+              
+              {canUseWallet && (
+                 <button 
+                  onClick={() => setUseWallet(!useWallet)}
+                  className={`w-full p-4 rounded-2xl border transition-all flex items-center justify-between gap-3 text-left ${useWallet ? 'bg-amber-500/20 border-amber-500/40 text-amber-500' : 'bg-white/5 border-white/10 text-neutral-400'}`}
+                 >
+                    <div className="flex items-center gap-3">
+                       <span className="text-xl">💰</span>
+                       <div>
+                          <p className="text-[10px] font-black uppercase tracking-widest leading-none mb-1">Usar Saldo Carteira</p>
+                          <p className="text-[9px] font-bold opacity-70">Disponível: R$ {walletBalance.toFixed(2)}</p>
+                       </div>
+                    </div>
+                    <div className={`w-10 h-5 rounded-full relative transition-colors ${useWallet ? 'bg-amber-500' : 'bg-neutral-800'}`}>
+                       <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${useWallet ? 'right-1' : 'left-1'}`} />
+                    </div>
+                 </button>
+              )}
+
+              <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest mb-4">
+                {useWallet 
+                  ? (remainingPrice <= 0 
+                      ? "Seu saldo cobre o valor total! Deseja confirmar o pagamento agora?" 
+                      : `Seu saldo abate R$ ${walletCoverage.toFixed(2)}. Restante: R$ ${remainingPrice.toFixed(2)} via Pix.`)
+                  : "Você pode pagar agora via Pix ou deixar para pagar na barbearia. É opcional!"}
+              </p>
               
               <div className="space-y-2">
                 <button
                   type="button"
                   onClick={() => {
-                    setWantsToPayNow(true);
-                    if (!mpData) {
+                    if (useWallet && remainingPrice <= 0) {
+                      handleWalletFullPayment();
+                    } else {
+                      setWantsToPayNow(true);
                       handleGenerateMpPix();
                     }
                   }}
                   className="w-full py-4 rounded-[1.5rem] bg-amber-500 text-black text-[10px] font-black uppercase tracking-widest hover:bg-amber-400 active:scale-95 transition-all text-center block"
                 >
-                  SIM, QUERO PAGAR AGORA
+                  {useWallet && remainingPrice <= 0 ? "CONFIRMAR PAGAMENTO TOTAL" : "SIM, QUERO PAGAR AGORA"}
                 </button>
                 <button
                   type="button"
@@ -976,6 +1062,7 @@ export function BookingScreen({
       <AnimatePresence>
         {showConfirmation && (
           <ConfirmationModal
+            user={user}
             service={services.find((s) => s.id === selectedService)}
             barber={barbers.find((b) => b.id === selectedBarber)}
             date={(() => {

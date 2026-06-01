@@ -239,7 +239,16 @@ async function startServer() {
               return;
            }
 
-           // 3. Perform atomic update
+           // 3. Optional: Deduct from wallet if partial payment was used
+           if (pData?.walletAmountToDeduct > 0 && pData?.userId && pData?.userId !== "guest") {
+              const uRef = doc(db, "users", pData.userId);
+              t.update(uRef, {
+                 walletBalance: increment(-(pData.walletAmountToDeduct)),
+                 updatedAt: serverTimestamp()
+              });
+           }
+
+           // 4. Perform atomic update
            t.update(appointmentRef, {
              status: "confirmed",
              paymentStatus: "paid",
@@ -304,7 +313,7 @@ async function startServer() {
 
   // API Route for Mercado Pago Pix Payment Creation
   app.post("/api/payments/mercado-pago/create-payment", async (req, res) => {
-    const { transaction_amount, description, email, name, appointmentId } = req.body;
+    const { transaction_amount, description, email, name, appointmentId, userId: providedUserId, walletAmountToDeduct } = req.body;
     const amount = Number(transaction_amount);
 
     try {
@@ -313,8 +322,8 @@ async function startServer() {
       }
 
       // Try parsing userId from topup appointmentId
-      let userId = "guest";
-      if (appointmentId && appointmentId.startsWith("wallet-topup-")) {
+      let userId = providedUserId || "guest";
+      if (userId === "guest" && appointmentId && appointmentId.startsWith("wallet-topup-")) {
         const withoutPrefix = appointmentId.substring("wallet-topup-".length);
         const lastDash = withoutPrefix.lastIndexOf("-");
         if (lastDash > 0) {
@@ -345,6 +354,7 @@ async function startServer() {
           id: simulatedPaymentId,
           appointmentId: appointmentId || null,
           userId: userId,
+          walletAmountToDeduct: walletAmountToDeduct || 0,
           amount: amount,
           description: description || "Simulated payment",
           status: "pending",
@@ -382,7 +392,8 @@ async function startServer() {
       await setDoc(doc(db, "payments", mpPaymentId), {
         id: mpPaymentId,
         appointmentId: appointmentId || null,
-        userId: userId,
+        userId: userId || "guest",
+        walletAmountToDeduct: walletAmountToDeduct || 0,
         amount: amount,
         description: description || "Agendamento MS Barbearia",
         status: response.data.status || "pending",

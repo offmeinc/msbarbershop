@@ -240,7 +240,7 @@ export default function App() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
-             subscription: sub, 
+             subscription: sub.toJSON(), 
              userId: userId,
              userRole: userRole 
           })
