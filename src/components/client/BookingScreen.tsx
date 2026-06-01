@@ -481,9 +481,9 @@ function ConfirmationModal({ service, barber, date, onConfirm, userId, userRole,
 
           <button
             onClick={onConfirm}
-            className="w-full bg-white text-black py-5 rounded-[1.8rem] font-black uppercase italic tracking-widest hover:scale-105 transition-transform"
+            className={`w-full py-5 rounded-[1.8rem] font-black uppercase italic tracking-widest hover:scale-105 transition-transform ${paymentSuccess ? "bg-green-500 text-black shadow-xl shadow-green-500/20" : "bg-white text-black"}`}
           >
-            VOLTAR PARA O INÍCIO
+            {paymentSuccess ? "AGENDAMENTO CONCLUÍDO!" : "VOLTAR PARA O INÍCIO"}
           </button>
         </div>
       </div>

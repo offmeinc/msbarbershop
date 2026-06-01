@@ -211,55 +211,90 @@ async function startServer() {
       // 2. Barber Appointment Booking Flow
       try {
         const appointmentRef = doc(db, "appointments", appointmentId);
-        const appointmentSnap = await getDoc(appointmentRef);
-        if (appointmentSnap.exists()) {
-          const appData = appointmentSnap.data();
-          if (appData.status !== "confirmed" || appData.paymentStatus !== "paid") {
-            await updateDoc(appointmentRef, {
-              status: "confirmed",
-              paymentStatus: "paid",
-              updatedAt: serverTimestamp()
-            });
+        const paymentRef = doc(db, "payments", String(paymentId));
+        
+        let shouldNotify = false;
+        let appData: any = null;
 
-            const clientName = appData.clientName || "Cliente";
-            const serviceName = appData.serviceName || "Serviço";
-            const barberName = appData.barberName || "Profissional";
-            const clientId = appData.clientId || "guest";
-            const clientPhone = appData.clientPhone || "";
+        await runTransaction(db, async (t) => {
+           // 1. Check if payment record already marked this appointment as processed
+           const pSnap = await t.get(paymentRef);
+           const pData = pSnap.exists() ? pSnap.data() : null;
+           
+           if (pData?.processedAppointment) {
+              console.log(`[Payment Processor] Payment ${paymentId} already processed for appointment ${appointmentId}.`);
+              return;
+           }
 
-            let formattedDateStr = "";
-            if (appData.date) {
-              try {
-                const dateVal = appData.date instanceof Timestamp ? appData.date.toDate() : new Date(appData.date);
-                formattedDateStr = dateVal.toLocaleString("pt-BR", {
-                  day: "2-digit",
-                  month: "2-digit",
-                  hour: "2-digit",
-                  minute: "2-digit"
-                });
-              } catch {
-                formattedDateStr = String(appData.date);
-              }
-            }
+           // 2. Check appointment state
+           const appSnap = await t.get(appointmentRef);
+           if (!appSnap.exists()) {
+              console.warn(`[Payment Processor] Appointment ${appointmentId} not found.`);
+              return;
+           }
+           
+           appData = appSnap.data();
+           // If already paid and confirmed, skip
+           if (appData.status === "confirmed" && appData.paymentStatus === "paid") {
+              return;
+           }
 
-            await sendNotificationToCollaborators({
-              title: "Novo Pagamento Pix Confirmado! 📱",
-              body: `Pix de ${clientName} aprovado para ${serviceName} às ${appData.time} com ${barberName}.`,
-              url: "/agenda"
-            });
+           // 3. Perform atomic update
+           t.update(appointmentRef, {
+             status: "confirmed",
+             paymentStatus: "paid",
+             updatedAt: serverTimestamp()
+           });
 
-            const rawTarget = clientId && clientId !== "guest" ? clientId : clientPhone;
-            const clientTarget = rawTarget ? rawTarget.replace(/[\s\-\(\)\+]/g, "") : "";
-            if (clientTarget) {
-              await sendPushNotification(clientTarget, {
-                title: "Pagamento Confirmado! ✅",
-                body: `Seu Pix foi recebido! Seu agendamento de ${serviceName} para ${formattedDateStr} está confirmado.`,
-                url: "/"
+           if (pSnap.exists()) {
+             t.update(paymentRef, {
+               processedAppointment: true,
+               updatedAt: serverTimestamp()
+             });
+           }
+           
+           shouldNotify = true;
+        });
+
+        if (shouldNotify && appData) {
+          const clientName = appData.clientName || "Cliente";
+          const serviceName = appData.serviceName || "Serviço";
+          const barberName = appData.barberName || "Profissional";
+          const clientId = appData.clientId || "guest";
+          const clientPhone = appData.clientPhone || "";
+
+          let formattedDateStr = "";
+          if (appData.date) {
+            try {
+              const dateVal = appData.date instanceof Timestamp ? appData.date.toDate() : new Date(appData.date);
+              formattedDateStr = dateVal.toLocaleString("pt-BR", {
+                day: "2-digit",
+                month: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit"
               });
+            } catch {
+              formattedDateStr = String(appData.date);
             }
-
-            console.log(`[Payment Processor] Confirmed appointment: ${appointmentId} due to payment`);
           }
+
+          await sendNotificationToCollaborators({
+            title: "Novo Pagamento Pix Confirmado! 📱",
+            body: `Pix de ${clientName} aprovado para ${serviceName} às ${appData.time} com ${barberName}.`,
+            url: "/agenda"
+          });
+
+          const rawTarget = clientId && clientId !== "guest" ? clientId : clientPhone;
+          const clientTarget = rawTarget ? rawTarget.replace(/[\s\-\(\)\+]/g, "") : "";
+          if (clientTarget) {
+            await sendPushNotification(clientTarget, {
+              title: "Pagamento Confirmado! ✅",
+              body: `Seu Pix foi recebido! Seu agendamento de ${serviceName} para ${formattedDateStr} está confirmado.`,
+              url: "/"
+            });
+          }
+
+          console.log(`[Payment Processor] Confirmed appointment: ${appointmentId} due to payment ${paymentId}`);
         }
       } catch (err: any) {
         console.error(`[Payment Processor] Error during appointment payment confirmation: ${err.message}`);
@@ -328,7 +363,7 @@ async function startServer() {
         transaction_amount: amount,
         description: description || "Agendamento MS Barbearia",
         payment_method_id: "pix",
-        notification_url: "https://msbarbershop.com.br/api/payments/mercado-pago/webhook",
+        external_reference: appointmentId || userId || "guest",
         payer: {
           email: email || "payment@example.com",
           first_name: name || "Cliente"
@@ -512,12 +547,14 @@ async function startServer() {
                 await processApprovedPayment({ id: String(paymentId), ...paymentData, status: "approved" });
               }
             } else {
-              // Even if not found in db, try to record and run
-              console.warn(`[MP Webhook] Received webhook for unrecorded payment ${paymentId}. Creating record...`);
+              // Even if not found in db, try to record and run using external_reference from MP response
+              console.warn(`[MP Webhook] Received webhook for unrecorded payment ${paymentId}. Creating record from MP data...`);
+              
+              const mpExtRef = mpResponse.data.external_reference;
               const payload = {
                 id: String(paymentId),
-                appointmentId: null,
-                userId: "guest",
+                appointmentId: (mpExtRef && mpExtRef.includes("wallet-topup")) ? mpExtRef : (mpExtRef || null),
+                userId: (mpExtRef && mpExtRef.includes("wallet-topup")) ? "guest" : (mpExtRef || "guest"),
                 amount: mpResponse.data.transaction_amount,
                 status: "approved",
                 email: mpResponse.data.payer?.email || "",
@@ -525,6 +562,16 @@ async function startServer() {
                 isMock: false,
                 createdAt: serverTimestamp()
               };
+              
+              // Refine userId if it was a wallet topup string
+              if (payload.appointmentId?.startsWith("wallet-topup-")) {
+                 const withoutPrefix = payload.appointmentId.substring("wallet-topup-".length);
+                 const lastDash = withoutPrefix.lastIndexOf("-");
+                 if (lastDash > 0) {
+                    payload.userId = withoutPrefix.substring(0, lastDash);
+                 }
+              }
+
               await setDoc(paymentRef, payload);
               await processApprovedPayment(payload);
             }
