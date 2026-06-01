@@ -99,9 +99,9 @@ async function startServer() {
   // API Route for ImgBB Upload
   app.post("/api/upload", upload.single("image"), async (req, res) => {
     try {
-      const apiKey = process.env.IMGBB_API_KEY;
+      const apiKey = process.env.IMGBB_API_KEY || process.env.VITE_IMGBB_API_KEY;
       if (!apiKey) {
-        throw new Error("IMGBB_API_KEY is not configured");
+        throw new Error("IMGBB_API_KEY ou VITE_IMGBB_API_KEY não configurada no servidor");
       }
 
       if (!req.file) {

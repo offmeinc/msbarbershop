@@ -454,9 +454,9 @@ async function startServer() {
   });
   app2.post("/api/upload", upload.single("image"), async (req, res) => {
     try {
-      const apiKey = process.env.IMGBB_API_KEY;
+      const apiKey = process.env.IMGBB_API_KEY || process.env.VITE_IMGBB_API_KEY;
       if (!apiKey) {
-        throw new Error("IMGBB_API_KEY is not configured");
+        throw new Error("IMGBB_API_KEY ou VITE_IMGBB_API_KEY n\xE3o configurada no servidor");
       }
       if (!req.file) {
         return res.status(400).json({ error: "No image provided" });
