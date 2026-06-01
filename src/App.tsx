@@ -134,7 +134,8 @@ import {
   auth, 
   db, 
   handleFirestoreError, 
-  OperationType 
+  OperationType,
+  safeStringify
 } from "./lib/firebase";
 import { uploadImage } from "./lib/uploadService";
 import { getBackendUrl, urlBase64ToUint8Array } from "./lib/pushRegister";
@@ -239,7 +240,7 @@ export default function App() {
         await fetch(getBackendUrl('/api/subscribe'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
+          body: safeStringify({ 
              subscription: sub.toJSON(), 
              userId: userId,
              userRole: userRole 

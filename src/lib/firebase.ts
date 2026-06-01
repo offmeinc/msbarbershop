@@ -42,6 +42,19 @@ export interface FirestoreErrorInfo {
   }
 }
 
+export function safeStringify(obj: any): string {
+  const cache = new Set();
+  return JSON.stringify(obj, (key, value) => {
+    if (typeof value === 'object' && value !== null) {
+      if (cache.has(value)) {
+        return '[Circular]';
+      }
+      cache.add(value);
+    }
+    return value;
+  }, 2);
+}
+
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
@@ -61,13 +74,14 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   }
   let errorJson = "";
   try {
-    errorJson = JSON.stringify(errInfo);
+    errorJson = safeStringify(errInfo);
   } catch (e) {
+    console.warn("safeStringify failed, falling back to basic info", e);
     errorJson = JSON.stringify({
       error: errInfo.error,
       operationType: errInfo.operationType,
       path: errInfo.path,
-      message: "Could not stringify full error info due to circularity"
+      message: "Could not stringify full error info even with safeStringify"
     });
   }
   console.error('Firestore Error: ', errorJson);

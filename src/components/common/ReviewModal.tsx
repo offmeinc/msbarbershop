@@ -4,6 +4,7 @@ import { Star, X, Camera, Loader2, Image as ImageIcon } from "lucide-react";
 import { updateDoc, doc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { toast } from "../ui/Toast";
+import { uploadImage } from "../../lib/uploadService";
 
 export function ReviewModal({ appointment, onClose }: { appointment: any, onClose: () => void }) {
   const [rating, setRating] = useState(appointment.rating || 5);
@@ -21,24 +22,15 @@ export function ReviewModal({ appointment, onClose }: { appointment: any, onClos
     formData.append('image', file);
 
     try {
-      const apiKey = (import.meta as any).env.VITE_IMGBB_API_KEY;
-      if (!apiKey) {
-        toast.error("Configuração de upload pendente.");
-        return;
-      }
-      const response = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
-        method: 'POST',
-        body: formData
-      });
-      const data = await response.json();
+      const data = await uploadImage(file);
       if (data.success) {
         setPhotoUrl(data.data.url);
         toast.success("Foto adicionada!");
       } else {
         toast.error("Erro no upload.");
       }
-    } catch (e) {
-      toast.error("Erro de conexão.");
+    } catch (e: any) {
+      toast.error(e.message || "Erro de conexão.");
     } finally {
       setUploading(false);
     }

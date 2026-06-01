@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { db } from "../../lib/firebase";
 import { toast } from "../ui/Toast";
+import { uploadImage } from "../../lib/uploadService";
 
 export function ProfileEditScreen({ user, onBack, isClient = false }: { user: any, onBack: () => void, isClient?: boolean }) {
   const [profileData, setProfileData] = useState({
@@ -130,18 +131,7 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
     formData.append('image', file);
 
     try {
-      const apiKey = (import.meta as any).env.VITE_IMGBB_API_KEY;
-      if (!apiKey) {
-        toast.error("Configuração de API do ImgBB faltando. Por favor, adicione VITE_IMGBB_API_KEY no arquivo .env");
-        setUploadingImage(false);
-        setLoading(false);
-        return;
-      }
-      const response = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
-        method: 'POST',
-        body: formData,
-      });
-      const data = await response.json();
+      const data = await uploadImage(file);
       if (data.success) {
         if (isPortfolio) {
             setProfileData(prev => ({ ...prev, portfolio: [...prev.portfolio, data.data.url] }));
@@ -152,9 +142,9 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
       } else {
         toast.error("Erro ao fazer upload da imagem.");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Upload error:", error);
-      toast.error("Erro na conexão com ImgBB.");
+      toast.error(error.message || "Erro na conexão com ImgBB.");
     } finally {
       setUploadingImage(false);
       setLoading(false);

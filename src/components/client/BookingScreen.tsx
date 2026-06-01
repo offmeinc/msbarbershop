@@ -45,7 +45,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { setupPushSubscription, getNotificationPermissionState, queryNotificationSupport, getBackendUrl } from "../../lib/pushRegister";
-import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
+import { db, handleFirestoreError, OperationType, safeStringify } from "../../lib/firebase";
 import { signInWithGoogleCalendar, addEventToCalendar, getCalendarAccessToken } from "../../lib/calendar";
 import { toast } from "../ui/Toast";
 
@@ -321,7 +321,7 @@ function ConfirmationModal({ service, barber, date, onConfirm, userId, userRole,
       const amountToPay = remainingPrice;
       let requestBody = "";
       try {
-        requestBody = JSON.stringify({
+        requestBody = safeStringify({
           transaction_amount: amountToPay,
           description: `Serviço: ${service?.name}${useWallet ? ' (Parcial Carteira)' : ''}`,
           email: user?.email || "automatico@msbarbaria.com.br",

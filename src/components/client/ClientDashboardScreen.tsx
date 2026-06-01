@@ -46,7 +46,7 @@ import {
   MessageSquare,
   MessageCircle
 } from "lucide-react";
-import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
+import { db, handleFirestoreError, OperationType, safeStringify } from "../../lib/firebase";
 import { getBackendUrl } from "../../lib/pushRegister";
 import { QRCodeCanvas } from "qrcode.react";
 import { MoreOptionsScreen } from "../common/MoreOptionsScreen";
@@ -139,7 +139,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({
+        body: safeStringify({
           transaction_amount: amount,
           description: `Recarga de Créditos Carteira - MS Barbearia`,
           email: user?.email || "carteira@msbarbaria.com.br",
@@ -304,7 +304,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
       const res = await fetch(getBackendUrl("/api/appointments/cancel"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        body: safeStringify({
           appointmentId: app.id,
           userId: user?.uid || user?.id
         })

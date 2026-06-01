@@ -7,6 +7,7 @@ import { updateDoc, doc, Timestamp, collection, query, where, onSnapshot } from 
 import { Scissors, Calendar, Clock, CheckCircle, XCircle, Star, ArrowLeft, Camera, Image as ImageIcon, X, Loader2, User, CalendarCheck } from "lucide-react";
 import { GOOGLE_REVIEW_URL } from "../../constants";
 import { toast } from "../ui/Toast";
+import { uploadImage } from "../../lib/uploadService";
 
 interface MyCutsScreenProps {
   user: any;
@@ -115,18 +116,7 @@ export function MyCutsScreen({ user, appointments, onBack, onBookAgain, onResche
     formData.append('image', file);
 
     try {
-      const apiKey = (import.meta as any).env.VITE_IMGBB_API_KEY;
-      if (!apiKey) {
-        toast.error("Erro na configuração de upload.");
-        return;
-      }
-      
-      const response = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
-        method: 'POST',
-        body: formData
-      });
-      
-      const data = await response.json();
+      const data = await uploadImage(file);
       if (data.success) {
         await updateDoc(doc(db, "appointments", appointmentId), { 
           reviewPhotoUrl: data.data.url 
@@ -135,8 +125,8 @@ export function MyCutsScreen({ user, appointments, onBack, onBookAgain, onResche
       } else {
         toast.error("Erro ao fazer upload.");
       }
-    } catch (error) {
-      toast.error("Erro na conexão.");
+    } catch (error: any) {
+      toast.error(error.message || "Erro na conexão.");
     } finally {
       setUploadingFor(null);
     }
