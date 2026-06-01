@@ -1,0 +1,6 @@
+{
+	"appId": "com.msbarber.app",
+	"appName": "MS Barber",
+	"webDir": "dist",
+	"packageClassList": []
+}

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">MS Barber</string>
+    <string name="title_activity_main">MS Barber</string>
+    <string name="package_name">com.msbarber.app</string>
+    <string name="custom_url_scheme">com.msbarber.app</string>
+</resources>
