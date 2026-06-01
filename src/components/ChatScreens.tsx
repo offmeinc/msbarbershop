@@ -14,8 +14,7 @@ import {
   getDocs
 } from "firebase/firestore";
 import { db, handleFirestoreError, OperationType } from "../lib/firebase";
-import { getBackendUrl } from "../lib/pushRegister";
-import { safeFetch } from "../lib/api";
+import { uploadImage } from "../lib/uploadService";
 import { 
   ChevronLeft, 
   Send, 
@@ -160,10 +159,7 @@ export function ChatScreen({ user, onBack }: { user: any, onBack: () => void }) 
         const formData = new FormData();
         formData.append("image", file);
         
-        const result = await safeFetch("/api/upload", {
-            method: "POST",
-            body: formData
-        });
+        const result = await uploadImage(file);
         
         if (result.data && result.data.url) {
             const docData = {
@@ -338,10 +334,7 @@ export function ChatScreen({ user, onBack }: { user: any, onBack: () => void }) 
                 const formData = new FormData();
                 formData.append("image", file);
                 
-                const result = await safeFetch("/api/upload", {
-                    method: "POST",
-                    body: formData
-                });
+                const result = await uploadImage(file);
                 
                 if (result.data && result.data.url) {
                     await addDoc(collection(db, "chats", clientUid, "messages"), {
@@ -415,10 +408,7 @@ export function ProfessionalClientChatsScreen({ user, onBack, initialClientId, i
         const formData = new FormData();
         formData.append("image", file);
         
-        const result = await safeFetch("/api/upload", {
-            method: "POST",
-            body: formData
-        });
+        const result = await uploadImage(file);
         
         if (result.data && result.data.url) {
             const docData = {
@@ -813,10 +803,7 @@ export function ProfessionalClientChatsScreen({ user, onBack, initialClientId, i
                   const formData = new FormData();
                   formData.append("image", file);
                   
-                  const result = await safeFetch("/api/upload", {
-                      method: "POST",
-                      body: formData
-                  });
+                  const result = await uploadImage(file);
                   
                   if (result.data && result.data.url) {
                       await addDoc(collection(db, "chats", activeClientId, "messages"), {

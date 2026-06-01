@@ -1,4 +1,3 @@
-import { safeFetch } from "./api";
 
 export interface ImgBBResponse {
   data: {
@@ -33,11 +32,23 @@ export interface ImgBBResponse {
 }
 
 export async function uploadImage(file: File): Promise<ImgBBResponse> {
+  const apiKey = (import.meta as any).env.VITE_IMGBB_API_KEY;
+  if (!apiKey) {
+    throw new Error("VITE_IMGBB_API_KEY no cliente não encontrada.");
+  }
+
   const formData = new FormData();
   formData.append("image", file);
 
-  return safeFetch("/api/upload", {
+  const response = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
     method: "POST",
     body: formData,
   });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error?.message || "Erro no upload ImgBB");
+  }
+
+  return response.json();
 }

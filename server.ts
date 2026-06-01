@@ -2,9 +2,7 @@ import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
-import multer from "multer";
 import axios from "axios";
-import FormData from "form-data";
 import { initVapid, startAppointmentsListener, sendPushNotification, sendNotificationToCollaborators } from "./src/server/pushNotificationService";
 import { startAppointmentAutoUpdater } from "./src/server/appointmentAutoUpdater";
 import { db } from "./src/lib/firebase";
@@ -45,11 +43,6 @@ async function startServer() {
   startAppointmentsListener();
   startAppointmentAutoUpdater();
   
-  const upload = multer({ 
-    storage: multer.memoryStorage(),
-    limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit
-  });
-
   // API Route for Push Config (Retrieve VAPID PublicKey)
   app.get("/api/push-config", (req, res) => {
     res.json({ publicKey: vapid.publicKey });
@@ -99,46 +92,6 @@ async function startServer() {
         console.error("[Push Test Route] Error delivering delayed push:", err.message);
       }
     }, delayMs);
-  });
-
-  // API Route for ImgBB Upload
-  app.post("/api/upload", upload.single("image"), async (req, res) => {
-    try {
-      const apiKey = process.env.IMGBB_API_KEY || process.env.VITE_IMGBB_API_KEY;
-      if (!apiKey) {
-        throw new Error("IMGBB_API_KEY ou VITE_IMGBB_API_KEY não configurada no servidor");
-      }
-
-      if (!req.file) {
-        return res.status(400).json({ error: "No image provided" });
-      }
-
-      const formData = new FormData();
-      // Send the buffer directly as a file to ImgBB
-      formData.append("image", req.file.buffer, {
-        filename: req.file.originalname || "image.jpg",
-        contentType: req.file.mimetype || "image/jpeg",
-      });
-
-      const response = await axios.post(`https://api.imgbb.com/1/upload?key=${apiKey}`, formData, {
-        headers: {
-          ...formData.getHeaders(),
-        },
-        maxContentLength: Infinity,
-        maxBodyLength: Infinity,
-        timeout: 30000 // 30 seconds timeout for large uploads
-      });
-
-      if (response.data && response.data.success) {
-        res.json(response.data);
-      } else {
-        throw new Error(response.data?.error?.message || "ImgBB returned success:false");
-      }
-    } catch (error: any) {
-      const errorMsg = error.response?.data?.error?.message || error.message;
-      console.error("[ImgBB] Upload failure:", errorMsg);
-      res.status(500).json({ error: `Falha no upload: ${errorMsg}` });
-    }
   });
 
   // Helper to process approved payments and perform wallet recharges or appointment confirmations
