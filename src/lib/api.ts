@@ -18,10 +18,10 @@ export async function safeFetch(path: string, options: RequestInit = {}): Promis
         if (response.status === 404 && isHtml) {
            throw new Error(`Erro 404: O servidor não encontrou o endpoint "${path}". Se estiver usando celular ou domínio customizado, verifique se a variável VITE_BACKEND_URL está configurada corretamente.`);
         }
-        throw new Error(`Erro no servidor (${response.status}): Resposta não configurada para JSON.`);
+        throw new Error(`Erro no servidor (${response.status}): Resposta não configurada para JSON. ${text.substring(0, 100)}`);
       }
       
-      throw new Error(`O servidor retornou uma resposta inesperada (${contentType || 'texto/plano'}). Verifique se o backend está ativo.`);
+      throw new Error(`O servidor retornou uma resposta inesperada (${contentType || 'texto/plano'}). ${text.substring(0, 100)}`);
     }
     
     const data = await response.json();

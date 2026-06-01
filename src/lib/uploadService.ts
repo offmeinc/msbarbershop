@@ -17,6 +17,12 @@ export async function uploadImage(file: File): Promise<UploadResponse> {
       body: formData,
     });
 
+    const contentType = response.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+      const text = await response.text();
+      throw new Error(`Upload fail: ${response.status} - ${text.substring(0, 50)}`);
+    }
+
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.error || `Erro no upload (${response.status})`);

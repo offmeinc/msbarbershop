@@ -37,6 +37,12 @@ export function ImageUpload({ onUpload, currentUrl, label = "Upload de Imagem", 
         body: formData,
       });
 
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+         const text = await response.text();
+         throw new Error(`Upload falhou: Resposta inválida do servidor (${response.status}). ${text.substring(0, 50)}`);
+      }
+
       const result = await response.json();
       if (result.success && result.data.url) {
         onUpload(result.data.url);
