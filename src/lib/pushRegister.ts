@@ -3,16 +3,24 @@ import { db } from "./firebase";
 
 // Helper to convert base64 VAPID key to Uint8Array
 export function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  if (!base64String) {
+    throw new Error("VAPID public key is missing");
+  }
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/\-/g, "+").replace(/_/g, "/");
 
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
+  try {
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
 
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  } catch (e) {
+    console.error("Failed to decode base64 VAPID key", e);
+    throw new Error("Invalid VAPID public key format");
   }
-  return outputArray;
 }
 
 // Dynamically resolve backend URLs to direct API requests to the active Cloud Run container
@@ -20,27 +28,12 @@ export function urlBase64ToUint8Array(base64String: string): Uint8Array {
 export function getBackendUrl(path: string): string {
   if (typeof window === "undefined") return path;
   
-  const origin = window.location.origin;
+  // Ensure the path starts with a single slash for relative resolution
   const cleanPath = path.startsWith("/") ? path : `/${path}`;
   
-  // If we're on a custom domain, we might need to hit the Cloud Run URL directly 
-  // if the custom domain proxy is restrictive. 
-  // But usually, relative to origin is best for PWAs.
-  const hostname = window.location.hostname;
-  const isCustomDomain = 
-    !hostname.includes("run.app") && 
-    !hostname.includes("localhost") && 
-    !hostname.includes("127.0.0.1") && 
-    !hostname.includes("0.0.0.0") &&
-    !hostname.includes(".aistudio.google");
-
-  if (isCustomDomain) {
-    // If you have a specific backend URL you want to prioritize for custom domains, 
-    // you could put it here. Otherwise, target the same origin.
-    return `${origin}${cleanPath}`;
-  }
-
-  return `${origin}${cleanPath}`;
+  // Using relative paths is the most compatible way for PWAs on both 
+  // custom domains and default domains.
+  return cleanPath;
 }
 
 // Check compatibility
@@ -94,6 +87,9 @@ export async function setupPushSubscription(userId: string, userRole: string): P
 
     // 4. Register or retrieve push subscription
     console.log("[Push Register] Subscribing via pushManager...");
+    if (!publicKey || typeof publicKey !== 'string') {
+      throw new Error("Chave VAPID inválida ou faltando.");
+    }
     const applicationServerKey = urlBase64ToUint8Array(publicKey);
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,

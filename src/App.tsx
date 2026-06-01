@@ -214,21 +214,30 @@ export default function App() {
   const subscribeUser = async (reg: ServiceWorkerRegistration) => {
     try {
       const resp = await fetch(getBackendUrl('/api/push-config'));
-      const { publicKey } = await resp.json();
+      const data = await resp.json();
+      const publicKey = data?.publicKey;
+      
+      if (!publicKey || typeof publicKey !== 'string') {
+        console.warn('[App] VAPID Public Key missing from server config');
+        return;
+      }
       
       let sub = await reg.pushManager.getSubscription();
+      const applicationServerKey = urlBase64ToUint8Array(publicKey);
+      
       try {
         sub = await reg.pushManager.subscribe({
           userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(publicKey)
+          applicationServerKey
         });
       } catch (subErr: any) {
+        console.log('[App] Initial subscribe failed, retrying...', subErr);
         // If subscription fails, it might be due to a changed VAPID key. Unsubscribe and try again.
         if (sub) {
           await sub.unsubscribe();
           sub = await reg.pushManager.subscribe({
             userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(publicKey)
+            applicationServerKey
           });
         } else {
           throw subErr;
