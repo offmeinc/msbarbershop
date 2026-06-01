@@ -1,5 +1,6 @@
 import { collection, addDoc, getDocs, query, where, doc, updateDoc, setDoc } from "firebase/firestore";
 import { db } from "./firebase";
+import { safeFetch } from "./api";
 
 // Helper to convert base64 VAPID key to Uint8Array
 export function urlBase64ToUint8Array(base64String: string): Uint8Array {
@@ -36,15 +37,23 @@ export function getBackendUrl(path: string): string {
   
   const cleanPath = path.startsWith("/") ? path : `/${path}`;
   
-  // Use VITE_BACKEND_URL if provided, otherwise default to relative path
-  // This is crucial for custom domains that don't proxy /api requests
-  const backendUrl = (import.meta as any).env.VITE_BACKEND_URL;
+  const envBackendUrl = (import.meta as any).env.VITE_BACKEND_URL;
   
-  if (backendUrl) {
-    const baseUrl = backendUrl.endsWith("/") ? backendUrl.slice(0, -1) : backendUrl;
-    return `${baseUrl}${cleanPath}`;
+  if (envBackendUrl) {
+    const cleanBase = envBackendUrl.endsWith("/") ? envBackendUrl.slice(0, -1) : envBackendUrl;
+    return `${cleanBase}${cleanPath}`;
   }
-  
+
+  // If we are on a custom domain and no VITE_BACKEND_URL is set, 
+  // relative paths might fail if they are served by a different provider (e.g. Vercel vs Cloud Run).
+  const isCustomDomain = window.location.hostname !== 'localhost' && 
+                         !window.location.hostname.endsWith('.run.app') &&
+                         !window.location.hostname.includes('aistudio.google.com');
+
+  if (isCustomDomain) {
+    console.warn(`[getBackendUrl] No VITE_BACKEND_URL set on custom domain ${window.location.hostname}. Calls to ${path} might fail with HTML responses.`);
+  }
+
   return cleanPath;
 }
 
@@ -88,11 +97,8 @@ export async function setupPushSubscription(userId: string, userRole: string): P
 
     // 3. Fetch VAPID public key from Server
     console.log("[Push Register] Fetching VAPID from server...");
-    const res = await fetch(getBackendUrl("/api/push-config"));
-    if (!res.ok) {
-      throw new Error(`Failed to fetch VAPID config: ${res.statusText}`);
-    }
-    const { publicKey } = await res.json();
+    const data = await safeFetch("/api/push-config");
+    const { publicKey } = data;
     if (!publicKey) {
       throw new Error("No VAPID Public Key found in server response.");
     }

@@ -139,6 +139,7 @@ import {
 } from "./lib/firebase";
 import { uploadImage } from "./lib/uploadService";
 import { getBackendUrl, urlBase64ToUint8Array } from "./lib/pushRegister";
+import { safeFetch } from "./lib/api";
 import { 
   onAuthStateChanged,
   signOut,
@@ -213,8 +214,7 @@ export default function App() {
 
   const subscribeUser = async (reg: ServiceWorkerRegistration) => {
     try {
-      const resp = await fetch(getBackendUrl('/api/push-config'));
-      const data = await resp.json();
+      const data = await safeFetch('/api/push-config');
       const publicKey = data?.publicKey;
       
       if (!publicKey || typeof publicKey !== 'string') {
@@ -246,7 +246,7 @@ export default function App() {
 
       const userId = user?.uid || loggedInClient?.id;
       if (userId && sub) {
-        await fetch(getBackendUrl('/api/subscribe'), {
+        await safeFetch('/api/subscribe', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: safeStringify({ 

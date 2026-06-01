@@ -15,6 +15,7 @@ import {
 } from "firebase/firestore";
 import { db, handleFirestoreError, OperationType } from "../lib/firebase";
 import { getBackendUrl } from "../lib/pushRegister";
+import { safeFetch } from "../lib/api";
 import { 
   ChevronLeft, 
   Send, 
@@ -159,12 +160,11 @@ export function ChatScreen({ user, onBack }: { user: any, onBack: () => void }) 
         const formData = new FormData();
         formData.append("image", file);
         
-        const response = await fetch(getBackendUrl("/api/upload"), {
+        const result = await safeFetch("/api/upload", {
             method: "POST",
             body: formData
         });
         
-        const result = await response.json();
         if (result.data && result.data.url) {
             const docData = {
               audioUrl: result.data.url,
@@ -338,12 +338,11 @@ export function ChatScreen({ user, onBack }: { user: any, onBack: () => void }) 
                 const formData = new FormData();
                 formData.append("image", file);
                 
-                const response = await fetch(getBackendUrl("/api/upload"), {
+                const result = await safeFetch("/api/upload", {
                     method: "POST",
                     body: formData
                 });
                 
-                const result = await response.json();
                 if (result.data && result.data.url) {
                     await addDoc(collection(db, "chats", clientUid, "messages"), {
                       imageUrl: result.data.url,
@@ -416,12 +415,11 @@ export function ProfessionalClientChatsScreen({ user, onBack, initialClientId, i
         const formData = new FormData();
         formData.append("image", file);
         
-        const response = await fetch(getBackendUrl("/api/upload"), {
+        const result = await safeFetch("/api/upload", {
             method: "POST",
             body: formData
         });
         
-        const result = await response.json();
         if (result.data && result.data.url) {
             const docData = {
               audioUrl: result.data.url,
@@ -815,12 +813,11 @@ export function ProfessionalClientChatsScreen({ user, onBack, initialClientId, i
                   const formData = new FormData();
                   formData.append("image", file);
                   
-                  const response = await fetch(getBackendUrl("/api/upload"), {
+                  const result = await safeFetch("/api/upload", {
                       method: "POST",
                       body: formData
                   });
                   
-                  const result = await response.json();
                   if (result.data && result.data.url) {
                       await addDoc(collection(db, "chats", activeClientId, "messages"), {
                         imageUrl: result.data.url,

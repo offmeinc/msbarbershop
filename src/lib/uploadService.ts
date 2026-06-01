@@ -1,4 +1,4 @@
-import { getBackendUrl } from "./pushRegister";
+import { safeFetch } from "./api";
 
 export interface ImgBBResponse {
   data: {
@@ -36,15 +36,8 @@ export async function uploadImage(file: File): Promise<ImgBBResponse> {
   const formData = new FormData();
   formData.append("image", file);
 
-  const response = await fetch(getBackendUrl("/api/upload"), {
+  return safeFetch("/api/upload", {
     method: "POST",
     body: formData,
   });
-
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.error || "Failed to upload image");
-  }
-
-  return response.json();
 }

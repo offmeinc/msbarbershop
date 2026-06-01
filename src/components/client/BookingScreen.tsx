@@ -46,6 +46,7 @@ import {
 } from "lucide-react";
 import { setupPushSubscription, getNotificationPermissionState, queryNotificationSupport, getBackendUrl } from "../../lib/pushRegister";
 import { db, handleFirestoreError, OperationType, safeStringify } from "../../lib/firebase";
+import { safeFetch } from "../../lib/api";
 import { signInWithGoogleCalendar, addEventToCalendar, getCalendarAccessToken } from "../../lib/calendar";
 import { toast } from "../ui/Toast";
 
@@ -298,13 +299,10 @@ function ConfirmationModal({ service, barber, date, onConfirm, userId, userRole,
     if (mpData?.payment_id && !paymentSuccess) {
       const interval = setInterval(async () => {
         try {
-          const res = await fetch(getBackendUrl(`/api/payments/mercado-pago/status/${mpData.payment_id}`));
-          if (res.ok) {
-            const data = await res.json();
-            if (data.status === "approved" || data.status === "completed") {
-              setPaymentSuccess(true);
-              toast.success("Pagamento Mercado Pago aprovado!");
-            }
+          const data = await safeFetch(`/api/payments/mercado-pago/status/${mpData.payment_id}`);
+          if (data.status === "approved" || data.status === "completed") {
+            setPaymentSuccess(true);
+            toast.success("Pagamento Mercado Pago aprovado!");
           }
         } catch (e) {
           console.error("Erro ao verificar status do pagamento:", e);
@@ -335,17 +333,13 @@ function ConfirmationModal({ service, barber, date, onConfirm, userId, userRole,
         throw new Error("Erro ao preparar dados da transação.");
       }
 
-      const res = await fetch(getBackendUrl("/api/payments/mercado-pago/create-payment"), {
+      const data = await safeFetch("/api/payments/mercado-pago/create-payment", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
         body: requestBody
       });
-      if (!res.ok) {
-        throw new Error("Erro de processamento da API de Pagamentos");
-      }
-      const data = await res.json();
       if (data.success) {
         setMpData(data);
       } else {
