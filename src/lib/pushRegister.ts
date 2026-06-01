@@ -37,21 +37,30 @@ export function getBackendUrl(path: string): string {
   
   const cleanPath = path.startsWith("/") ? path : `/${path}`;
   
+  // 1. Try environment variable
   const envBackendUrl = (import.meta as any).env.VITE_BACKEND_URL;
-  
-  if (envBackendUrl) {
+  if (envBackendUrl && envBackendUrl.trim() !== "") {
     const cleanBase = envBackendUrl.endsWith("/") ? envBackendUrl.slice(0, -1) : envBackendUrl;
     return `${cleanBase}${cleanPath}`;
   }
 
-  // If we are on a custom domain and no VITE_BACKEND_URL is set, 
-  // relative paths might fail if they are served by a different provider (e.g. Vercel vs Cloud Run).
+  // 2. Check for Capacitor/Mobile environment
+  const isCapacitor = (window as any).Capacitor !== undefined || 
+                      window.location.protocol === 'capacitor:' || 
+                      window.location.protocol === 'http-extension:';
+  
+  if (isCapacitor) {
+    // If on mobile without VITE_BACKEND_URL, relative paths will 404
+    console.warn(`[getBackendUrl] Capacitor detected. Backend calls to ${cleanPath} will likely fail without VITE_BACKEND_URL absolute URL.`);
+  }
+
+  // 3. Check for custom domain
   const isCustomDomain = window.location.hostname !== 'localhost' && 
                          !window.location.hostname.endsWith('.run.app') &&
                          !window.location.hostname.includes('aistudio.google.com');
 
   if (isCustomDomain) {
-    console.warn(`[getBackendUrl] No VITE_BACKEND_URL set on custom domain ${window.location.hostname}. Calls to ${path} might fail with HTML responses.`);
+    console.warn(`[getBackendUrl] Custom domain ${window.location.hostname} detected. If not proxying /api, set VITE_BACKEND_URL.`);
   }
 
   return cleanPath;
