@@ -8,7 +8,7 @@ import FormData from "form-data";
 import { initVapid, startAppointmentsListener, sendPushNotification, sendNotificationToCollaborators } from "./src/server/pushNotificationService";
 import { startAppointmentAutoUpdater } from "./src/server/appointmentAutoUpdater";
 import { db } from "./src/lib/firebase";
-import { doc, getDoc, updateDoc, setDoc, collection, addDoc, serverTimestamp, increment, Timestamp } from "firebase/firestore";
+import { doc, getDoc, updateDoc, setDoc, collection, addDoc, serverTimestamp, increment, Timestamp, runTransaction } from "firebase/firestore";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -131,35 +131,65 @@ async function startServer() {
 
     if (appointmentId && appointmentId.startsWith("wallet-topup-")) {
       // 1. Wallet Topup Flow
-      const parts = appointmentId.split("-");
-      const parsedUserId = parts.length >= 3 ? parts[1] : userId;
+      let parsedUserId = userId;
+      const withoutPrefix = appointmentId.substring("wallet-topup-".length);
+      const lastDash = withoutPrefix.lastIndexOf("-");
+      if (lastDash > 0) {
+        parsedUserId = withoutPrefix.substring(0, lastDash);
+      } else if (withoutPrefix.length > 0) {
+        parsedUserId = withoutPrefix;
+      }
 
       if (parsedUserId) {
         try {
           const userRef = doc(db, "users", parsedUserId);
-          const userSnap = await getDoc(userRef);
-          if (userSnap.exists()) {
-            const userData = userSnap.data();
-            const currentBalance = Number(userData.walletBalance || 0);
+          const paymentRef = doc(db, "payments", String(paymentId));
+          
+          let totalAdded = 0;
+          let bonus = 0;
+          let userData: any = null;
+          
+          await runTransaction(db, async (t) => {
+             const pSnap = await t.get(paymentRef);
+             if (!pSnap.exists()) return;
+             const pData = pSnap.data();
+             
+             if (pData.processedWallet) {
+                console.log(`[Payment Processor] Payment ${paymentId} already processed for wallet.`);
+                return;
+             }
+             
+             const userSnap = await t.get(userRef);
+             if (!userSnap.exists()) return;
+             
+             userData = userSnap.data();
+             const currentBalance = Number(userData.walletBalance || 0);
 
-            let bonus = 0;
-            let cutsReward = 0;
-            if (amount >= 200) { bonus = 35; cutsReward = 2; }
-            else if (amount >= 100) { bonus = 15; cutsReward = 1; }
-            else if (amount >= 50) { bonus = 5; }
+             let cutsReward = 0;
+             if (amount >= 200) { bonus = 35; cutsReward = 2; }
+             else if (amount >= 100) { bonus = 15; cutsReward = 1; }
+             else if (amount >= 50) { bonus = 5; }
 
-            const totalToAdd = amount + bonus;
+             const totalToAdd = amount + bonus;
+             totalAdded = totalToAdd;
 
-            await updateDoc(userRef, {
-              walletBalance: currentBalance + totalToAdd,
-              cutsBalance: increment(cutsReward),
-              updatedAt: serverTimestamp()
-            });
-
+             t.update(userRef, {
+               walletBalance: currentBalance + totalToAdd,
+               cutsBalance: (Number(userData.cutsBalance) || 0) + cutsReward,
+               updatedAt: serverTimestamp()
+             });
+             
+             t.update(paymentRef, {
+               processedWallet: true,
+               updatedAt: serverTimestamp()
+             });
+          });
+          
+          if (totalAdded > 0 && userData) {
             // Create collection record of notification
             await addDoc(collection(db, "notifications"), {
               clientEmail: email || userData.email || "",
-              message: `Recarga Aprovada! R$ ${totalToAdd.toFixed(2).replace('.', ',')} adicionados à sua Carteira Digital através do Pix Mercado Pago.`,
+              message: `Recarga Aprovada! R$ ${totalAdded.toFixed(2).replace('.', ',')} adicionados à sua Carteira Digital através do Pix Mercado Pago.`,
               timestamp: serverTimestamp(),
               read: false
             });
@@ -167,11 +197,11 @@ async function startServer() {
             // Push notification to user
             await sendPushNotification(parsedUserId, {
               title: "Recarga Aprovada! 💰",
-              body: `Seu Pix de R$ ${amount.toFixed(2).replace('.', ',')} foi recebido! R$ ${totalToAdd.toFixed(2).replace('.', ',')} foram adicionados na sua carteira.`,
+              body: `Seu Pix de R$ ${amount.toFixed(2).replace('.', ',')} foi recebido! R$ ${totalAdded.toFixed(2).replace('.', ',')} foram adicionados na sua carteira.`,
               url: "/"
             });
 
-            console.log(`[Payment Processor] Successfully topped up wallet of user: ${parsedUserId} with R$ ${totalToAdd}`);
+            console.log(`[Payment Processor] Successfully topped up wallet of user: ${parsedUserId} with R$ ${totalAdded}`);
           }
         } catch (err: any) {
           console.error(`[Payment Processor] Error during wallet topup: ${err.message}`);
@@ -250,9 +280,12 @@ async function startServer() {
       // Try parsing userId from topup appointmentId
       let userId = "guest";
       if (appointmentId && appointmentId.startsWith("wallet-topup-")) {
-        const parts = appointmentId.split("-");
-        if (parts.length >= 3) {
-          userId = parts[1];
+        const withoutPrefix = appointmentId.substring("wallet-topup-".length);
+        const lastDash = withoutPrefix.lastIndexOf("-");
+        if (lastDash > 0) {
+          userId = withoutPrefix.substring(0, lastDash);
+        } else if (withoutPrefix.length > 0) {
+          userId = withoutPrefix;
         }
       }
 
@@ -295,6 +328,7 @@ async function startServer() {
         transaction_amount: amount,
         description: description || "Agendamento MS Barbearia",
         payment_method_id: "pix",
+        notification_url: "https://msbarbershop.com.br/api/payments/mercado-pago/webhook",
         payer: {
           email: email || "payment@example.com",
           first_name: name || "Cliente"
@@ -328,8 +362,8 @@ async function startServer() {
         isMock: false,
         status: response.data.status,
         status_detail: response.data.status_detail,
-        qr_code: response.data.point_of_integration?.transaction_data?.qr_code,
-        qr_code_base64: response.data.point_of_integration?.transaction_data?.qr_code_base64,
+        qr_code: response.data.point_of_interaction?.transaction_data?.qr_code,
+        qr_code_base64: response.data.point_of_interaction?.transaction_data?.qr_code_base64,
         payment_id: mpPaymentId
       });
     } catch (error: any) {

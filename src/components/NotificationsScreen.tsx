@@ -1,19 +1,29 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { motion } from "motion/react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Timestamp } from "firebase/firestore";
-import { Calendar, CalendarCheck, CalendarX, BellOff, ChevronLeft } from "lucide-react";
+import { Calendar, CalendarCheck, CalendarX, BellOff, ChevronLeft, BellRing } from "lucide-react";
+import { setupPushSubscription, getNotificationPermissionState, queryNotificationSupport } from "../lib/pushRegister";
+import { toast } from "./ui/Toast";
 
 interface NotificationsScreenProps {
   notifications: any[];
   appointments: any[];
   onBack: () => void;
   onClear: () => void;
+  user?: any;
 }
 
-export const NotificationsScreen = ({ notifications, appointments, onBack, onClear }: NotificationsScreenProps) => {
+export const NotificationsScreen = ({ notifications, appointments, onBack, onClear, user }: NotificationsScreenProps) => {
   const [activeTab, setActiveTab] = useState<'recent' | 'history'>('recent');
+  const [pushState, setPushState] = useState<NotificationPermission | "unsupported">("default");
+
+  useEffect(() => {
+    if (pushState === "default") {
+      setPushState(getNotificationPermissionState());
+    }
+  }, [pushState]);
 
   const history = useMemo(() => {
     return appointments
@@ -64,6 +74,36 @@ export const NotificationsScreen = ({ notifications, appointments, onBack, onCle
           Histórico
         </button>
       </div>
+
+      {pushState !== "granted" && pushState !== "unsupported" && (
+        <div className="mb-6 p-4 rounded-3xl bg-amber-500/10 border border-amber-500/20">
+          <div className="flex gap-4 items-start">
+            <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-amber-500 shrink-0 text-black">
+              <BellRing className="w-5 h-5" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-black text-amber-500 uppercase tracking-widest mb-1">Ative as Notificações</h3>
+              <p className="text-xs text-neutral-400 font-medium mb-3">Receba avisos de agendamentos e atualizações de recargas direto no seu celular.</p>
+              <button 
+                onClick={async () => {
+                   const cleanId = user?.uid || user?.id || "anonymous";
+                   const success = await setupPushSubscription(cleanId, "client");
+                   if (success) {
+                     setPushState("granted");
+                     toast.success("Notificações ativadas com sucesso!");
+                   } else {
+                     toast.error("Não foi possível ativar. Verifique as permissões do seu navegador.");
+                   }
+                }}
+                className="bg-amber-500 text-black text-[10px] font-black uppercase tracking-[0.2em] px-4 py-2 rounded-xl hover:bg-amber-400 transition-colors"
+                disabled={pushState === "denied"}
+              >
+                {pushState === "denied" ? "Bloqueado no Navegador" : "Ativar Agora"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-3">
         {activeTab === 'recent' ? (

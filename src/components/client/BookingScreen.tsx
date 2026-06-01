@@ -150,10 +150,8 @@ function ConfirmationModal({ service, barber, date, onConfirm, userId, userRole,
   const [calendarError, setCalendarError] = useState<string | null>(null);
   const [copiedPix, setCopiedPix] = useState(false);
   
-  // Payment option: 'manual' (the original barber pix key) or 'mercadopago' (automated dynamic pix)
-  const [selectedPixMethod, setSelectedPixMethod] = useState<"manual" | "mercadopago">("manual");
+  const [wantsToPayNow, setWantsToPayNow] = useState<boolean | null>(null);
   
-  // Mercado Pago states
   const [mpLoading, setMpLoading] = useState(false);
   const [mpData, setMpData] = useState<any>(null);
   const [mpError, setMpError] = useState<string | null>(null);
@@ -161,7 +159,7 @@ function ConfirmationModal({ service, barber, date, onConfirm, userId, userRole,
   const [isSimulatingCheck, setIsSimulatingCheck] = useState(false);
 
   useEffect(() => {
-    if (selectedPixMethod === "mercadopago" && mpData?.payment_id && !paymentSuccess) {
+    if (mpData?.payment_id && !paymentSuccess) {
       const interval = setInterval(async () => {
         try {
           const res = await fetch(getBackendUrl(`/api/payments/mercado-pago/status/${mpData.payment_id}`));
@@ -178,7 +176,7 @@ function ConfirmationModal({ service, barber, date, onConfirm, userId, userRole,
       }, 4000);
       return () => clearInterval(interval);
     }
-  }, [selectedPixMethod, mpData?.payment_id, paymentSuccess]);
+  }, [mpData?.payment_id, paymentSuccess]);
 
   const handleCopyPix = (str: string) => {
     navigator.clipboard.writeText(str);
@@ -308,76 +306,93 @@ function ConfirmationModal({ service, barber, date, onConfirm, userId, userRole,
 
         {/* Dynamic Payment Sector (Mercado Pago + Standard Pix) */}
         {(hasPix || true) && (
-          <div className="bg-neutral-900 border border-white/5 p-6 rounded-[2.5rem] space-y-4 text-center">
-            <div className="flex gap-2 p-1 bg-black rounded-2xl">
-              <button
-                type="button"
-                onClick={() => setSelectedPixMethod("manual")}
-                className={`flex-1 py-2 px-3 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all ${selectedPixMethod === "manual" ? "bg-amber-500 text-black" : "text-neutral-500 hover:text-white"}`}
-              >
-                Chave Direta
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedPixMethod("mercadopago");
-                  if (!mpData) {
-                    handleGenerateMpPix();
-                  }
-                }}
-                className={`flex-1 py-2 px-3 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${selectedPixMethod === "mercadopago" ? "bg-amber-500 text-black" : "text-neutral-500 hover:text-white"}`}
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
-                Mercado Pago
-              </button>
+          wantsToPayNow === null ? (
+            <div className="bg-neutral-900 border border-white/5 p-6 rounded-[2.5rem] space-y-4 text-center">
+              <div className="w-12 h-12 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-2">
+                <Sparkles className="w-6 h-6 text-amber-500" />
+              </div>
+              <h4 className="text-sm font-black text-white uppercase tracking-wider mb-2">Deseja deixar pago pelo App?</h4>
+              <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest mb-4">Você pode pagar agora ou deixar para pagar na barbearia. É opcional!</p>
+              
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setWantsToPayNow(true);
+                    if (!mpData) {
+                      handleGenerateMpPix();
+                    }
+                  }}
+                  className="w-full py-4 rounded-[1.5rem] bg-amber-500 text-black text-[10px] font-black uppercase tracking-widest hover:bg-amber-400 active:scale-95 transition-all text-center block"
+                >
+                  SIM, QUERO PAGAR AGORA
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setWantsToPayNow(false)}
+                  className="w-full py-4 rounded-[1.5rem] bg-white/5 text-white border border-white/10 text-[10px] font-black uppercase tracking-widest hover:bg-white/10 active:scale-95 transition-all text-center block"
+                >
+                  NÃO, PAGAREI NA BARBEARIA
+                </button>
+              </div>
             </div>
-
-            {selectedPixMethod === "manual" ? (
-              hasPix ? (
-                <div className="space-y-4">
-                  <div className="space-y-1">
-                    <h4 className="text-xs font-black text-white uppercase tracking-wider">Pagar com Pix DIRETO</h4>
-                    <p className="text-[9px] text-neutral-500 font-bold uppercase tracking-widest">Copie a chave Pix e pague no seu banco</p>
-                  </div>
-                  
-                  <div className="bg-white p-4 rounded-3xl mx-auto w-fit shadow-xl shadow-amber-500/10">
-                    <QRCodeCanvas value={pixString} size={120} level="M" />
-                  </div>
-                  
-                  <button
-                    onClick={() => handleCopyPix(pixString)}
-                    className="w-full py-3 bg-white/5 border border-white/10 rounded-[1.2rem] text-[10px] font-black uppercase text-white hover:bg-white/10 transition-colors flex items-center justify-center gap-2"
-                  >
-                    {copiedPix ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-                    {copiedPix ? "Copiado!" : "Copiar Código Pix"}
-                  </button>
-                </div>
-              ) : (
-                <div className="py-6 text-center text-neutral-500 text-[10px] uppercase font-bold tracking-wider">
-                  Nenhuma chave Pix direta estipulada para este profissional.
-                </div>
-              )
-            ) : (
-              // Mercado Pago Area
+          ) : wantsToPayNow === true ? (
+            <div className="bg-neutral-900 border border-white/5 p-6 rounded-[2.5rem] space-y-4 text-center">
+              {/* Mercado Pago Area */}
               <div className="space-y-4 py-4 text-center">
                 <div className="w-12 h-12 bg-amber-500/10 border border-amber-500/20 rounded-2xl mx-auto flex items-center justify-center text-amber-500">
                   <span className="text-xl">⚡</span>
                 </div>
                 <div className="space-y-1">
-                  <h4 className="text-xs font-black text-white uppercase tracking-wider">Pagamento via Mercado Pago</h4>
-                  <p className="text-[10px] text-amber-500 font-bold uppercase tracking-widest">Recurso Em Breve!</p>
+                  <h4 className="text-xs font-black text-white uppercase tracking-wider">Pagamento via Pix</h4>
+                  <p className="text-[9px] text-neutral-500 font-bold uppercase tracking-widest">Baixa automática instantânea</p>
                 </div>
-                <p className="text-[9px] text-neutral-400 font-medium uppercase leading-relaxed max-w-[260px] mx-auto">
-                  A confirmação automática via Mercado Pago está em fase de homologação e estará disponível em breve para você pagar e confirmar o seu agendamento no mesmo segundo!
-                </p>
-                <div className="pt-2">
-                  <span className="bg-white/5 border border-white/5 text-neutral-500 text-[8px] font-black uppercase px-3 py-1.5 rounded-full tracking-wider">
-                    Fase de Integração
-                  </span>
-                </div>
+                
+                {paymentSuccess ? (
+                   <div className="py-6 space-y-4">
+                     <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto text-black mb-2 animate-bounce">
+                        <CheckCircle2 strokeWidth={3} size={32} />
+                     </div>
+                     <h3 className="text-xl font-black text-white uppercase italic tracking-tighter">Pagamento Aprovado!</h3>
+                     <p className="text-xs text-neutral-400 font-medium">Seu agendamento foi pago com sucesso.</p>
+                   </div>
+                ) : mpLoading ? (
+                   <div className="py-8 flex flex-col items-center justify-center space-y-4">
+                     <span className="w-8 h-8 rounded-full border-2 border-amber-500/30 border-t-amber-500 animate-spin" />
+                     <p className="text-[10px] text-amber-500 uppercase font-black tracking-widest animate-pulse">Gerando Pix...</p>
+                   </div>
+                ) : mpError ? (
+                   <div className="py-6 space-y-4">
+                      <p className="text-xs text-red-400 font-medium">{mpError}</p>
+                      <button 
+                         onClick={handleGenerateMpPix}
+                         className="px-4 py-2 bg-red-500/10 text-red-500 border border-red-500/20 rounded-xl text-[10px] font-black uppercase"
+                      >
+                         Tentar Novamente
+                      </button>
+                   </div>
+                ) : mpData?.qr_code_base64 && mpData?.qr_code ? (
+                  <div className="space-y-6">
+                    <div className="bg-white p-4 rounded-3xl mx-auto w-fit shadow-xl shadow-amber-500/10">
+                      <img src={`data:image/png;base64,${mpData.qr_code_base64}`} alt="QR Code Pix" className="w-[180px] h-[180px] rounded-xl" />
+                    </div>
+                    
+                    <button
+                      onClick={() => handleCopyPix(mpData.qr_code)}
+                      className="w-full py-4 bg-white/5 border border-white/10 rounded-[1.2rem] text-[10px] font-black uppercase text-white hover:bg-white/10 transition-colors flex items-center justify-center gap-2"
+                    >
+                      {copiedPix ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                      {copiedPix ? "Código Copiado!" : "Copiar Código Pix Copia e Cola"}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="py-6 text-center text-neutral-500 text-[10px] uppercase font-bold tracking-wider">
+                     Aguardando geração...
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </div>
+          ) : null
         )}
 
         {/* Dynamic Push Opt-in for instant user activation */}
@@ -536,6 +551,7 @@ export function BookingScreen({
   const [guestPhone, setGuestPhone] = useState(
     editAppointment?.clientPhone || initialClient?.whatsapp || "",
   );
+  const [guestReferralCode, setGuestReferralCode] = useState("");
   const [couponCode, setCouponCode] = useState(
     editAppointment?.couponCode || "",
   );
@@ -895,12 +911,32 @@ export function BookingScreen({
           const userRef = doc(firestore, "users", cleanPhone);
           const userSnap = await getDoc(userRef);
           if (!userSnap.exists()) {
+            let initialBalance = 0;
+            let referrerDocId = null;
+
+            if (guestReferralCode) {
+               const referrerQuery = query(collection(firestore, "users"), where("referralCode", "==", guestReferralCode));
+               const referrerSnap = await getDocs(referrerQuery);
+               if (!referrerSnap.empty) {
+                  referrerDocId = referrerSnap.docs[0].id;
+                  initialBalance = 5; // Referree initial bonus
+
+                  const referrerDoc = referrerSnap.docs[0];
+                  const currentBalance = Number(referrerDoc.data().walletBalance || 0);
+                  await updateDoc(doc(firestore, "users", referrerDocId), {
+                     walletBalance: currentBalance + 5
+                  });
+               }
+            }
+
             await setDoc(userRef, {
               uid: cleanPhone,
               name: guestName || "",
               whatsapp: cleanPhone,
               role: "client",
               password: "123456",
+              referredBy: referrerDocId ? guestReferralCode : null,
+              walletBalance: initialBalance,
               createdAt: serverTimestamp(),
             });
           }
@@ -1409,6 +1445,14 @@ export function BookingScreen({
                         value={guestEmail}
                         onChange={(e) => setGuestEmail(e.target.value)}
                       />
+                      {(!user && !selectedClient) && (
+                        <input
+                          placeholder="Código de Indicação (opcional)"
+                          className="w-full p-4 bg-black rounded-2xl border border-white/5 text-white text-sm focus:border-amber-500 outline-none transition-all uppercase placeholder-normal"
+                          value={guestReferralCode}
+                          onChange={(e) => setGuestReferralCode(e.target.value.toUpperCase())}
+                        />
+                      )}
                     </div>
                   </div>
                 )}

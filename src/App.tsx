@@ -137,7 +137,7 @@ import {
   OperationType 
 } from "./lib/firebase";
 import { uploadImage } from "./lib/uploadService";
-import { getBackendUrl } from "./lib/pushRegister";
+import { getBackendUrl, urlBase64ToUint8Array } from "./lib/pushRegister";
 import { 
   onAuthStateChanged,
   signOut,
@@ -214,12 +214,28 @@ export default function App() {
     try {
       const resp = await fetch(getBackendUrl('/api/push-config'));
       const { publicKey } = await resp.json();
-      const sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: publicKey
-      });
+      
+      let sub = await reg.pushManager.getSubscription();
+      try {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicKey)
+        });
+      } catch (subErr: any) {
+        // If subscription fails, it might be due to a changed VAPID key. Unsubscribe and try again.
+        if (sub) {
+          await sub.unsubscribe();
+          sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(publicKey)
+          });
+        } else {
+          throw subErr;
+        }
+      }
+
       const userId = user?.uid || loggedInClient?.id;
-      if (userId) {
+      if (userId && sub) {
         await fetch(getBackendUrl('/api/subscribe'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -231,8 +247,8 @@ export default function App() {
         });
         console.log('[App] Subscribed to push notifications');
       }
-    } catch (err) {
-      console.error('[App] Push subscribe error', err);
+    } catch (err: any) {
+      console.warn('[App] Push subscribe skipped/failed:', err.message || err);
     }
   };
   

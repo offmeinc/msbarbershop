@@ -2,7 +2,7 @@ import { collection, addDoc, getDocs, query, where, doc, updateDoc, setDoc } fro
 import { db } from "./firebase";
 
 // Helper to convert base64 VAPID key to Uint8Array
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
+export function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/\-/g, "+").replace(/_/g, "/");
 
@@ -113,8 +113,8 @@ export async function setupPushSubscription(userId: string, userRole: string): P
     console.log("[Push Register] Subscription saved to Firestore under ID:", endpointHash);
 
     return true;
-  } catch (error) {
-    console.error("[Push Register] Setup Push subscription failed:", error);
+  } catch (error: any) {
+    console.warn("[Push Register] Setup Push subscription skipped/failed.", error.message || error);
     return false;
   }
 }

@@ -740,7 +740,6 @@ export function ProfessionalClientChatsScreen({ user, onBack, initialClientId, i
               </div>
             ) : (
               messages.map((m) => {
-                try { JSON.stringify(m); } catch (e) { console.error("Circular structure in message:", m); }
                 const isClientMsg = m.sender === "client";
                 return (
                   <div 

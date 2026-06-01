@@ -81,6 +81,21 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
   const [comment, setComment] = useState("");
   const [referralCode, setReferralCode] = useState(user?.referralCode || "");
 
+  const [liveUser, setLiveUser] = useState<any>(user);
+
+  useEffect(() => {
+    const finalUserId = user?.uid || user?.id;
+    if (!finalUserId) return;
+    
+    const unsubscribe = onSnapshot(doc(db, "users", finalUserId), (docSnap) => {
+      if (docSnap.exists()) {
+        setLiveUser({ uid: docSnap.id, id: docSnap.id, ...docSnap.data() });
+      }
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
   // Live tracking of unread chats
   useEffect(() => {
     const clientUid = user?.uid || user?.id;
@@ -98,7 +113,9 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
   const [isRecharging, setIsRecharging] = useState(false);
   const [rechargeStep, setRechargeStep] = useState<"select" | "pix">("select");
   const [rechargeAmount, setRechargeAmount] = useState<number | null>(null);
+  const [customRechargeInput, setCustomRechargeInput] = useState<string>("");
   const [rechargeBonus, setRechargeBonus] = useState<number>(0);
+
   const [rechargeCutsReward, setRechargeCutsReward] = useState<number>(0);
   const [copiedRechargePix, setCopiedRechargePix] = useState(false);
   const [rechargeLoading, setRechargeLoading] = useState(false);
@@ -150,8 +167,8 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
     if (!rechargeAmount) return;
     try {
       const totalToAdd = rechargeAmount + rechargeBonus;
-      const currentBalance = Number(user?.walletBalance || 0);
-      const currentCuts = Number(user?.cutsBalance || 0);
+      const currentBalance = Number(liveUser?.walletBalance || 0);
+      const currentCuts = Number(liveUser?.cutsBalance || 0);
 
       const finalUserId = user?.uid || user?.id;
       if (!finalUserId) {
@@ -592,7 +609,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                            <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest mb-1">Saldo Disponível</p>
                            <div className="flex items-baseline gap-1">
                               <span className="text-3xl font-black italic text-white tracking-tighter">
-                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(user?.walletBalance || 0)}
+                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(liveUser?.walletBalance || 0)}
                               </span>
                            </div>
                         </div>
@@ -613,7 +630,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                      <div className="mt-8 pt-6 border-t border-white/5 flex gap-4">
                         <div className="flex-1 bg-black/40 rounded-2xl p-4 border border-white/5">
                            <p className="text-[8px] font-black text-neutral-500 uppercase tracking-widest mb-1">Cortes Restantes</p>
-                           <p className="text-xl font-black italic text-white">{user?.cutsBalance || 0}</p>
+                           <p className="text-xl font-black italic text-white">{liveUser?.cutsBalance || 0}</p>
                         </div>
                         <div className="flex-1 bg-black/40 rounded-2xl p-4 border border-white/5">
                            <p className="text-[8px] font-black text-neutral-500 uppercase tracking-widest mb-1">Pontos Fidelidade</p>
@@ -625,32 +642,51 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
 
 
               {/* Referral Section */}
-              <div className="bg-neutral-900 border border-white/5 p-8 rounded-[3rem] shadow-2xl relative overflow-hidden group">
+              {stats.completedCount > 0 && (
+                <div className="bg-neutral-900 border border-white/5 p-8 rounded-[3rem] shadow-2xl relative overflow-hidden group mt-6">
                   <div className="absolute -right-4 -bottom-4 text-white/5 group-hover:scale-110 transition-transform duration-700">
                     <Gift size={160} />
                   </div>
-                  <div className="relative z-10 opacity-60">
+                  <div className="relative z-10">
                     <div className="flex items-center gap-2 mb-4">
-                        <Share2 className="w-4 h-4 text-neutral-500" />
+                        <Share2 className="w-4 h-4 text-amber-500" />
                         <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-500">Convide um amigo</span>
-                        <span className="ml-auto bg-neutral-800 text-neutral-400 text-[8px] font-black px-2 py-0.5 rounded-full uppercase italic tracking-tighter">Em Breve</span>
+                        <span className="ml-auto bg-amber-500/10 text-amber-500 border border-amber-500/20 text-[8px] font-black px-2 py-0.5 rounded-full uppercase italic tracking-tighter shadow-[0_0_10px_rgba(250,204,21,0.2)]">Ativo</span>
                     </div>
-                    <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white mb-2 leading-none">Indique e Ganhe</h3>
-                    <p className="text-xs text-neutral-500 font-medium mb-6">Em breve você poderá indicar amigos e ganhar descontos exclusivos!</p>
+                    <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white mb-2 leading-none">Indique e Ganhe R$ 5,00</h3>
+                    <p className="text-xs text-neutral-400 font-medium mb-6">Compartilhe seu código com um amigo. Quando ele agendar o primeiro corte e pagar, você ganha R$ 5,00 de desconto no seu próximo corte!</p>
                     
-                    <div className="flex items-center gap-2 opacity-30 pointer-events-none">
-                        <div className="flex-1 bg-black/30 backdrop-blur-md rounded-2xl p-4 border border-white/10 flex items-center justify-between">
-                            <span className="text-sm font-black tracking-widest text-white">------</span>
-                            <button disabled className="text-neutral-500">
-                                <Copy className="w-4 h-4" />
+                    <div className="flex items-center gap-2">
+                        <div className="flex-1 bg-black rounded-2xl p-4 border border-white/10 flex items-center justify-between">
+                            <span className="text-base font-black tracking-widest text-white">{referralCode}</span>
+                            <button 
+                                onClick={() => {
+                                  navigator.clipboard.writeText(referralCode);
+                                  toast.success("Código de indicação copiado!");
+                                }} 
+                                className="text-neutral-500 hover:text-white transition-colors"
+                            >
+                                <Copy className="w-5 h-5" />
                             </button>
                         </div>
-                        <button disabled className="bg-neutral-800 text-neutral-600 p-4 rounded-2xl font-black">
+                        <button 
+                            onClick={() => {
+                              const text = `Use meu código ${referralCode} ao agendar seu corte na barbearia! Você e eu ganhamos R$5,00 de desconto no corte! Acesse o app e reserve!`;
+                              if (navigator.share) {
+                                navigator.share({ title: "Agende seu corte com Desconto", text }).catch(console.error);
+                              } else {
+                                navigator.clipboard.writeText(text);
+                                toast.success("Link de convite copiado!");
+                              }
+                            }}
+                            className="bg-amber-500 text-black p-4 rounded-2xl font-black hover:bg-amber-400 active:scale-95 transition-all shadow-lg shadow-amber-500/20"
+                        >
                             <Share2 className="w-5 h-5" />
                         </button>
                     </div>
                   </div>
-              </div>
+                </div>
+              )}
 
               {/* Live Chat Card */}
               <div className="bg-neutral-900 border border-white/5 p-8 rounded-[3.5rem] shadow-2xl relative overflow-hidden group">
@@ -765,7 +801,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
           />
         )}
         {currentView === 'lookbook' && <LookbookScreen onBack={() => setCurrentView('home')} onBook={(style) => { setCurrentView('booking'); setInitialBookingServiceId(undefined); /* Could filter services by style if needed */ }} />}
-        {currentView === 'notifications' && <NotificationsScreen notifications={notifications} appointments={appointments} onClear={handleClearNotifications} onBack={() => setCurrentView('home')} />}
+        {currentView === 'notifications' && <NotificationsScreen user={user} notifications={notifications} appointments={appointments} onClear={handleClearNotifications} onBack={() => setCurrentView('home')} />}
         {currentView === 'style-sheet' && <StyleSheet user={user} onBack={() => setCurrentView('home')} />}
         {currentView === 'wallet' && (
           <motion.div
@@ -812,7 +848,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                          <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest mb-1">Saldo Disponível</p>
                          <div className="flex items-baseline gap-1">
                             <span className="text-3xl font-black italic text-white tracking-tighter">
-                              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(user?.walletBalance || 0)}
+                              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(liveUser?.walletBalance || 0)}
                             </span>
                          </div>
                       </div>
@@ -833,7 +869,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                    <div className="mt-8 pt-6 border-t border-white/5 flex gap-4">
                       <div className="flex-1 bg-black/40 rounded-2xl p-4 border border-white/5">
                          <p className="text-[8px] font-black text-neutral-500 uppercase tracking-widest mb-1">Cortes Restantes</p>
-                         <p className="text-xl font-black italic text-white">{user?.cutsBalance || 0}</p>
+                         <p className="text-xl font-black italic text-white">{liveUser?.cutsBalance || 0}</p>
                       </div>
                       <div className="flex-1 bg-black/40 rounded-2xl p-4 border border-white/5">
                          <p className="text-[8px] font-black text-neutral-500 uppercase tracking-widest mb-1">Pontos Fidelidade</p>
@@ -976,29 +1012,107 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                 <div className="space-y-6 py-4 flex flex-col items-center">
                   <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500 border border-amber-500/20 mb-2 relative">
                     <Wallet className="w-8 h-8" />
-                    <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-amber-500"></span>
-                    </span>
                   </div>
                   <div>
-                    <span className="bg-amber-500 text-black text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider font-sans mb-3 inline-block">
-                      Em Breve!
-                    </span>
                     <h2 className="text-xl font-black italic uppercase text-white mb-2 leading-tight">
                       Recargas via Pix
                     </h2>
-                    <p className="text-xs text-neutral-400 font-bold leading-relaxed px-2 uppercase tracking-tight">
-                      A possibilidade de recarregar sua carteira digital diretamente no app para adquirir créditos e bônus exclusivos estará disponível em breve!
+                    <p className="text-xs text-neutral-400 font-bold leading-relaxed px-2 uppercase tracking-tight mb-4">
+                      Ganhe créditos e recompensas recarregando sua carteira
                     </p>
                   </div>
                   
-                  <button 
-                    onClick={() => setIsRecharging(false)}
-                    className="w-full bg-amber-500 hover:bg-amber-600 text-black py-4 rounded-2xl font-black uppercase italic tracking-widest transition-colors text-xs mt-2"
-                  >
-                    Entendido
-                  </button>
+                  {rechargeSuccess ? (
+                    <div className="py-6 space-y-4">
+                      <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto text-black mb-2 animate-bounce">
+                         <CheckCircle2 strokeWidth={3} size={32} />
+                      </div>
+                      <h3 className="text-xl font-black text-white uppercase italic tracking-tighter">Recarga Aprovada!</h3>
+                      <p className="text-xs text-neutral-400 font-medium">Os créditos foram adicionados a sua carteira digital.</p>
+                      
+                      <button 
+                        onClick={() => {
+                          setIsRecharging(false);
+                          setRechargeSuccess(false);
+                          setRechargeStep("select");
+                        }}
+                        className="w-full bg-amber-500 hover:bg-amber-600 text-black py-4 rounded-2xl font-black uppercase italic tracking-widest transition-colors text-xs mt-6"
+                      >
+                        Concluir
+                      </button>
+                    </div>
+                  ) : rechargeLoading ? (
+                    <div className="py-8 flex flex-col items-center justify-center space-y-4">
+                      <span className="w-8 h-8 rounded-full border-2 border-amber-500/30 border-t-amber-500 animate-spin" />
+                      <p className="text-[10px] text-amber-500 uppercase font-black tracking-widest animate-pulse">Gerando Pix...</p>
+                    </div>
+                  ) : rechargeError ? (
+                     <div className="py-6 space-y-4">
+                        <p className="text-xs text-red-400 font-medium">{rechargeError}</p>
+                        <button 
+                           onClick={() => handleGenerateRechargePix(rechargeAmount || 50, rechargeBonus, rechargeCutsReward)}
+                           className="px-4 py-2 bg-red-500/10 text-red-500 border border-red-500/20 rounded-xl text-[10px] font-black uppercase"
+                        >
+                           Tentar Novamente
+                        </button>
+                     </div>
+                  ) : rechargeMpData?.qr_code_base64 && rechargeMpData?.qr_code ? (
+                    <div className="space-y-6 w-full">
+                      <div className="bg-white p-4 rounded-3xl mx-auto w-fit shadow-xl shadow-amber-500/10">
+                        <img src={`data:image/png;base64,${rechargeMpData.qr_code_base64}`} alt="QR Code Pix" className="w-[180px] h-[180px] rounded-xl" />
+                      </div>
+                      
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(rechargeMpData.qr_code);
+                          setCopiedRechargePix(true);
+                          toast.success("Código Pix copiado!");
+                          setTimeout(() => setCopiedRechargePix(false), 2000);
+                        }}
+                        className="w-full py-4 bg-white/5 border border-white/10 rounded-[1.2rem] text-[10px] font-black uppercase text-white hover:bg-white/10 transition-colors flex items-center justify-center gap-2"
+                      >
+                        {copiedRechargePix ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                        {copiedRechargePix ? "Código Copiado!" : "Copiar Código Pix Copia e Cola"}
+                      </button>
+                      
+                      <div className="py-4 text-center text-neutral-500 text-[10px] uppercase font-bold tracking-wider animate-pulse">
+                         Aguardando confirmação do pagamento...
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4 w-full mt-4">
+                      <div>
+                        <label className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest pl-2 mb-1 block">
+                          Valor da Recarga
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white font-black italic">R$</span>
+                          <input 
+                            type="number"
+                            value={customRechargeInput}
+                            onChange={(e) => setCustomRechargeInput(e.target.value)}
+                            placeholder="0,00"
+                            className="w-full bg-neutral-900 border-2 border-white/5 focus:border-amber-500 rounded-2xl py-4 pl-12 pr-4 text-white font-black text-xl italic outline-none transition-colors"
+                          />
+                        </div>
+                      </div>
+                      
+                      <button 
+                        onClick={() => {
+                          const val = parseFloat(customRechargeInput.replace(",", "."));
+                          if (!isNaN(val) && val > 0) {
+                             handleGenerateRechargePix(val, 0, 0); // No bonus for arbitrary amount for now
+                          } else {
+                             toast.error("Insira um valor válido para recarga");
+                          }
+                        }}
+                        disabled={!customRechargeInput}
+                        className="w-full bg-amber-500 hover:bg-amber-600 disabled:opacity-50 disabled:bg-neutral-800 disabled:text-neutral-500 text-black py-4 rounded-2xl font-black uppercase italic tracking-widest transition-colors text-xs"
+                      >
+                        Gerar Pagamento Pix
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
           </motion.div>

@@ -23,6 +23,11 @@ service cloud.firestore {
       allow read, write: if true; // Keeping open for simplicity with login codes, but usually involves auth checks
     }
 
+    // Payments
+    match /payments/{paymentId} {
+      allow read, write: if true;
+    }
+
     // Working Hours
     match /workingHours/{workId} {
       allow read: if true;
