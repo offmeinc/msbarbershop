@@ -4,6 +4,7 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import multer from "multer";
+import cors from "cors";
 import axios from "axios";
 import FormData from "form-data";
 import { GoogleGenAI } from "@google/genai";
@@ -15,15 +16,23 @@ import { doc, getDoc, updateDoc, setDoc, collection, addDoc, serverTimestamp, in
 const _filename = typeof __filename !== 'undefined' ? __filename : fileURLToPath(import.meta.url);
 const _dirname = typeof __dirname !== 'undefined' ? __dirname : path.dirname(_filename);
 
-// Initialize Gemini Client
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY!,
-  httpOptions: {
-    headers: {
-      'User-Agent': 'aistudio-build',
+let aiClient: GoogleGenAI | null = null;
+function getGeminiClient(): GoogleGenAI {
+  if (!aiClient) {
+    if (!process.env.GEMINI_API_KEY) {
+      throw new Error("GEMINI_API_KEY is missing");
     }
+    aiClient = new GoogleGenAI({
+      apiKey: process.env.GEMINI_API_KEY,
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build',
+        }
+      }
+    });
   }
-});
+  return aiClient;
+}
 
 async function startServer() {
   const app = express();
@@ -40,35 +49,23 @@ async function startServer() {
     next();
   });
   
-  // Custom CORS middleware to support custom domains like msbarbershop.com.br
-  app.use((req, res, next) => {
-    const origin = req.headers.origin;
-    console.log(`[CORS Check] Origin: ${origin}, Method: ${req.method}`);
-    const allowedOrigins = [
+  // Standard CORS middleware
+  app.use(cors({
+    origin: [
       'https://www.msbarbershop.com.br',
       'https://msbarbershop.com.br'
-    ];
-    
-    if (origin) {
-      if (allowedOrigins.includes(origin)) {
-        res.setHeader("Access-Control-Allow-Origin", origin);
-        res.setHeader("Access-Control-Allow-Credentials", "true");
-      } else {
-        // If not in allowed list, still allow if specific dynamic origin for dev,
-        // but be careful with credentials
-        res.setHeader("Access-Control-Allow-Origin", origin);
-      }
-    }
-    
-    res.setHeader("Vary", "Origin");
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, DELETE");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
-
-    if (req.method === "OPTIONS") {
-      return res.sendStatus(200);
-    }
-    next();
-  });
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  }));
+  
+  // Also allow all for specific API if they bypass the origin check (optional fallback)
+  app.use('/api', cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  }));
   
   // Initialize Push notifications (generation and registration of VAPID)
   const vapid = await initVapid();
@@ -81,6 +78,7 @@ async function startServer() {
   app.post("/api/chat", async (req, res) => {
     const { messages } = req.body;
     try {
+        const ai = getGeminiClient();
         const chat = ai.chats.create({
             model: "gemini-3.5-flash",
             config: {
@@ -216,6 +214,7 @@ Por favor, gere uma avaliação de desempenho semanal premium, amigável, acolhe
 
 Seja motivador, conciso e profissional em português do Brasil! Garanta que os valores estimados em reais sejam calculados de maneira razoavelmente correta baseando-se nos preços de agendamentos não cancelados informados.`;
 
+      const ai = getGeminiClient();
       const response = await ai.models.generateContent({
         model: "gemini-3.5-flash",
         contents: prompt,

@@ -14,9 +14,11 @@ export const auth = getAuth(app);
 export const storage = getStorage(app);
 
 // Set persistence to Local so users stay logged in across sessions
-setPersistence(auth, browserLocalPersistence).catch((error) => {
-  console.error("Auth persistence error:", error);
-});
+if (typeof window !== "undefined") {
+  setPersistence(auth, browserLocalPersistence).catch((error) => {
+    console.error("Auth persistence error:", error);
+  });
+}
 
 export enum OperationType {
   CREATE = 'create',
