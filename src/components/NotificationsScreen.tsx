@@ -3,7 +3,7 @@ import { motion } from "motion/react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Timestamp } from "firebase/firestore";
-import { Calendar, CalendarCheck, CalendarX, BellOff, ChevronLeft, BellRing } from "lucide-react";
+import { Calendar, CalendarCheck, CalendarX, BellOff, ChevronLeft, BellRing, Wallet } from "lucide-react";
 import { setupPushSubscription, getNotificationPermissionState, queryNotificationSupport } from "../lib/pushRegister";
 import { toast } from "./ui/Toast";
 
@@ -117,10 +117,12 @@ export const NotificationsScreen = ({ notifications, appointments, onBack, onCle
                   <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
                     n.type === 'booking' ? 'bg-green-500/20 text-green-500' : 
                     n.type === 'status_update' ? 'bg-amber-500/20 text-amber-500' : 
+                    n.type === 'recharge' ? 'bg-blue-500/20 text-blue-500' :
                     'bg-red-500/20 text-red-500'
                   }`}>
                     {n.type === 'booking' ? <CalendarCheck className="w-5 h-5" /> : 
                      n.type === 'status_update' ? <Calendar className="w-5 h-5" /> : 
+                     n.type === 'recharge' ? <Wallet className="w-5 h-5" /> :
                      <CalendarX className="w-5 h-5" />}
                   </div>
                   <div className="flex-1">
@@ -128,10 +130,12 @@ export const NotificationsScreen = ({ notifications, appointments, onBack, onCle
                       <span className={`text-[10px] font-black uppercase tracking-widest ${
                         n.type === 'booking' ? 'text-green-500' : 
                         n.type === 'status_update' ? 'text-amber-500' : 
+                        n.type === 'recharge' ? 'text-blue-500' :
                         'text-red-500'
                       }`}>
                         {n.type === 'booking' ? 'Novo Agendamento' : 
                          n.type === 'status_update' ? 'Atualização' : 
+                         n.type === 'recharge' ? 'Recarga' :
                          'Cancelamento'}
                       </span>
                       <span className="text-[9px] text-neutral-600 font-bold whitespace-nowrap">

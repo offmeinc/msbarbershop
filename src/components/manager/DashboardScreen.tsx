@@ -57,6 +57,7 @@ import {
   getFirestore
 } from "firebase/firestore";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
+import { AnalyticsScreen } from "./AnalyticsScreen";
 import { CalendarWidget, AppointmentModal } from "../CalendarWidget";
 import { ServicesManagement, CollaboratorsManager, WorkingHoursManager } from "./ManagementScreens";
 import { ReviewModal } from "../common/ReviewModal";
@@ -461,7 +462,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
         </div>
       )}
 
-      {currentView === 'earnings' && <EarningsDashboard appointments={appointments} services={services} />}
+      {currentView === 'earnings' && <AnalyticsScreen appointments={appointments} services={services} />}
       
       {selectedAppointment && (
         <AppointmentModal 

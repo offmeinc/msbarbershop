@@ -188,7 +188,8 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
          clientEmail: user.email,
          message: `Recarga Concluída! R$ ${totalToAdd.toFixed(2).replace('.', ',')} adicionados à sua Carteira Digital. Por estar em fase inicial, o valor foi simulado com sucesso!`,
          timestamp: serverTimestamp(),
-         read: false
+         read: false,
+         type: 'recharge'
       });
 
       setRechargeSuccess(true);

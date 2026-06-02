@@ -340,12 +340,6 @@ export default function App() {
       handleFirestoreError(error, OperationType.LIST, "services");
     });
 
-    // Restore client session
-    const savedClient = localStorage.getItem('loggedInClient');
-    if (savedClient) {
-      setLoggedInClient(JSON.parse(savedClient));
-    }
-
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
       setLoading(false); // Set loading to false as soon as auth state is determined
@@ -370,6 +364,7 @@ export default function App() {
               };
               await setDoc(userDocRef, newUser);
               setUserRole("client");
+              setCurrentScreen("client-dashboard");
             } else {
               const data = userDoc.data();
               console.log("User document found. Role:", data?.role);
@@ -377,7 +372,11 @@ export default function App() {
                 updateDoc(userDocRef, { role: "manager" });
                 setUserRole("manager");
               } else {
-                setUserRole(data?.role || "client");
+                const role = data?.role || "client";
+                setUserRole(role);
+                if (role === 'client') {
+                    setCurrentScreen("client-dashboard");
+                }
               }
             }
           });
@@ -387,6 +386,14 @@ export default function App() {
       } else {
         console.log("Auth state changed: User logged out");
         setUserRole("client");
+        
+        // Restore client session if no Firebase user
+        const savedClient = localStorage.getItem('loggedInClient');
+        if (savedClient) {
+          const parsedClient = JSON.parse(savedClient);
+          setLoggedInClient(parsedClient);
+          setCurrentScreen("client-dashboard");
+        }
       }
     });
     return () => {
@@ -451,9 +458,20 @@ export default function App() {
   };
 
   const handleLogout = async () => {
+    // 1. Sign out Firebase user
     await signOut(auth);
+    
+    // 2. Clear client session
     setLoggedInClient(null);
+    
+    // 3. Reset roles and UI State
+    setUserRole("client");
+    
+    // 4. Clear storage
     localStorage.removeItem('loggedInClient');
+    localStorage.removeItem('userRole'); // Ensure this is also cleared if it's used
+    
+    // 5. Reset screen
     setCurrentScreen("home");
   };
 
@@ -710,10 +728,10 @@ export default function App() {
             ) : loggedInClient ? (
               <div className="flex items-center gap-6">
                 <button 
-                  onClick={() => setCurrentScreen("client-dashboard")}
+                  onClick={handleLogout}
                   className={`hover:text-amber-500 transition-colors flex items-center gap-2 uppercase text-[10px] font-black tracking-widest leading-none ${currentScreen === "client-dashboard" ? "text-amber-500" : "text-neutral-400"}`}
                 >
-                  Meu Painel
+                  Sair
                 </button>
                 <div className="flex items-center gap-3 pl-6 border-l border-white/10">
                   <div className="text-right">
@@ -736,7 +754,7 @@ export default function App() {
                   </div>
                 </div>
                 <button 
-                  onClick={() => { setLoggedInClient(null); setCurrentScreen("home"); }}
+                  onClick={handleLogout}
                   className={`p-2 rounded-lg transition-all bg-white/5 text-neutral-400 hover:bg-red-500/20 hover:text-red-500`}
                 >
                   <LogOut className="w-4 h-4" />
@@ -1006,7 +1024,7 @@ export default function App() {
                       menuItems.push({
                         label: "Sair",
                         icon: <LogOut className="w-4 h-4" />,
-                        onClick: () => { setLoggedInClient(null); setCurrentScreen("home"); setIsMenuOpen(false); },
+                        onClick: () => { handleLogout(); setIsMenuOpen(false); },
                         isActive: false
                       });
                     } else {

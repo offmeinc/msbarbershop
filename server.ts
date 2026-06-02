@@ -6,6 +6,7 @@ import { fileURLToPath } from "url";
 import multer from "multer";
 import axios from "axios";
 import FormData from "form-data";
+import { GoogleGenAI } from "@google/genai";
 import { initVapid, startAppointmentsListener, sendPushNotification, sendNotificationToCollaborators } from "./src/server/pushNotificationService";
 import { startAppointmentAutoUpdater } from "./src/server/appointmentAutoUpdater";
 import { db } from "./src/lib/firebase";
@@ -13,6 +14,16 @@ import { doc, getDoc, updateDoc, setDoc, collection, addDoc, serverTimestamp, in
 
 const _filename = typeof __filename !== 'undefined' ? __filename : fileURLToPath(import.meta.url);
 const _dirname = typeof __dirname !== 'undefined' ? __dirname : path.dirname(_filename);
+
+// Initialize Gemini Client
+const ai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY!,
+  httpOptions: {
+    headers: {
+      'User-Agent': 'aistudio-build',
+    }
+  }
+});
 
 async function startServer() {
   const app = express();
@@ -53,6 +64,28 @@ async function startServer() {
   startAppointmentAutoUpdater();
   
   const upload = multer({ storage: multer.memoryStorage() });
+
+  // Assistant Chat API Route
+  app.post("/api/chat", async (req, res) => {
+    const { messages } = req.body;
+    try {
+        const chat = ai.chats.create({
+            model: "gemini-3.5-flash",
+            config: {
+                systemInstruction: "Você é o assistente virtual da MS Barbearia. Ajude os clientes com dúvidas sobre agendamentos, serviços e carteira digital. Seja amigável e direto.",
+            },
+        });
+        
+        // Take the last message as the prompt
+        const lastMessage = messages[messages.length - 1].text;
+        
+        const response = await chat.sendMessage({ message: lastMessage });
+        res.json({ reply: response.text });
+    } catch (error) {
+        console.error("[Chat API Error]:", error);
+        res.status(500).json({ error: "Failed to process chat" });
+    }
+  });
 
   // API Route for Push Config (Retrieve VAPID PublicKey)
   app.get("/api/push-config", (req, res) => {
@@ -200,7 +233,8 @@ async function startServer() {
               clientEmail: email || userData.email || "",
               message: `Recarga Aprovada! R$ ${totalAdded.toFixed(2).replace('.', ',')} adicionados à sua Carteira Digital através do Pix Mercado Pago.`,
               timestamp: serverTimestamp(),
-              read: false
+              read: false,
+              type: 'recharge'
             });
 
             // Push notification to user
