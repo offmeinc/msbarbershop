@@ -443,35 +443,38 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
           >
-            <div className="pt-12 px-6 pb-8 sticky top-0 bg-black/80 backdrop-blur-xl z-20">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-3">
-                   <div className="w-12 h-12 rounded-2xl bg-amber-500 overflow-hidden border-2 border-amber-500 shadow-xl">
-                      <img src={user?.photoURL || user?.photoUrl || `https://ui-avatars.com/api/?name=${user?.displayName || user?.name || 'Cliente'}&background=f59e0b&color=000`} alt="Avatar" className="w-full h-full object-cover" />
-                   </div>
-                   <div className="flex items-center gap-2">
-                      <div>
-                        <p className="text-[10px] text-neutral-500 font-black uppercase tracking-[0.2em] leading-none mb-1">Bem-vind{user?.gender === 'female' ? 'a' : 'o'}</p>
-                        <h2 className="text-xl font-black italic uppercase tracking-tighter truncate w-40">{(user?.displayName || 'Cliente').split(' ')[0]}</h2>
-                      </div>
-                      <button onClick={() => setCurrentView('notifications')} className="relative p-3 bg-neutral-900 rounded-2xl text-neutral-500 hover:text-white border border-white/5 transition-all">
-                        <Bell className="w-5 h-5" />
+            <div className="pt-12 px-6 pb-6 sticky top-0 bg-black/90 backdrop-blur-2xl z-20 border-b border-white/[0.02]">
+              <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center gap-4">
+                     <div className="w-14 h-14 rounded-full bg-neutral-900 overflow-hidden shadow-xl shrink-0 border border-white/5 relative group">
+                        <img src={user?.photoURL || user?.photoUrl || `https://ui-avatars.com/api/?name=${user?.displayName || user?.name || 'Cliente'}&background=1a1a1a&color=fff`} alt="Avatar" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                        <div className="absolute inset-0 rounded-full shadow-[inset_0_2px_4px_rgba(255,255,255,0.1)] pointer-events-none" />
+                     </div>
+                     <div className="flex flex-col justify-center">
+                        <p className="text-[10px] text-neutral-400 font-medium uppercase tracking-[0.25em] leading-none mb-1.5 flex items-center gap-1.5">
+                          Bem-vind{user?.gender === 'female' ? 'a' : 'o'}
+                          <Sparkles className="w-3 h-3 text-amber-500/70" />
+                        </p>
+                        <h2 className="text-2xl font-light tracking-tight truncate max-w-[140px] md:max-w-xs">{user?.displayName?.split(' ')[0] || 'Cliente'}</h2>
+                     </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                      <button onClick={() => setCurrentView('notifications')} className="relative p-2.5 bg-neutral-900/50 rounded-full text-neutral-400 hover:text-white hover:bg-neutral-800 border border-transparent hover:border-white/10 transition-all">
+                        <Bell className="w-5 h-5 md:w-5 md:h-5" strokeWidth={1.5} />
                         {notifications.filter(n => !n.read).length > 0 && (
-                          <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-amber-500 rounded-full border-2 border-black" />
+                          <span className="absolute top-2 right-2 w-2 h-2 bg-amber-500 rounded-full border border-black" />
                         )}
                       </button>
-                      <button onClick={() => setCurrentView('chat')} className="relative p-3 bg-neutral-900 rounded-2xl text-neutral-500 hover:text-white border border-white/5 transition-all" title="Chat com Profissional">
-                        <MessageSquare className="w-5 h-5" />
+                      <button onClick={() => setCurrentView('chat')} className="relative p-2.5 bg-neutral-900/50 rounded-full text-neutral-400 hover:text-white hover:bg-neutral-800 border border-transparent hover:border-white/10 transition-all" title="Chat com Profissional">
+                        <MessageSquare className="w-5 h-5 md:w-5 md:h-5" strokeWidth={1.5} />
                         {unreadChat && (
-                          <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-amber-500 rounded-full border-2 border-black animate-pulse" />
+                          <span className="absolute top-2 right-2 w-2 h-2 bg-amber-500 rounded-full border border-black animate-pulse" />
                         )}
                       </button>
-                      <button onClick={() => setCurrentView('more-options')} className="p-3 bg-neutral-900 rounded-2xl text-neutral-500 hover:text-white border border-white/5 transition-all">
-                        <Menu className="w-5 h-5" />
+                      <button onClick={() => setCurrentView('more-options')} className="p-2.5 bg-neutral-900/50 rounded-full text-neutral-400 hover:text-white hover:bg-neutral-800 border border-transparent hover:border-white/10 transition-all">
+                        <Menu className="w-5 h-5 md:w-5 md:h-5" strokeWidth={1.5} />
                       </button>
-                   </div>
-                </div>
-
+                  </div>
               </div>
             </div>
 

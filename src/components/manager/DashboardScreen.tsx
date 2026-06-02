@@ -344,7 +344,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
       {currentView === 'list' && (
         <div className="flex items-center justify-between mb-8">
           <div className="flex flex-col gap-1">
-             <h1 className="text-2xl font-black text-white capitalize">{format(currentDate, "dd 'de' MMMM", { locale: ptBR })}</h1>
+             <h1 className="text-2xl font-light tracking-tight text-white capitalize">{format(currentDate, "dd 'de' MMMM", { locale: ptBR })}</h1>
              <div className="flex gap-2">
               <button onClick={() => setCurrentDate(subDays(currentDate, 1))} className="text-neutral-500 hover:text-white"><ChevronLeft className="w-5 h-5"/></button>
               <button onClick={() => setCurrentDate(new Date())} className="text-xs font-bold text-amber-500 hover:text-amber-400">Hoje</button>
@@ -682,7 +682,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                                                     <Clock className="w-3 h-3 text-amber-500" />
                                                     {format(dateVal, "PPP", { locale: ptBR })}
                                                   </p>
-                                                  <h4 className="font-black text-lg text-white tracking-tight italic uppercase mt-1 leading-none">{app.serviceName}</h4>
+                                                  <h4 className="font-medium text-lg text-white tracking-tight mt-1 leading-none">{app.serviceName}</h4>
                                               </div>
                                               <div className={`px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5 ${statusColor}`}>
                                                   <div className={`w-1.5 h-1.5 rounded-full ${badgeDot}`} />

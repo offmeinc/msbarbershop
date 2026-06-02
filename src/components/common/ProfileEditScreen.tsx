@@ -92,6 +92,7 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
       });
       
       toast.success("Perfil atualizado com sucesso! ✨");
+      onBack();
     } catch (error) {
       console.error(error);
       toast.error("Erro ao atualizar perfil.");

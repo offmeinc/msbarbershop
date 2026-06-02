@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { motion } from "motion/react";
 import { 
-  User, 
-  CreditCard, 
+  UserCircle, 
+  MonitorSmartphone, 
   Bell, 
-  Wallet, 
+  WalletCards, 
   Calendar, 
   Lock, 
   CheckCircle2, 
@@ -45,8 +45,8 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
     {
       title: "Perfil e Conta",
       items: [
-        { id: 'profile', label: 'Meu Perfil', icon: <User className="w-5 h-5" />, onClick: () => setActiveSubScreen('profile') },
-        ...(role === 'client' ? [] : [{ id: 'dashboard', label: 'Painel Cliente', icon: <CreditCard className="w-5 h-5" />, onClick: () => setActiveSubScreen('dashboard') }]),
+        { id: 'profile', label: 'Meu Perfil', icon: <UserCircle className="w-5 h-5" />, onClick: () => setActiveSubScreen('profile') },
+        ...(role === 'client' ? [] : [{ id: 'dashboard', label: 'Painel Cliente', icon: <MonitorSmartphone className="w-5 h-5" />, onClick: () => setActiveSubScreen('dashboard') }]),
         { 
           id: 'notif', 
           label: 'Notificações', 
@@ -54,7 +54,7 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
           badge: unreadCount > 0 ? (unreadCount > 99 ? '99+' : unreadCount.toString()) : undefined, 
           onClick: () => setActiveSubScreen('notif') 
         },
-        ...(role === 'barber' || role === 'manager' ? [{ id: 'earnings', label: 'Meus Ganhos', icon: <Wallet className="w-5 h-5" />, onClick: () => setActiveSubScreen('earnings') }] : []),
+        ...(role === 'barber' || role === 'manager' ? [{ id: 'earnings', label: 'Meus Ganhos', icon: <WalletCards className="w-5 h-5" />, onClick: () => setActiveSubScreen('earnings') }] : []),
       ]
     },
     ...(role !== 'client' ? [{

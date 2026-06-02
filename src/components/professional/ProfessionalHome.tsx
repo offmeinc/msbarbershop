@@ -118,18 +118,29 @@ export function ProfessionalHome({ user, role, setCurrentScreen }: ProfessionalH
   };
 
   return (
-    <div className="max-w-xl md:max-w-4xl lg:max-w-5xl mx-auto py-8 px-6 space-y-8 animate-in fade-in duration-500">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-black text-white">{getTimeGreeting()}, {user?.displayName?.split(' ')[0] || "Profissional"}! 👋</h1>
-          <p className="text-neutral-500 text-sm flex items-center gap-1 font-medium mt-1">
-            <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Seu desempenho de hoje
-          </p>
+    <div className="max-w-xl md:max-w-4xl lg:max-w-5xl mx-auto py-8 px-6 space-y-10 animate-in fade-in duration-500">
+      <div className="flex items-center justify-between w-full">
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-16 rounded-full bg-neutral-900 overflow-hidden shadow-xl shrink-0 border border-white/5 relative group">
+             <img src={user?.photoURL || user?.photoUrl || `https://ui-avatars.com/api/?name=${user?.displayName || user?.name || 'Profissional'}&background=1a1a1a&color=fff`} alt="Avatar" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+             <div className="absolute inset-0 rounded-full shadow-[inset_0_2px_4px_rgba(255,255,255,0.1)] pointer-events-none" />
+          </div>
+          <div className="flex flex-col justify-center">
+            <p className="text-[10px] text-neutral-400 font-medium uppercase tracking-[0.25em] leading-none mb-1.5 flex items-center gap-1.5">
+              {getTimeGreeting()}
+              <Sparkles className="w-3 h-3 text-amber-500/70" />
+            </p>
+            <h1 className="text-2xl font-light tracking-tight truncate max-w-[200px] md:max-w-xs text-white">
+              {user?.displayName?.split(' ')[0] || "Profissional"}
+            </h1>
+          </div>
         </div>
-        <div className="bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full">
-          <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest leading-none">
-            {role === 'manager' ? 'Gestor' : 'Profissional'}
-          </span>
+        <div className="flex items-center shrink-0">
+           <div className="bg-neutral-900/50 border border-white/5 px-3 py-1 flex items-center justify-center rounded-full">
+             <span className="text-[9px] font-medium text-neutral-400 uppercase tracking-widest leading-none">
+               {role === 'manager' ? 'Gestor' : 'Profissional'}
+             </span>
+           </div>
         </div>
       </div>
 
@@ -139,13 +150,13 @@ export function ProfessionalHome({ user, role, setCurrentScreen }: ProfessionalH
           className="bg-neutral-900 p-5 rounded-[2rem] border border-neutral-800 space-y-3 text-left relative overflow-hidden group hover:border-amber-500/30 active:scale-95 transition-all"
         >
           <div className="flex justify-between items-start">
-            <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">Ganhos Hoje</p>
+            <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Ganhos Hoje</p>
             <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-500 group-hover:bg-amber-500/20 transition-colors">
               <DollarSign className="w-4 h-4" />
             </div>
           </div>
           <div className="space-y-0.5">
-            <h3 className="text-3xl font-black text-white tracking-tighter">R$ {stats.earnings.toFixed(2)}</h3>
+            <h3 className="text-3xl font-bold text-white tracking-tighter">R$ {stats.earnings.toFixed(2)}</h3>
           </div>
         </button>
 
@@ -160,7 +171,7 @@ export function ProfessionalHome({ user, role, setCurrentScreen }: ProfessionalH
             </div>
           </div>
           <div className="space-y-0.5">
-            <h3 className="text-3xl font-black text-white tracking-tighter">{stats.appointmentsCount}</h3>
+            <h3 className="text-3xl font-semibold text-white tracking-tighter">{stats.appointmentsCount}</h3>
           </div>
         </button>
 
@@ -175,7 +186,7 @@ export function ProfessionalHome({ user, role, setCurrentScreen }: ProfessionalH
             </div>
           </div>
           <div className="space-y-0.5">
-             <h3 className="text-3xl font-black text-white tracking-tighter">Fotos</h3>
+             <h3 className="text-3xl font-semibold text-white tracking-tighter">Fotos</h3>
           </div>
         </button>
 
@@ -190,7 +201,7 @@ export function ProfessionalHome({ user, role, setCurrentScreen }: ProfessionalH
             </div>
           </div>
           <div className="space-y-0.5">
-             <h3 className="text-3xl font-black text-white tracking-tighter">Listar</h3>
+             <h3 className="text-3xl font-semibold text-white tracking-tighter">Listar</h3>
           </div>
         </button>
 
@@ -225,7 +236,7 @@ export function ProfessionalHome({ user, role, setCurrentScreen }: ProfessionalH
             </div>
           </div>
           <div className="space-y-0.5">
-             <h3 className="text-3xl font-black text-white tracking-tighter">Gerir</h3>
+             <h3 className="text-3xl font-semibold text-white tracking-tighter">Gerir</h3>
           </div>
         </button>
 
@@ -237,7 +248,7 @@ export function ProfessionalHome({ user, role, setCurrentScreen }: ProfessionalH
             </div>
           </div>
           <div className="space-y-1">
-            <h3 className="text-2xl font-black text-white">{stats.attendanceRate}%</h3>
+            <h3 className="text-2xl font-semibold text-white">{stats.attendanceRate}%</h3>
             <p className="text-[10px] text-amber-500 font-bold flex items-center gap-1">
               <TrendingUp className="w-3 h-3" /> hoje
             </p>
@@ -252,7 +263,7 @@ export function ProfessionalHome({ user, role, setCurrentScreen }: ProfessionalH
             </div>
           </div>
           <div className="space-y-1">
-            <h3 className="text-2xl font-black text-white">{stats.uniqueClients}</h3>
+            <h3 className="text-2xl font-semibold text-white">{stats.uniqueClients}</h3>
             <p className="text-[10px] text-amber-500 font-bold flex items-center gap-1">
               <TrendingUp className="w-3 h-3" /> hoje
             </p>

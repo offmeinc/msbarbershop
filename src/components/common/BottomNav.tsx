@@ -1,18 +1,18 @@
-import { Grid, Calendar, User, Plus, Grip } from "lucide-react";
+import { Home, CalendarDays, Users, Scissors, GripHorizontal } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 export function BottomNav({ userRole, currentScreen, setCurrentScreen, user, unreadCount, isVisible = true }: { userRole: string, currentScreen: string, setCurrentScreen: (s: any) => void, user: any, unreadCount: number, isVisible?: boolean }) {
   if (!user) return null;
 
   const items = [];
-  items.push({ id: "home", label: "Início", icon: <Grid className="w-5 h-5" />, screen: "home" });
+  items.push({ id: "home", label: "Início", icon: <Home className="w-5 h-5" />, screen: "home" });
     
   if (userRole === "manager" || userRole === "barber") {
-    items.push({ id: "agenda", label: "Agenda", icon: <Calendar className="w-5 h-5" />, screen: "agenda" });
-    items.push({ id: "clients", label: "Clientes", icon: <User className="w-5 h-5" />, screen: "clients" });
+    items.push({ id: "agenda", label: "Agenda", icon: <CalendarDays className="w-5 h-5" />, screen: "agenda" });
+    items.push({ id: "clients", label: "Clientes", icon: <Users className="w-5 h-5" />, screen: "clients" });
   } else {
-    items.push({ id: "booking", label: "Agendar", icon: <Plus className="w-5 h-5" />, screen: "booking" });
-    items.push({ id: "agenda", label: "Meus Cortes", icon: <Calendar className="w-5 h-5" />, screen: "agenda" });
+    items.push({ id: "booking", label: "Agendar", icon: <Scissors className="w-5 h-5" />, screen: "booking" });
+    items.push({ id: "agenda", label: "Histórico", icon: <CalendarDays className="w-5 h-5" />, screen: "agenda" });
   }
     
   items.push({ 
@@ -21,7 +21,7 @@ export function BottomNav({ userRole, currentScreen, setCurrentScreen, user, unr
     icon: (
       <div className="relative">
         <motion.div animate={{ rotate: currentScreen === 'more' ? 90 : 0 }}>
-          <Grip className="w-5 h-5" />
+          <GripHorizontal className="w-5 h-5" />
         </motion.div>
         {unreadCount > 0 && (
           <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-500 rounded-full border-2 border-black" />

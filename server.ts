@@ -10,8 +10,8 @@ import { startAppointmentAutoUpdater } from "./src/server/appointmentAutoUpdater
 import { db } from "./src/lib/firebase";
 import { doc, getDoc, updateDoc, setDoc, collection, addDoc, serverTimestamp, increment, Timestamp, runTransaction, query, where, getDocs, limit } from "firebase/firestore";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const _filename = typeof __filename !== 'undefined' ? __filename : fileURLToPath(import.meta.url);
+const _dirname = typeof __dirname !== 'undefined' ? __dirname : path.dirname(_filename);
 
 async function startServer() {
   const app = express();
