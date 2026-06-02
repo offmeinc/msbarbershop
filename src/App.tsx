@@ -62,6 +62,7 @@ import {
 import { useState, useEffect, useRef, useMemo, ChangeEvent, FormEvent, lazy, Suspense } from "react";
 import { BrandLogo } from "./components/common/BrandLogo";
 import { Toaster, toast } from "./components/ui/Toast";
+import { NotificationModal } from "./components/common/NotificationModal";
 
 // Lazy-loaded components for better initial loading performance
 const NotificationsScreen = lazy(() => import("./components/NotificationsScreen").then(m => ({ default: m.NotificationsScreen })));
@@ -814,6 +815,16 @@ export default function App() {
         unreadCount={staffNotifications.filter(n => !n.read).length}
         isVisible={!hidden}
       />
+
+      {['manager', 'barber'].includes(userRole) && (
+        <NotificationModal 
+            notifications={staffNotifications}
+            onClose={() => {}}
+            onMarkAsRead={async (id) => {
+                await updateDoc(doc(db, "staff_notifications", id), { read: true });
+            }}
+        />
+      )}
 
       {currentScreen === "home" && (
         <>
