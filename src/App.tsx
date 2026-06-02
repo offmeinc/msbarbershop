@@ -785,7 +785,7 @@ export default function App() {
         </div>
       </motion.nav>
 
-      <main className="pt-[calc(5rem+env(safe-area-inset-top))]">
+      <main className="pt-[calc(5rem+env(safe-area-inset-top))] max-w-7xl mx-auto px-4 md:px-6 pb-12">
         <Suspense fallback={<LoadingFallback />}>
           <AnimatePresence mode="wait">
             {currentScreen === "home" && (

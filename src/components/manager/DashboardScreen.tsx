@@ -299,43 +299,43 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
   }, [appointments, currentDate, selectedBarberId]);
 
   return (
-    <div className="min-h-screen bg-black px-4 pt-16 relative pb-28">
+    <div className="min-h-screen bg-black px-6 pt-6 relative pb-28">
       {statusMsg && (
-        <div className="fixed top-5 left-4 right-4 bg-green-500 text-white p-4 rounded-full font-bold text-center z-50 shadow-xl shadow-green-500/20">
+        <div className="fixed top-6 left-4 right-4 bg-emerald-500 text-white p-4 rounded-3xl font-black text-xs uppercase tracking-widest text-center z-50 shadow-2xl">
           {statusMsg}
         </div>
       )}
       
       {/* Modern View Segmented Selector at the header */}
       {(role === 'manager' || role === 'barber') && (currentView === 'agenda' || currentView === 'list') && (
-        <div className="max-w-xl mx-auto mb-8 mt-2">
-          <div className="bg-neutral-900 border border-white/5 p-1 rounded-2xl flex items-center justify-between shadow-2xl relative overflow-hidden">
+        <div className="max-w-xl mx-auto mb-4 mt-2">
+          <div className="bg-neutral-900 border border-white/5 p-1.5 rounded-3xl flex items-center justify-between shadow-2xl relative overflow-hidden">
             <button 
               onClick={() => setCurrentView('agenda')}
-              className={`flex-1 py-3 px-4 rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 transition-all relative z-10 ${currentView === 'agenda' ? 'text-black font-black' : 'text-neutral-500 hover:text-white'}`}
+              className={`flex-1 py-4 px-4 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 transition-all relative z-10 ${currentView === 'agenda' ? 'text-black font-black' : 'text-neutral-500 hover:text-white'}`}
             >
               {currentView === 'agenda' && (
                 <motion.div 
                   layoutId="activeSubView" 
-                  className="absolute inset-0 bg-amber-500 rounded-xl z-[-1]" 
+                  className="absolute inset-0 bg-amber-500 rounded-2xl z-[-1]" 
                   transition={{ type: "spring", stiffness: 380, damping: 30 }}
                 />
               )}
-              <Calendar className="w-3.5 h-3.5 animate-pulse" />
-              Ver Agenda
+              <Calendar className="w-4 h-4" />
+              Agenda
             </button>
             <button 
               onClick={() => setCurrentView('list')}
-              className={`flex-1 py-3 px-4 rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 transition-all relative z-10 ${currentView === 'list' ? 'text-black font-black' : 'text-neutral-500 hover:text-white'}`}
+              className={`flex-1 py-4 px-4 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 transition-all relative z-10 ${currentView === 'list' ? 'text-black font-black' : 'text-neutral-500 hover:text-white'}`}
             >
               {currentView === 'list' && (
                 <motion.div 
                   layoutId="activeSubView" 
-                  className="absolute inset-0 bg-amber-500 rounded-xl z-[-1]" 
+                  className="absolute inset-0 bg-amber-500 rounded-2xl z-[-1]" 
                   transition={{ type: "spring", stiffness: 380, damping: 30 }}
                 />
               )}
-              <Scissors className="w-3.5 h-3.5" />
+              <Scissors className="w-4 h-4" />
               Atendimentos
             </button>
           </div>
