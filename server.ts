@@ -51,18 +51,11 @@ async function startServer() {
   
   // Standard CORS middleware
   app.use(cors({
-    origin: [
-      'https://www.msbarbershop.com.br',
-      'https://msbarbershop.com.br'
-    ],
+    origin: function (origin, callback) {
+      // Allow all origins
+      callback(null, true);
+    },
     credentials: true,
-    methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-  }));
-  
-  // Also allow all for specific API if they bypass the origin check (optional fallback)
-  app.use('/api', cors({
-    origin: '*',
     methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
   }));
