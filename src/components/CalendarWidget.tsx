@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { 
   ChevronLeft, 
@@ -199,6 +199,28 @@ export function CalendarWidget({
       return appDate instanceof Date && !isNaN(appDate.getTime()) && isSameDay(appDate, date);
     });
   };
+
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to current time when timeline opens (first render or viewMode change)
+  useEffect(() => {
+    if (scrollContainerRef.current && currentTimePosition !== null) {
+      // scroll so the redline is roughly in the middle, or just show the current hour
+      const scrollTo = Math.max(0, currentTimePosition - 150); 
+      
+      const timer = setTimeout(() => {
+         if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTo({
+              top: scrollTo,
+              behavior: "smooth" 
+            });
+         }
+      }, 100);
+
+      return () => clearTimeout(timer);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, currentDate]);
 
   // Dynamically map active professionals and assign clean consistent theme colors
   const uniqueBarbers = useMemo(() => {
@@ -515,7 +537,7 @@ export function CalendarWidget({
           </div>
 
           {/* Core Interactive Scrolling grid */}
-          <div className="overflow-y-auto max-h-[600px] no-scrollbar">
+          <div ref={scrollContainerRef} className="overflow-y-auto max-h-[600px] no-scrollbar">
             <div className="flex relative" style={{ height: `${hours.length * ROW_HEIGHT}px` }}>
               {/* Left Hour Tags gutter */}
               <div className="w-[12.5%] border-r border-white/5 relative z-10 bg-black/10 select-none">
@@ -701,7 +723,7 @@ export function CalendarWidget({
         </div>
 
         {/* Scrollable Day Timeline Canvas */}
-        <div className="overflow-y-auto max-h-[600px] no-scrollbar">
+        <div ref={scrollContainerRef} className="overflow-y-auto max-h-[600px] no-scrollbar">
           <div className="relative" style={{ height: `${hours.length * ROW_HEIGHT}px` }}>
             {/* Hour lines backing ticks */}
             {hours.map((hour, i) => (
