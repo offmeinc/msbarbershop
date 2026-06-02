@@ -395,7 +395,8 @@ async function startServer() {
         }
       }
 
-      const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
+    const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
+    console.log(`[Mercado Pago] ACCESS_TOKEN exists: ${!!accessToken}`);
       if (!accessToken || accessToken.trim() === "") {
         console.warn("[Mercado Pago] ACCESS_TOKEN not configured. Returning simulated payment payload.");
         const simulatedPaymentId = "mp-sim-" + Math.floor(Math.random() * 900000000 + 100000000).toString();
