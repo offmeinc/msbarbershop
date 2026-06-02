@@ -111,16 +111,10 @@ export function MyCutsScreen({ user, appointments, onBack, onBookAgain, onResche
     if (!file) return;
 
     setUploadingFor(appointmentId);
-    const formData = new FormData();
-    formData.append('image', file);
-
     try {
-      const response = await fetch(`/api/upload`, {
-        method: 'POST',
-        body: formData
-      });
+      const { uploadImage } = await import('../../lib/uploadService');
+      const data = await uploadImage(file);
       
-      const data = await response.json();
       if (data.success) {
         await updateDoc(doc(db, "appointments", appointmentId), { 
           reviewPhotoUrl: data.data.url 

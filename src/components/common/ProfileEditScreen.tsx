@@ -126,15 +126,9 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
         setUploadingImage(true);
     }
     
-    const formData = new FormData();
-    formData.append('image', file);
-
     try {
-      const response = await fetch(`/api/upload`, {
-        method: 'POST',
-        body: formData,
-      });
-      const data = await response.json();
+      const { uploadImage } = await import('../../lib/uploadService');
+      const data = await uploadImage(file);
       if (data.success) {
         if (isPortfolio) {
             setProfileData(prev => ({ ...prev, portfolio: [...prev.portfolio, data.data.url] }));

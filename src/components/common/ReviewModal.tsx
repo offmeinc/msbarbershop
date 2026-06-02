@@ -17,15 +17,9 @@ export function ReviewModal({ appointment, onClose }: { appointment: any, onClos
     if (!file) return;
 
     setUploading(true);
-    const formData = new FormData();
-    formData.append('image', file);
-
     try {
-      const response = await fetch(`/api/upload`, {
-        method: 'POST',
-        body: formData
-      });
-      const data = await response.json();
+      const { uploadImage } = await import('../../lib/uploadService');
+      const data = await uploadImage(file);
       if (data.success) {
         setPhotoUrl(data.data.url);
         toast.success("Foto adicionada!");

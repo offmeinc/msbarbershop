@@ -101,11 +101,11 @@ async function startServer() {
     try {
       const apiKey = process.env.IMGBB_API_KEY;
       if (!apiKey) {
-        throw new Error("IMGBB_API_KEY is not configured");
+        throw new Error("IMGBB_API_KEY não configurado no arquivo .env");
       }
 
       if (!req.file) {
-        return res.status(400).json({ error: "No image provided" });
+        return res.status(400).json({ error: "Nenhuma imagem foi recebida" });
       }
 
       const formData = new FormData();

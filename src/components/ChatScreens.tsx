@@ -156,25 +156,23 @@ export function ChatScreen({ user, onBack }: { user: any, onBack: () => void }) 
         const audioBlob = new Blob(audioChunksRef.current, { type: "audio/ogg; codecs=opus" });
         const file = new File([audioBlob], "audio.ogg", { type: "audio/ogg" });
         
-        const formData = new FormData();
-        formData.append("image", file);
-        
-        const response = await fetch(getBackendUrl("/api/upload"), {
-            method: "POST",
-            body: formData
-        });
-        
-        const result = await response.json();
-        if (result.data && result.data.url) {
-            const docData = {
-              audioUrl: result.data.url,
-              text: "🎙️ Mensagem de voz",
-              createdAt: Timestamp.now(),
-              userId: clientUid,
-              sender: "client"
-            };
-            console.log("DEBUG: Data to add (ChatScreen):", docData);
-            await addDoc(collection(db, "chats", clientUid!, "messages"), docData);
+        try {
+          const { uploadImage } = await import('../lib/uploadService');
+          const result = await uploadImage(file);
+          
+          if (result.data && result.data.url) {
+              const docData = {
+                audioUrl: result.data.url,
+                text: "🎙️ Mensagem de voz",
+                createdAt: Timestamp.now(),
+                userId: clientUid,
+                sender: "client"
+              };
+              console.log("DEBUG: Data to add (ChatScreen):", docData);
+              await addDoc(collection(db, "chats", clientUid!, "messages"), docData);
+          }
+        } catch (error) {
+          console.error("Audio upload error:", error);
         }
         
         stream.getTracks().forEach(track => track.stop());
@@ -335,23 +333,20 @@ export function ChatScreen({ user, onBack }: { user: any, onBack: () => void }) 
                 const file = e.target.files?.[0];
                 if (!file) return;
                 
-                const formData = new FormData();
-                formData.append("image", file);
-                
-                const response = await fetch(getBackendUrl("/api/upload"), {
-                    method: "POST",
-                    body: formData
-                });
-                
-                const result = await response.json();
-                if (result.data && result.data.url) {
-                    await addDoc(collection(db, "chats", clientUid, "messages"), {
-                      imageUrl: result.data.url,
-                      text: "📷 Imagem",
-                      createdAt: Timestamp.now(),
-                      userId: clientUid,
-                      sender: "client"
-                    });
+                try {
+                  const { uploadImage } = await import('../lib/uploadService');
+                  const result = await uploadImage(file);
+                  if (result.data && result.data.url) {
+                      await addDoc(collection(db, "chats", clientUid, "messages"), {
+                        imageUrl: result.data.url,
+                        text: "📷 Imagem",
+                        createdAt: Timestamp.now(),
+                        userId: clientUid,
+                        sender: "client"
+                      });
+                  }
+                } catch (error) {
+                  console.error("Upload failed", error);
                 }
             }} />
         </label>
@@ -413,26 +408,24 @@ export function ProfessionalClientChatsScreen({ user, onBack, initialClientId, i
         const audioBlob = new Blob(audioChunksRef.current, { type: "audio/ogg; codecs=opus" });
         const file = new File([audioBlob], "audio.ogg", { type: "audio/ogg" });
         
-        const formData = new FormData();
-        formData.append("image", file);
-        
-        const response = await fetch(getBackendUrl("/api/upload"), {
-            method: "POST",
-            body: formData
-        });
-        
-        const result = await response.json();
-        if (result.data && result.data.url) {
-            const docData = {
-              audioUrl: result.data.url,
-              text: "🎙️ Mensagem de voz",
-              createdAt: Timestamp.now(),
-              sender: "professional",
-              senderName: user?.displayName || user?.name || "Suporte",
-              senderId: user?.uid || user?.id
-            };
-            console.log("DEBUG: Data to add:", docData);
-            await addDoc(collection(db, "chats", activeClientId!, "messages"), docData);
+        try {
+          const { uploadImage } = await import('../lib/uploadService');
+          const result = await uploadImage(file);
+          
+          if (result.data && result.data.url) {
+              const docData = {
+                audioUrl: result.data.url,
+                text: "🎙️ Mensagem de voz",
+                createdAt: Timestamp.now(),
+                sender: "professional",
+                senderName: user?.displayName || user?.name || "Suporte",
+                senderId: user?.uid || user?.id
+              };
+              console.log("DEBUG: Data to add:", docData);
+              await addDoc(collection(db, "chats", activeClientId!, "messages"), docData);
+          }
+        } catch (error) {
+          console.error("Upload error:", error);
         }
         
         stream.getTracks().forEach(track => track.stop());
@@ -812,24 +805,22 @@ export function ProfessionalClientChatsScreen({ user, onBack, initialClientId, i
                   const file = e.target.files?.[0];
                   if (!file || !activeClientId) return;
                   
-                  const formData = new FormData();
-                  formData.append("image", file);
-                  
-                  const response = await fetch(getBackendUrl("/api/upload"), {
-                      method: "POST",
-                      body: formData
-                  });
-                  
-                  const result = await response.json();
-                  if (result.data && result.data.url) {
-                      await addDoc(collection(db, "chats", activeClientId, "messages"), {
-                        imageUrl: result.data.url,
-                        text: "📷 Imagem",
-                        createdAt: Timestamp.now(),
-                        sender: "professional",
-                        senderName: user?.displayName || user?.name || "Suporte",
-                        senderId: user?.uid || user?.id
-                      });
+                  try {
+                    const { uploadImage } = await import('../lib/uploadService');
+                    const result = await uploadImage(file);
+                    
+                    if (result.data && result.data.url) {
+                        await addDoc(collection(db, "chats", activeClientId, "messages"), {
+                          imageUrl: result.data.url,
+                          text: "📷 Imagem",
+                          createdAt: Timestamp.now(),
+                          sender: "professional",
+                          senderName: user?.displayName || user?.name || "Suporte",
+                          senderId: user?.uid || user?.id
+                        });
+                    }
+                  } catch (error) {
+                    console.error("Upload error:", error);
                   }
               }} />
             </label>
