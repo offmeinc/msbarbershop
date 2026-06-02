@@ -21,12 +21,7 @@ export function ReviewModal({ appointment, onClose }: { appointment: any, onClos
     formData.append('image', file);
 
     try {
-      const apiKey = (import.meta as any).env.VITE_IMGBB_API_KEY;
-      if (!apiKey) {
-        toast.error("Configuração de upload pendente.");
-        return;
-      }
-      const response = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
+      const response = await fetch(`/api/upload`, {
         method: 'POST',
         body: formData
       });

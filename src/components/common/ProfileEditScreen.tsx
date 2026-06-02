@@ -130,14 +130,7 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
     formData.append('image', file);
 
     try {
-      const apiKey = (import.meta as any).env.VITE_IMGBB_API_KEY;
-      if (!apiKey) {
-        toast.error("Configuração de API do ImgBB faltando. Por favor, adicione VITE_IMGBB_API_KEY no arquivo .env");
-        setUploadingImage(false);
-        setLoading(false);
-        return;
-      }
-      const response = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
+      const response = await fetch(`/api/upload`, {
         method: 'POST',
         body: formData,
       });
