@@ -372,11 +372,14 @@ async function startServer() {
 
   // API Route for Mercado Pago Pix Payment Creation
   app.post("/api/payments/mercado-pago/create-payment", async (req, res) => {
+    console.log("[Route] Received request for /api/payments/mercado-pago/create-payment");
     const { transaction_amount, description, email, name, appointmentId, userId: providedUserId, walletAmountToDeduct } = req.body;
     const amount = Number(transaction_amount);
+    console.log(`[Route] Params: amount=${amount}, userId=${providedUserId}`);
 
     try {
       if (isNaN(amount) || amount <= 0) {
+        console.warn("[Route] Invalid transaction amount.");
         return res.status(400).json({ error: "Invalid transaction amount" });
       }
 
