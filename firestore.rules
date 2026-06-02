@@ -58,6 +58,25 @@ service cloud.firestore {
                       (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'manager' || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'barber');
     }
 
+    // Expenses
+    match /expenses/{expenseId} {
+      allow read, write: if request.auth != null && 
+                      (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'manager' || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'barber');
+    }
+
+    // Debts
+    match /debts/{debtId} {
+      allow read, write: if request.auth != null && 
+                      (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'manager' || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'barber');
+    }
+
+    // Settings
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if request.auth != null && 
+                      (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'manager' || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'barber');
+    }
+
     // Promotions
     match /promotions/{promoId} {
       allow read: if true;

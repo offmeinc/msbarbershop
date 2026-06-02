@@ -15,14 +15,21 @@ export function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return outputArray;
 }
 
-// Resolve backend paths to be relative, ensuring calls are made to the current origin
+// Resolve backend paths, supporting dynamic custom backend host URL when deploying on platforms like Vercel
 export function getBackendUrl(path: string): string {
   if (typeof window === "undefined") return path;
   
   const cleanPath = path.startsWith("/") ? path : `/${path}`;
   
-  console.log(`[getBackendUrl] path=${path}, result=${cleanPath}`);
+  // Support custom backend domain (e.g., Cloud Run or elsewhere) when running client on Vercel
+  const extBackend = import.meta.env?.VITE_BACKEND_URL;
+  if (extBackend && extBackend.trim() !== "") {
+    const baseUrl = extBackend.endsWith("/") ? extBackend.slice(0, -1) : extBackend;
+    console.log(`[getBackendUrl] external origin path=${path}, result=${baseUrl}${cleanPath}`);
+    return `${baseUrl}${cleanPath}`;
+  }
   
+  console.log(`[getBackendUrl] relative origin path=${path}, result=${cleanPath}`);
   return cleanPath;
 }
 

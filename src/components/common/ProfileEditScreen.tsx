@@ -13,7 +13,15 @@ import {
   Camera, 
   Loader2, 
   Plus, 
-  X 
+  X,
+  User,
+  Phone,
+  Lock,
+  QrCode,
+  Sparkles,
+  LayoutGrid,
+  Heart,
+  StickyNote
 } from "lucide-react";
 import { db } from "../../lib/firebase";
 import { toast } from "../ui/Toast";
@@ -122,7 +130,7 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
     if (!file) return;
 
     if (isPortfolio) {
-        setLoading(true); // Reuse loading for global state or add specific one
+        setLoading(true);
     } else {
         setUploadingImage(true);
     }
@@ -158,132 +166,248 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
 
   if (fetching) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="animate-spin text-amber-500 w-8 h-8" />
+      <div className="flex items-center justify-center py-20 bg-black">
+        <Loader2 className="animate-spin text-amber-500 w-8 h-8 font-black" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-xl mx-auto py-8 px-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="max-w-xl mx-auto py-8 px-4 animate-in fade-in duration-300">
       <div className="flex items-center justify-between mb-8">
-        <button onClick={onBack} className="w-10 h-10 rounded-full bg-neutral-900 flex items-center justify-center text-neutral-500 hover:text-amber-500 transition-colors">
-          <ChevronLeft className="w-6 h-6" />
+        <button 
+          onClick={onBack} 
+          className="flex items-center gap-2 text-neutral-500 hover:text-white transition-all font-black uppercase text-[10px] tracking-widest bg-white/5 px-4 py-2.5 rounded-2xl border border-white/5 cursor-pointer shadow-md"
+        >
+          <ChevronLeft className="w-4 h-4 text-amber-500" />
+          Voltar
         </button>
-        <h2 className="text-xl font-black text-white italic uppercase">Configurações de Perfil</h2>
-        <div className="w-10" />
+        <span className="text-[10px] font-black text-neutral-500 uppercase tracking-widest bg-neutral-900 px-4 py-2.5 rounded-2xl border border-white/5 flex items-center gap-1.5 label shadow-inner">
+          <Sparkles className="w-3.5 h-3.5 text-amber-500" /> MEU CADASTRO
+        </span>
       </div>
 
-      <form onSubmit={handleUpdate} className="space-y-8 pb-20">
-        {/* Avatar Section */}
-        <div className="flex flex-col items-center gap-4">
-          <div className="relative group">
-            <div className="w-24 h-24 rounded-[2rem] overflow-hidden border-2 border-amber-500 ring-8 ring-amber-500/10 transition-all group-hover:scale-105">
-              <img 
-                src={profileData.photoUrl || `https://ui-avatars.com/api/?name=${profileData.name}&background=f59e0b&color=000`} 
-                alt="Profile" 
-                className="w-full h-full object-cover" 
-              />
-            </div>
-            <div className="absolute -bottom-2 -right-2 bg-amber-500 w-8 h-8 rounded-xl flex items-center justify-center text-black shadow-lg">
-              <Camera className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="w-full">
-            <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest mb-2">Foto de Perfil</label>
-            <div className="flex gap-4">
-              <label className="flex-1 cursor-pointer bg-neutral-900 border border-white/5 rounded-2xl p-4 flex items-center justify-between hover:border-amber-500 transition-all group">
-                <span className="text-sm text-neutral-400 group-hover:text-white transition-colors">
-                  {uploadingImage ? 'Enviando para o servidor...' : (profileData.photoUrl ? 'Trocar imagem atual' : 'Selecionar foto de perfil')}
-                </span>
-                <div className="bg-amber-500 text-black px-4 py-2 rounded-xl font-bold text-[10px] uppercase flex items-center gap-2">
-                  {uploadingImage ? <Loader2 className="w-3 h-3 animate-spin" /> : <Camera className="w-3 h-3" />}
-                  {uploadingImage ? 'Processando' : 'Upload'}
-                </div>
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  onChange={handleImageUpload} 
-                  className="hidden" 
-                  disabled={uploadingImage}
+      <form onSubmit={handleUpdate} className="space-y-6 pb-20">
+        
+        {/* Avatar Interactive Circle Block */}
+        <div className="flex flex-col items-center gap-3 py-6 bg-white/[0.01] border border-white/5 rounded-[2.5rem] relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/[0.02] rounded-full blur-2xl pointer-events-none" />
+          
+          <div className="relative group cursor-pointer decoration-none">
+            <label className="block cursor-pointer">
+              <div className="w-28 h-28 rounded-[2.5rem] overflow-hidden border-2 border-amber-500 group-hover:border-amber-400 ring-8 ring-amber-500/5 group-hover:ring-amber-500/10 transition-all duration-300 relative shadow-2xl">
+                <img 
+                  src={profileData.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(profileData.name)}&background=f59e0b&color=000`} 
+                  alt="Profile picture" 
+                  className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-300"
+                  referrerPolicy="no-referrer"
                 />
-              </label>
-            </div>
-            <p className="text-[9px] text-neutral-600 mt-2 uppercase tracking-tight">A imagem será processada e otimizada automaticamente.</p>
+                
+                {/* Loader Mask overlay on topup */}
+                {uploadingImage && (
+                  <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center gap-1.5 animate-fade-in z-20">
+                    <Loader2 className="w-6 h-6 text-amber-500 animate-spin" />
+                    <span className="text-[8px] text-amber-500 uppercase font-black tracking-widest">Processando</span>
+                  </div>
+                )}
+              </div>
+              
+              {/* Camera camera-trigger circle overlap pin */}
+              <div className="absolute -bottom-1 -right-1 bg-amber-400 hover:bg-amber-300 text-black w-9 h-9 rounded-2xl flex items-center justify-center shadow-2xl transition-all duration-300 hover:scale-110 active:scale-95 border border-black/20 z-10">
+                <Camera className="w-4.5 h-4.5" />
+              </div>
+
+              {/* Hidden target file upload receiver */}
+              <input 
+                type="file" 
+                accept="image/*" 
+                onChange={handleImageUpload} 
+                className="hidden" 
+                disabled={uploadingImage}
+              />
+            </label>
+          </div>
+
+          <div className="space-y-0.5 text-center">
+            <h3 className="text-white text-sm font-black uppercase italic tracking-wider leading-tight">
+              {profileData.name || "Seu Nome de Usuário"}
+            </h3>
+            <p className="text-[8.5px] text-neutral-500 uppercase font-black tracking-widest">
+              Toque no círculo para fazer upload de nova foto
+            </p>
           </div>
         </div>
 
-        {/* Basic Info */}
-        <div className="grid grid-cols-1 gap-6">
-          <div className="space-y-2">
-            <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest">Nome Completo</label>
-            <input 
-              type="text" 
-              value={profileData.name} 
-              onChange={(e) => setProfileData(prev => ({ ...prev, name: e.target.value }))}
-              className="w-full bg-neutral-900 border border-white/5 rounded-2xl p-4 text-sm text-white focus:border-amber-500 transition-all font-bold"
-              placeholder="Seu nome"
-            />
+        {/* Basic Information Layout Fields Card */}
+        <div className="bg-white/[0.03] backdrop-blur-md rounded-[2.5rem] border border-white/10 p-6 space-y-5 text-left shadow-xl relative overflow-hidden">
+          <div className="border-b border-white/5 pb-3">
+             <span className="text-[10px] text-amber-500 font-sans uppercase font-black tracking-widest block flex items-center gap-2">
+               <User className="w-4 h-4 text-amber-500" /> DADOS DO SEU PERFIL
+             </span>
           </div>
 
-          <div className="space-y-2">
-            <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest">WhatsApp / Contato</label>
-            <input 
-              type="text" 
-              value={profileData.whatsapp} 
-              onChange={(e) => setProfileData(prev => ({ ...prev, whatsapp: e.target.value }))}
-              className="w-full bg-neutral-900 border border-white/5 rounded-2xl p-4 text-sm text-white focus:border-amber-500 transition-all"
-              placeholder="(11) 99999-9999"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest">Alterar Senha do Portal</label>
-            <input 
-              type="text" 
-              value={profileData.password} 
-              onChange={(e) => setProfileData(prev => ({ ...prev, password: e.target.value }))}
-              className="w-full bg-neutral-900 border border-white/5 rounded-2xl p-4 text-sm text-white focus:border-amber-500 transition-all"
-              placeholder="Senha de 4 dígitos ou mais"
-            />
-            <p className="text-[9px] text-neutral-600 mt-1 uppercase tracking-tight">Esta senha será usada para acessar seu painel pelo WhatsApp.</p>
-          </div>
-
-          {!isClient && (
-            <div className="space-y-2">
-              <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest">Chave Pix</label>
-              <input 
-                type="text" 
-                value={profileData.pixKey} 
-                onChange={(e) => setProfileData(prev => ({ ...prev, pixKey: e.target.value }))}
-                className="w-full bg-neutral-900 border border-white/5 rounded-2xl p-4 text-sm text-white focus:border-amber-500 transition-all font-bold"
-                placeholder="Sua chave Pix (CPF, E-mail, Celular ou Aleatória)"
-              />
-              <p className="text-[9px] text-neutral-600 mt-1 uppercase tracking-tight">Será exibida como QR Code para pagamento após o cliente confirmar o agendamento.</p>
+          <div className="space-y-5">
+            {/* Input Name */}
+            <div className="space-y-1.5">
+              <label className="text-[9px] text-neutral-400 uppercase font-black tracking-widest block">Nome Completo</label>
+              <div className="relative">
+                <input 
+                  type="text" 
+                  value={profileData.name} 
+                  required
+                  onChange={(e) => setProfileData(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full bg-black/60 border border-white/10 focus:border-amber-500 rounded-2xl p-4 text-xs font-bold text-white transition-all outline-none"
+                  placeholder="Insira seu nome completo"
+                />
+              </div>
             </div>
-          )}
 
-          {!isClient && (
-            <div className="space-y-4">
-              <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest">Galeria de Portfólio</label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {profileData.portfolio.map((img, index) => (
-                  <div key={index} className="relative group aspect-square rounded-2xl overflow-hidden border border-white/5 bg-neutral-900">
-                    <img src={img} alt={`Portfolio ${index}`} className="w-full h-full object-cover" />
+            {/* Whatsapp */}
+            <div className="space-y-1.5">
+              <label className="text-[9px] text-neutral-400 uppercase font-black tracking-widest block">WhatsApp / Contato</label>
+              <div className="relative">
+                <input 
+                  type="text" 
+                  value={profileData.whatsapp} 
+                  onChange={(e) => setProfileData(prev => ({ ...prev, whatsapp: e.target.value }))}
+                  className="w-full bg-black/60 border border-white/10 focus:border-amber-500 rounded-2xl p-4 text-xs font-bold text-white transition-all outline-none"
+                  placeholder="Ex: (11) 99999-9999"
+                />
+              </div>
+            </div>
+
+            {/* Password */}
+            <div className="space-y-1.5">
+              <label className="text-[9px] text-neutral-400 uppercase font-black tracking-widest block">Senha do Painel Web</label>
+              <div className="relative">
+                <input 
+                  type="text" 
+                  value={profileData.password} 
+                  onChange={(e) => setProfileData(prev => ({ ...prev, password: e.target.value }))}
+                  className="w-full bg-black/60 border border-white/10 focus:border-amber-500 rounded-2xl p-4 text-xs text-white transition-all outline-none"
+                  placeholder="Mínimo de 4 caracteres para segurança"
+                />
+              </div>
+              <span className="text-[8px] text-neutral-600 block uppercase font-bold tracking-tight">
+                Utilize esta senha para gerenciar ou agendar através dos canais automatizados.
+              </span>
+            </div>
+
+            {/* Pix Key - Only for Professionals/Managers */}
+            {!isClient && (
+              <div className="space-y-1.5">
+                <label className="text-[9px] text-emerald-400 uppercase font-black tracking-widest block flex items-center gap-1">
+                  <QrCode className="w-3.5 h-3.5" /> Chave Pix de Recebimento
+                </label>
+                <div className="relative">
+                  <input 
+                    type="text" 
+                    value={profileData.pixKey} 
+                    onChange={(e) => setProfileData(prev => ({ ...prev, pixKey: e.target.value }))}
+                    className="w-full bg-emerald-500/5 focus:bg-black/60 border border-emerald-500/20 focus:border-emerald-500 rounded-2xl p-4 text-xs font-bold text-emerald-300 transition-all outline-none placeholder:text-neutral-600"
+                    placeholder="E-mail, CPF, celular ou aleatória"
+                  />
+                </div>
+                <span className="text-[8px] text-neutral-600 block uppercase font-bold tracking-tight">
+                  Esta chave facilitará seus recebimentos diretos. Clientes verão o QR Code correspondente no fluxo.
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Professional Profile Section */}
+        {!isClient && (
+          <div className="bg-white/[0.03] backdrop-blur-md rounded-[2.5rem] border border-white/10 p-6 space-y-6 text-left shadow-xl">
+            <div className="border-b border-white/5 pb-3">
+               <span className="text-[10px] text-amber-500 font-sans uppercase font-black tracking-widest block flex items-center gap-2">
+                 <LayoutGrid className="w-4 h-4 text-amber-500" /> EXPOSIÇÃO PROFISSIONAL E BIO
+               </span>
+            </div>
+
+            {/* Bio */}
+            <div className="space-y-1.5">
+              <label className="text-[9px] text-neutral-400 uppercase font-black tracking-widest block flex items-center gap-1.5">
+                <StickyNote className="w-3.5 h-3.5 text-neutral-500" /> APRESENTAÇÃO / MINHA BIO
+              </label>
+              <textarea 
+                value={profileData.bio} 
+                onChange={(e) => setProfileData(prev => ({ ...prev, bio: e.target.value }))}
+                rows={4}
+                className="w-full bg-black/60 border border-white/10 focus:border-amber-500 rounded-2xl p-4 text-xs text-white transition-all resize-none outline-none"
+                placeholder="Descreva seu estilo, diferenciais ou quanto tempo atua na área profissional..."
+              />
+            </div>
+
+            {/* Specialties tag adder */}
+            <div className="space-y-3">
+              <label className="text-[9px] text-neutral-400 uppercase font-black tracking-widest block flex items-center gap-1.5">
+                <Heart className="w-3.5 h-3.5 text-amber-500" /> HABILIDADES / ESPECIALIDADES ATIVAS
+              </label>
+              
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  value={newSpecialty} 
+                  onChange={(e) => setNewSpecialty(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addSpecialty())}
+                  placeholder="Ex: Degradê navalhado, Barba completa..."
+                  className="flex-1 bg-black/60 border border-white/10 focus:border-amber-500 rounded-2xl px-4 py-3 placeholder:text-neutral-600 text-xs text-white outline-none transition-all"
+                />
+                <button 
+                  type="button"
+                  onClick={addSpecialty}
+                  className="px-4 bg-amber-500 hover:bg-amber-400 text-black rounded-2xl flex items-center justify-center transition-transform active:scale-95 cursor-pointer shadow"
+                >
+                  <Plus className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="flex flex-wrap gap-1.5">
+                {profileData.specialties.map((spec, index) => (
+                  <div key={index} className="bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-xl flex items-center gap-2 group shadow-sm">
+                    <span className="text-[10px] font-bold text-amber-400">{spec}</span>
                     <button 
-                      type="button"
-                      onClick={() => removePortfolioImage(index)}
-                      className="absolute top-2 right-2 w-7 h-7 bg-black/80 backdrop-blur-md rounded-lg flex items-center justify-center text-red-500 opacity-0 group-hover:opacity-100 transition-opacity border border-white/10"
+                      type="button" 
+                      onClick={() => removeSpecialty(index)}
+                      className="text-amber-500/40 hover:text-red-400 transition-colors cursor-pointer"
                     >
-                      <X className="w-4 h-4" />
+                      <X className="w-3 h-3" />
                     </button>
                   </div>
                 ))}
-                <label className="aspect-square rounded-2xl border-2 border-dashed border-white/5 bg-neutral-900/50 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-amber-500/50 hover:bg-neutral-900 transition-all group">
-                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500 group-hover:scale-110 transition-transform">
-                    <Plus className="w-6 h-6" />
+                {profileData.specialties.length === 0 && (
+                  <span className="text-[10px] text-neutral-600 font-extrabold uppercase italic tracking-wide py-2">
+                    Nenhuma habilidade cadastrada ainda
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Gallery portfolio Grid Section */}
+            <div className="space-y-3">
+              <label className="text-[9px] text-neutral-400 uppercase font-black tracking-widest block">MINHAS MELHORES FOTOS (GALERIA)</label>
+              
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {profileData.portfolio.map((img, index) => (
+                  <div key={index} className="relative group aspect-square rounded-2xl overflow-hidden border border-white/5 bg-black/60 shadow hover:border-amber-500/20 transition-all duration-300">
+                    <img src={img} alt={`Portfolio shot ${index}`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                    <button 
+                      type="button"
+                      onClick={() => removePortfolioImage(index)}
+                      className="absolute top-2 right-2 w-7 h-7 bg-black/80 backdrop-blur-md rounded-lg flex items-center justify-center text-red-500 opacity-0 group-hover:opacity-100 transition-opacity border border-white/10 shadow cursor-pointer active:scale-95"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
                   </div>
-                  <span className="text-[9px] font-black uppercase text-neutral-500">Adicionar Foto</span>
+                ))}
+
+                {/* File picker button for portfolio inside grid */}
+                <label className="aspect-square rounded-[1.5rem] border-2 border-dashed border-white/5 bg-black/40 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-amber-500/40 hover:bg-black/60 transition-all duration-300 group">
+                  <div className="w-9 h-9 rounded-xl bg-amber-500/15 flex items-center justify-center text-amber-500 group-hover:scale-110 duration-300 shadow">
+                    <Plus className="w-5 h-5" />
+                  </div>
+                  <span className="text-[8px] font-black uppercase text-neutral-500 tracking-widest block">Inserir Foto</span>
                   <input 
                     type="file" 
                     accept="image/*" 
@@ -293,74 +417,30 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
                   />
                 </label>
               </div>
-              <p className="text-[9px] text-neutral-600 uppercase tracking-tight">Mostre seus melhores cortes para os clientes na hora do agendamento.</p>
+              <p className="text-[8px] text-neutral-600 uppercase tracking-tight block">
+                Estas imagens aparecerão no catálogo virtual para clientes que buscarem referências do seu trabalho.
+              </p>
             </div>
-          )}
 
-          {!isClient && (
-            <div className="space-y-2">
-              <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest">Biografia / Sobre você</label>
-              <textarea 
-                value={profileData.bio} 
-                onChange={(e) => setProfileData(prev => ({ ...prev, bio: e.target.value }))}
-                rows={4}
-                className="w-full bg-neutral-900 border border-white/5 rounded-2xl p-4 text-sm text-white focus:border-amber-500 transition-all resize-none"
-                placeholder="Conte um pouco sobre sua experiência e estilo..."
-              />
-            </div>
-          )}
-        </div>
-
-        {/* Specialties */}
-        {!isClient && (
-          <div className="space-y-4">
-            <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest">Especialidades</label>
-            <div className="flex gap-2">
-              <input 
-                type="text" 
-                value={newSpecialty} 
-                onChange={(e) => setNewSpecialty(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addSpecialty())}
-                placeholder="Ex: Degradê, Barba, Pigmentação..."
-                className="flex-1 bg-neutral-900 border border-white/5 rounded-2xl p-4 text-sm text-white focus:border-amber-500 transition-all"
-              />
-              <button 
-                type="button"
-                onClick={addSpecialty}
-                className="w-14 h-14 bg-white text-black rounded-2xl flex items-center justify-center hover:bg-neutral-200 transition-colors"
-              >
-                <Plus className="w-6 h-6" />
-              </button>
-            </div>
-            
-            <div className="flex flex-wrap gap-2">
-              {profileData.specialties.map((spec, index) => (
-                <div key={index} className="bg-amber-500/10 border border-amber-500/20 px-3 py-2 rounded-xl flex items-center gap-2 group">
-                  <span className="text-xs font-bold text-amber-500">{spec}</span>
-                  <button 
-                    type="button" 
-                    onClick={() => removeSpecialty(index)}
-                    className="text-amber-500/40 hover:text-amber-500 transition-colors"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
-              {profileData.specialties.length === 0 && (
-                <p className="text-neutral-600 text-xs font-bold uppercase italic">Nenhuma especialidade adicionada</p>
-              )}
-            </div>
           </div>
         )}
 
-        {/* Submit */}
+        {/* Global form submit button at the bottom */}
         <button 
           type="submit"
           disabled={loading}
-          className="w-full bg-amber-500 text-black py-5 rounded-2xl font-black uppercase italic tracking-widest hover:bg-amber-400 transition-all transform active:scale-95 disabled:opacity-50 shadow-lg shadow-amber-500/20"
+          className="w-full bg-amber-500 hover:bg-amber-400 text-black py-4.5 rounded-[1.5rem] font-sans font-black text-[11px] uppercase tracking-widest transition-all duration-300 transform active:scale-95 disabled:opacity-50 cursor-pointer shadow-lg shadow-amber-500/10 flex items-center justify-center gap-2 border-b border-amber-600"
         >
-          {loading ? "Salvando Alterações..." : (isClient ? "Salvar Alterações" : "Salvar Perfil Profissional")}
+          {loading ? (
+            <>
+              <Loader2 className="w-4 h-4 text-black animate-spin" />
+              <span>Salvando dados...</span>
+            </>
+          ) : (
+            <span>{isClient ? "SALVAR ALTERAÇÕES DE CLIENTE" : "ATUALIZAR MEU PERFIL DE PROFISSIONAL"}</span>
+          )}
         </button>
+
       </form>
     </div>
   );

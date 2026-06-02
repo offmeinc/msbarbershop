@@ -1,4 +1,4 @@
-import { Home, CalendarDays, Users, Scissors, GripHorizontal } from "lucide-react";
+import { Home, CalendarDays, Users, Scissors, GripHorizontal, Sliders } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 export function BottomNav({ userRole, currentScreen, setCurrentScreen, user, unreadCount, isVisible = true }: { userRole: string, currentScreen: string, setCurrentScreen: (s: any) => void, user: any, unreadCount: number, isVisible?: boolean }) {
@@ -9,6 +9,7 @@ export function BottomNav({ userRole, currentScreen, setCurrentScreen, user, unr
     
   if (userRole === "manager" || userRole === "barber") {
     items.push({ id: "agenda", label: "Agenda", icon: <CalendarDays className="w-5 h-5" />, screen: "agenda" });
+    items.push({ id: "management", label: "Gestão", icon: <Sliders className="w-5 h-5" />, screen: "barber-management" });
     items.push({ id: "clients", label: "Clientes", icon: <Users className="w-5 h-5" />, screen: "clients" });
   } else {
     items.push({ id: "booking", label: "Agendar", icon: <Scissors className="w-5 h-5" />, screen: "booking" });

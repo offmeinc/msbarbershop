@@ -85,6 +85,7 @@ const CollaboratorLoginScreen = lazy(() => import("./components/auth/AuthScreens
 const PortfolioManager = lazy(() => import("./components/professional/PortfolioManager").then(m => ({ default: m.PortfolioManager })));
 const DashboardScreen = lazy(() => import("./components/manager/DashboardScreen").then(m => ({ default: m.DashboardScreen })));
 const ProfessionalClientChatsScreen = lazy(() => import("./components/ChatScreens").then(m => ({ default: m.ProfessionalClientChatsScreen })));
+const BarbershopManagement = lazy(() => import("./components/manager/BarbershopManagement").then(m => ({ default: m.BarbershopManagement })));
 
 import { HomeScreen } from "./components/client/HomeScreen";
 import { BottomNav } from "./components/common/BottomNav";
@@ -151,7 +152,7 @@ import {
 } from "firebase/auth";
 
 
-type Screen = "home" | "booking" | "agenda" | "clients" | "client-details" | "more" | "login" | "collaborators" | "services" | "client-login" | "client-dashboard" | "earnings" | "promotions" | "portfolio" | "professional-chat";
+type Screen = "home" | "booking" | "agenda" | "clients" | "client-details" | "more" | "login" | "collaborators" | "services" | "client-login" | "client-dashboard" | "earnings" | "promotions" | "portfolio" | "professional-chat" | "barber-management";
 
 
 export default function App() {
@@ -497,7 +498,7 @@ export default function App() {
     
     const clientData = { id: docs[0].id, ...docs[0].data() };
     setLoggedInClient(clientData);
-    localStorage.setItem('loggedInClient', JSON.stringify(clientData));
+    localStorage.setItem('loggedInClient', safeStringify(clientData));
     setCurrentScreen("client-dashboard");
   };
 
@@ -814,6 +815,7 @@ export default function App() {
             {currentScreen === "clients" && <ClientsScreen onBack={() => setCurrentScreen("home")} onScheduleClient={(client) => { setClientToSchedule(client); setCurrentScreen("booking"); }} onClientClick={(client) => { setSelectedClient(client); setCurrentScreen("client-details"); }} />}
             {currentScreen === "client-details" && selectedClient && <ClientDetailsScreen client={selectedClient} onBack={() => { setCurrentScreen("clients"); setSelectedClient(null); }} onScheduleClient={(client) => { setClientToSchedule(client); setCurrentScreen("booking"); }} onMessageClient={(client) => { setSelectedClient(client); setCurrentScreen("professional-chat"); }} />}
             {currentScreen === "portfolio" && <PortfolioManager onBack={() => setCurrentScreen("home")} />}
+            {currentScreen === "barber-management" && <BarbershopManagement user={user} role={userRole} onBack={() => setCurrentScreen("home")} />}
             {currentScreen === "professional-chat" && (
               <ProfessionalClientChatsScreen 
                 user={user} 

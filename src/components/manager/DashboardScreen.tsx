@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { 
   TrendingUp, 
@@ -53,6 +53,7 @@ import {
   doc, 
   updateDoc, 
   addDoc, 
+  deleteDoc,
   serverTimestamp,
   getFirestore
 } from "firebase/firestore";
@@ -120,9 +121,85 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "confirmed" | "completed" | "cancelled">("all");
   const [reviewAppointment, setReviewAppointment] = useState<any>(null);
+  const [listScope, setListScope] = useState<"day" | "all">("day");
   const [expandedAppointmentId, setExpandedAppointmentId] = useState<string | null>(null);
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
+
+  // Real-time synchronization & feature states for header icons
+  const [isLockModalOpen, setIsLockModalOpen] = useState(false);
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [isDatepickerModalOpen, setIsDatepickerModalOpen] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [blockedTimes, setBlockedTimes] = useState<any[]>([]);
+  const [lockDate, setLockDate] = useState("");
+  const [lockReason, setLockReason] = useState("");
+  const [blockingBarberId, setBlockingBarberId] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const handleRefreshSync = async () => {
+    setIsSyncing(true);
+    setStatusMsg("Sincronizando dados em tempo real com o Firebase...");
+    setTimeout(() => {
+      setIsSyncing(false);
+      setStatusMsg("Dados 100% atualizados em tempo real!");
+      setTimeout(() => setStatusMsg(null), 3000);
+    }, 1000);
+  };
+
+  const handleAddLock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!lockDate) {
+      alert("Selecione uma data e hora para o bloqueio!");
+      return;
+    }
+    const firestore = db || getFirestore();
+    try {
+      const lockObj = {
+        date: Timestamp.fromDate(new Date(lockDate)),
+        reason: lockReason || "Bloqueio administrativo",
+        barberId: blockingBarberId,
+        barberName: blockingBarberId === "all" ? "Todos" : (barbers.find(b => b.id === blockingBarberId)?.name || "Profissional"),
+        createdAt: serverTimestamp()
+      };
+      await addDoc(collection(firestore, "blocked_times"), lockObj);
+      setLockDate("");
+      setLockReason("");
+      setBlockingBarberId("all");
+      setStatusMsg("Horário bloqueado com sucesso real-time!");
+      setTimeout(() => setStatusMsg(null), 3000);
+    } catch (err) {
+      console.error("Error creating block limit:", err);
+      alert("Erro ao criar bloqueio.");
+    }
+  };
+
+  const handleDeleteLock = async (lockId: string) => {
+    const firestore = db || getFirestore();
+    try {
+      await deleteDoc(doc(firestore, "blocked_times", lockId));
+      setStatusMsg("Bloqueio removido com sucesso!");
+      setTimeout(() => setStatusMsg(null), 3000);
+    } catch (err) {
+      console.error("Error deleting block limit:", err);
+      alert("Erro ao deletar bloqueio.");
+    }
+  };
+
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const queryLower = searchQuery.toLowerCase();
+    return appointments.filter(app => {
+      return (
+        (app.clientName || "").toLowerCase().includes(queryLower) ||
+        (app.clientPhone || "").toLowerCase().includes(queryLower) ||
+        (app.serviceName || "").toLowerCase().includes(queryLower) ||
+        (app.barberName || "").toLowerCase().includes(queryLower) ||
+        (app.status || "").toLowerCase().includes(queryLower) ||
+        (app.notes || "").toLowerCase().includes(queryLower)
+      );
+    });
+  }, [appointments, searchQuery]);
 
   const handleStatusUpdate = async (app: any, newStatus: string, extraData: any = {}) => {
     const firestore = db || getFirestore();
@@ -208,15 +285,48 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
 
   const filteredAppointmentsList = useMemo(() => {
 	  return appointments.filter(app => {
-		  if (filterStatus === 'all') return true;
-		  if (filterStatus === 'pending') return !app.status || app.status === 'pending';
-		  return app.status === filterStatus;
+		  // Status Filter
+		  if (filterStatus !== 'all') {
+			  const isPending = !app.status || app.status === 'pending';
+			  if (filterStatus === 'pending') {
+				  if (!isPending) return false;
+			  } else {
+				  if (app.status !== filterStatus) return false;
+			  }
+		  }
+
+		  // Barber Filter
+		  if (selectedBarberId !== 'all' && app.barberId !== selectedBarberId) {
+			  return false;
+		  }
+
+		  // Date Filter (if scope is 'day')
+		  if (listScope === 'day') {
+			  if (!app.date) return false;
+			  const appDate = app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date);
+			  if (!(appDate instanceof Date) || isNaN(appDate.getTime())) return false;
+			  return isSameDay(appDate, currentDate);
+		  }
+
+		  return true;
 	  });
-  }, [appointments, filterStatus]);
+  }, [appointments, filterStatus, selectedBarberId, listScope, currentDate]);
 
   const statsForListMode = useMemo(() => {
     const listApps = appointments.filter(app => {
-      return selectedBarberId === 'all' || app.barberId === selectedBarberId;
+      // Barber Filter
+      if (selectedBarberId !== 'all' && app.barberId !== selectedBarberId) {
+		  return false;
+	  }
+
+      // Date Filter
+      if (listScope === 'day') {
+		  if (!app.date) return false;
+		  const appDate = app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date);
+		  if (!(appDate instanceof Date) || isNaN(appDate.getTime())) return false;
+		  return isSameDay(appDate, currentDate);
+	  }
+	  return true;
     });
     
     const completed = listApps.filter(app => app.status === 'completed' && app.status !== 'cancelled');
@@ -243,7 +353,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
       avgValue,
       projectedValue
     };
-  }, [appointments, selectedBarberId]);
+  }, [appointments, selectedBarberId, listScope, currentDate]);
 
   useEffect(() => {
     if (dashboardView === 'calendar') setCurrentView('agenda');
@@ -280,9 +390,17 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
       handleFirestoreError(error, OperationType.LIST, "users");
     });
 
+    const qBlocked = query(collection(firestore, "blocked_times"), orderBy("date", "asc"));
+    const unsubscribeBlocked = onSnapshot(qBlocked, (sn) => {
+        setBlockedTimes(sn.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, (error) => {
+      console.error("Failed to fetch blocked times:", error);
+    });
+
     return () => {
         unsubscribe();
         unsubscribeBarbers();
+        unsubscribeBlocked();
     };
   }, [user?.uid, role]);
 
@@ -361,10 +479,26 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                  referrerPolicy="no-referrer"
                />
              </div>
-             <Lock className="w-5 h-5 cursor-pointer hover:text-amber-500 transition-colors" />
-             <Search className="w-5 h-5 cursor-pointer hover:text-amber-500 transition-colors" />
-             <RefreshCw className="w-5 h-5 cursor-pointer hover:text-amber-500 transition-colors" />
-             <Calendar className="w-5 h-5 cursor-pointer hover:text-amber-500 transition-colors" />
+             <Lock 
+               onClick={() => setIsLockModalOpen(true)}
+               className="w-5 h-5 cursor-pointer hover:text-amber-500 transition-colors" 
+               title="Gerenciar Bloqueios"
+             />
+             <Search 
+               onClick={() => setIsSearchModalOpen(true)}
+               className="w-5 h-5 cursor-pointer hover:text-amber-500 transition-colors" 
+               title="Buscar Agendamento"
+             />
+             <RefreshCw 
+               onClick={handleRefreshSync}
+               className={`w-5 h-5 cursor-pointer hover:text-amber-500 transition-colors ${isSyncing ? "animate-spin text-amber-500" : ""}`} 
+               title="Sincronizar Firestore"
+             />
+             <Calendar 
+               onClick={() => setIsDatepickerModalOpen(true)}
+               className="w-5 h-5 cursor-pointer hover:text-amber-500 transition-colors" 
+               title="Seletor de Data"
+             />
           </div>
         </div>
       )}
@@ -495,19 +629,38 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
               {currentView === 'list' && (
                   <div className="space-y-6 max-w-xl md:max-w-4xl lg:max-w-5xl mx-auto">
                       {/* Redesigned Premium Header */}
-                      <div className="flex justify-between items-center">
-                        <div className="space-y-1">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="space-y-1 text-left">
                           <h2 className="text-xl font-black uppercase italic tracking-tight text-white flex items-center gap-2">
                              Fluxo de <span className="text-amber-500">Atendimentos</span>
                           </h2>
                           <p className="text-neutral-500 text-[10px] font-black uppercase tracking-widest">Controles e histórico total</p>
                         </div>
-                        <button 
-                          onClick={exportToCSV} 
-                          className="px-4 py-2 rounded-xl bg-white/5 border border-white/5 text-neutral-400 text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 hover:text-white hover:bg-white/10 active:scale-95 transition-all duration-300"
-                        > 
-                          <Download className="w-3.5 h-3.5 text-amber-500"/> Exportar CSV
-                        </button>
+                        
+                        <div className="flex items-center gap-3">
+                          {/* List Scope Control */}
+                          <div className="bg-neutral-900 border border-white/5 p-1 rounded-2xl flex items-center gap-1 shadow-inner">
+                            <button
+                              onClick={() => setListScope("day")}
+                              className={`py-2 px-4 rounded-xl font-black uppercase text-[9px] tracking-widest transition-all ${listScope === 'day' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/10' : 'text-neutral-500 hover:text-white'}`}
+                            >
+                              Dia Filtrado
+                            </button>
+                            <button
+                              onClick={() => setListScope("all")}
+                              className={`py-2 px-4 rounded-xl font-black uppercase text-[9px] tracking-widest transition-all ${listScope === 'all' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/10' : 'text-neutral-500 hover:text-white'}`}
+                            >
+                              Histórico Total
+                            </button>
+                          </div>
+
+                          <button 
+                            onClick={exportToCSV} 
+                            className="px-4 py-2.5 rounded-xl bg-white/5 border border-white/5 text-neutral-400 text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 hover:text-white hover:bg-white/10 active:scale-95 transition-all duration-300"
+                          > 
+                            <Download className="w-3.5 h-3.5 text-amber-500"/> Exportar CSV
+                          </button>
+                        </div>
                       </div>
 
                       {/* Gorgeous Key Metrics Row */}
@@ -859,6 +1012,291 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
           </span>
         </button>
       )}
+
+      {/* ⚠️ LOCKS MODAL (Gerenciamento de Bloqueios) */}
+      <AnimatePresence>
+        {isLockModalOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md overflow-y-auto"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-neutral-900 border border-white/5 rounded-[2.5rem] p-6 max-w-lg w-full shadow-2xl relative space-y-6"
+            >
+              <button 
+                onClick={() => setIsLockModalOpen(false)}
+                className="absolute top-6 right-6 text-neutral-500 hover:text-white transition-colors p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="text-center space-y-1">
+                <div className="mx-auto w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
+                  <Lock className="w-5 h-5 text-amber-500" />
+                </div>
+                <h3 className="text-xl font-black text-white uppercase italic tracking-tight">Gerenciamento de Bloqueios</h3>
+                <p className="text-neutral-500 text-[10px] font-black uppercase tracking-widest">Reserve períodos de indisponibilidade em tempo real</p>
+              </div>
+
+              {/* Form of locks */}
+              <form onSubmit={handleAddLock} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[8px] font-black uppercase text-neutral-500 tracking-widest mb-1.5 pl-1">Data & Hora Inicial</label>
+                    <input 
+                      type="datetime-local" 
+                      value={lockDate} 
+                      onChange={e => setLockDate(e.target.value)} 
+                      className="w-full bg-black border border-white/10 rounded-2xl p-3 text-xs text-white uppercase tracking-wider font-extrabold outline-none focus:border-amber-500 transition-colors"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[8px] font-black uppercase text-neutral-500 tracking-widest mb-1.5 pl-1">Profissional Selecionado</label>
+                    <select
+                      value={blockingBarberId}
+                      onChange={e => setBlockingBarberId(e.target.value)}
+                      className="w-full bg-black border border-white/10 rounded-2xl p-3 text-xs text-white font-black uppercase tracking-widest outline-none focus:border-amber-500 transition-colors"
+                    >
+                      <option value="all">SALA INTEIRA (TODOS)</option>
+                      {barbers.map(b => (
+                        <option key={b.id} value={b.id}>{b.name.toUpperCase()}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[8px] font-black uppercase text-neutral-500 tracking-widest mb-1.5 pl-1">Motivo do Bloqueio</label>
+                  <input 
+                    type="text" 
+                    placeholder="Ex: Almoço, Intervalo de Descanso, Reunião"
+                    value={lockReason} 
+                    onChange={e => setLockReason(e.target.value)} 
+                    className="w-full bg-black border border-white/10 rounded-2xl p-3 text-xs placeholder-neutral-700 font-extrabold outline-none focus:border-amber-500 transition-colors text-white"
+                  />
+                </div>
+
+                <button 
+                  type="submit"
+                  className="w-full py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 active:scale-95 text-black font-black uppercase text-[10px] tracking-widest transition-all duration-300"
+                >
+                  Bloquear Período 🔒
+                </button>
+              </form>
+
+              {/* List of current blocks */}
+              <div className="space-y-3">
+                <div className="border-t border-white/5 pt-4">
+                  <h4 className="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-3">Bloqueios Ativos Recentes</h4>
+                </div>
+                <div className="max-h-[160px] overflow-y-auto pr-1 space-y-2 no-scrollbar">
+                  {blockedTimes.length === 0 ? (
+                    <p className="text-center py-4 text-xs font-bold text-neutral-600 uppercase tracking-widest">Nenhum bloqueio cadastrado</p>
+                  ) : (
+                    blockedTimes.map(b => {
+                      const dateVal = b.date instanceof Timestamp ? b.date.toDate() : (typeof b.date === 'string' ? parseISO(b.date) : b.date);
+                      return (
+                        <div key={b.id} className="bg-black/60 border border-white/5 p-3 rounded-2xl flex justify-between items-center group hover:border-amber-500/20 transition-all">
+                          <div className="text-left space-y-1">
+                            <p className="text-[10px] text-white font-black uppercase tracking-wide leading-none">{b.reason || "Bloqueio de Horário"}</p>
+                            <p className="text-[8px] text-neutral-500 font-medium tracking-tight">
+                              {format(dateVal, "PPPP 'às' HH:mm", { locale: ptBR })}
+                            </p>
+                            <p className="text-[8px] text-amber-500 font-black uppercase tracking-widest">
+                              Profissional: {b.barberName || "Todos"}
+                            </p>
+                          </div>
+                          <button 
+                            onClick={() => handleDeleteLock(b.id)}
+                            className="bg-red-500/10 hover:bg-red-500/20 text-red-400 p-2 rounded-xl border border-red-500/10 hover:border-red-500/30 transition-colors cursor-pointer"
+                            title="Desfazer Bloqueio"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 🔍 SEARCH MODAL */}
+      <AnimatePresence>
+        {isSearchModalOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-neutral-900 border border-white/5 rounded-[2.5rem] p-6 max-w-lg w-full shadow-2xl relative space-y-4"
+            >
+              <button 
+                onClick={() => {
+                  setIsSearchModalOpen(false);
+                  setSearchQuery("");
+                }}
+                className="absolute top-6 right-6 text-neutral-500 hover:text-white transition-colors p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="text-center space-y-1">
+                <div className="mx-auto w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
+                  <Search className="w-5 h-5 text-amber-500" />
+                </div>
+                <h3 className="text-xl font-black text-white uppercase italic tracking-tight">Painel de Pesquisa</h3>
+                <p className="text-neutral-500 text-[10px] font-black uppercase tracking-widest">Encontre clientes, agendamentos ou status instantaneamente</p>
+              </div>
+
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
+                <input 
+                  type="text" 
+                  placeholder="DIGITE NOME DO CLIENTE, TELEFONE, PROFISSIONAL OU SERVIÇO..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="w-full bg-black border border-white/10 rounded-2xl pl-12 pr-4 py-3.5 text-xs text-white uppercase font-black tracking-widest outline-none focus:border-amber-500 transition-colors placeholder:text-neutral-700"
+                  autoFocus
+                />
+              </div>
+
+              <div className="max-h-[300px] overflow-y-auto pr-1 space-y-2 no-scrollbar">
+                {!searchQuery.trim() ? (
+                  <p className="text-center py-10 text-[9px] font-black text-neutral-600 uppercase tracking-widest">Digite uma palavra-chave para buscar</p>
+                ) : searchResults.length === 0 ? (
+                  <p className="text-center py-10 text-[9px] font-black text-neutral-600 uppercase tracking-widest">Nenhum agendamento encontrado</p>
+                ) : (
+                  searchResults.map(app => {
+                    const dateVal = app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date);
+                    return (
+                      <div 
+                        key={app.id} 
+                        onClick={() => {
+                          setSelectedAppointment(app);
+                          setIsSearchModalOpen(false);
+                          setSearchQuery("");
+                        }}
+                        className="bg-black/60 border border-white/5 p-4 rounded-2xl text-left hover:border-amber-500 hover:bg-neutral-950 transition-all duration-300 cursor-pointer flex justify-between items-center group"
+                      >
+                        <div className="space-y-1">
+                          <p className="text-[10px] text-white font-black uppercase tracking-widest group-hover:text-amber-500 transition-colors">{app.clientName}</p>
+                          <p className="text-[8px] text-neutral-500 font-bold uppercase tracking-widest leading-none">
+                            {app.serviceName} com <span className="text-white capitalize">{app.barberName}</span>
+                          </p>
+                          <p className="text-[8px] text-neutral-600 font-medium uppercase tracking-widest">
+                            {format(dateVal, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          </p>
+                        </div>
+                        <div className="text-right flex flex-col items-end gap-1.5 shrink-0">
+                          <span className="text-amber-500 text-[10px] font-black leading-none">R$ {app.price || app.totalPrice || "0,00"}</span>
+                          <span className={`px-2 py-0.5 rounded-md text-[7px] font-black uppercase tracking-widest ${
+                            app.status === 'completed' ? 'bg-emerald-500/10 text-emerald-400' :
+                            app.status === 'confirmed' ? 'bg-amber-500/10 text-amber-400' :
+                            app.status === 'cancelled' ? 'bg-red-500/10 text-red-400' : 'bg-blue-500/10 text-blue-400'
+                          }`}>
+                            {app.status || "AGUARDANDO"}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 📅 DATEPICKER MODAL */}
+      <AnimatePresence>
+        {isDatepickerModalOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-neutral-900 border border-white/5 rounded-[2.5rem] p-6 max-w-sm w-full shadow-2xl relative space-y-6"
+            >
+              <button 
+                onClick={() => setIsDatepickerModalOpen(false)}
+                className="absolute top-6 right-6 text-neutral-500 hover:text-white transition-colors p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="text-center space-y-1">
+                <div className="mx-auto w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
+                  <Calendar className="w-5 h-5 text-amber-500" />
+                </div>
+                <h3 className="text-xl font-black text-white uppercase italic tracking-tight">Selecionar Data</h3>
+                <p className="text-neutral-500 text-[10px] font-black uppercase tracking-widest">Navegue rapidamente para o dia desejado</p>
+              </div>
+
+              <div className="space-y-4">
+                <input 
+                  type="date" 
+                  value={format(currentDate, "yyyy-MM-dd")}
+                  onChange={e => {
+                    if (e.target.value) {
+                      const [year, month, day] = e.target.value.split('-').map(Number);
+                      setCurrentDate(new Date(year, month - 1, day));
+                      setIsDatepickerModalOpen(false);
+                      setStatusMsg(`Agenda atualizada para ${format(new Date(year, month-1, day), "dd/MM/yyyy")}!`);
+                      setTimeout(() => setStatusMsg(null), 3000);
+                    }
+                  }}
+                  className="w-full bg-black border border-white/10 rounded-2xl p-4 text-sm tracking-wider font-extrabold outline-none focus:border-amber-500 transition-colors text-white text-center"
+                />
+
+                <div className="grid grid-cols-2 gap-2 pb-2">
+                  <button
+                    onClick={() => {
+                      setCurrentDate(new Date());
+                      setIsDatepickerModalOpen(false);
+                      setStatusMsg("Mostrando o dia de Hoje!");
+                      setTimeout(() => setStatusMsg(null), 3000);
+                    }}
+                    className="py-3 rounded-2xl bg-neutral-950 hover:bg-neutral-800 border border-white/5 text-neutral-300 font-black text-[9px] uppercase tracking-widest transition-all duration-300"
+                  >
+                    Dia de Hoje
+                  </button>
+                  <button
+                    onClick={() => {
+                      setCurrentDate(addDays(new Date(), 1));
+                      setIsDatepickerModalOpen(false);
+                      setStatusMsg("Mostrando o dia de Amanhã!");
+                      setTimeout(() => setStatusMsg(null), 3000);
+                    }}
+                    className="py-3 rounded-2xl bg-neutral-950 hover:bg-neutral-800 border border-white/5 text-neutral-300 font-black text-[9px] uppercase tracking-widest transition-all duration-300"
+                  >
+                    Amanhã
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

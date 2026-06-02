@@ -137,9 +137,58 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "endpoint", "keys"]
+    },
+    "Expense": {
+      "title": "Expense",
+      "description": "Barbershop operational and maintenance expenses.",
+      "type": "object",
+      "properties": {
+        "description": { "type": "string" },
+        "value": { "type": "number" },
+        "category": { "type": "string" },
+        "date": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["description", "value", "category", "date"]
+    },
+    "Debt": {
+      "title": "Debt",
+      "description": "Barbershop customer outstanding debts (fiados).",
+      "type": "object",
+      "properties": {
+        "clientName": { "type": "string" },
+        "value": { "type": "number" },
+        "phone": { "type": "string" },
+        "date": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["clientName", "value", "date"]
+    },
+    "Settings": {
+      "title": "Settings",
+      "description": "General barbershop settings like monthly goals and loyalty parameters.",
+      "type": "object",
+      "properties": {
+        "monthlyGoal": { "type": "number" },
+        "loyaltyMultiplier": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["monthlyGoal", "loyaltyMultiplier"]
     }
   },
   "firestore": {
+    "/debts/{debtId}": {
+      "schema": "Debt",
+      "description": "Customers debts (fiados) records."
+    },
+    "/settings/{settingId}": {
+      "schema": "Settings",
+      "description": "Global barbershop settings."
+    },
+    "/expenses/{expenseId}": {
+      "schema": "Expense",
+      "description": "Barbershop expenses records."
+    },
     "/users/{userId}": {
       "schema": "User",
       "description": "Storage for user profiles."

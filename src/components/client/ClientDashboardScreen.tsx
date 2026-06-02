@@ -44,7 +44,14 @@ import {
   Bell,
   Clock,
   MessageSquare,
-  MessageCircle
+  MessageCircle,
+  Image as ImageIcon,
+  CreditCard,
+  ShieldCheck,
+  Zap,
+  Check,
+  RotateCcw,
+  Info
 } from "lucide-react";
 import { db, handleFirestoreError, OperationType, safeStringify } from "../../lib/firebase";
 import { getBackendUrl } from "../../lib/pushRegister";
@@ -83,6 +90,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
   const [referralCode, setReferralCode] = useState(user?.referralCode || "");
 
   const [liveUser, setLiveUser] = useState<any>(user);
+  const [selectedLookbookStyle, setSelectedLookbookStyle] = useState<{ title: string, imageUrl: string } | null>(null);
 
   useEffect(() => {
     const finalUserId = user?.uid || user?.id;
@@ -158,7 +166,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
       }
     } catch (err: any) {
       console.error(err);
-      setRechargeError("Não foi possível conectar ao Mercado Pago. Mas sinta-se à vontade para simular a conclusão do pagamento abaixo!");
+      setRechargeError("Não foi possível conectar ao Mercado Pago. Verifique sua conexão e tente novamente.");
     } finally {
       setRechargeLoading(false);
     }
@@ -714,9 +722,34 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                     
                     <button 
                         onClick={() => setCurrentView('chat')}
-                        className="w-fit bg-amber-500/10 border border-amber-500/20 text-text-amber-500 hover:text-amber-500 text-amber-500 text-[10px] font-black uppercase italic tracking-widest px-6 py-3 rounded-xl hover:bg-amber-500 hover:text-black transition-all active:scale-95"
+                        className="w-fit bg-amber-500/10 border border-amber-500/20 text-text-amber-500 hover:text-amber-500 text-amber-500 text-[10px] font-black uppercase italic tracking-widest px-6 py-3 rounded-xl hover:bg-amber-500 hover:text-black transition-all active:scale-95 cursor-pointer"
                     >
                         ABRIR CONVERSA
+                    </button>
+                  </div>
+              </div>
+
+              {/* Lookbook / Inspirações e Portfólio Bento Card */}
+              <div 
+                id="lookbook-bento-card"
+                onClick={() => setCurrentView('lookbook')}
+                className="bg-neutral-900 border border-white/5 p-8 rounded-[3.5rem] shadow-2xl relative overflow-hidden group cursor-pointer active:scale-95 transition-all text-left"
+              >
+                  <div className="absolute -right-4 -bottom-4 text-amber-500/5 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
+                    <ImageIcon size={160} />
+                  </div>
+                  <div className="relative z-10 flex flex-col justify-between h-full pt-1">
+                    <div className="flex items-center gap-2 mb-4">
+                        <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" />
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-500">Galeria & Inspiração</span>
+                    </div>
+                    <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white mb-2 leading-none">Fotos & Portfólio</h3>
+                    <p className="text-xs text-neutral-400 font-medium mb-6">Exiba cortes da equipe ou tendências globais para escolher o modelo perfeito para o seu rosto!</p>
+                    
+                    <button 
+                        className="w-fit bg-amber-500/10 border border-amber-500/20 text-amber-500 text-[10px] font-black uppercase italic tracking-widest px-6 py-3 rounded-xl hover:bg-amber-500 hover:text-black transition-all pointer-events-none"
+                    >
+                        EXPLORAR GALERIA
                     </button>
                   </div>
               </div>
@@ -792,7 +825,23 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
         )}
 
         {currentView === 'profile' && <ProfileEditScreen user={user} onBack={() => setCurrentView('home')} isClient={true} />}
-        {currentView === 'booking' && <BookingScreen user={user} services={services} onBack={() => { setCurrentView('home'); setSelectedAppointment(null); setInitialBookingServiceId(undefined); setInitialBookingBarberId(undefined); }} editAppointment={selectedAppointment} initialServiceId={initialBookingServiceId} initialBarberId={initialBookingBarberId} />}
+        {currentView === 'booking' && (
+          <BookingScreen 
+            user={user} 
+            services={services} 
+            onBack={() => { 
+              setCurrentView('home'); 
+              setSelectedAppointment(null); 
+              setInitialBookingServiceId(undefined); 
+              setInitialBookingBarberId(undefined); 
+              setSelectedLookbookStyle(null); 
+            }} 
+            editAppointment={selectedAppointment} 
+            initialServiceId={initialBookingServiceId} 
+            initialBarberId={initialBookingBarberId} 
+            initialStyle={selectedLookbookStyle}
+          />
+        )}
         {currentView === 'chat' && <ChatScreen user={user} onBack={() => setCurrentView('home')} />}
         {currentView === 'my-cuts' && (
           <MyCutsScreen 
@@ -811,7 +860,16 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
             onCancel={handleCancelAppointment}
           />
         )}
-        {currentView === 'lookbook' && <LookbookScreen onBack={() => setCurrentView('home')} onBook={(style) => { setCurrentView('booking'); setInitialBookingServiceId(undefined); /* Could filter services by style if needed */ }} />}
+        {currentView === 'lookbook' && (
+          <LookbookScreen 
+            onBack={() => setCurrentView('home')} 
+            onBook={(styleObj) => { 
+              setSelectedLookbookStyle(styleObj);
+              setInitialBookingServiceId(undefined);
+              setCurrentView('booking'); 
+            }} 
+          />
+        )}
         {currentView === 'notifications' && <NotificationsScreen user={user} notifications={notifications} appointments={appointments} onClear={handleClearNotifications} onBack={() => setCurrentView('home')} />}
         {currentView === 'style-sheet' && <StyleSheet user={user} onBack={() => setCurrentView('home')} />}
         {currentView === 'wallet' && (
@@ -821,98 +879,194 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -15 }}
             transition={{ duration: 0.3 }}
-            className="px-6 pt-12 pb-24 max-w-md mx-auto space-y-8 min-h-[85vh]"
+            className="px-4 sm:px-6 pt-10 pb-32 max-w-md mx-auto space-y-6 min-h-[85vh] text-left"
           >
              {/* Header */}
-             <div className="flex items-center justify-between pb-4 border-b border-white/5">
+             <div className="flex items-center justify-between pb-3 border-b border-white/5">
                 <button 
                   onClick={() => setCurrentView('home')} 
-                  className="flex items-center gap-1.5 text-xs font-black uppercase text-amber-500 hover:text-white transition-colors"
+                  className="flex items-center gap-1.5 text-[10px] font-black uppercase text-amber-500 hover:text-white transition-all hover:translate-x-[-2px] cursor-pointer"
                 >
-                   ← VOLTAR
+                   ← PAINEL
                 </button>
-                <h2 className="text-xl font-black italic uppercase text-white tracking-widest">MINHA CARTEIRA</h2>
-                <div className="w-12 h-6" /> {/* alignment spacer */}
+                <div className="flex items-center gap-1.5 self-center">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                  <h2 className="text-xs font-black uppercase text-white tracking-[0.2em]">Sua Carteira VIP</h2>
+                </div>
+                <div className="w-10 h-6" />
              </div>
 
-             {/* Digital Wallet Card */}
-             <div className="bg-gradient-to-br from-neutral-800 to-neutral-900 border border-white/10 p-8 rounded-[3.5rem] relative overflow-hidden group shadow-2xl text-left">
-                <div className="absolute -right-8 -top-8 text-amber-500/5 rotate-12">
-                   <Wallet size={200} />
+             {/* Digital Wallet Card - Premium Design */}
+             <div className="bg-gradient-to-tr from-[#121212] via-[#0e0e0e] to-neutral-950 border border-white/5 rounded-[2.5rem] p-6 sm:p-7 relative overflow-hidden group shadow-2xl transition-all duration-500 hover:border-amber-500/20">
+                {/* Holographic light layer mimicking reflection */}
+                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/[0.02] to-amber-500/[0.02] pointer-events-none" />
+                
+                {/* Embedded dynamic luxury vector log */}
+                <div className="absolute -right-4 -bottom-4 text-amber-500/[0.02] select-none pointer-events-none group-hover:scale-105 transition-transform duration-1000 rotate-12">
+                   <Wallet size={190} />
                 </div>
-                <div className="relative z-10">
-                   <div className="flex items-center justify-between mb-8">
-                      <div className="flex items-center gap-3">
-                         <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500 border border-amber-500/20">
-                            <Wallet className="w-5 h-5" />
+                
+                <div className="relative z-10 space-y-6">
+                   <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                         <div className="w-9 h-9 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500 border border-amber-500/10 shrink-0">
+                            <CreditCard className="w-4 h-4" />
                          </div>
                          <div>
-                            <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest leading-none mb-1">Carteira Digital</p>
-                            <h4 className="text-sm font-black text-white uppercase italic tracking-tighter">Planos e Créditos</h4>
+                            <h4 className="text-[10px] sm:text-xs font-black text-white uppercase tracking-tight italic">MENSBARBER VIP</h4>
+                            <p className="text-[7px] font-mono text-neutral-500 uppercase tracking-widest leading-none">FIDELIDADE EXCLUSIVA</p>
                          </div>
                       </div>
-                      <span className="bg-neutral-800 text-neutral-400 text-[8px] font-black px-2 py-1 rounded-lg uppercase tracking-tight">VIP</span>
+                      <span className="bg-gradient-to-r from-amber-500/10 to-amber-500/20 text-amber-400 border border-amber-500/10 text-[8px] font-black px-2.5 py-1 rounded-xl uppercase tracking-widest">
+                         MEMBER
+                      </span>
                    </div>
 
-                   <div className="flex items-end justify-between gap-4">
+                   {/* Simulated Golden RFID smart-chip and Contactless Wave */}
+                   <div className="flex items-center justify-between pt-1 select-none">
+                     <div className="w-8 h-6 bg-gradient-to-br from-amber-400/30 via-amber-500/20 to-amber-600/10 rounded-md border border-amber-500/20 relative" />
+                     <div className="flex flex-col gap-0.5 items-end rotate-90 text-[8px] text-neutral-600 font-black tracking-widest leading-none">
+                       <span>)))</span>
+                     </div>
+                   </div>
+
+                   <div className="space-y-1">
+                      <p className="text-[8px] font-black text-neutral-500 uppercase tracking-[0.2em] leading-normal">SALDO INTEGRADO</p>
+                      <div className="flex items-baseline gap-1.5">
+                         <span className="text-3xl font-black italic text-white tracking-tighter drop-shadow-md">
+                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(liveUser?.walletBalance || 0)}
+                         </span>
+                         <span className="text-[9px] font-black text-emerald-400 uppercase tracking-wider bg-emerald-500/15 py-0.5 px-1.5 rounded-md border border-emerald-500/10 leading-none">
+                           ATIVO
+                         </span>
+                      </div>
+                   </div>
+
+                   {/* Micro statistics or references */}
+                   <div className="pt-5 border-t border-white/5 flex items-center justify-between gap-4 font-mono">
                       <div>
-                         <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest mb-1">Saldo Disponível</p>
-                         <div className="flex items-baseline gap-1">
-                            <span className="text-3xl font-black italic text-white tracking-tighter">
-                              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(liveUser?.walletBalance || 0)}
-                            </span>
-                         </div>
+                        <p className="text-[7.5px] font-extrabold text-[#555555]">CÓDIGO CLIENTE</p>
+                        <p className="text-[9px] font-black text-neutral-300">
+                          MB-{(liveUser?.id || user?.uid || "MEMBER").slice(0, 8).toUpperCase()}
+                        </p>
                       </div>
-                      <button 
-                        onClick={() => {
-                          setIsRecharging(true);
-                          setRechargeStep("select");
-                          setRechargeSuccess(false);
-                          setRechargeAmount(null);
-                          setRechargeMpData(null);
-                        }}
-                        className="bg-amber-500 hover:bg-amber-600 text-black text-[10px] font-black uppercase italic tracking-widest px-6 py-3 rounded-xl shadow-lg active:scale-95 transition-all shadow-amber-500/10"
-                      >
-                         RECARREGAR
-                      </button>
-                   </div>
-
-                   <div className="mt-8 pt-6 border-t border-white/5 flex gap-4">
-                      <div className="flex-1 bg-black/40 rounded-2xl p-4 border border-white/5">
-                         <p className="text-[8px] font-black text-neutral-500 uppercase tracking-widest mb-1">Cortes Restantes</p>
-                         <p className="text-xl font-black italic text-white">{liveUser?.cutsBalance || 0}</p>
-                      </div>
-                      <div className="flex-1 bg-black/40 rounded-2xl p-4 border border-white/5">
-                         <p className="text-[8px] font-black text-neutral-500 uppercase tracking-widest mb-1">Pontos Fidelidade</p>
-                         <p className="text-xl font-black italic text-amber-500">{(stats.completedCount % 10) * 100}</p>
+                      <div className="text-right">
+                        <p className="text-[7.5px] font-extrabold text-[#555555]">ATIVAÇÃO</p>
+                        <p className="text-[9px] font-black text-amber-500">GOLD PREMIUM</p>
                       </div>
                    </div>
                 </div>
              </div>
 
-             {/* Description Banner */}
-             <div className="bg-neutral-900 border border-white/5 p-6 rounded-[2.5rem] text-left space-y-4">
-               <h3 className="text-sm font-black uppercase italic tracking-wider text-amber-500">Vantagens de Adicionar Créditos</h3>
-               <div className="space-y-3">
-                 <div className="flex items-start gap-3">
-                   <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 flex-shrink-0" />
-                   <p className="text-xs text-neutral-400 font-bold uppercase leading-relaxed">
-                     <span className="text-white">Pagamento sem Fricção:</span> Pague seus cortes de forma automática pelo saldo da carteira com apenas 1 clique no estabelecimento.
-                   </p>
-                 </div>
-                 <div className="flex items-start gap-3">
-                   <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 flex-shrink-0" />
-                   <p className="text-xs text-neutral-400 font-bold uppercase leading-relaxed">
-                     <span className="text-white">Cortes de Recompensa:</span> Ao recarregar valores específicos, ganhe cortes inteiros extras em seu saldo virtual!
-                   </p>
-                 </div>
-                 <div className="flex items-start gap-3">
-                   <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 flex-shrink-0" />
-                   <p className="text-xs text-neutral-400 font-bold uppercase leading-relaxed">
-                     <span className="text-white">Agilidade Máxima:</span> Sem necessidade de levar cartão ou celular na hora do atendimento, tudo já está controlado no seu perfil.
-                   </p>
-                 </div>
-               </div>
+             {/* Dynamic Gauges: Cuts and Loyalty Points */}
+             <div className="grid grid-cols-2 gap-3">
+                <div className="bg-[#0A0A0A] border border-white/5 p-4 rounded-3xl text-left flex flex-col justify-between space-y-2 group hover:border-amber-500/10 transition-colors">
+                   <div className="flex items-center justify-between">
+                     <span className="text-[7.5px] font-black text-[#555] uppercase tracking-[0.15em]">Cortes Grátis</span>
+                     <Gift className="w-3.5 h-3.5 text-amber-500" />
+                   </div>
+                   <div>
+                     <p className="text-2xl font-black italic text-white tracking-tight leading-none mb-0.5">
+                       {liveUser?.cutsBalance || 0}
+                     </p>
+                     <p className="text-[8px] text-neutral-500 font-bold uppercase tracking-wider">Regastáveis na reserva</p>
+                   </div>
+                </div>
+
+                <div className="bg-[#0A0A0A] border border-white/5 p-4 rounded-3xl text-left flex flex-col justify-between space-y-2 group hover:border-amber-500/10 transition-colors">
+                   <div className="flex items-center justify-between">
+                     <span className="text-[7.5px] font-black text-[#555] uppercase tracking-[0.15em]">Fidelidade</span>
+                     <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                   </div>
+                   <div>
+                     <p className="text-2xl font-black italic text-amber-500 tracking-tight leading-none mb-0.5">
+                       {((stats.completedCount || 0) % 10) * 100}
+                     </p>
+                     <p className="text-[8px] text-neutral-500 font-bold uppercase tracking-wider">
+                       {10 - ((stats.completedCount || 0) % 10)} cortes p/ brinde!
+                     </p>
+                   </div>
+                </div>
+             </div>
+
+             {/* Fidelity Progress bar */}
+             <div className="bg-[#090909] border border-white/5 p-4 rounded-3xl space-y-2 text-left">
+                <div className="flex justify-between items-center text-[8px] font-black uppercase tracking-wider">
+                  <span className="text-neutral-400">Progresso do Próximo Corte Cortesia</span>
+                  <span className="text-amber-500">{((stats.completedCount || 0) % 10) * 10}%</span>
+                </div>
+                <div className="w-full h-2 bg-neutral-900 rounded-full overflow-hidden border border-white/5 relative">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${((stats.completedCount || 0) % 10) * 10}%` }}
+                    transition={{ duration: 0.8, ease: "easeOut" }}
+                    className="h-full bg-gradient-to-r from-amber-600 to-amber-400 rounded-full relative"
+                  >
+                    <div className="absolute top-0 right-0 w-1 h-full bg-white/40 animate-pulse" />
+                  </motion.div>
+                </div>
+                <div className="flex items-center gap-1.5 text-[8.5px] text-neutral-500 font-medium">
+                  <Info className="w-3 h-3 text-amber-500" />
+                  <span>Cada 10 cortes completados geram automaticaticamente 1 corte livre!</span>
+                </div>
+             </div>
+
+             {/* Packages and Quick Top-up cards - STUNNING RECHARGES */}
+             <div className="space-y-3 pt-2 text-left">
+
+
+
+             </div>
+
+             {/* Custom Value Top up expander */}
+             <div className="bg-[#090909] border border-white/5 rounded-3xl p-4.5 text-left">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[8px] font-black text-neutral-500 uppercase tracking-[0.25em]">VALOR PERSONALIZADO</span>
+                  <span className="text-[8.5px] font-mono text-neutral-600">Min. R$ 10,00</span>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setIsRecharging(true);
+                      setRechargeStep("select");
+                      setRechargeSuccess(false);
+                      setRechargeAmount(null);
+                      setRechargeMpData(null);
+                    }}
+                    className="w-full py-3.5 bg-neutral-900 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-white/5 hover:border-white/10 rounded-2xl text-[9px] font-black uppercase tracking-widest italic cursor-pointer transition-all active:scale-95 text-center flex items-center justify-center gap-1.5 shadow-md"
+                  >
+                     <Zap className="w-3 h-3 text-amber-500" /> RECARREGAR OUTRO VALOR
+                  </button>
+                </div>
+             </div>
+
+             {/* Advantages Accordion Grid */}
+             <div className="bg-neutral-900/40 border border-white/5 p-6 rounded-[2.2rem] text-left space-y-4">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-amber-500 shrink-0" />
+                  <h4 className="text-[10px] font-black uppercase tracking-[0.15em] text-amber-500 italic">TERMOS & BENEFÍCIOS DO SALDO</h4>
+                </div>
+                
+                <div className="space-y-3 text-[9px] uppercase font-bold tracking-wider text-neutral-400">
+                  <div className="flex gap-2 items-start leading-snug">
+                    <span className="text-amber-500 mt-0.5">✔</span>
+                    <p>
+                      <strong className="text-white">Uso Imediato:</strong> Use para pagar cortes de cabelo, barba, ou produtos sem usar carteiras físicas.
+                    </p>
+                  </div>
+                  <div className="flex gap-2 items-start leading-snug">
+                    <span className="text-amber-500 mt-0.5">✔</span>
+                    <p>
+                      <strong className="text-white">Segurança Integral:</strong> Sistema auditado em tempo real por tecnologia de ledger integrada da barbearia.
+                    </p>
+                  </div>
+                  <div className="flex gap-2 items-start leading-snug">
+                    <span className="text-amber-500 mt-0.5">✔</span>
+                    <p>
+                      <strong className="text-white">Sem Expiração:</strong> Seus créditos acumulados não expiram, use-os quando quiser durante o ano.
+                    </p>
+                  </div>
+                </div>
              </div>
           </motion.div>
         )}
@@ -1012,34 +1166,38 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
 
         {isRecharging && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6">
-              <div className="bg-neutral-900 border border-white/10 p-8 rounded-[3rem] w-full max-w-sm text-center relative overflow-hidden my-auto shadow-2xl">
+              <div className="bg-neutral-900 border border-white/10 p-7 rounded-[3rem] w-full max-w-sm text-center relative overflow-hidden my-auto shadow-2xl">
                 <button 
                   onClick={() => setIsRecharging(false)}
-                  className="absolute top-6 right-6 text-neutral-500 hover:text-white transition-colors z-20"
+                  className="absolute top-6 right-6 text-neutral-500 hover:text-white transition-colors z-20 cursor-pointer p-1"
                 >
                   <X className="w-5 h-5" />
                 </button>
 
-                <div className="space-y-6 py-4 flex flex-col items-center">
-                  <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500 border border-amber-500/20 mb-2 relative">
-                    <Wallet className="w-8 h-8" />
+                <div className="space-y-5 py-2 flex flex-col items-center">
+                  <div className="w-14 h-14 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500 border border-amber-500/10 shrink-0 relative">
+                    <Wallet className="w-6 h-6" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-black italic uppercase text-white mb-2 leading-tight">
-                      Recargas via Pix
+                    <h2 className="text-lg font-black italic uppercase text-white mb-1 leading-tight tracking-wider">
+                      Recarga Eletrônica
                     </h2>
-                    <p className="text-xs text-neutral-400 font-bold leading-relaxed px-2 uppercase tracking-tight mb-4">
-                      Ganhe créditos e recompensas recarregando sua carteira
+                    <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">
+                      CRÉDITOS NA CARTEIRA DIGITAL
                     </p>
                   </div>
                   
                   {rechargeSuccess ? (
-                    <div className="py-6 space-y-4">
-                      <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto text-black mb-2 animate-bounce">
-                         <CheckCircle2 strokeWidth={3} size={32} />
+                    <div className="py-4 space-y-4 w-full text-center">
+                      <div className="w-14 h-14 bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-2 animate-pulse">
+                         <Check className="w-7 h-7 stroke-[3]" />
                       </div>
-                      <h3 className="text-xl font-black text-white uppercase italic tracking-tighter">Recarga Aprovada!</h3>
-                      <p className="text-xs text-neutral-400 font-medium">Os créditos foram adicionados a sua carteira digital.</p>
+                      <div>
+                        <h3 className="text-base font-black text-white uppercase italic tracking-wider leading-none mb-1">Recarga Concluída!</h3>
+                        <p className="text-[10px] text-neutral-400 font-semibold px-4 leading-normal uppercase">
+                          Os bônus e créditos foram vinculados ao saldo da sua conta com sucesso!
+                        </p>
+                      </div>
                       
                       <button 
                         onClick={() => {
@@ -1047,54 +1205,68 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                           setRechargeSuccess(false);
                           setRechargeStep("select");
                         }}
-                        className="w-full bg-amber-500 hover:bg-amber-600 text-black py-4 rounded-2xl font-black uppercase italic tracking-widest transition-colors text-xs mt-6"
+                        className="w-full bg-amber-500 hover:bg-amber-600 text-black py-3.5 rounded-2xl font-black uppercase italic tracking-widest transition-all text-[10px] cursor-pointer hover:shadow-lg shadow-amber-500/15"
                       >
-                        Concluir
+                        CONCLUIR PARABÉNS
                       </button>
                     </div>
                   ) : rechargeLoading ? (
-                    <div className="py-8 flex flex-col items-center justify-center space-y-4">
-                      <span className="w-8 h-8 rounded-full border-2 border-amber-500/30 border-t-amber-500 animate-spin" />
-                      <p className="text-[10px] text-amber-500 uppercase font-black tracking-widest animate-pulse">Gerando Pix...</p>
+                    <div className="py-8 flex flex-col items-center justify-center space-y-3">
+                      <span className="w-7 h-7 rounded-full border-2 border-amber-500/20 border-t-amber-500 animate-spin" />
+                      <p className="text-[9px] text-amber-500 uppercase font-black tracking-[0.2em] animate-pulse">Gerando Pix no Ledger...</p>
                     </div>
                   ) : rechargeError ? (
-                     <div className="py-6 space-y-4">
-                        <p className="text-xs text-red-400 font-medium">{rechargeError}</p>
+                    <div className="py-4 space-y-4 w-full text-center">
+                       <div className="bg-[#1A1110] border border-red-900/40 p-4 rounded-2xl text-left space-y-1">
+                          <span className="text-[8px] font-black text-red-400 uppercase tracking-widest block leading-none">Erro de Conexão</span>
+                          <p className="text-[10px] text-neutral-400 font-semibold uppercase leading-snug">
+                             Incapaz de gerar Pix de recarga neste momento. Verifique seus dados e tente novamente.
+                          </p>
+                       </div>
+                       
+
                         <button 
                            onClick={() => handleGenerateRechargePix(rechargeAmount || 50, rechargeBonus, rechargeCutsReward)}
-                           className="px-4 py-2 bg-red-500/10 text-red-500 border border-red-500/20 rounded-xl text-[10px] font-black uppercase"
+                           className="w-full py-2.5 bg-neutral-900 border border-white/5 rounded-xl text-[8.5px] text-neutral-405 font-black uppercase text-center hover:bg-neutral-800 cursor-pointer"
                         >
-                           Tentar Novamente
+                           Tentar Conexão Novamente
                         </button>
-                     </div>
-                  ) : rechargeMpData?.qr_code_base64 && rechargeMpData?.qr_code ? (
-                    <div className="space-y-6 w-full">
-                      <div className="bg-white p-4 rounded-3xl mx-auto w-fit shadow-xl shadow-amber-500/10">
-                        <img src={`data:image/png;base64,${rechargeMpData.qr_code_base64}`} alt="QR Code Pix" className="w-[180px] h-[180px] rounded-xl" />
+                    </div>
+                 ) : rechargeMpData?.qr_code_base64 && rechargeMpData?.qr_code ? (
+                    <div className="space-y-4 w-full">
+                      <div className="bg-white p-3.5 rounded-[2rem] mx-auto w-fit shadow-xl shadow-amber-500/5 relative group">
+                        <img src={`data:image/png;base64,${rechargeMpData.qr_code_base64}`} alt="QR Code Pix" className="w-[160px] h-[160px] rounded-2xl" />
                       </div>
                       
                       <button
                         onClick={() => {
                           navigator.clipboard.writeText(rechargeMpData.qr_code);
                           setCopiedRechargePix(true);
-                          toast.success("Código Pix copiado!");
+                          toast.success("Código Copiado!");
                           setTimeout(() => setCopiedRechargePix(false), 2000);
                         }}
-                        className="w-full py-4 bg-white/5 border border-white/10 rounded-[1.2rem] text-[10px] font-black uppercase text-white hover:bg-white/10 transition-colors flex items-center justify-center gap-2"
+                        className="w-full py-3.5 bg-white/5 border border-white/10 rounded-[1.1rem] text-[9.5px] font-mono text-white hover:bg-white/10 transition-all flex items-center justify-center gap-2 cursor-pointer"
                       >
-                        {copiedRechargePix ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-                        {copiedRechargePix ? "Código Copiado!" : "Copiar Código Pix Copia e Cola"}
+                        {copiedRechargePix ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                        {copiedRechargePix ? "RECORTE COPIADO!" : "COPIAR CÓDIGO COPIA E COLA"}
                       </button>
+
+                      <div className="h-[1px] bg-white/5 my-1" />
                       
-                      <div className="py-4 text-center text-neutral-500 text-[10px] uppercase font-bold tracking-wider animate-pulse">
-                         Aguardando confirmação do pagamento...
+                      <div className="space-y-2">
+                         <div className="text-center text-neutral-500 text-[8.5px] uppercase font-bold tracking-widest animate-pulse flex items-center justify-center gap-1.5 mb-1 justify-center">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping shadow-lg" />
+                            <span>Aguardando Pix eletrônico...</span>
+                         </div>
+
+                         
                       </div>
                     </div>
                   ) : (
                     <div className="space-y-4 w-full mt-4">
                       <div>
-                        <label className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest pl-2 mb-1 block">
-                          Valor da Recarga
+                        <label className="text-[8.5px] text-neutral-500 font-extrabold uppercase tracking-widest pl-2 mb-1.5 block">
+                          DIGITE O VALOR DA RECARGA
                         </label>
                         <div className="relative">
                           <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white font-black italic">R$</span>

@@ -47,12 +47,23 @@ export interface FirestoreErrorInfo {
 export function safeStringify(obj: any): string {
   const cache = new Set();
   return JSON.stringify(obj, (key, value) => {
-    if (typeof value === 'object' && value !== null) {
-      if (cache.has(value)) {
-        return '[Circular]';
-      }
-      cache.add(value);
+    // Basic types that are safe
+    if (typeof value !== 'object' || value === null) {
+      return value;
     }
+    
+    // Check if we already visited this object
+    if (cache.has(value)) {
+      return undefined; // Drop circular references
+    }
+    
+    // Check for some common non-serializable objects in Firebase (like Functions, or complex class instances)
+    // If it has a custom constructor that's not a plain object, let's just return a generic name or undefined
+    if (value.constructor && value.constructor.name !== 'Object' && value.constructor.name !== 'Array' && value.constructor.name !== 'Timestamp') {
+        return `[${value.constructor.name}]`;
+    }
+    
+    cache.add(value);
     return value;
   }, 2);
 }
