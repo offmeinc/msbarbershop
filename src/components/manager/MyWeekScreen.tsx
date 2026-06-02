@@ -337,432 +337,158 @@ export function MyWeekScreen({ user, appointments, onBack }: MyWeekScreenProps) 
       initial={{ opacity: 0, scale: 0.98 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.98 }}
-      className="max-w-md mx-auto py-8 px-4 min-h-screen pb-36 text-left"
+      className="max-w-md mx-auto min-h-screen bg-white text-left font-sans flex flex-col"
     >
-      {/* Dynamic Welcoming Header Banner */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="space-y-1">
-          <span className="text-[8px] font-black text-amber-500 uppercase tracking-widest bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/10">
-            ★ CENTRAL DE COMPETÊNCIA
+      {/* Header section like Google Calendar / Reference */}
+      <div className="px-4 pt-6 pb-2 border-b border-gray-100 flex items-center justify-between bg-white sticky top-0 z-10">
+        <div className="flex items-baseline gap-2">
+          <h1 className="text-xl font-bold text-gray-900 capitalize">
+            {format(today, "MMMM", { locale: ptBR })}
+          </h1>
+          <span className="text-sm font-medium text-gray-400">
+            {format(today, "yyyy")}
           </span>
-          <h2 className="text-2xl font-black text-white italic uppercase tracking-tighter">
-            {customWelcomeText}, <span className="text-amber-400">{profName}</span>! 👋
-          </h2>
-          <p className="text-[9px] text-neutral-500 font-extrabold uppercase tracking-wide leading-none">
-            Análise atualizada da sua semana • {format(today, "dd 'de' MMMM", { locale: ptBR })}
-          </p>
         </div>
-        
-        <button 
-          onClick={onBack}
-          className="text-[9px] text-neutral-400 hover:text-white font-black uppercase tracking-widest bg-neutral-900 border border-white/5 hover:border-white/10 px-3.5 py-2.5 rounded-2xl transition-all cursor-pointer shadow-md active:scale-95 flex items-center gap-1"
-        >
-          Voltar
-        </button>
-      </div>
-
-      {/* Bento Grid Stats Card area */}
-      <div className="grid grid-cols-2 gap-3 mb-6">
-        {/* Projections Card */}
-        <div className="bg-gradient-to-br from-neutral-900 to-neutral-950 p-4 rounded-[2rem] border border-white/5 shadow-xl relative overflow-hidden flex flex-col justify-between min-h-[95px]">
-          <div className="absolute top-0 right-0 w-12 h-12 bg-emerald-500/5 rounded-full blur-xl" />
-          <div className="flex items-center justify-between">
-            <span className="text-[8px] font-black uppercase text-neutral-500 tracking-widest">Faturamento Est.</span>
-            <div className="w-5 h-5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-              <DollarSign className="w-3 h-3" />
-            </div>
-          </div>
-          <div className="space-y-0.5 mt-2">
-            <span className="text-xl font-black text-white tracking-tight leading-none block">
-              R$ {stats.earned.toFixed(2).replace(".", ",")}
-            </span>
-            <span className="text-[8px] text-emerald-400 font-black uppercase tracking-wider block">Estupendo progresso</span>
-          </div>
-        </div>
-
-        {/* Occupancy Card */}
-        <div className="bg-gradient-to-br from-neutral-900 to-neutral-950 p-4 rounded-[2rem] border border-white/5 shadow-xl relative overflow-hidden flex flex-col justify-between min-h-[95px]">
-          <div className="absolute top-0 right-0 w-12 h-12 bg-amber-500/5 rounded-full blur-xl" />
-          <div className="flex items-center justify-between">
-            <span className="text-[8px] font-black uppercase text-neutral-500 tracking-widest">Eficiência Geral</span>
-            <div className="w-5 h-5 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500">
-              <TrendingUp className="w-3 h-3" />
-            </div>
-          </div>
-          <div className="space-y-0.5 mt-2">
-            <span className="text-xl font-black text-white tracking-tight leading-none block">
-              {stats.occupancyRate}%
-            </span>
-            <span className="text-[8px] text-amber-500 font-black uppercase tracking-wider block">Taxa de Ocupação</span>
-          </div>
-        </div>
-
-        {/* Action summaries nested inline */}
-        <div className="col-span-2 bg-neutral-950/60 p-3 rounded-2xl border border-white/5 flex justify-between text-center divide-x divide-white/5">
-          <div className="flex-1">
-            <span className="text-[7.5px] font-black text-neutral-500 uppercase tracking-widest block">Ativos</span>
-            <span className="text-xs font-black text-white">{stats.confirmedCount}</span>
-          </div>
-          <div className="flex-1">
-            <span className="text-[7.5px] font-black text-neutral-500 uppercase tracking-widest block">Cortes Concluídos</span>
-            <span className="text-xs font-black text-green-400">{stats.completedCount}</span>
-          </div>
-          <div className="flex-1">
-            <span className="text-[7.5px] font-black text-neutral-500 uppercase tracking-widest block">Cancelados</span>
-            <span className="text-xs font-black text-rose-400">{stats.cancelledCount}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Mini Visual Chart Bar represent Occupancy Index across Segment days */}
-      <div className="bg-neutral-900/40 p-4 rounded-[2rem] border border-white/5 mb-6">
-        <h4 className="text-[9px] font-black text-neutral-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-          <TrendingUp className="w-3.5 h-3.5 text-amber-500" /> Atendimentos Realizados na Semana
-        </h4>
-        <div className="h-32 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
-              <XAxis 
-                dataKey="name" 
-                stroke="#525252" 
-                fontSize={8} 
-                tickLine={false} 
-                axisLine={false} 
-              />
-              <YAxis 
-                stroke="#525252" 
-                fontSize={8} 
-                tickLine={false} 
-                axisLine={false}
-                allowDecimals={false}
-              />
-              <Tooltip 
-                cursor={{ fill: 'rgba(255,255,255,0.02)' }}
-                contentStyle={{ background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '12px' }}
-                labelStyle={{ fontSize: '9px', fontWeight: 'bold', color: '#ffb020' }}
-                itemStyle={{ fontSize: '9px', color: '#fff' }}
-              />
-              <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                {chartData.map((entry, index) => {
-                  const isCurrentDay = isSameDay(entry.fullDate, today);
-                  return (
-                    <Cell 
-                      key={`cell-${index}`} 
-                      fill={isCurrentDay ? '#f59e0b' : '#3f3f46'} 
-                      opacity={entry.count === 0 ? 0.3 : 1}
-                    />
-                  );
-                })}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+        <div className="flex items-center gap-3">
+           <button onClick={onBack} className="p-1 text-gray-400 hover:text-gray-900 bg-gray-50 rounded-full">
+              <CornerDownLeft className="w-5 h-5" />
+           </button>
         </div>
       </div>
 
       {/* Week Day Picker Carousel */}
-      <div className="mb-4">
-        <div className="flex items-center justify-between mb-2">
-          <h4 className="text-[9px] font-black text-neutral-400 uppercase tracking-widest flex items-center gap-1.5">
-            <CalendarCheck className="w-3.5 h-3.5 text-amber-500" /> Agenda do Dia Selecionado
-          </h4>
-          <span className="text-[8px] font-black text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full uppercase tracking-wider">
-            {format(selectedDay, "dd MMM", { locale: ptBR })}
-          </span>
-        </div>
+      <div className="px-2 py-3 bg-white border-b border-gray-100 shadow-sm z-10 sticky top-[60px]">
+        <div className="flex items-center justify-between">
+          <button className="p-1 px-2 text-gray-400">
+            <ChevronRight className="w-4 h-4 rotate-180" />
+          </button>
+          
+          <div className="flex gap-1 overflow-x-auto no-scrollbar justify-between flex-1 px-1">
+            {daysOfTheWeek.map((dayDate, idx) => {
+              const isSelected = isSameDay(selectedDay, dayDate);
+              const dayLabel = format(dayDate, "eee", { locale: ptBR }).substring(0, 3);
+              const dateNum = format(dayDate, "dd");
 
-        <div className="flex gap-1.5 overflow-x-auto no-scrollbar py-1">
-          {daysOfTheWeek.map((dayDate, idx) => {
-            const isSelected = isSameDay(selectedDay, dayDate);
-            const isToday = isSameDay(today, dayDate);
-            const dayLabel = format(dayDate, "eee", { locale: ptBR }).substring(0, 3);
-            const dateNum = format(dayDate, "dd");
+              // Count appointments for this day to draw a indicator badge (dot)
+              const dayAppCount = weeklyAppointments.filter(app => {
+                const aDate = getAppDate(app.date);
+                return aDate && isSameDay(aDate, dayDate) && app.status !== "cancelled";
+              }).length;
 
-            // Count appointments for this day to draw a indicator badge
-            const dayAppCount = weeklyAppointments.filter(app => {
-              const aDate = getAppDate(app.date);
-              return aDate && isSameDay(aDate, dayDate) && app.status !== "cancelled";
-            }).length;
-
-            return (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => setSelectedDay(dayDate)}
-                className={`flex-1 min-w-[48px] py-2.5 rounded-2xl flex flex-col items-center justify-center transition-all border relative cursor-pointer ${
-                  isSelected 
-                    ? "bg-amber-500 text-black border-amber-500 shadow-md transform scale-105" 
-                    : isToday
-                      ? "bg-amber-500/10 text-amber-400 border-amber-500/30 font-bold"
-                      : "bg-neutral-900/50 text-neutral-400 border-white/5 hover:border-white/10"
-                }`}
-              >
-                <span className="text-[7.5px] uppercase font-black tracking-widest select-none">
-                  {dayLabel}
-                </span>
-                <span className="text-xs font-black select-none mt-0.5">
-                  {dateNum}
-                </span>
-
-                {dayAppCount > 0 && (
-                  <span className={`absolute -top-1 -right-1 w-4 h-4 rounded-full text-[7.5px] font-black flex items-center justify-center border ${
-                    isSelected 
-                      ? "bg-black text-amber-400 border-amber-500"
-                      : "bg-amber-500 text-black border-neutral-950"
-                  }`}>
-                    {dayAppCount}
+              return (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setSelectedDay(dayDate)}
+                  className={`flex flex-col items-center justify-center p-1.5 min-w-[40px] rounded-full transition-all cursor-pointer ${
+                    isSelected ? "bg-[#0fc285] text-white" : "bg-transparent text-gray-500 hover:bg-gray-50"
+                  }`}
+                >
+                  <span className={`text-[10px] font-medium uppercase font-bold tracking-tight ${isSelected ? "text-white/90" : "text-gray-400"}`}>
+                    {dayLabel}
                   </span>
-                )}
-              </button>
-            );
-          })}
+                  <span className={`text-base font-bold mt-0.5 ${isSelected ? "text-white" : "text-gray-900"}`}>
+                    {dateNum}
+                  </span>
+                  {/* Dot indicator */}
+                  <div className={`w-1 h-1 rounded-full mt-1 ${
+                    dayAppCount > 0 
+                      ? isSelected ? "bg-white" : "bg-[#0fc285]"
+                      : "bg-transparent"
+                  }`} />
+                </button>
+              );
+            })}
+          </div>
+
+          <button className="p-1 px-2 text-gray-400">
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Selected Day Header Label */}
+      <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+        <h2 className="text-sm font-bold text-gray-900 capitalize flex items-center gap-2">
+          {format(selectedDay, "EEEE", { locale: ptBR })}
+          <span className="text-gray-400 font-normal text-xs">{format(selectedDay, "dd/MM")}</span>
+        </h2>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold text-gray-600 bg-gray-100 px-2 py-1 rounded-full">
+            {selectedDayAppointments.length} agendamentos
+          </span>
         </div>
       </div>
 
       {/* Appointment Day List container */}
-      <div className="mb-6 space-y-2.5">
-        {selectedDayAppointments.map((app) => {
-          return (
-            <motion.div
-              layout
-              key={app.id}
-              className={`p-3.5 rounded-2xl border text-left flex items-center justify-between gap-3 ${
-                app.status === "completed" ? "bg-neutral-900/20 border-green-500/10 opacity-75" :
-                app.status === "cancelled" ? "bg-neutral-900/10 border-rose-500/10 opacity-55" :
-                "bg-neutral-900/60 border-white/5 shadow-md hover:border-white/10"
-              }`}
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                {/* Time Indicator Badge */}
-                <div className={`w-11 h-11 rounded-xl flex flex-col items-center justify-center border font-mono select-none shrink-0 ${
-                  app.status === "completed" ? "bg-green-500/10 text-green-400 border-green-500/15" :
-                  app.status === "cancelled" ? "bg-rose-500/10 text-rose-400 border-rose-500/15" :
-                  "bg-amber-500/10 text-amber-400 border-amber-500/15 font-bold"
-                }`}>
-                  <Clock className="w-3.5 h-3.5 shrink-0" />
-                  <span className="text-[10px] font-black uppercase tracking-tighter mt-0.5">
-                    {app.time || "S/H"}
+      <div className="flex-1 overflow-y-auto pb-32">
+        <div className="pt-2">
+          {selectedDayAppointments.map((app, index) => {
+            // Determine if we need to show time on left
+            const showTime = index === 0 || selectedDayAppointments[index - 1].time !== app.time;
+            
+            return (
+              <motion.div
+                layout
+                key={app.id}
+                className="flex items-start px-4 mb-2"
+              >
+                {/* Time Column */}
+                <div className="w-[50px] shrink-0 pt-3 text-right pr-4">
+                  <span className="text-[11px] font-semibold text-gray-400 leading-none">
+                    {showTime ? app.time : ""}
                   </span>
                 </div>
 
-                <div className="min-w-0">
-                  <h4 className="text-xs font-black text-white uppercase italic truncate">
-                    {app.clientName || "Cliente"}
-                  </h4>
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-[8px] text-amber-500 font-black uppercase tracking-wider">
-                      {app.serviceName}
-                    </span>
-                    <span className="text-[8.5px] text-neutral-500 font-extrabold">•</span>
-                    <span className="text-[8px] text-neutral-400 font-extrabold">
-                      R$ {Number(app.totalPrice || app.price || 0).toFixed(2).replace(".", ",")}
-                    </span>
+                {/* Event Card */}
+                <div className={`flex-1 p-3.5 rounded-2xl flex items-center justify-between relative ${
+                  app.status === "completed" ? "bg-gray-100 opacity-70" :
+                  app.status === "cancelled" ? "bg-red-50 opacity-60" :
+                  "bg-[#eef2fa]" // soft blue background like the screenshot
+                }`}>
+                  {/* Info */}
+                  <div className="min-w-0 pr-2">
+                    <h4 className={`text-sm font-bold truncate ${
+                      app.status === "completed" ? "text-gray-600 line-through decoration-1" :
+                      app.status === "cancelled" ? "text-red-700 line-through decoration-1" :
+                      "text-gray-900"
+                    }`}>
+                      {app.clientName || "Cliente"}
+                    </h4>
+                    <p className={`text-xs mt-0.5 truncate ${
+                      app.status === "completed" ? "text-gray-500" :
+                      app.status === "cancelled" ? "text-red-500/70" :
+                      "text-gray-600"
+                    }`}>
+                      {app.serviceName} • {app.duration || "30min"}
+                    </p>
+                  </div>
+
+                  {/* Icon Check / Actions */}
+                  <div className="shrink-0 pl-2">
+                    {app.status === "completed" ? (
+                      <div className="w-5 h-5 rounded-full border border-[#0fc285] flex items-center justify-center text-[#0fc285]">
+                         <CheckCircle2 className="w-3.5 h-3.5" />
+                      </div>
+                    ) : app.status === "cancelled" ? (
+                      <div className="w-5 h-5 rounded-full border border-red-400 flex items-center justify-center text-red-400">
+                         <XCircle className="w-3.5 h-3.5" />
+                      </div>
+                    ) : (
+                      <div className="w-5 h-5 rounded-full border border-gray-300" />
+                    )}
                   </div>
                 </div>
-              </div>
+              </motion.div>
+            );
+          })}
 
-              {/* Action and status check */}
-              <div className="flex items-center gap-2">
-                <span className={`px-2 py-0.5 rounded-lg text-[7.5px] font-black uppercase tracking-wider border ${
-                  app.status === "completed" ? "bg-green-500/10 text-green-400 border-green-500/20" :
-                  app.status === "cancelled" ? "bg-red-500/10 text-red-400 border-red-500/20" :
-                  "bg-amber-500/10 text-amber-500 border-amber-500/20"
-                }`}>
-                  {app.status === "completed" ? "Conclúido" :
-                   app.status === "cancelled" ? "Cancelado" :
-                   "Confirmado"}
-                </span>
-
-                {/* Prompt contact helper button if confirmed */}
-                {app.status !== "completed" && app.status !== "cancelled" && (
-                  <a
-                    href={`https://wa.me/${app.clientPhone ? app.clientPhone.replace(/\D/g, '') : ''}`}
-                    target="_blank"
-                    referrerPolicy="no-referrer"
-                    rel="noopener noreferrer"
-                    className="p-1.5 bg-neutral-900 hover:bg-neutral-800 text-neutral-400 hover:text-white rounded-lg border border-white/5 active:scale-95 transition-all"
-                    title="Enviar WhatsApp"
-                  >
-                    <MessageSquare className="w-3.5 h-3.5" />
-                  </a>
-                )}
-              </div>
-            </motion.div>
-          );
-        })}
-
-        {selectedDayAppointments.length === 0 && (
-          <div className="py-8 text-center bg-black/10 rounded-2xl border border-dashed border-white/5 space-y-1">
-            <Calendar className="w-6 h-6 text-neutral-800 mx-auto" />
-            <p className="text-[9px] text-neutral-500 uppercase font-black tracking-widest">Agenda Livre</p>
-            <p className="text-[7.5px] text-neutral-600 font-bold uppercase tracking-widest max-w-[200px] mx-auto">
-              Nenhum agendamento ativo para este dia. Aproveite para descansar ou planejar promoções.
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* AI Business Coach & Report Block */}
-      <div className="mb-6 space-y-4">
-        <div className="text-left">
-          <span className="text-[8px] font-black text-amber-500 uppercase tracking-widest block mb-0.5">
-            ✦ CO-PILOTO ESTRATÉGICO
-          </span>
-          <h3 className="text-lg font-black text-white italic uppercase tracking-tighter">
-            Coach de Negócios Inteligência Artificial
-          </h3>
-        </div>
-
-        {/* Dynamic Strategic Report */}
-        <div className="bg-neutral-900/80 rounded-[2rem] border border-white/5 overflow-hidden shadow-2xl">
-          {/* Header Bar */}
-          <div className="bg-gradient-to-r from-amber-500/10 to-amber-600/[0.02] border-b border-white/5 px-5 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-amber-500 flex items-center justify-center text-black shadow font-bold">
-                <BrainCircuit className="w-4 h-4" />
-              </div>
-              <div className="text-left">
-                <h4 className="text-xs font-black text-white uppercase tracking-tight">Relatório Semanal AI</h4>
-                <p className="text-[7.5px] text-amber-500 font-extrabold uppercase tracking-widest">Estratégias de Agenda</p>
-              </div>
+          {selectedDayAppointments.length === 0 && (
+            <div className="py-16 text-center space-y-2">
+              <Calendar className="w-10 h-10 text-gray-200 mx-auto" />
+              <p className="text-sm text-gray-400 font-medium tracking-tight">Nenhum agendamento para este dia.</p>
             </div>
-
-            <button
-              onClick={handleGenerateReport}
-              disabled={loadingReport}
-              className="px-3 py-1.5 bg-neutral-900 hover:bg-neutral-800 disabled:opacity-50 text-[8px] font-black uppercase tracking-widest text-neutral-300 rounded-lg border border-white/5 hover:border-white/10 active:scale-95 transition-all cursor-pointer flex items-center gap-1"
-            >
-              {loadingReport ? (
-                <>
-                  <Loader2 className="w-3 h-3 animate-spin text-amber-500" />
-                  Gerando...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-3 h-3 text-amber-400" />
-                  Atualizar
-                </>
-              )}
-            </button>
-          </div>
-
-          {/* Report Text Display Area */}
-          <div className="p-5 text-left max-h-[290px] overflow-y-auto font-medium space-y-1 text-xs border-b border-white/5">
-            {loadingReport && !aiReport ? (
-              <div className="py-12 flex flex-col items-center justify-center space-y-2">
-                <Loader2 className="w-8 h-8 text-amber-500 animate-spin" />
-                <p className="text-[8px] font-black uppercase text-neutral-500 tracking-widest animate-pulse">
-                  Gemini analisando sua agenda...
-                </p>
-              </div>
-            ) : aiReport ? (
-              <div className="space-y-1.5 transition-all duration-300">
-                {renderMarkdown(aiReport)}
-              </div>
-            ) : (
-              <div className="py-8 text-center space-y-2">
-                <Sparkles className="w-8 h-8 text-neutral-800 mx-auto" />
-                <p className="text-[10px] text-neutral-500 uppercase font-black tracking-widest">Resumo de desempenho Inteligente</p>
-                <p className="text-[9px] text-neutral-600 font-semibold max-w-xs mx-auto leading-relaxed">
-                  Gere um resumo estratégico baseando-se no faturamento, ocupação das terças de manhã, retenção e comparecimentos.
-                </p>
-                <button
-                  onClick={handleGenerateReport}
-                  className="bg-amber-500 hover:bg-amber-400 text-black text-[8px] font-black uppercase tracking-wider px-3py-2 rounded-lg py-1.5 active:scale-95 transition-all"
-                >
-                  Gerar Primeiro Resumo
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Interactive Strategist Chat Box */}
-          <div className="bg-neutral-950 p-4 space-y-3">
-            <span className="text-[8px] font-black text-neutral-500 uppercase tracking-widest block text-left">
-              💬 Conversar sobre sua agenda e ticket médio:
-            </span>
-
-            {/* Chat Messages display */}
-            {chatMessages.length > 0 && (
-              <div className="space-y-4 max-h-[220px] overflow-y-auto mb-3 pr-1 text-xs text-left">
-                {chatMessages.map((msg, mIdx) => (
-                  <div 
-                    key={mIdx} 
-                    className={`flex gap-2.5 items-start ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                  >
-                    {msg.role !== "user" && (
-                      <div className="w-6 h-6 rounded-lg bg-amber-500 text-black flex items-center justify-center shrink-0 text-[10px] font-black">
-                        AI
-                      </div>
-                    )}
-                    <div className={`p-3 rounded-2xl max-w-[85%] leading-relaxed ${
-                      msg.role === "user" 
-                        ? "bg-amber-500 text-black font-semibold rounded-tr-none" 
-                        : "bg-neutral-900 text-neutral-200 font-medium rounded-tl-none border border-white/5"
-                    }`}>
-                      <p className="whitespace-pre-line text-[10.5px]">{msg.content}</p>
-                    </div>
-                  </div>
-                ))}
-
-                {chatLoading && (
-                  <div className="flex gap-2.5 items-center justify-start">
-                    <div className="w-6 h-6 rounded-lg bg-amber-500 text-black flex items-center justify-center shrink-0 animate-pulse text-[10px] font-black">
-                      ...
-                    </div>
-                    <div className="bg-neutral-900 border border-white/5 text-neutral-500 p-2.5 rounded-2xl text-[9px] font-black tracking-widest uppercase animate-pulse flex items-center gap-1.5">
-                      <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-500" />
-                      Coach IA formulando resposta estratégica...
-                    </div>
-                  </div>
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-            )}
-
-            {/* Quick Templates questions */}
-            <div className="flex gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-              <button
-                type="button"
-                onClick={() => selectQuickQuestion("Como melhorar meu faturamento e o ticket médio nesta semana?")}
-                className="text-[8px] px-2.5 py-1.5 bg-neutral-900 hover:bg-neutral-800 text-neutral-400 hover:text-white border border-white/5 rounded-xl truncate shrink-0 cursor-pointer font-bold transition-all"
-              >
-                💡 Melhorar Faturamento
-              </button>
-              <button
-                type="button"
-                onClick={() => selectQuickQuestion("Quais são as melhores dicas para lotar horários menos movimentados?")}
-                className="text-[8px] px-2.5 py-1.5 bg-neutral-900 hover:bg-neutral-800 text-neutral-400 hover:text-white border border-white/5 rounded-xl truncate shrink-0 cursor-pointer font-bold transition-all"
-              >
-                📅 Preencher Agenda Ociosa
-              </button>
-              <button
-                type="button"
-                onClick={() => selectQuickQuestion("Como posso sugerir produtos de barbearia de forma elegante para meus clientes?")}
-                className="text-[8px] px-2.5 py-1.5 bg-neutral-900 hover:bg-neutral-800 text-neutral-400 hover:text-white border border-white/5 rounded-xl truncate shrink-0 cursor-pointer font-bold transition-all"
-              >
-                🧴 Upsell de Produtos
-              </button>
-            </div>
-
-            {/* Form Input submit panel */}
-            <form onSubmit={handleSendMessage} className="flex gap-1.5">
-              <input
-                type="text"
-                value={userInput}
-                onChange={(e) => setUserInput(e.target.value)}
-                placeholder="Pergunte ao seu consultor de negócios IA..."
-                disabled={chatLoading}
-                className="flex-1 bg-neutral-900 text-white placeholder-neutral-500 text-[10.5px] px-3 py-2.5 rounded-xl border border-white/5 focus:border-amber-500 focus:outline-none transition-colors"
-              />
-              <button
-                type="submit"
-                disabled={!userInput.trim() || chatLoading}
-                className="w-10 h-10 bg-amber-500 hover:bg-amber-400 text-black rounded-xl flex items-center justify-center shrink-0 disabled:opacity-50 transition-all cursor-pointer shadow active:scale-95"
-              >
-                <Send className="w-4 h-4" />
-              </button>
-            </form>
-          </div>
+          )}
         </div>
       </div>
     </motion.div>

@@ -221,7 +221,7 @@ export function CalendarWidget({
 
   // Timeline Hour constants
   const hours = useMemo(() => Array.from({ length: 15 }, (_, i) => i + 8), []); // 8:00 AM to 10:00 PM
-  const ROW_HEIGHT = 68; // Height in pixels for a single hour block
+  const ROW_HEIGHT = 120; // Height in pixels for a single hour block - increased to allow full details on 30m slots
 
   // Calculate live red line height position inside the timeline canvas
   const currentTimePosition = useMemo(() => {
@@ -569,7 +569,7 @@ export function CalendarWidget({
                           <div
                             key={appIdx}
                             onClick={() => onSelectAppointment && onSelectAppointment(app)}
-                            className={`absolute rounded-xl p-2.5 cursor-pointer flex flex-col justify-between overflow-hidden group hover:shadow-xl active:scale-95 transition-all border-l-4 ${colorObj.bg} ${colorObj.border} ${colorObj.accent}`}
+                            className={`absolute rounded-xl px-1.5 py-1 sm:px-2 sm:py-1.5 cursor-pointer flex flex-col justify-between overflow-hidden group hover:shadow-xl active:scale-95 transition-all border-l-2 sm:border-l-4 ${colorObj.bg} ${colorObj.border} ${colorObj.accent}`}
                             style={{
                               top: `${startOffset + 2}px`,
                               height: `${heightPixels - 4}px`,
@@ -578,14 +578,14 @@ export function CalendarWidget({
                               zIndex: 10 + app.column
                             }}
                           >
-                            <div className="text-left select-none space-y-0.5">
-                              <p className="text-[10px] font-black text-white truncate leading-none">{app.clientName}</p>
-                              <p className="text-[8px] font-extrabold text-neutral-400 uppercase truncate mb-1">{app.serviceName}</p>
+                            <div className="text-left select-none space-y-0.5 min-w-0">
+                              <p className="text-[9px] sm:text-[10px] font-black text-white truncate leading-none">{app.clientName}</p>
+                              <p className="text-[7px] sm:text-[8px] font-extrabold text-neutral-400 uppercase truncate mb-1">{app.serviceName}</p>
                             </div>
                             
-                            <div className="flex items-center justify-between pointer-events-none">
-                              <span className="text-[8px] font-bold text-white/50">{app.time || format(app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date), 'HH:mm')}</span>
-                              <span className="text-[7px] font-black uppercase text-white/80 px-1 rounded bg-black/40 max-w-[50%] truncate">
+                            <div className="flex items-center justify-between pointer-events-none gap-1 mt-auto">
+                              <span className="text-[7px] sm:text-[8px] font-bold text-white/50 shrink-0">{app.time || format(app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date), 'HH:mm')}</span>
+                              <span className="text-[6px] sm:text-[7px] font-black uppercase text-white/80 px-1 rounded bg-black/40 max-w-[50%] truncate hidden sm:inline-block">
                                 {app.barberName?.split(' ')[0]}
                               </span>
                             </div>
@@ -731,7 +731,7 @@ export function CalendarWidget({
                     animate={{ opacity: 1, scale: 1 }}
                     key={idx}
                     onClick={() => onSelectAppointment && onSelectAppointment(app)}
-                    className={`absolute cursor-pointer rounded-2xl p-4 overflow-hidden group hover:shadow-2xl active:scale-98 border border-white/5 transition-all text-left flex justify-between items-start border-l-4 ${colorObj.bg} ${colorObj.border} ${colorObj.accent}`}
+                    className={`absolute cursor-pointer rounded-xl px-3 py-1.5 overflow-hidden group hover:shadow-2xl active:scale-98 border border-white/5 transition-all text-left flex justify-between items-start border-l-4 ${colorObj.bg} ${colorObj.border} ${colorObj.accent}`}
                     style={{
                       top: `${startOffset + 2}px`,
                       height: `${heightPixels - 4}px`,
@@ -740,32 +740,32 @@ export function CalendarWidget({
                       zIndex: 20 + app.column
                     }}
                   >
-                    <div className="flex items-start gap-3.5 h-full max-w-[75%]">
-                      <div className="w-10 h-10 rounded-xl bg-black/40 border border-white/5 flex items-center justify-center shrink-0 overflow-hidden select-none">
+                    <div className="flex items-start gap-2.5 h-full max-w-[75%] min-w-0">
+                      <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-black/40 border border-white/5 flex items-center justify-center shrink-0 overflow-hidden select-none">
                         {app.clientPhoto ? (
                           <img src={app.clientPhoto} alt={app.clientName} className="w-full h-full object-cover" />
                         ) : (
-                          <User className="w-5 h-5 text-amber-500" />
+                          <User className="w-3 h-3 sm:w-4 sm:h-4 text-amber-500" />
                         )}
                       </div>
-                      <div className="flex flex-col justify-between h-full text-white truncate">
+                      <div className="flex flex-col justify-center h-full text-white min-w-0">
                         <div className="truncate">
-                          <p className="text-xs font-black uppercase tracking-wide truncate leading-tight">{app.clientName}</p>
-                          <p className="text-[9px] font-extrabold text-neutral-400 uppercase tracking-wider truncate leading-none mt-0.5">{app.serviceName}</p>
+                          <p className="text-[10px] sm:text-xs font-black uppercase tracking-wide truncate leading-tight">{app.clientName}</p>
+                          <p className="text-[8px] sm:text-[9px] font-extrabold text-neutral-400 uppercase tracking-wider truncate leading-none mt-0.5">{app.serviceName}</p>
                         </div>
-                        <span className="text-[8px] font-black text-amber-400 uppercase tracking-widest truncate leading-none flex items-center gap-1 mt-1">
-                          <Users className="w-3 h-3 text-amber-500 shrink-0" /> {app.barberName}
+                        <span className="text-[7px] sm:text-[8px] font-black text-amber-400 uppercase tracking-widest truncate leading-none flex items-center gap-1 mt-1">
+                          <Users className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-amber-500 shrink-0" /> {app.barberName}
                         </span>
                       </div>
                     </div>
 
-                    <div className="flex flex-col justify-between items-end h-full select-none">
-                      <span className="text-[10px] font-black text-white bg-black/45 border border-white/10 px-2.5 py-1 rounded-xl shadow-inner tracking-widest">{app.time || format(app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date), 'HH:mm')}</span>
+                    <div className="flex flex-col justify-start sm:justify-between items-end h-full select-none shrink-0 gap-1">
+                      <span className="text-[9px] sm:text-[10px] font-black text-white bg-black/45 border border-white/10 px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-lg shadow-inner tracking-widest">{app.time || format(app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date), 'HH:mm')}</span>
                       {app.status === 'confirmed' && (
-                        <span className="text-[7px] font-black bg-amber-500/20 text-amber-400 border border-amber-500/10 px-2 py-0.5 rounded-md uppercase tracking-widest">Confirmado</span>
+                        <span className="text-[6px] sm:text-[7px] font-black bg-amber-500/20 text-amber-400 border border-amber-500/10 px-1.5 py-0.5 rounded-md uppercase tracking-widest hidden sm:inline-block">Confirmado</span>
                       )}
                       {app.status === 'completed' && (
-                        <span className="text-[7px] font-black bg-green-500/20 text-green-400 border border-green-500/10 px-2 py-0.5 rounded-md uppercase tracking-wide">Finalizado</span>
+                        <span className="text-[6px] sm:text-[7px] font-black bg-green-500/20 text-green-400 border border-green-500/10 px-1.5 py-0.5 rounded-md uppercase tracking-wide hidden sm:inline-block">Finalizado</span>
                       )}
                     </div>
                   </motion.div>

@@ -1106,8 +1106,9 @@ export function BookingScreen({
           slotDate.getTime() + (customDuration || 30) * 60000,
         );
 
-        const isBusy =
-          barberAppointments.some((app) => {
+        let blockedReason: string | undefined;
+
+        const isAppBusy = barberAppointments.some((app) => {
             if (editAppointment && app.id === editAppointment.id) return false; // Ignore self when editing
             const appDate =
               app.date instanceof Timestamp
@@ -1128,23 +1129,42 @@ export function BookingScreen({
 
             const appEnd = new Date(appDate.getTime() + appDuration * 60000);
             return slotDate < appEnd && slotEnd > appDate;
-          }) ||
-          blockedTimes.some((b) => {
+          });
+
+        const isBlocked = blockedTimes.some((b) => {
             const bDate =
               b.date instanceof Timestamp
                 ? b.date.toDate()
                 : typeof b.date === "string"
                   ? parseISO(b.date)
-                  : b.date;
-            return (
-              format(bDate, "yyyy-MM-dd") ===
-                format(selectedDate, "yyyy-MM-dd") &&
-              format(bDate, "HH:mm") === time
-            );
+                  : typeof b.date.seconds === "number" 
+                    ? new Date(b.date.seconds * 1000)
+                    : new Date(b.date);
+            
+            // Check barber
+            if (b.barberId !== "all" && b.barberId !== selectedBarber) return false;
+            
+            if (format(bDate, "yyyy-MM-dd") !== format(selectedDate, "yyyy-MM-dd")) {
+              return false;
+            }
+
+            if (b.startTime && b.endTime) {
+              if (time >= b.startTime && time < b.endTime) {
+                blockedReason = b.reason;
+                return true;
+              }
+            } else {
+              if (format(bDate, "HH:mm") === time) {
+                blockedReason = b.reason;
+                return true;
+              }
+            }
+            return false;
           });
 
+        const isBusy = isAppBusy || isBlocked;
         const isPast = slotDate < new Date();
-        slots.push({ time, available: !isBusy && !isPast });
+        slots.push({ time, available: !isBusy && !isPast, blockedReason, isPast });
       }
     }
     return slots;
@@ -1787,8 +1807,8 @@ export function BookingScreen({
                             <h4 className="text-[8.5px] font-black uppercase tracking-[0.22em] text-neutral-500 flex items-center gap-1.5 pl-1">
                               <span className="text-sm">{period.icon}</span> {period.label}
                             </h4>
-                            <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
-                              {period.list.map(({ time, available }) => {
+                            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                              {period.list.map(({ time, available, blockedReason, isPast }: any) => {
                                 const isSelected = selectedTime === time;
                                 return (
                                   <motion.button
@@ -1800,15 +1820,30 @@ export function BookingScreen({
                                       setSelectedTime(time);
                                       setStep(4);
                                     }}
-                                    className={`py-3 rounded-2xl text-xs font-black transition-all border ${
+                                    className={`relative py-3 px-2 flex flex-col items-center justify-center rounded-2xl text-[10px] font-black transition-all border group ${
                                       isSelected 
                                         ? "bg-amber-500 border-amber-500 text-black shadow-lg shadow-amber-500/10" 
                                         : available 
                                           ? "bg-neutral-900 border-white/5 hover:border-white/20 hover:bg-neutral-900/80 text-white cursor-pointer" 
-                                          : "bg-neutral-900/10 border-transparent text-neutral-800 opacity-30 cursor-not-allowed"
+                                          : "bg-neutral-900/10 border-transparent text-neutral-600 opacity-60 cursor-not-allowed overflow-hidden"
                                     }`}
                                   >
-                                    {time}
+                                    <span className={available ? "text-xs" : ""}>{time}</span>
+                                    {blockedReason && !available && (
+                                      <span className="text-[7px] text-red-400 mt-1 uppercase tracking-widest text-center truncate max-w-[80px]">
+                                        {blockedReason}
+                                      </span>
+                                    )}
+                                    {!available && !blockedReason && isPast && (
+                                      <span className="text-[7px] text-neutral-700 mt-1 uppercase tracking-widest text-center">
+                                        Passou
+                                      </span>
+                                    )}
+                                    {!available && !blockedReason && !isPast && (
+                                      <span className="text-[7px] text-neutral-700 mt-1 uppercase tracking-widest text-center">
+                                        Ocupado
+                                      </span>
+                                    )}
                                   </motion.button>
                                 );
                               })}

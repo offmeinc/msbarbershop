@@ -30,11 +30,13 @@ export function BlockScreen({ onBack }: { onBack: () => void }) {
 
   // Form States
   const [lockDate, setLockDate] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
   const [lockReason, setLockReason] = useState("");
   const [blockingBarberId, setBlockingBarberId] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
-  
+
   // Tab filters
   const [activeTab, setActiveTab] = useState<"upcoming" | "past">("upcoming");
 
@@ -75,7 +77,15 @@ export function BlockScreen({ onBack }: { onBack: () => void }) {
   const handleCreateBlock = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!lockDate) {
-      alert("Selecione uma data e hora para o bloqueio!");
+      alert("Selecione uma data para o bloqueio!");
+      return;
+    }
+    if (!startTime || !endTime) {
+      alert("Selecione o horário inicial e final!");
+      return;
+    }
+    if (startTime >= endTime) {
+      alert("O horário final deve ser após o horário inicial.");
       return;
     }
 
@@ -86,7 +96,9 @@ export function BlockScreen({ onBack }: { onBack: () => void }) {
         : (barbers.find(b => b.id === blockingBarberId)?.name || "Profissional");
 
       const lockObj = {
-        date: Timestamp.fromDate(new Date(lockDate)),
+        date: Timestamp.fromDate(new Date(`${lockDate}T${startTime}:00`)),
+        startTime,
+        endTime,
         reason: lockReason.trim() || "Bloqueio administrativo 🔒",
         barberId: blockingBarberId,
         barberName: selectedBarber,
@@ -97,6 +109,8 @@ export function BlockScreen({ onBack }: { onBack: () => void }) {
       
       // Reset form fields
       setLockDate("");
+      setStartTime("");
+      setEndTime("");
       setLockReason("");
       setBlockingBarberId("all");
       
@@ -204,14 +218,38 @@ export function BlockScreen({ onBack }: { onBack: () => void }) {
             </div>
 
             <form onSubmit={handleCreateBlock} className="space-y-4 text-left">
-              {/* Date & Time Input */}
+              {/* Date Input */}
               <div className="space-y-1.5">
-                <label className="text-[9px] text-neutral-400 uppercase font-black tracking-widest block">Data e Hora do Bloqueio</label>
+                <label className="text-[9px] text-neutral-400 uppercase font-black tracking-widest block">Data do Bloqueio</label>
                 <div className="relative">
                   <input 
-                    type="datetime-local" 
+                    type="date" 
                     value={lockDate} 
                     onChange={e => setLockDate(e.target.value)} 
+                    required
+                    className="w-full bg-black/60 border border-white/10 hover:border-white/20 focus:border-amber-500 rounded-2xl p-4 text-xs text-white transition-all outline-none" 
+                  />
+                </div>
+              </div>
+
+              {/* Time Inputs */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[9px] text-neutral-400 uppercase font-black tracking-widest block">Hora Inicial</label>
+                  <input 
+                    type="time" 
+                    value={startTime} 
+                    onChange={e => setStartTime(e.target.value)} 
+                    required
+                    className="w-full bg-black/60 border border-white/10 hover:border-white/20 focus:border-amber-500 rounded-2xl p-4 text-xs text-white transition-all outline-none" 
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[9px] text-neutral-400 uppercase font-black tracking-widest block">Hora Final</label>
+                  <input 
+                    type="time" 
+                    value={endTime} 
+                    onChange={e => setEndTime(e.target.value)} 
                     required
                     className="w-full bg-black/60 border border-white/10 hover:border-white/20 focus:border-amber-500 rounded-2xl p-4 text-xs text-white transition-all outline-none" 
                   />
@@ -387,7 +425,7 @@ export function BlockScreen({ onBack }: { onBack: () => void }) {
                                 {format(dt, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                                 <span className="text-neutral-600">•</span>
                                 <Clock className="w-3.5 h-3.5 text-amber-500" />
-                                {format(dt, "HH:mm'h'")}
+                                {lock.startTime && lock.endTime ? `${lock.startTime}h - ${lock.endTime}h` : format(dt, "HH:mm'h'")}
                               </div>
                             </div>
                           </div>

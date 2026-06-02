@@ -133,6 +133,8 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
   const [isSyncing, setIsSyncing] = useState(false);
   const [blockedTimes, setBlockedTimes] = useState<any[]>([]);
   const [lockDate, setLockDate] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
   const [lockReason, setLockReason] = useState("");
   const [blockingBarberId, setBlockingBarberId] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -150,13 +152,19 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
   const handleAddLock = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!lockDate) {
-      alert("Selecione uma data e hora para o bloqueio!");
+      alert("Selecione uma data para o bloqueio!");
+      return;
+    }
+    if (!startTime || !endTime) {
+      alert("Selecione os horários inicial e final!");
       return;
     }
     const firestore = db || getFirestore();
     try {
       const lockObj = {
-        date: Timestamp.fromDate(new Date(lockDate)),
+        date: Timestamp.fromDate(new Date(`${lockDate}T${startTime}:00`)),
+        startTime,
+        endTime,
         reason: lockReason || "Bloqueio administrativo",
         barberId: blockingBarberId,
         barberName: blockingBarberId === "all" ? "Todos" : (barbers.find(b => b.id === blockingBarberId)?.name || "Profissional"),
@@ -164,6 +172,8 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
       };
       await addDoc(collection(firestore, "blocked_times"), lockObj);
       setLockDate("");
+      setStartTime("");
+      setEndTime("");
       setLockReason("");
       setBlockingBarberId("all");
       setStatusMsg("Horário bloqueado com sucesso real-time!");
@@ -1047,9 +1057,9 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
               <form onSubmit={handleAddLock} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[8px] font-black uppercase text-neutral-500 tracking-widest mb-1.5 pl-1">Data & Hora Inicial</label>
+                    <label className="block text-[8px] font-black uppercase text-neutral-500 tracking-widest mb-1.5 pl-1">Data</label>
                     <input 
-                      type="datetime-local" 
+                      type="date" 
                       value={lockDate} 
                       onChange={e => setLockDate(e.target.value)} 
                       className="w-full bg-black border border-white/10 rounded-2xl p-3 text-xs text-white uppercase tracking-wider font-extrabold outline-none focus:border-amber-500 transition-colors"
@@ -1057,7 +1067,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                     />
                   </div>
                   <div>
-                    <label className="block text-[8px] font-black uppercase text-neutral-500 tracking-widest mb-1.5 pl-1">Profissional Selecionado</label>
+                    <label className="block text-[8px] font-black uppercase text-neutral-500 tracking-widest mb-1.5 pl-1">Profissional</label>
                     <select
                       value={blockingBarberId}
                       onChange={e => setBlockingBarberId(e.target.value)}
@@ -1068,6 +1078,29 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                         <option key={b.id} value={b.id}>{b.name.toUpperCase()}</option>
                       ))}
                     </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mt-3">
+                  <div>
+                    <label className="block text-[8px] font-black uppercase text-neutral-500 tracking-widest mb-1.5 pl-1">Hora Inicial</label>
+                    <input 
+                      type="time" 
+                      value={startTime} 
+                      onChange={e => setStartTime(e.target.value)} 
+                      className="w-full bg-black border border-white/10 rounded-2xl p-3 text-xs text-white uppercase tracking-wider font-extrabold outline-none focus:border-amber-500 transition-colors"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[8px] font-black uppercase text-neutral-500 tracking-widest mb-1.5 pl-1">Hora Final</label>
+                    <input 
+                      type="time" 
+                      value={endTime} 
+                      onChange={e => setEndTime(e.target.value)} 
+                      className="w-full bg-black border border-white/10 rounded-2xl p-3 text-xs text-white uppercase tracking-wider font-extrabold outline-none focus:border-amber-500 transition-colors"
+                      required
+                    />
                   </div>
                 </div>
 

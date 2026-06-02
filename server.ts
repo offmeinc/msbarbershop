@@ -43,19 +43,26 @@ async function startServer() {
   // Custom CORS middleware to support custom domains like msbarbershop.com.br
   app.use((req, res, next) => {
     const origin = req.headers.origin;
+    console.log(`[CORS Check] Origin: ${origin}, Method: ${req.method}`);
     const allowedOrigins = [
       'https://www.msbarbershop.com.br',
       'https://msbarbershop.com.br'
     ];
     
-    if (origin && allowedOrigins.includes(origin)) {
-      res.setHeader("Access-Control-Allow-Origin", origin);
-    } else {
-      res.setHeader("Access-Control-Allow-Origin", origin || "*");
+    if (origin) {
+      if (allowedOrigins.includes(origin)) {
+        res.setHeader("Access-Control-Allow-Origin", origin);
+        res.setHeader("Access-Control-Allow-Credentials", "true");
+      } else {
+        // If not in allowed list, still allow if specific dynamic origin for dev,
+        // but be careful with credentials
+        res.setHeader("Access-Control-Allow-Origin", origin);
+      }
     }
+    
+    res.setHeader("Vary", "Origin");
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, DELETE");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
-    res.setHeader("Access-Control-Allow-Credentials", "true");
 
     if (req.method === "OPTIONS") {
       return res.sendStatus(200);
