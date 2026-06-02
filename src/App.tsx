@@ -340,6 +340,12 @@ export default function App() {
       handleFirestoreError(error, OperationType.LIST, "services");
     });
 
+    // Restore client session
+    const savedClient = localStorage.getItem('loggedInClient');
+    if (savedClient) {
+      setLoggedInClient(JSON.parse(savedClient));
+    }
+
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
       setLoading(false); // Set loading to false as soon as auth state is determined
@@ -446,6 +452,8 @@ export default function App() {
 
   const handleLogout = async () => {
     await signOut(auth);
+    setLoggedInClient(null);
+    localStorage.removeItem('loggedInClient');
     setCurrentScreen("home");
   };
 
@@ -469,7 +477,9 @@ export default function App() {
         return;
     }
     
-    setLoggedInClient({ id: docs[0].id, ...docs[0].data() });
+    const clientData = { id: docs[0].id, ...docs[0].data() };
+    setLoggedInClient(clientData);
+    localStorage.setItem('loggedInClient', JSON.stringify(clientData));
     setCurrentScreen("client-dashboard");
   };
 

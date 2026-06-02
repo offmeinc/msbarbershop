@@ -20,8 +20,8 @@ export function urlBase64ToUint8Array(base64String: string): Uint8Array {
 export function getBackendUrl(path: string): string {
   if (typeof window === "undefined") return path;
   
-  // Use VITE_BACKEND_URL if provided, otherwise default to relative path
-  const baseUrl = import.meta.env.VITE_BACKEND_URL ? import.meta.env.VITE_BACKEND_URL.replace(/\/$/, '') : '';
+  // Use VITE_BACKEND_URL if provided, otherwise default to origin
+  const baseUrl = import.meta.env.VITE_BACKEND_URL ? import.meta.env.VITE_BACKEND_URL.replace(/\/$/, '') : window.location.origin;
   const cleanPath = path.startsWith("/") ? path : `/${path}`;
   
   return `${baseUrl}${cleanPath}`;

@@ -32,7 +32,7 @@ export function HomeScreen({ services, onStartBooking }: { services: any[], onSt
             {BARBERSHOP_NAME}
           </h1>
           <p className="text-neutral-500 text-sm max-w-[280px] md:max-w-xl font-medium leading-relaxed md:mx-auto">
-            Estilo e precisão. Agende seu horário com o melhor profissional da cidade.
+            Estilo e precisão. Agende seu horário com a gente.
           </p>
         </motion.div>
         

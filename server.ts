@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
@@ -20,6 +21,14 @@ async function startServer() {
   // Support standard JSON body parsing for API routes
   app.use(express.json());
 
+  // Logging for API routes
+  app.use((req, res, next) => {
+    if (req.path.startsWith('/api/')) {
+        console.log(`[API Request] ${req.method} ${req.path}`);
+    }
+    next();
+  });
+  
   // Custom CORS middleware to support custom domains like msbarbershop.com.br
   app.use((req, res, next) => {
     const origin = req.headers.origin;
@@ -488,7 +497,7 @@ async function startServer() {
         qr_code: "00020101021226870014br.gov.bcb.pix2572em-breve-mercado-pago-completo-integrado-barbearia-prod",
         qr_code_base64: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
         payment_id: fallbackPaymentId,
-        message: "Mercado Pago offline ou credenciais inválidas. Exibindo simulador."
+        message: `Mercado Pago falhou: ${error.response?.data?.message || error.message}`
       });
     }
   });
