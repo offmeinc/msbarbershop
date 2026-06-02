@@ -140,6 +140,7 @@ import {
 } from "./lib/firebase";
 import { uploadImage } from "./lib/uploadService";
 import { getBackendUrl, urlBase64ToUint8Array } from "./lib/pushRegister";
+import { setupNativePush } from "./lib/nativePush";
 import { 
   onAuthStateChanged,
   signOut,
@@ -195,6 +196,7 @@ export default function App() {
   };
   
   useEffect(() => {
+    // 1. Web Push (PWA)
     if ('serviceWorker' in navigator && 'PushManager' in window) {
       navigator.serviceWorker.register('/sw-push.js')
         .then(async (reg) => {
@@ -210,7 +212,12 @@ export default function App() {
         })
         .catch(err => console.error('[App] SW registration failed', err));
     }
-  }, [user, loggedInClient]);
+
+    // 2. Native Push (Capacitor iOS/Android)
+    if (user) {
+      setupNativePush(user.uid, userRole).catch(console.error);
+    }
+  }, [user, loggedInClient, userRole]);
 
   const subscribeUser = async (reg: ServiceWorkerRegistration) => {
     try {
