@@ -1,69 +1,36 @@
 import { collection, addDoc, getDocs, query, where, doc, updateDoc, setDoc } from "firebase/firestore";
 import { db } from "./firebase";
-import { safeFetch } from "./api";
 
 // Helper to convert base64 VAPID key to Uint8Array
 export function urlBase64ToUint8Array(base64String: string): Uint8Array {
-  if (!base64String || typeof base64String !== 'string') {
-    console.error("[Push Register] VAPID key is missing or not a string", base64String);
-    throw new Error("VAPID public key is missing or invalid");
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/\-/g, "+").replace(/_/g, "/");
+
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
   }
-
-  // Sanitize: trim extra spaces, remove surrounding quotes often present in env vars
-  let sanitized = base64String.trim().replace(/^["']|["']$/g, "");
-  
-  // Standard Base64 vs Base64URL conversion
-  const padding = "=".repeat((4 - (sanitized.length % 4)) % 4);
-  const base64 = (sanitized + padding).replace(/-/g, "+").replace(/_/g, "/");
-
-  try {
-    const rawData = window.atob(base64);
-    const outputArray = new Uint8Array(rawData.length);
-
-    for (let i = 0; i < rawData.length; ++i) {
-      outputArray[i] = rawData.charCodeAt(i);
-    }
-    return outputArray;
-  } catch (e) {
-    console.error("[Push Register] Failed to decode base64 VAPID key. Input was:", base64String, "Sanitized base64 was:", base64);
-    throw new Error("The string did not match the expected pattern. (Invalid VAPID format)");
-  }
+  return outputArray;
 }
 
 // Dynamically resolve backend URLs to direct API requests to the active Cloud Run container
 // whenever the application is loaded on custom domains (e.g., msbarbershop.com.br)
 export function getBackendUrl(path: string): string {
   if (typeof window === "undefined") return path;
-  
-  const cleanPath = path.startsWith("/") ? path : `/${path}`;
-  
-  // 1. Try environment variable
-  const envBackendUrl = (import.meta as any).env.VITE_BACKEND_URL;
-  if (envBackendUrl && envBackendUrl.trim() !== "") {
-    const cleanBase = envBackendUrl.endsWith("/") ? envBackendUrl.slice(0, -1) : envBackendUrl;
-    return `${cleanBase}${cleanPath}`;
+  const hostname = window.location.hostname;
+  const isDefaultHost = 
+    hostname.includes("run.app") || 
+    hostname.includes("localhost") || 
+    hostname.includes("127.0.0.1") || 
+    hostname.includes("0.0.0.0");
+    
+  if (!isDefaultHost) {
+    const cleanPath = path.startsWith("/") ? path.substring(1) : path;
+    return `https://ais-pre-g75ihsxfdnknje432j7ycb-486235155545.us-east1.run.app/${cleanPath}`;
   }
-
-  // 2. Check for Capacitor/Mobile environment
-  const isCapacitor = (window as any).Capacitor !== undefined || 
-                      window.location.protocol === 'capacitor:' || 
-                      window.location.protocol === 'http-extension:';
-  
-  if (isCapacitor) {
-    // If on mobile without VITE_BACKEND_URL, relative paths will 404
-    console.warn(`[getBackendUrl] Capacitor detected. Backend calls to ${cleanPath} will likely fail without VITE_BACKEND_URL absolute URL.`);
-  }
-
-  // 3. Check for custom domain
-  const isCustomDomain = window.location.hostname !== 'localhost' && 
-                         !window.location.hostname.endsWith('.run.app') &&
-                         !window.location.hostname.includes('aistudio.google.com');
-
-  if (isCustomDomain) {
-    console.warn(`[getBackendUrl] Custom domain ${window.location.hostname} detected. If not proxying /api, set VITE_BACKEND_URL.`);
-  }
-
-  return cleanPath;
+  return path;
 }
 
 // Check compatibility
@@ -106,17 +73,17 @@ export async function setupPushSubscription(userId: string, userRole: string): P
 
     // 3. Fetch VAPID public key from Server
     console.log("[Push Register] Fetching VAPID from server...");
-    const data = await safeFetch("/api/push-config");
-    const { publicKey } = data;
+    const res = await fetch(getBackendUrl("/api/push-config"));
+    if (!res.ok) {
+      throw new Error(`Failed to fetch VAPID config: ${res.statusText}`);
+    }
+    const { publicKey } = await res.json();
     if (!publicKey) {
       throw new Error("No VAPID Public Key found in server response.");
     }
 
     // 4. Register or retrieve push subscription
     console.log("[Push Register] Subscribing via pushManager...");
-    if (!publicKey || typeof publicKey !== 'string') {
-      throw new Error("Chave VAPID inválida ou faltando.");
-    }
     const applicationServerKey = urlBase64ToUint8Array(publicKey);
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
@@ -131,9 +98,7 @@ export async function setupPushSubscription(userId: string, userRole: string): P
       throw new Error("Invalid subscription object retrieved.");
     }
 
-    // Use a safer way to generate a unique ID for the subscription that doesn't involve unsafe btoa
-    // We can use a simple hash or just a sanitized version of the endpoint
-    const endpointHash = subJson.endpoint.split("/").pop() || "sub-" + Date.now();
+    const endpointHash = btoa(subJson.endpoint).replace(/[^a-zA-Z0-9]/g, "").substring(0, 50);
 
     const subscriptionData = {
       userId,

@@ -10,14 +10,13 @@ import {
 } from "firebase/auth";
 import { 
   ChevronLeft, 
-  Loader2,
+  Camera, 
+  Loader2, 
   Plus, 
-  X,
-  Camera
+  X 
 } from "lucide-react";
 import { db } from "../../lib/firebase";
 import { toast } from "../ui/Toast";
-import { uploadImage } from "../../lib/uploadService";
 
 export function ProfileEditScreen({ user, onBack, isClient = false }: { user: any, onBack: () => void, isClient?: boolean }) {
   const [profileData, setProfileData] = useState({
@@ -100,37 +99,6 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
     setLoading(false);
   };
 
-  const handleImageUpload = async (e: ChangeEvent<HTMLInputElement>, isPortfolio: boolean = false) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (isPortfolio) {
-        setLoading(true);
-    } else {
-        setUploadingImage(true);
-    }
-    
-    try {
-      const result = await uploadImage(file);
-      if (result.success && result.data.url) {
-        if (isPortfolio) {
-            setProfileData(prev => ({ ...prev, portfolio: [...prev.portfolio, result.data.url] }));
-        } else {
-            setProfileData(prev => ({ ...prev, photoUrl: result.data.url }));
-        }
-        toast.success("Imagem carregada!");
-      } else {
-        toast.error("Erro ao fazer upload da imagem.");
-      }
-    } catch (error: any) {
-      console.error("Upload error:", error);
-      toast.error(error.message || "Erro no upload.");
-    } finally {
-      setUploadingImage(false);
-      setLoading(false);
-    }
-  };
-
   const addSpecialty = () => {
     if (newSpecialty.trim() && !profileData.specialties.includes(newSpecialty.trim())) {
       setProfileData(prev => ({
@@ -146,6 +114,51 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
       ...prev,
       specialties: prev.specialties.filter((_, i) => i !== index)
     }));
+  };
+
+  const handleImageUpload = async (e: ChangeEvent<HTMLInputElement>, isPortfolio: boolean = false) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (isPortfolio) {
+        setLoading(true); // Reuse loading for global state or add specific one
+    } else {
+        setUploadingImage(true);
+    }
+    
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      const apiKey = (import.meta as any).env.VITE_IMGBB_API_KEY;
+      if (!apiKey) {
+        toast.error("Configuração de API do ImgBB faltando. Por favor, adicione VITE_IMGBB_API_KEY no arquivo .env");
+        setUploadingImage(false);
+        setLoading(false);
+        return;
+      }
+      const response = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await response.json();
+      if (data.success) {
+        if (isPortfolio) {
+            setProfileData(prev => ({ ...prev, portfolio: [...prev.portfolio, data.data.url] }));
+        } else {
+            setProfileData(prev => ({ ...prev, photoUrl: data.data.url }));
+        }
+        toast.success("Imagem carregada!");
+      } else {
+        toast.error("Erro ao fazer upload da imagem.");
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast.error("Erro na conexão com ImgBB.");
+    } finally {
+      setUploadingImage(false);
+      setLoading(false);
+    }
   };
 
   const removePortfolioImage = (index: number) => {
@@ -184,7 +197,7 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
                 className="w-full h-full object-cover" 
               />
             </div>
-            <div className="absolute -bottom-1 -right-1 bg-amber-500 w-8 h-8 rounded-xl flex items-center justify-center text-black shadow-lg">
+            <div className="absolute -bottom-2 -right-2 bg-amber-500 w-8 h-8 rounded-xl flex items-center justify-center text-black shadow-lg">
               <Camera className="w-4 h-4" />
             </div>
           </div>
@@ -193,7 +206,7 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
             <div className="flex gap-4">
               <label className="flex-1 cursor-pointer bg-neutral-900 border border-white/5 rounded-2xl p-4 flex items-center justify-between hover:border-amber-500 transition-all group">
                 <span className="text-sm text-neutral-400 group-hover:text-white transition-colors">
-                  {uploadingImage ? 'Enviando...' : (profileData.photoUrl ? 'Trocar imagem atual' : 'Selecionar foto')}
+                  {uploadingImage ? 'Enviando para o servidor...' : (profileData.photoUrl ? 'Trocar imagem atual' : 'Selecionar foto de perfil')}
                 </span>
                 <div className="bg-amber-500 text-black px-4 py-2 rounded-xl font-bold text-[10px] uppercase flex items-center gap-2">
                   {uploadingImage ? <Loader2 className="w-3 h-3 animate-spin" /> : <Camera className="w-3 h-3" />}
@@ -208,7 +221,7 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
                 />
               </label>
             </div>
-            <p className="text-[9px] text-neutral-600 mt-2 uppercase tracking-tight">Otimize seu perfil com uma foto profissional.</p>
+            <p className="text-[9px] text-neutral-600 mt-2 uppercase tracking-tight">A imagem será processada e otimizada automaticamente.</p>
           </div>
         </div>
 
@@ -282,7 +295,7 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
                   <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500 group-hover:scale-110 transition-transform">
                     <Plus className="w-6 h-6" />
                   </div>
-                  <span className="text-[9px] font-black uppercase text-neutral-500">Adicionar</span>
+                  <span className="text-[9px] font-black uppercase text-neutral-500">Adicionar Foto</span>
                   <input 
                     type="file" 
                     accept="image/*" 

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { collection, query, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
 import { ArrowLeft, Package, Plus, Search, Edit2, Trash2 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 
 export function InventoryScreen({ onBack }: { onBack: () => void }) {
   const [products, setProducts] = useState<any[]>([]);

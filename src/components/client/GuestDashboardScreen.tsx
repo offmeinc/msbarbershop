@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import { Loader2, Ticket, Scissors, Calendar, Clock, ChevronRight } from "lucide-react";
 import { collection, query, where, onSnapshot, Timestamp } from "firebase/firestore";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
@@ -49,7 +49,7 @@ export function GuestDashboardScreen({ loginCode, onBack }: { loginCode: string,
                           <div className="flex items-center gap-4">
                               <div className="w-12 h-12 bg-neutral-900 rounded-2xl overflow-hidden flex items-center justify-center border border-white/5">
                                 <img 
-                                  src="/logo.png" 
+                                  src="https://i.ibb.co/LXjzGkFs/cd17f19f-71a4-453e-b9d7-f129a7ecfb2f.jpg" 
                                   alt="Logo"
                                   className="w-full h-full object-cover"
                                   referrerPolicy="no-referrer"

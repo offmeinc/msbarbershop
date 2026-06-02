@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import { 
   format, 
   parseISO,
@@ -48,7 +48,6 @@ import {
 } from "lucide-react";
 import { db, handleFirestoreError, OperationType, safeStringify } from "../../lib/firebase";
 import { getBackendUrl } from "../../lib/pushRegister";
-import { safeFetch } from "../../lib/api";
 import { QRCodeCanvas } from "qrcode.react";
 import { MoreOptionsScreen } from "../common/MoreOptionsScreen";
 import { BookingScreen } from "./BookingScreen";
@@ -135,7 +134,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
     setRechargeStep("pix");
     
     try {
-      const data = await safeFetch("/api/payments/mercado-pago/create-payment", {
+      const res = await fetch(getBackendUrl("/api/payments/mercado-pago/create-payment"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -148,6 +147,10 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
           appointmentId: "wallet-topup-" + (user?.uid || user?.id || "anon") + "-" + Date.now()
         })
       });
+      if (!res.ok) {
+        throw new Error("Erro de processamento da API de Recarga");
+      }
+      const data = await res.json();
       if (data.success) {
         setRechargeMpData(data);
       } else {
@@ -208,9 +211,12 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
     if (isRecharging && rechargeStep === "pix" && rechargeMpData?.payment_id && !rechargeSuccess) {
       const interval = setInterval(async () => {
         try {
-          const data = await safeFetch(`/api/payments/mercado-pago/status/${rechargeMpData.payment_id}`);
-          if (data.status === "approved" || data.status === "completed") {
-            setRechargeSuccess(true);
+          const res = await fetch(getBackendUrl(`/api/payments/mercado-pago/status/${rechargeMpData.payment_id}`));
+          if (res.ok) {
+            const data = await res.json();
+            if (data.status === "approved" || data.status === "completed") {
+              setRechargeSuccess(true);
+            }
           }
         } catch (e) {
           console.error("Erro ao verificar status da recarga:", e);
@@ -295,7 +301,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
     if (!confirm("Deseja realmente cancelar este agendamento?")) return;
     
     try {
-      const data = await safeFetch("/api/appointments/cancel", {
+      const res = await fetch(getBackendUrl("/api/appointments/cancel"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: safeStringify({
@@ -304,6 +310,12 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
         })
       });
 
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Erro ao cancelar agendamento");
+      }
+
+      const data = await res.json();
       if (data.refundedAmount > 0) {
         toast.success(`Cancelado! R$ ${data.refundedAmount.toFixed(2)} foram devolvidos à sua carteira.`);
       } else {

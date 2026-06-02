@@ -4,7 +4,7 @@ const ASSETS_TO_CACHE = [
   "/",
   "/index.html",
   "/manifest.webmanifest",
-  "/logo.png"
+  "https://i.ibb.co/LXjzGkFs/cd17f19f-71a4-453e-b9d7-f129a7ecfb2f.jpg"
 ];
 
 // 1. Install Event (Precache essential offline materials)
@@ -92,8 +92,8 @@ self.addEventListener("push", function (event) {
   const title = data.title || "MS BARBER SHOP 💈";
   const options = {
     body: data.body || "Você tem um novo aviso sobre seu agendamento!",
-    icon: data.icon || "/logo.png",
-    badge: data.badge || "/logo.png",
+    icon: data.icon || "https://i.ibb.co/LXjzGkFs/cd17f19f-71a4-453e-b9d7-f129a7ecfb2f.jpg",
+    badge: data.badge || "https://i.ibb.co/LXjzGkFs/cd17f19f-71a4-453e-b9d7-f129a7ecfb2f.jpg",
     data: {
       url: data.url || "/"
     },

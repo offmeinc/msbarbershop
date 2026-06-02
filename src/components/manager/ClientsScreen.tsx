@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { Search, Loader2, ChevronRight, User } from "lucide-react";
 import { collection, query, where, limit, onSnapshot } from "firebase/firestore";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";

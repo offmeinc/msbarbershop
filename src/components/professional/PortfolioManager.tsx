@@ -6,18 +6,18 @@ import {
   Trash2, 
   ArrowLeft, 
   Image as ImageIcon, 
+  Camera, 
+  Upload, 
+  Loader2, 
   Sparkles, 
+  AlertCircle,
   X,
   Search,
   Check,
   User,
-  Scissors,
-  Loader2,
-  Camera,
-  Upload,
-  AlertCircle
+  Scissors
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import { uploadImage } from "../../lib/uploadService";
 
 export function PortfolioManager({ onBack }: { onBack: () => void }) {
@@ -31,7 +31,7 @@ export function PortfolioManager({ onBack }: { onBack: () => void }) {
   const [dragActive, setDragActive] = useState(false);
   const [uploadError, setUploadError] = useState("");
 
-  // States
+  // Client link states
   const [clients, setClients] = useState<any[]>([]);
   const [clientSearch, setClientSearch] = useState("");
   const [selectedClient, setSelectedClient] = useState<any | null>(null);
@@ -41,7 +41,6 @@ export function PortfolioManager({ onBack }: { onBack: () => void }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
-  // Sync / fetch clients
   useEffect(() => {
     const q = query(collection(db, "portfolio"), orderBy("createdAt", "desc"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -63,7 +62,7 @@ export function PortfolioManager({ onBack }: { onBack: () => void }) {
     return () => unsubscribe();
   }, []);
 
-  // Centralized file processing & Cloudinary upload handler
+  // Centralized file processing & ImgBB upload handler
   const processAndUploadFile = async (file: File) => {
     if (!file) return;
     if (!file.type.startsWith("image/")) {
@@ -83,7 +82,7 @@ export function PortfolioManager({ onBack }: { onBack: () => void }) {
       }
     } catch (err: any) {
       console.error("[Upload Error]", err);
-      setUploadError(err?.message || "Não foi possível enviar a foto.");
+      setUploadError(err?.message || "Não foi possível enviar a foto. Verifique a configuração da chave ImgBB.");
     } finally {
       setUploading(false);
     }
@@ -96,6 +95,7 @@ export function PortfolioManager({ onBack }: { onBack: () => void }) {
     }
   };
 
+  // Drag and drop events
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -258,17 +258,6 @@ export function PortfolioManager({ onBack }: { onBack: () => void }) {
                 </motion.div>
               )}
             </AnimatePresence>
-
-            <div className="space-y-1.5">
-                <label className="text-[9px] font-black uppercase text-neutral-600 tracking-widest px-2">URL da Imagem (Opcional)</label>
-                <input 
-                    type="text" 
-                    placeholder="Ou cole o link da imagem aqui..." 
-                    value={imageUrl}
-                    onChange={e => setImageUrl(e.target.value)}
-                    className="w-full bg-black border border-white/5 rounded-2xl p-4 text-xs font-bold tracking-widest focus:border-amber-500 transition-colors placeholder:text-neutral-700"
-                />
-            </div>
 
             {/* Premium Client Selector */}
             {selectedClient ? (

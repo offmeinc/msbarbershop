@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import { 
   TrendingUp, 
   Users, 
@@ -59,7 +59,6 @@ import {
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
 import { CalendarWidget, AppointmentModal } from "../CalendarWidget";
 import { ServicesManagement, CollaboratorsManager, WorkingHoursManager } from "./ManagementScreens";
-import { PortfolioManager } from "../professional/PortfolioManager";
 import { ReviewModal } from "../common/ReviewModal";
 import { setupPushSubscription, getNotificationPermissionState, queryNotificationSupport } from "../../lib/pushRegister";
 
@@ -109,13 +108,13 @@ export function EarningsDashboard({ appointments, services }: { appointments: an
   );
 }
 
-export function DashboardScreen({ user, role, services, dashboardView, onBack, onNewBooking, onEditBooking }: { user: any, role: string, services: any[], dashboardView?: "agenda" | "list" | "calendar" | "services" | "hours" | "collaborators" | "earnings" | "portfolio", onBack: () => void, onNewBooking?: () => void, onEditBooking?: (app: any) => void }) {
+export function DashboardScreen({ user, role, services, dashboardView, onBack, onNewBooking, onEditBooking }: { user: any, role: string, services: any[], dashboardView?: "agenda" | "list" | "calendar" | "services" | "hours" | "collaborators" | "earnings", onBack: () => void, onNewBooking?: () => void, onEditBooking?: (app: any) => void }) {
   const [pushPermission, setPushPermission] = useState<NotificationPermission>(getNotificationPermissionState());
   const [appointments, setAppointments] = useState<any[]>([]);
   const [barbers, setBarbers] = useState<any[]>([]);
   const [selectedBarberId, setSelectedBarberId] = useState<string>("all");
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [currentView, setCurrentView] = useState<"agenda" | "list" | "services" | "hours" | "collaborators" | "earnings" | "portfolio">(dashboardView || (role === 'client' ? 'list' : 'agenda'));
+  const [currentView, setCurrentView] = useState<"agenda" | "list" | "services" | "hours" | "collaborators" | "earnings">(dashboardView || (role === 'client' ? 'list' : 'agenda'));
   const [agendaMode, setAgendaMode] = useState<"day" | "week" | "month">("day");
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "confirmed" | "completed" | "cancelled">("all");
@@ -252,7 +251,6 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
     else if (dashboardView === 'hours') setCurrentView('hours');
     else if (dashboardView === 'collaborators') setCurrentView('collaborators');
     else if (dashboardView === 'earnings') setCurrentView('earnings');
-    else if (dashboardView === 'portfolio') setCurrentView('portfolio');
   }, [dashboardView]);
 
   useEffect(() => {
@@ -356,7 +354,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
           <div className="flex items-center gap-3 text-neutral-500">
              <div className="w-8 h-8 rounded-lg overflow-hidden border border-white/5 cursor-pointer hover:border-amber-500 transition-all">
                <img 
-                 src="/logo.png" 
+                 src="https://i.ibb.co/LXjzGkFs/cd17f19f-71a4-453e-b9d7-f129a7ecfb2f.jpg" 
                  alt="Logo"
                  className="w-full h-full object-cover"
                  referrerPolicy="no-referrer"
@@ -832,7 +830,6 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
               {currentView === 'services' && <ServicesManagement services={services} />}
               {currentView === 'collaborators' && <CollaboratorsManager />}
               {currentView === 'hours' && <WorkingHoursManager />}
-              {currentView === 'portfolio' && <PortfolioManager onBack={() => setCurrentView('list')} />}
               {reviewAppointment && <ReviewModal appointment={reviewAppointment} onClose={() => setReviewAppointment(null)} />}
           </div>
       )}

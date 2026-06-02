@@ -2,9 +2,9 @@ import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
-import axios from "axios";
 import multer from "multer";
-import { v2 as cloudinary } from "cloudinary";
+import axios from "axios";
+import FormData from "form-data";
 import { initVapid, startAppointmentsListener, sendPushNotification, sendNotificationToCollaborators } from "./src/server/pushNotificationService";
 import { startAppointmentAutoUpdater } from "./src/server/appointmentAutoUpdater";
 import { db } from "./src/lib/firebase";
@@ -17,22 +17,8 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
   
-  // Cloudinary Configuration
-  cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-    secure: true
-  });
-
-  const upload = multer({ 
-    storage: multer.memoryStorage(),
-    limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
-  });
-  
   // Support standard JSON body parsing for API routes
-  app.use(express.json({ limit: '50mb' }));
-  app.use(express.urlencoded({ limit: '50mb', extended: true }));
+  app.use(express.json());
 
   // Custom CORS middleware to support custom domains like msbarbershop.com.br
   app.use((req, res, next) => {
@@ -42,10 +28,9 @@ async function startServer() {
     } else {
       res.setHeader("Access-Control-Allow-Origin", "*");
     }
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, DELETE, PATCH");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, DELETE");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
     res.setHeader("Access-Control-Allow-Credentials", "true");
-    res.setHeader("Access-Control-Max-Age", "86400"); // 24 hours
 
     if (req.method === "OPTIONS") {
       return res.sendStatus(200);
@@ -58,84 +43,7 @@ async function startServer() {
   startAppointmentsListener();
   startAppointmentAutoUpdater();
   
-  // Fallback in-memory storage for images if Cloudinary fails or is unconfigured
-  const inMemoryImages = new Map<string, { buffer: Buffer, mimeType: string }>();
-
-  // Helper route to serve in-memory images
-  app.get("/api/images/:id", (req, res) => {
-    const img = inMemoryImages.get(req.params.id);
-    if (!img) return res.status(404).send("Not found");
-    res.setHeader("Content-Type", img.mimeType);
-    res.send(img.buffer);
-  });
-
-  // API Route for upload to Cloudinary
-  app.post("/api/upload", upload.single("image"), async (req, res) => {
-    try {
-      if (!req.file) {
-        return res.status(400).json({ error: "Nenhum arquivo enviado" });
-      }
-
-      // Check if Cloudinary is fully configured
-      const hasCloudinary = process.env.CLOUDINARY_CLOUD_NAME && 
-                           process.env.CLOUDINARY_API_KEY && 
-                           process.env.CLOUDINARY_API_SECRET;
-
-      if (!hasCloudinary) {
-        console.warn("[Upload] Cloudinary credentials missing. Falling back to in-memory mock storage.");
-        const fileId = `mock-${Date.now()}-${Math.random().toString(36).substring(2)}`;
-        inMemoryImages.set(fileId, { buffer: req.file.buffer, mimeType: req.file.mimetype });
-        
-        return res.json({
-          success: true,
-          data: {
-            url: `/api/images/${fileId}`,
-            public_id: fileId,
-          }
-        });
-      }
-
-      // Upload to Cloudinary using stream for better performance with buffers
-      const uploadStream = cloudinary.uploader.upload_stream(
-        {
-          folder: "msbarbershop",
-          resource_type: "auto",
-        },
-        (error, result) => {
-          if (error) {
-            // Fallback gracefully on Cloudinary error (e.g. invalid signature)
-            // Silently fall back to in-memory mock storage if Cloudinary fails
-            const fileId = `mock-${Date.now()}-${Math.random().toString(36).substring(2)}`;
-            if (req.file) {
-              inMemoryImages.set(fileId, { buffer: req.file.buffer, mimeType: req.file.mimetype });
-            }
-            
-            return res.json({
-              success: true,
-              isMock: true,
-              errorWarning: error.message,
-              data: {
-                url: `/api/images/${fileId}`,
-                public_id: fileId,
-              }
-            });
-          }
-          res.json({
-            success: true,
-            data: {
-              url: result?.secure_url,
-              public_id: result?.public_id,
-            }
-          });
-        }
-      );
-
-      uploadStream.end(req.file.buffer);
-    } catch (err: any) {
-      console.error("[Upload Route] Error:", err.message);
-      res.status(500).json({ error: "Falha no upload: " + err.message });
-    }
-  });
+  const upload = multer({ storage: multer.memoryStorage() });
 
   // API Route for Push Config (Retrieve VAPID PublicKey)
   app.get("/api/push-config", (req, res) => {
@@ -186,6 +94,34 @@ async function startServer() {
         console.error("[Push Test Route] Error delivering delayed push:", err.message);
       }
     }, delayMs);
+  });
+
+  // API Route for ImgBB Upload
+  app.post("/api/upload", upload.single("image"), async (req, res) => {
+    try {
+      const apiKey = process.env.IMGBB_API_KEY;
+      if (!apiKey) {
+        throw new Error("IMGBB_API_KEY is not configured");
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ error: "No image provided" });
+      }
+
+      const formData = new FormData();
+      formData.append("image", req.file.buffer.toString("base64"));
+
+      const response = await axios.post(`https://api.imgbb.com/1/upload?key=${apiKey}`, formData, {
+        headers: {
+          ...formData.getHeaders(),
+        },
+      });
+
+      res.json(response.data);
+    } catch (error: any) {
+      console.error("Upload error:", error.response?.data || error.message);
+      res.status(500).json({ error: "Failed to upload image" });
+    }
   });
 
   // Helper to process approved payments and perform wallet recharges or appointment confirmations

@@ -1,5 +1,5 @@
 import { useState, useEffect, FormEvent } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import { 
   Plus, 
   Loader2, 
@@ -29,14 +29,12 @@ import {
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { auth, db, handleFirestoreError, OperationType } from "../../lib/firebase";
 import { toast } from "../ui/Toast";
-import { ImageUpload } from "../common/ImageUpload";
 
 export function CollaboratorsManager() {
   const [barbers, setBarbers] = useState<any[]>([]);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [photoURL, setPhotoURL] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -54,22 +52,17 @@ export function CollaboratorsManager() {
     setLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      await updateProfile(userCredential.user, { 
-        displayName: name,
-        photoURL: photoURL
-      });
+      await updateProfile(userCredential.user, { displayName: name });
       await setDoc(doc(db, "users", userCredential.user.uid), {
         uid: userCredential.user.uid,
         name: name,
         email: email,
         role: 'barber',
-        photoURL: photoURL,
         createdAt: Timestamp.now(),
       });
       setName("");
       setEmail("");
       setPassword("");
-      setPhotoURL("");
       toast.success("Colaborador criado com sucesso!");
     } catch (error) {
       console.error(error);
@@ -92,21 +85,13 @@ export function CollaboratorsManager() {
 
   return (
     <div className="space-y-8 max-w-2xl mx-auto pb-20">
-      <form onSubmit={handleAddBarber} className="bg-neutral-900 p-8 rounded-[2rem] border border-white/5 shadow-2xl space-y-6">
-        <div className="flex items-center gap-3 mb-2">
+      <form onSubmit={handleAddBarber} className="bg-neutral-900 p-8 rounded-[2rem] border border-white/5 shadow-2xl space-y-4">
+        <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center text-black shadow-[0_0_20px_rgba(245,158,11,0.2)]">
                 <User className="w-5 h-5" />
             </div>
             <h4 className="text-xl font-bold text-white">Novo Colaborador</h4>
         </div>
-
-        <ImageUpload 
-          onUpload={setPhotoURL} 
-          currentUrl={photoURL} 
-          label="Foto do Profissional"
-          folder="barbers"
-        />
-
         <div className="space-y-3">
             <input type="text" placeholder="Nome completo" className="w-full bg-black border border-white/10 p-4 rounded-2xl text-white outline-none focus:border-amber-500 transition-all font-bold" value={name} onChange={(e) => setName(e.target.value)} required />
             <input type="email" placeholder="E-mail profissional" className="w-full bg-black border border-white/10 p-4 rounded-2xl text-white outline-none focus:border-amber-500 transition-all font-bold" value={email} onChange={(e) => setEmail(e.target.value)} required />
@@ -456,7 +441,7 @@ export function ServicesManagement({ services }: { services: any[] }) {
           <div className="col-span-full py-20 flex flex-col items-center justify-center opacity-30 border-2 border-dashed border-white/10 rounded-[3rem]">
             <div className="w-16 h-16 mb-4 rounded-3xl overflow-hidden border border-white/5 opacity-50 grayscale">
               <img 
-                src="/logo.png" 
+                src="https://i.ibb.co/LXjzGkFs/cd17f19f-71a4-453e-b9d7-f129a7ecfb2f.jpg" 
                 alt="Logo"
                 className="w-full h-full object-cover"
                 referrerPolicy="no-referrer"
@@ -477,7 +462,7 @@ export function ServicesManagement({ services }: { services: any[] }) {
                   service.active === false ? "opacity-50 grayscale" : ""
                 }`}>
                   <img 
-                    src="/logo.png" 
+                    src="https://i.ibb.co/LXjzGkFs/cd17f19f-71a4-453e-b9d7-f129a7ecfb2f.jpg" 
                     alt="Logo"
                     className="w-full h-full object-cover"
                     referrerPolicy="no-referrer"
