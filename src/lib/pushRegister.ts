@@ -67,7 +67,7 @@ export async function setupPushSubscription(userId: string, userRole: string): P
     const registration = await navigator.serviceWorker.register("/sw-push.js", {
       scope: "/"
     });
-    console.log("[Push Register] Service Worker registered:", registration);
+    console.log("[Push Register] Service Worker registered. Scope:", registration.scope);
 
     // 3. Fetch VAPID public key from Server
     console.log("[Push Register] Fetching VAPID from server...");
@@ -88,7 +88,7 @@ export async function setupPushSubscription(userId: string, userRole: string): P
       applicationServerKey
     });
 
-    console.log("[Push Register] Subscribed successfully!", subscription);
+    console.log("[Push Register] Subscribed successfully. Endpoint:", subscription.endpoint);
 
     // 5. Save/Sync this subscription payload in Firestore
     const subJson = subscription.toJSON();

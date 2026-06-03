@@ -61,30 +61,31 @@ import {
 } from "lucide-react";
 import { useState, useEffect, useRef, useMemo, ChangeEvent, FormEvent, lazy, Suspense, useCallback } from "react";
 
-// --- Custom Hook for Hash-based Routing ---
-function useHashNavigation<T extends string>(defaultScreen: T) {
-  const getScreenFromHash = (): T => {
+// --- Custom Hook for Path-based Routing ---
+function usePathNavigation<T extends string>(defaultScreen: T) {
+  const getScreenFromPath = (): T => {
     if (typeof window === "undefined") return defaultScreen;
-    const hash = window.location.hash.replace("#/", "");
-    return (hash as T) || defaultScreen;
+    const path = window.location.pathname.replace("/", "");
+    return (path as T) || defaultScreen;
   };
 
-  const [currentScreen, _setCurrentScreen] = useState<T>(getScreenFromHash);
+  const [currentScreen, _setCurrentScreen] = useState<T>(getScreenFromPath);
 
   useEffect(() => {
-    const handleHashChange = () => {
-      _setCurrentScreen(getScreenFromHash());
+    const handlePopState = () => {
+      _setCurrentScreen(getScreenFromPath());
     };
-    window.addEventListener("hashchange", handleHashChange);
-    return () => window.removeEventListener("hashchange", handleHashChange);
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
   }, [defaultScreen]);
 
   const setCurrentScreen = useCallback((screen: T) => {
     if (screen === defaultScreen) {
-      window.history.pushState(null, "", window.location.pathname + window.location.search);
+      window.history.pushState(null, "", "/");
       _setCurrentScreen(screen);
     } else {
-      window.location.hash = `/${screen}`;
+      window.history.pushState(null, "", `/${screen}`);
+      _setCurrentScreen(screen);
     }
   }, [defaultScreen]);
 
@@ -192,7 +193,7 @@ export default function App() {
   const [clientLoginCode, setClientLoginCode] = useState<string>("");
   const [loggedInClient, setLoggedInClient] = useState<any>(null);
   const [userRole, setUserRole] = useState<string>("client");
-  const { currentScreen, setCurrentScreen } = useHashNavigation<Screen>("home");
+  const { currentScreen, setCurrentScreen } = usePathNavigation<Screen>("home");
   const { scrollY } = useScroll();
   const [hidden, setHidden] = useState(false);
   const validScreens = ["home", "booking", "agenda", "clients", "client-details", "more", "login", "collaborators", "services", "client-login", "client-dashboard", "earnings", "promotions", "portfolio", "professional-chat", "barber-management", "checkout"];
@@ -234,7 +235,7 @@ export default function App() {
     if ('serviceWorker' in navigator && 'PushManager' in window) {
       navigator.serviceWorker.register('/sw-push.js')
         .then(async (reg) => {
-          console.log('[App] SW registered', reg);
+          console.log('[App] SW registered with scope:', reg.scope);
           if (Notification.permission === 'granted') {
              subscribeUser(reg);
           } else if (Notification.permission !== 'denied') {
