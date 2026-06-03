@@ -59,7 +59,38 @@ import {
   Download,
   LayoutDashboard
 } from "lucide-react";
-import { useState, useEffect, useRef, useMemo, ChangeEvent, FormEvent, lazy, Suspense } from "react";
+import { useState, useEffect, useRef, useMemo, ChangeEvent, FormEvent, lazy, Suspense, useCallback } from "react";
+
+// --- Custom Hook for Hash-based Routing ---
+function useHashNavigation<T extends string>(defaultScreen: T) {
+  const getScreenFromHash = (): T => {
+    if (typeof window === "undefined") return defaultScreen;
+    const hash = window.location.hash.replace("#/", "");
+    return (hash as T) || defaultScreen;
+  };
+
+  const [currentScreen, _setCurrentScreen] = useState<T>(getScreenFromHash);
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      _setCurrentScreen(getScreenFromHash());
+    };
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, [defaultScreen]);
+
+  const setCurrentScreen = useCallback((screen: T) => {
+    if (screen === defaultScreen) {
+      window.history.pushState(null, "", window.location.pathname + window.location.search);
+      _setCurrentScreen(screen);
+    } else {
+      window.location.hash = `/${screen}`;
+    }
+  }, [defaultScreen]);
+
+  return { currentScreen, setCurrentScreen };
+}
+
 import { BrandLogo } from "./components/common/BrandLogo";
 import { Toaster, toast } from "./components/ui/Toast";
 import { NotificationModal } from "./components/common/NotificationModal";
@@ -161,9 +192,11 @@ export default function App() {
   const [clientLoginCode, setClientLoginCode] = useState<string>("");
   const [loggedInClient, setLoggedInClient] = useState<any>(null);
   const [userRole, setUserRole] = useState<string>("client");
-  const [currentScreen, setCurrentScreen] = useState<Screen>("home");
+  const { currentScreen, setCurrentScreen } = useHashNavigation<Screen>("home");
   const { scrollY } = useScroll();
   const [hidden, setHidden] = useState(false);
+  const validScreens = ["home", "booking", "agenda", "clients", "client-details", "more", "login", "collaborators", "services", "client-login", "client-dashboard", "earnings", "promotions", "portfolio", "professional-chat", "barber-management", "checkout"];
+  const displayScreen = validScreens.includes(currentScreen as string) ? currentScreen : "home";
 
   useMotionValueEvent(scrollY, "change", (latest) => {
     const previous = scrollY.getPrevious() ?? 0;
@@ -579,10 +612,10 @@ export default function App() {
           </div>
 
           <div className="hidden md:flex items-center gap-8 text-sm font-medium uppercase tracking-widest text-neutral-400">
-            {currentScreen !== "home" && (
+            {displayScreen !== "home" && (
               <button onClick={() => setCurrentScreen("home")} className="hover:text-amber-500 transition-colors">Início</button>
             )}
-            {currentScreen === "home" && (
+            {displayScreen === "home" && (
               <>
                 <a href="#inicio" className="hover:text-amber-500 transition-colors">Início</a>
                 <a href="#servicos" className="hover:text-amber-500 transition-colors">Serviços</a>
@@ -597,7 +630,7 @@ export default function App() {
                     setDashboardView("calendar");
                     setCurrentScreen("agenda");
                   }}
-                  className={`hover:text-amber-500 transition-colors flex items-center gap-2 uppercase text-[10px] font-black tracking-widest leading-none ${currentScreen === "agenda" && dashboardView === "calendar" ? "text-amber-500" : "text-neutral-400"}`}
+                  className={`hover:text-amber-500 transition-colors flex items-center gap-2 uppercase text-[10px] font-black tracking-widest leading-none ${displayScreen === "agenda" && dashboardView === "calendar" ? "text-amber-500" : "text-neutral-400"}`}
                 >
                   Agenda
                 </button>
@@ -607,7 +640,7 @@ export default function App() {
                       setDashboardView("list");
                       setCurrentScreen("agenda");
                     }}
-                    className={`hover:text-amber-500 transition-colors flex items-center gap-2 uppercase text-[10px] font-black tracking-widest leading-none ${currentScreen === "agenda" && dashboardView === "list" ? "text-amber-500" : "text-neutral-400"}`}
+                    className={`hover:text-amber-500 transition-colors flex items-center gap-2 uppercase text-[10px] font-black tracking-widest leading-none ${displayScreen === "agenda" && dashboardView === "list" ? "text-amber-500" : "text-neutral-400"}`}
                   >
                     Atendimentos
                   </button>
@@ -617,14 +650,14 @@ export default function App() {
                     {userRole === "manager" && (
                         <button 
                           onClick={() => setCurrentScreen("collaborators")}
-                          className={`hover:text-white transition-colors flex items-center gap-2 ${currentScreen === "collaborators" ? "text-amber-500" : ""}`}
+                          className={`hover:text-white transition-colors flex items-center gap-2 ${displayScreen === "collaborators" ? "text-amber-500" : ""}`}
                         >
                           Equipe
                         </button>
                     )}
                     <button 
                       onClick={() => setCurrentScreen("services")}
-                      className={`hover:text-white transition-colors flex items-center gap-2 ${currentScreen === "services" ? "text-amber-500" : ""}`}
+                      className={`hover:text-white transition-colors flex items-center gap-2 ${displayScreen === "services" ? "text-amber-500" : ""}`}
                     >
                       Serviços
                     </button>
@@ -719,8 +752,8 @@ export default function App() {
                   )}
 
                   <button 
-                    onClick={() => setCurrentScreen(currentScreen === "more" ? "home" : "more")} 
-                    className={`p-2 rounded-lg transition-all ${currentScreen === 'more' ? 'bg-amber-500 text-black' : 'bg-white/5 text-neutral-400 hover:bg-amber-500/20 hover:text-amber-500'}`}
+                    onClick={() => setCurrentScreen(displayScreen === "more" ? "home" : "more")} 
+                    className={`p-2 rounded-lg transition-all ${displayScreen === 'more' ? 'bg-amber-500 text-black' : 'bg-white/5 text-neutral-400 hover:bg-amber-500/20 hover:text-amber-500'}`}
                   >
                     <Settings className="w-4 h-4" />
                   </button>
@@ -730,7 +763,7 @@ export default function App() {
               <div className="flex items-center gap-6">
                 <button 
                   onClick={handleLogout}
-                  className={`hover:text-amber-500 transition-colors flex items-center gap-2 uppercase text-[10px] font-black tracking-widest leading-none ${currentScreen === "client-dashboard" ? "text-amber-500" : "text-neutral-400"}`}
+                  className={`hover:text-amber-500 transition-colors flex items-center gap-2 uppercase text-[10px] font-black tracking-widest leading-none ${displayScreen === "client-dashboard" ? "text-amber-500" : "text-neutral-400"}`}
                 >
                   Sair
                 </button>
@@ -789,7 +822,7 @@ export default function App() {
       <main className="pt-[calc(5rem+env(safe-area-inset-top))] max-w-7xl mx-auto px-4 md:px-6 pb-12">
         <Suspense fallback={<LoadingFallback />}>
           <AnimatePresence mode="wait">
-            {currentScreen === "home" && (
+            {displayScreen === "home" && (
               (['manager', 'barber'].includes(userRole)) 
               ? <ProfessionalHome 
                   user={user} 
@@ -803,20 +836,20 @@ export default function App() {
                 /> 
               : <HomeScreen services={services} onStartBooking={() => setCurrentScreen("booking")} />
             )}
-            {currentScreen === "login" && <CollaboratorLoginScreen onLogin={handleLogin} setCurrentScreen={setCurrentScreen} setRequestedRole={setRequestedRole} />}
-            {currentScreen === "client-login" && <ClientPortalScreen onLogin={handleClientLogin} onForgotPassword={handleForgotPassword} onBack={() => setCurrentScreen("home")} />}
-            {currentScreen === "client-dashboard" && <ClientDashboardScreen user={loggedInClient} onBack={() => setCurrentScreen("home")} />}
-            {currentScreen === "booking" && <BookingScreen user={user} role={userRole} services={services} onBack={() => { setCurrentScreen("home"); setAppointmentToEdit(null); setClientToSchedule(null); }} editAppointment={appointmentToEdit} initialClient={clientToSchedule} />}
-            {currentScreen === "agenda" && <DashboardScreen user={user} role={userRole} services={services} dashboardView={dashboardView} onBack={() => setCurrentScreen("home")} onNewBooking={() => setCurrentScreen("booking")} onEditBooking={(app) => { setAppointmentToEdit(app); setCurrentScreen("booking"); }} />}
-            {currentScreen === "collaborators" && <DashboardScreen user={user} role={userRole} services={services} dashboardView="collaborators" onBack={() => setCurrentScreen("home")} onNewBooking={() => setCurrentScreen("booking")} onEditBooking={(app) => { setAppointmentToEdit(app); setCurrentScreen("booking"); }} />}
-            {currentScreen === "services" && <DashboardScreen user={user} role={userRole} services={services} dashboardView="services" onBack={() => setCurrentScreen("home")} onNewBooking={() => setCurrentScreen("booking")} onEditBooking={(app) => { setAppointmentToEdit(app); setCurrentScreen("booking"); }} />}
-            {currentScreen === "earnings" && <EarningsScreen onBack={() => setCurrentScreen("home")} />}
-            {currentScreen === "promotions" && <PromotionsManager onBack={() => setCurrentScreen("home")} />}
-            {currentScreen === "clients" && <ClientsScreen onBack={() => setCurrentScreen("home")} onScheduleClient={(client) => { setClientToSchedule(client); setCurrentScreen("booking"); }} onClientClick={(client) => { setSelectedClient(client); setCurrentScreen("client-details"); }} />}
-            {currentScreen === "client-details" && selectedClient && <ClientDetailsScreen client={selectedClient} onBack={() => { setCurrentScreen("clients"); setSelectedClient(null); }} onScheduleClient={(client) => { setClientToSchedule(client); setCurrentScreen("booking"); }} onMessageClient={(client) => { setSelectedClient(client); setCurrentScreen("professional-chat"); }} />}
-            {currentScreen === "portfolio" && <PortfolioManager onBack={() => setCurrentScreen("home")} />}
-            {currentScreen === "barber-management" && <BarbershopManagement user={user} role={userRole} onBack={() => setCurrentScreen("home")} />}
-            {currentScreen === "professional-chat" && (
+            {displayScreen === "login" && <CollaboratorLoginScreen onLogin={handleLogin} setCurrentScreen={setCurrentScreen} setRequestedRole={setRequestedRole} />}
+            {displayScreen === "client-login" && <ClientPortalScreen onLogin={handleClientLogin} onForgotPassword={handleForgotPassword} onBack={() => setCurrentScreen("home")} />}
+            {(displayScreen === "client-dashboard" || displayScreen === "checkout") && <ClientDashboardScreen user={loggedInClient} onBack={() => setCurrentScreen("home")} />}
+            {displayScreen === "booking" && <BookingScreen user={user} role={userRole} services={services} onBack={() => { setCurrentScreen("home"); setAppointmentToEdit(null); setClientToSchedule(null); }} editAppointment={appointmentToEdit} initialClient={clientToSchedule} />}
+            {displayScreen === "agenda" && <DashboardScreen user={user} role={userRole} services={services} dashboardView={dashboardView} onBack={() => setCurrentScreen("home")} onNewBooking={() => setCurrentScreen("booking")} onEditBooking={(app) => { setAppointmentToEdit(app); setCurrentScreen("booking"); }} />}
+            {displayScreen === "collaborators" && <DashboardScreen user={user} role={userRole} services={services} dashboardView="collaborators" onBack={() => setCurrentScreen("home")} onNewBooking={() => setCurrentScreen("booking")} onEditBooking={(app) => { setAppointmentToEdit(app); setCurrentScreen("booking"); }} />}
+            {displayScreen === "services" && <DashboardScreen user={user} role={userRole} services={services} dashboardView="services" onBack={() => setCurrentScreen("home")} onNewBooking={() => setCurrentScreen("booking")} onEditBooking={(app) => { setAppointmentToEdit(app); setCurrentScreen("booking"); }} />}
+            {displayScreen === "earnings" && <EarningsScreen onBack={() => setCurrentScreen("home")} />}
+            {displayScreen === "promotions" && <PromotionsManager onBack={() => setCurrentScreen("home")} />}
+            {displayScreen === "clients" && <ClientsScreen onBack={() => setCurrentScreen("home")} onScheduleClient={(client) => { setClientToSchedule(client); setCurrentScreen("booking"); }} onClientClick={(client) => { setSelectedClient(client); setCurrentScreen("client-details"); }} />}
+            {displayScreen === "client-details" && selectedClient && <ClientDetailsScreen client={selectedClient} onBack={() => { setCurrentScreen("clients"); setSelectedClient(null); }} onScheduleClient={(client) => { setClientToSchedule(client); setCurrentScreen("booking"); }} onMessageClient={(client) => { setSelectedClient(client); setCurrentScreen("professional-chat"); }} />}
+            {displayScreen === "portfolio" && <PortfolioManager onBack={() => setCurrentScreen("home")} />}
+            {displayScreen === "barber-management" && <BarbershopManagement user={user} role={userRole} onBack={() => setCurrentScreen("home")} />}
+            {displayScreen === "professional-chat" && (
               <ProfessionalClientChatsScreen 
                 user={user} 
                 onBack={() => { setCurrentScreen("home"); setSelectedClient(null); }} 
@@ -824,7 +857,7 @@ export default function App() {
                 initialClientName={selectedClient?.name} 
               />
             )}
-            {currentScreen === "more" && (
+            {displayScreen === "more" && (
               <MoreOptionsScreen 
                 user={user || loggedInClient} 
                 role={userRole} 
@@ -846,7 +879,7 @@ export default function App() {
 
       <BottomNav 
         userRole={userRole} 
-        currentScreen={currentScreen} 
+        currentScreen={displayScreen} 
         setCurrentScreen={setCurrentScreen} 
         user={user} 
         unreadCount={staffNotifications.filter(n => !n.read).length}

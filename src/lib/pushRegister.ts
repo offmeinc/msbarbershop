@@ -19,9 +19,14 @@ export function urlBase64ToUint8Array(base64String: string): Uint8Array {
 export function getBackendUrl(path: string): string {
   const cleanPath = path.startsWith("/") ? path : `/${path}`;
   
-  // If we are strictly on standard AI Studio dev domains, we might want custom URL handling,
-  // but to support custom domains like msbarbershop.com.br we force relative paths.
-  // This ensures that API calls always go to the same domain as the frontend, avoiding CORS entirely.
+  // Support custom backend domain via ENV when accessing directly
+  const extBackend = import.meta.env?.VITE_BACKEND_URL;
+  if (extBackend && extBackend.trim() !== "") {
+    const baseUrl = extBackend.endsWith("/") ? extBackend.slice(0, -1) : extBackend;
+    console.log(`[getBackendUrl] external origin path=${path}, result=${baseUrl}${cleanPath}`);
+    return `${baseUrl}${cleanPath}`;
+  }
+  
   console.log(`[getBackendUrl] relative origin path=${path}, result=${cleanPath}`);
   return cleanPath;
 }
