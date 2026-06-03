@@ -15,20 +15,13 @@ export function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return outputArray;
 }
 
-// Resolve backend paths, supporting dynamic custom backend host URL when deploying on platforms like Vercel
+// Resolve backend paths
 export function getBackendUrl(path: string): string {
-  if (typeof window === "undefined") return path;
-  
   const cleanPath = path.startsWith("/") ? path : `/${path}`;
   
-  // Support custom backend domain (e.g., Cloud Run or elsewhere) when running client on Vercel
-  const extBackend = import.meta.env?.VITE_BACKEND_URL;
-  if (extBackend && extBackend.trim() !== "") {
-    const baseUrl = extBackend.endsWith("/") ? extBackend.slice(0, -1) : extBackend;
-    console.log(`[getBackendUrl] external origin path=${path}, result=${baseUrl}${cleanPath}`);
-    return `${baseUrl}${cleanPath}`;
-  }
-  
+  // If we are strictly on standard AI Studio dev domains, we might want custom URL handling,
+  // but to support custom domains like msbarbershop.com.br we force relative paths.
+  // This ensures that API calls always go to the same domain as the frontend, avoiding CORS entirely.
   console.log(`[getBackendUrl] relative origin path=${path}, result=${cleanPath}`);
   return cleanPath;
 }

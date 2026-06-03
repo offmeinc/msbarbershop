@@ -1,16 +1,11 @@
 {
-  "version": 2,
   "rewrites": [
     {
-      "source": "/api/payments/mercado-pago/status/:paymentId",
-      "destination": "/api/payments/mercado-pago/status/[paymentId]"
-    },
-    {
       "source": "/api/(.*)",
-      "destination": "/api/$1"
+      "destination": "https://ais-pre-g75ihsxfdnknje432j7ycb-486235155545.us-east1.run.app/api/$1"
     },
     {
-      "source": "/((?!api/).*)",
+      "source": "/(.*)",
       "destination": "/index.html"
     }
   ]
