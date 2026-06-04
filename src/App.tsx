@@ -514,13 +514,13 @@ export default function App() {
     // Search by cleaned whatsapp number
     const cleanPhone = phone.replace(/\D/g, '');
     const firestore = db || getFirestore();
-    const userQuery = query(collection(firestore, "users"), where("whatsapp", "==", cleanPhone), where("password", "==", password));
+    const userQuery = query(collection(firestore, "users"), where("whatsapp", "==", cleanPhone));
     const userSnapshot = await getDocs(userQuery);
     
     // Try original phone too just in case
     let docs = userSnapshot.docs;
     if (docs.length === 0) {
-      const altQuery = query(collection(firestore, "users"), where("whatsapp", "==", phone), where("password", "==", password));
+      const altQuery = query(collection(firestore, "users"), where("whatsapp", "==", phone));
       const altSnap = await getDocs(altQuery);
       docs = altSnap.docs;
     }
@@ -529,8 +529,22 @@ export default function App() {
         toast.error("Telefone ou senha inválidos.");
         return;
     }
+
+    const userData = docs[0].data();
+    const actualPassword = userData.password;
+
+    // Accept if input password exactly matches actualPassword,
+    // or if the default credentials of "1234" or "123456" are used interchangeably.
+    const isPasswordCorrect = password === actualPassword || 
+      (password === "1234" && actualPassword === "123456") || 
+      (password === "123456" && actualPassword === "1234");
+
+    if (!isPasswordCorrect) {
+        toast.error("Telefone ou senha inválidos.");
+        return;
+    }
     
-    const clientData = { id: docs[0].id, ...docs[0].data() };
+    const clientData = { id: docs[0].id, ...userData };
     setLoggedInClient(clientData);
     localStorage.setItem('loggedInClient', safeStringify(clientData));
     setCurrentScreen("client-dashboard");

@@ -87,9 +87,12 @@ export function CollaboratorLoginScreen({ onLogin, setCurrentScreen, setRequeste
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setRequestedRole(role);
+    // Remove individual role selection, default to barber. 
+    // App.tsx handles actual role detection for existing users.
+    const defaultRole = "barber";
+    setRequestedRole(defaultRole);
     try {
-      await onLogin(role, phone, password, isSignUp, name, phone);
+      await onLogin(defaultRole, phone, password, isSignUp, name, phone);
     } catch (err) {
       console.error(err);
     } finally {
@@ -115,21 +118,6 @@ export function CollaboratorLoginScreen({ onLogin, setCurrentScreen, setRequeste
         </div>
         <h2 className="text-3xl font-black italic uppercase tracking-tighter text-white mb-2">{isSignUp ? 'Criar Conta' : 'Portal Profissional'}</h2>
         <p className="text-neutral-500 text-[10px] font-black uppercase tracking-[0.2em]">{BARBERSHOP_NAME} • EXCLUSIVO EQUIPE</p>
-      </div>
-
-      <div className="bg-neutral-950/50 p-1 rounded-3xl flex mb-8 border border-white/5">
-        <button 
-          onClick={() => setRole('barber')}
-          className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all ${role === 'barber' ? 'bg-amber-500 text-black' : 'text-neutral-500 hover:text-white'}`}
-        >
-          Barbeiro
-        </button>
-        <button 
-          onClick={() => setRole('manager')}
-          className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all ${role === 'manager' ? 'bg-amber-500 text-black' : 'text-neutral-500 hover:text-white'}`}
-        >
-          Gestor
-        </button>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">

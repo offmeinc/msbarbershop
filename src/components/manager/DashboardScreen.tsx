@@ -136,8 +136,14 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [lockReason, setLockReason] = useState("");
-  const [blockingBarberId, setBlockingBarberId] = useState<string>("all");
+  const [blockingBarberId, setBlockingBarberId] = useState<string>(role === 'manager' ? "all" : (user?.uid || "all"));
   const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    if (role === 'barber' && user?.uid) {
+      setSelectedBarberId(user.uid);
+    }
+  }, [role, user?.uid]);
 
   const handleRefreshSync = async () => {
     setIsSyncing(true);
@@ -546,7 +552,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
         </div>
       )}
 
-      {(role === 'manager' || role === 'barber') && (currentView === 'list' || currentView === 'agenda') && (
+      {role === 'manager' && (currentView === 'list' || currentView === 'agenda') && (
           <div className="flex gap-4 overflow-x-auto no-scrollbar mb-8 pb-2">
               <button 
                 onClick={() => setSelectedBarberId("all")}

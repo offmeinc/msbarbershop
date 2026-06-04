@@ -1308,7 +1308,7 @@ export function BookingScreen({
               name: guestName || "",
               whatsapp: cleanPhone,
               role: "client",
-              password: "123456",
+              password: "1234",
               referredBy: referrerDocId ? guestReferralCode : null,
               walletBalance: initialBalance,
               createdAt: serverTimestamp(),

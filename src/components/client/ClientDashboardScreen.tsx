@@ -193,7 +193,8 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
 
       // Add notification
       await addDoc(collection(db, "notifications"), {
-         clientEmail: user.email,
+         clientId: user?.uid || user?.id || "",
+         clientEmail: user?.email || "",
          message: `Recarga Concluída! R$ ${totalToAdd.toFixed(2).replace('.', ',')} adicionados à sua Carteira Digital. Por estar em fase inicial, o valor foi simulado com sucesso!`,
          timestamp: serverTimestamp(),
          read: false,
@@ -236,20 +237,55 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
   }, [isRecharging, rechargeStep, rechargeMpData?.payment_id, rechargeSuccess]);
 
   useEffect(() => {
-    if (!user || !user.email) return;
-    const q = query(collection(db, "appointments"), where("clientEmail", "==", user.email), orderBy("date", "desc"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setAppointments(snapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter((app: any) => app.hiddenByClient !== true)
-      );
+    if (!user) return;
+    const finalUserId = user?.uid || user?.id;
+    if (!finalUserId) return;
+
+    let unsubEmail: (() => void) | null = null;
+    let appointmentsById: any[] = [];
+    let appointmentsByEmail: any[] = [];
+
+    const updateCombinedAppointments = (byId: any[], byEmail: any[]) => {
+      const merged = [...byId];
+      byEmail.forEach((app) => {
+        if (!merged.some((m) => m.id === app.id)) {
+          merged.push(app);
+        }
+      });
+      // Sort combined array by date descending
+      merged.sort((a, b) => {
+        const dateA = a.date instanceof Timestamp ? a.date.toDate().getTime() : (typeof a.date === 'string' ? parseISO(a.date).getTime() : a.date.getTime());
+        const dateB = b.date instanceof Timestamp ? b.date.toDate().getTime() : (typeof b.date === 'string' ? parseISO(b.date).getTime() : b.date.getTime());
+        return dateB - dateA;
+      });
+      setAppointments(merged.filter((app: any) => app.hiddenByClient !== true));
       setLoading(false);
+    };
+
+    const qId = query(collection(db, "appointments"), where("clientId", "==", finalUserId));
+    const unsubId = onSnapshot(qId, (snapshot) => {
+      appointmentsById = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      updateCombinedAppointments(appointmentsById, appointmentsByEmail);
     }, (error: any) => {
-      console.error("Error fetching appointments:", error?.message || error);
+      console.error("Error fetching appointments by ID:", error);
       setLoading(false);
     });
-    return unsubscribe;
-  }, [user?.email]);
+
+    if (user.email) {
+      const qEmail = query(collection(db, "appointments"), where("clientEmail", "==", user.email));
+      unsubEmail = onSnapshot(qEmail, (snapshot) => {
+        appointmentsByEmail = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        updateCombinedAppointments(appointmentsById, appointmentsByEmail);
+      }, (error: any) => {
+        console.error("Error fetching appointments by Email:", error);
+      });
+    }
+
+    return () => {
+      unsubId();
+      if (unsubEmail) unsubEmail();
+    };
+  }, [user]);
 
   useEffect(() => {
     const q = query(collection(db, "services"));
@@ -379,27 +415,68 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
   };
 
   useEffect(() => {
-    if (!user || !user.email) return;
-    const q = query(
-      collection(db, "notifications"), 
-      where("clientEmail", "==", user.email), 
-      orderBy("timestamp", "desc")
-    );
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const newNotifs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
-      
-      // Check for new notifications to show toast
-      if (notifications.length > 0 && newNotifs.length > notifications.length) {
-        const latest = newNotifs[0];
-        if (!latest.read) {
-          toast.success(latest.message);
+    if (!user) return;
+    const finalUserId = user?.uid || user?.id;
+    if (!finalUserId) return;
+
+    let unsubEmail: (() => void) | null = null;
+    let notifsById: any[] = [];
+    let notifsByEmail: any[] = [];
+
+    const updateCombinedNotifications = (byId: any[], byEmail: any[]) => {
+      const merged = [...byId];
+      byEmail.forEach((n) => {
+        if (!merged.some((m) => m.id === n.id)) {
+          merged.push(n);
         }
-      }
-      
-      setNotifications(newNotifs);
+      });
+      // Sort combined array by timestamp descending
+      merged.sort((a, b) => {
+        const timeA = a.timestamp instanceof Timestamp ? a.timestamp.toDate().getTime() : (a.timestamp ? new Date(a.timestamp).getTime() : 0);
+        const timeB = b.timestamp instanceof Timestamp ? b.timestamp.toDate().getTime() : (b.timestamp ? new Date(b.timestamp).getTime() : 0);
+        return timeB - timeA;
+      });
+
+      // Avoid trigger loop: ONLY update state if the length or content has actually changed
+      setNotifications((prev) => {
+        if (prev.length === merged.length && prev.every((v, i) => v.id === merged[i].id && v.read === merged[i].read)) {
+          return prev;
+        }
+        
+        // Trigger toast for new unread notifications if they were added
+        if (prev.length > 0 && merged.length > prev.length) {
+          const latest = merged[0];
+          if (!latest.read) {
+            toast.success(latest.message);
+          }
+        }
+        return merged;
+      });
+    };
+
+    const qId = query(collection(db, "notifications"), where("clientId", "==", finalUserId));
+    const unsubId = onSnapshot(qId, (snapshot) => {
+      notifsById = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      updateCombinedNotifications(notifsById, notifsByEmail);
+    }, (error: any) => {
+      console.error("Error fetching notifications by ID:", error);
     });
-    return unsubscribe;
-  }, [user?.email, notifications.length]);
+
+    if (user.email) {
+      const qEmail = query(collection(db, "notifications"), where("clientEmail", "==", user.email));
+      unsubEmail = onSnapshot(qEmail, (snapshot) => {
+        notifsByEmail = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        updateCombinedNotifications(notifsById, notifsByEmail);
+      }, (error: any) => {
+        console.error("Error fetching notifications by Email:", error);
+      });
+    }
+
+    return () => {
+      unsubId();
+      if (unsubEmail) unsubEmail();
+    };
+  }, [user]);
 
   // Reminder logic
   useEffect(() => {
@@ -442,6 +519,9 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
     );
   }
 
+  const currentClientName = liveUser?.name || liveUser?.displayName || user?.name || user?.displayName || "Cliente";
+  const currentClientPhoto = liveUser?.photoURL || liveUser?.photoUrl || user?.photoURL || user?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentClientName)}&background=1a1a1a&color=fff`;
+
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen bg-black text-white pb-32">
       <AnimatePresence mode="wait">
@@ -456,15 +536,15 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
               <div className="flex items-center justify-between w-full">
                   <div className="flex items-center gap-4">
                      <div className="w-14 h-14 rounded-full bg-neutral-900 overflow-hidden shadow-xl shrink-0 border border-white/5 relative group">
-                        <img src={user?.photoURL || user?.photoUrl || `https://ui-avatars.com/api/?name=${user?.displayName || user?.name || 'Cliente'}&background=1a1a1a&color=fff`} alt="Avatar" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                        <img src={currentClientPhoto} alt="Avatar" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                         <div className="absolute inset-0 rounded-full shadow-[inset_0_2px_4px_rgba(255,255,255,0.1)] pointer-events-none" />
                      </div>
                      <div className="flex flex-col justify-center">
                         <p className="text-[10px] text-neutral-400 font-medium uppercase tracking-[0.25em] leading-none mb-1.5 flex items-center gap-1.5">
-                          Bem-vind{user?.gender === 'female' ? 'a' : 'o'}
+                          Bem-vind{((liveUser?.gender || user?.gender) === 'female') ? 'a' : 'o'}
                           <Sparkles className="w-3 h-3 text-amber-500/70" />
                         </p>
-                        <h2 className="text-2xl font-light tracking-tight truncate max-w-[140px] md:max-w-xs">{user?.displayName?.split(' ')[0] || 'Cliente'}</h2>
+                        <h2 className="text-2xl font-light tracking-tight truncate max-w-[140px] md:max-w-xs">{currentClientName.split(' ')[0]}</h2>
                      </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">

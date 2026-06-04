@@ -15,7 +15,7 @@ export async function getBusinessInsights(stats: any) {
     Responda de forma motivadora e em Português do Brasil.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-3.5-flash",
       contents: prompt,
     });
 

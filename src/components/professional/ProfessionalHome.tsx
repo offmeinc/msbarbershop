@@ -147,7 +147,7 @@ export function ProfessionalHome({ user, role, setCurrentScreen }: ProfessionalH
               {user?.displayName || user?.name || "Profissional"}
             </h1>
             <span className="text-[8.5px] font-extrabold uppercase bg-amber-500/10 text-amber-500 border border-amber-500/20 px-2.5 py-0.5 rounded leading-none inline-block">
-              {role === 'manager' ? 'Gestor' : 'Profissional / Barbeiro'}
+              {role === 'manager' ? 'Gestor / Administrador' : 'Barbeiro Profissional'}
             </span>
           </div>
         </div>
@@ -254,24 +254,26 @@ export function ProfessionalHome({ user, role, setCurrentScreen }: ProfessionalH
 
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3.5">
           
-          {/* Main management configuration (Admin / Barbershop Management) */}
-          <button 
-            onClick={() => setCurrentScreen("barber-management")}
-            className="bg-neutral-900/30 hover:bg-neutral-900/80 border border-white/5 hover:border-amber-500/20 p-5 rounded-[1.75rem] flex flex-col justify-between min-h-[145px] sm:min-h-[160px] transition-all group active:scale-95 text-left cursor-pointer relative overflow-hidden"
-          >
-            <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-amber-500/[0.02] pointer-events-none" />
-            <div className="w-10 h-10 rounded-xl bg-black border border-white/5 group-hover:border-amber-500/20 flex items-center justify-center text-amber-500 group-hover:bg-amber-500 group-hover:text-black transition-all relative">
-              <Sliders className="w-5 h-5" />
-            </div>
-            <div className="space-y-0.5 mt-4">
-              <span className="text-[11px] sm:text-xs font-black text-white group-hover:text-amber-400 uppercase tracking-wider transition-colors block leading-tight">
-                Gestão Geral
-              </span>
-              <span className="text-[8px] sm:text-[9px] text-neutral-500 group-hover:text-neutral-400 font-semibold leading-snug block line-clamp-2">
-                Gerenciar equipe, serviços, preços e horários
-              </span>
-            </div>
-          </button>
+          {/* Main management configuration (Admin / Barbershop Management) - ONLY FOR MANAGER */}
+          {role === 'manager' && (
+            <button 
+              onClick={() => setCurrentScreen("barber-management")}
+              className="bg-neutral-900/30 hover:bg-neutral-900/80 border border-white/5 hover:border-amber-500/20 p-5 rounded-[1.75rem] flex flex-col justify-between min-h-[145px] sm:min-h-[160px] transition-all group active:scale-95 text-left cursor-pointer relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-amber-500/[0.02] pointer-events-none" />
+              <div className="w-10 h-10 rounded-xl bg-black border border-white/5 group-hover:border-amber-500/20 flex items-center justify-center text-amber-500 group-hover:bg-amber-500 group-hover:text-black transition-all relative">
+                <Sliders className="w-5 h-5" />
+              </div>
+              <div className="space-y-0.5 mt-4">
+                <span className="text-[11px] sm:text-xs font-black text-white group-hover:text-amber-400 uppercase tracking-wider transition-colors block leading-tight">
+                  Gestão Geral
+                </span>
+                <span className="text-[8px] sm:text-[9px] text-neutral-500 group-hover:text-neutral-400 font-semibold leading-snug block line-clamp-2">
+                  Gerenciar equipe, serviços, preços e horários
+                </span>
+              </div>
+            </button>
+          )}
 
           {/* Agenda view option */}
           <button 
@@ -355,24 +357,26 @@ export function ProfessionalHome({ user, role, setCurrentScreen }: ProfessionalH
             </div>
           </button>
 
-          {/* Marketing Promotions panel */}
-          <button 
-            onClick={() => setCurrentScreen("promotions")}
-            className="bg-neutral-900/30 hover:bg-neutral-900/80 border border-white/5 hover:border-amber-500/20 p-5 rounded-[1.75rem] flex flex-col justify-between min-h-[145px] sm:min-h-[160px] transition-all group active:scale-95 text-left cursor-pointer relative overflow-hidden"
-          >
-            <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-purple-500/[0.02] pointer-events-none" />
-            <div className="w-10 h-10 rounded-xl bg-black border border-white/5 group-hover:border-amber-500/20 flex items-center justify-center text-purple-400 group-hover:bg-amber-500 group-hover:text-black transition-all relative">
-              <Sparkles className="w-5 h-5" />
-            </div>
-            <div className="space-y-0.5 mt-4">
-              <span className="text-[11px] sm:text-xs font-black text-white group-hover:text-amber-400 uppercase tracking-wider transition-colors block leading-tight">
-                Gerenciar Cupons
-              </span>
-              <span className="text-[8px] sm:text-[9px] text-neutral-500 group-hover:text-neutral-400 font-semibold leading-snug block block line-clamp-2">
-                Criar descontos inovadores e códigos promocionais
-              </span>
-            </div>
-          </button>
+          {/* Marketing Promotions panel - ONLY FOR MANAGER */}
+          {role === 'manager' && (
+            <button 
+              onClick={() => setCurrentScreen("promotions")}
+              className="bg-neutral-900/30 hover:bg-neutral-900/80 border border-white/5 hover:border-amber-500/20 p-5 rounded-[1.75rem] flex flex-col justify-between min-h-[145px] sm:min-h-[160px] transition-all group active:scale-95 text-left cursor-pointer relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-purple-500/[0.02] pointer-events-none" />
+              <div className="w-10 h-10 rounded-xl bg-black border border-white/5 group-hover:border-amber-500/20 flex items-center justify-center text-purple-400 group-hover:bg-amber-500 group-hover:text-black transition-all relative">
+                <Sparkles className="w-5 h-5" />
+              </div>
+              <div className="space-y-0.5 mt-4">
+                <span className="text-[11px] sm:text-xs font-black text-white group-hover:text-amber-400 uppercase tracking-wider transition-colors block leading-tight">
+                  Gerenciar Cupons
+                </span>
+                <span className="text-[8px] sm:text-[9px] text-neutral-500 group-hover:text-neutral-400 font-semibold leading-snug block block line-clamp-2">
+                  Criar descontos inovadores e códigos promocionais
+                </span>
+              </div>
+            </button>
+          )}
 
         </div>
       </div>

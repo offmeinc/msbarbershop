@@ -9,7 +9,9 @@ export function BottomNav({ userRole, currentScreen, setCurrentScreen, user, unr
     
   if (userRole === "manager" || userRole === "barber") {
     items.push({ id: "agenda", label: "Agenda", icon: <CalendarDays className="w-5 h-5" />, screen: "agenda" });
-    items.push({ id: "management", label: "Gestão", icon: <Sliders className="w-5 h-5" />, screen: "barber-management" });
+    if (userRole === "manager") {
+      items.push({ id: "management", label: "Gestão", icon: <Sliders className="w-5 h-5" />, screen: "barber-management" });
+    }
     items.push({ id: "clients", label: "Clientes", icon: <Users className="w-5 h-5" />, screen: "clients" });
   } else {
     items.push({ id: "booking", label: "Agendar", icon: <Scissors className="w-5 h-5" />, screen: "booking" });
