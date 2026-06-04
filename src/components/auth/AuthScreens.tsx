@@ -3,13 +3,12 @@ import { motion } from "motion/react";
 import { Loader2, Key, Mail, Lock, User, Phone, Sparkles, LogIn, ChevronLeft } from "lucide-react";
 import { BARBERSHOP_NAME } from "../../constants";
 
-export function ClientPortalScreen({ onLogin, onForgotPassword, onBack }: { onLogin: (phone: string, code: string) => void, onForgotPassword: () => void, onBack: () => void }) {
+export function ClientPortalScreen({ onLogin, onBack }: { onLogin: (phone: string) => void, onBack: () => void }) {
   const [phone, setPhone] = useState("");
-  const [code, setCode] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onLogin(phone, code);
+    onLogin(phone);
   };
 
   return (
@@ -42,34 +41,11 @@ export function ClientPortalScreen({ onLogin, onForgotPassword, onBack }: { onLo
           </div>
         </div>
 
-        <div className="space-y-2">
-          <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest ml-2">Sua Senha</label>
-          <div className="relative group">
-            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-600 group-focus-within:text-amber-500 transition-colors" />
-            <input 
-              type="password"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              className="w-full bg-neutral-950 border border-white/5 rounded-3xl p-5 pl-12 text-sm text-white focus:border-amber-500 outline-none transition-all"
-              placeholder="Digite sua senha"
-              required
-            />
-          </div>
-        </div>
-
         <button 
           type="submit"
           className="w-full bg-white text-black py-5 rounded-[2rem] font-black uppercase italic tracking-widest text-xs hover:bg-neutral-200 transition-all active:scale-95 shadow-xl shadow-white/5 mt-4"
         >
           Acessar Portal
-        </button>
-
-        <button 
-          type="button"
-          onClick={onForgotPassword}
-          className="w-full text-neutral-600 text-[10px] font-black uppercase tracking-widest hover:text-amber-500 transition-colors py-4"
-        >
-          Esqueceu sua senha?
         </button>
       </form>
     </div>

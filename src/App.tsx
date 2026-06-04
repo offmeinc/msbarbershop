@@ -510,7 +510,11 @@ export default function App() {
     setCurrentScreen("home");
   };
 
-  const handleClientLogin = async (phone: string, password: string) => {
+  const handleClientLogin = async (phone: string) => {
+    if (!phone) {
+      toast.error("O número de WhatsApp é obrigatório.");
+      return;
+    }
     // Search by cleaned whatsapp number
     const cleanPhone = phone.replace(/\D/g, '');
     const firestore = db || getFirestore();
@@ -526,53 +530,15 @@ export default function App() {
     }
 
     if (docs.length === 0) {
-        toast.error("Telefone ou senha inválidos.");
+        toast.error("Nenhum cadastro encontrado com este WhatsApp. Agende um horário primeiro para criar seu cadastro!");
         return;
     }
 
     const userData = docs[0].data();
-    const actualPassword = userData.password;
-
-    // Accept if input password exactly matches actualPassword,
-    // or if the default credentials of "1234" or "123456" are used interchangeably.
-    const isPasswordCorrect = password === actualPassword || 
-      (password === "1234" && actualPassword === "123456") || 
-      (password === "123456" && actualPassword === "1234");
-
-    if (!isPasswordCorrect) {
-        toast.error("Telefone ou senha inválidos.");
-        return;
-    }
-    
     const clientData = { id: docs[0].id, ...userData };
     setLoggedInClient(clientData);
     localStorage.setItem('loggedInClient', safeStringify(clientData));
     setCurrentScreen("client-dashboard");
-  };
-
-  const handleForgotPassword = async () => {
-    const phone = prompt("Digite seu WhatsApp cadastrado:");
-    if (!phone) return;
-    
-    // Look up appointments with this phone
-    const cleanPhone = phone.replace(/\D/g, '');
-    const firestore = db || getFirestore();
-    const appointmentsQuery = query(collection(firestore, "appointments"), where("clientPhone", "==", cleanPhone), orderBy("createdAt", "desc"), limit(1));
-    const querySnapshot = await getDocs(appointmentsQuery);
-
-    if (querySnapshot.empty) {
-        toast.error("Nenhum agendamento encontrado para este número.");
-        return;
-    }
-
-    const doc = querySnapshot.docs[0];
-    const code = doc.data().loginCode;
-
-    if (code) {
-        toast.info("Seu código de acesso é: " + code);
-    } else {
-        toast.error("Código não encontrado.");
-    }
   };
 
   if (loading) {
@@ -852,7 +818,7 @@ export default function App() {
               : <HomeScreen services={services} onStartBooking={() => setCurrentScreen("booking")} />
             )}
             {displayScreen === "login" && <CollaboratorLoginScreen onLogin={handleLogin} setCurrentScreen={setCurrentScreen} setRequestedRole={setRequestedRole} />}
-            {displayScreen === "client-login" && <ClientPortalScreen onLogin={handleClientLogin} onForgotPassword={handleForgotPassword} onBack={() => setCurrentScreen("home")} />}
+            {displayScreen === "client-login" && <ClientPortalScreen onLogin={handleClientLogin} onBack={() => setCurrentScreen("home")} />}
             {(displayScreen === "client-dashboard" || displayScreen === "checkout") && <ClientDashboardScreen user={loggedInClient} onBack={() => setCurrentScreen("home")} />}
             {displayScreen === "booking" && <BookingScreen user={user} role={userRole} services={services} onBack={() => { setCurrentScreen("home"); setAppointmentToEdit(null); setClientToSchedule(null); }} editAppointment={appointmentToEdit} initialClient={clientToSchedule} />}
             {displayScreen === "agenda" && <DashboardScreen user={user} role={userRole} services={services} dashboardView={dashboardView} onBack={() => setCurrentScreen("home")} onNewBooking={() => setCurrentScreen("booking")} onEditBooking={(app) => { setAppointmentToEdit(app); setCurrentScreen("booking"); }} />}
