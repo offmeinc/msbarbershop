@@ -14,12 +14,15 @@ import {
   Lock, 
   Clock, 
   X, 
+  XCircle,
   Download, 
   Loader2,
   CheckCircle2,
   CreditCard,
   Sparkles,
-  Star
+  Star,
+  Wifi,
+  WifiOff
 } from "lucide-react";
 import { 
   BarChart, 
@@ -58,6 +61,7 @@ import {
   getFirestore
 } from "firebase/firestore";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
+import { addToOfflineQueue, getOfflineQueue, syncOfflineQueue, OfflineAction } from "../../lib/offlineQueue";
 import { AnalyticsScreen } from "./AnalyticsScreen";
 import { CalendarWidget, AppointmentModal } from "../CalendarWidget";
 import { ServicesManagement, CollaboratorsManager, WorkingHoursManager } from "./ManagementScreens";
@@ -125,6 +129,9 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
   const [expandedAppointmentId, setExpandedAppointmentId] = useState<string | null>(null);
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
+  const [managerAppToCancel, setManagerAppToCancel] = useState<any | null>(null);
+  const [managerCancelReason, setManagerCancelReason] = useState("");
+  const [isManagerCancelling, setIsManagerCancelling] = useState(false);
 
   // Real-time synchronization & feature states for header icons
   const [isLockModalOpen, setIsLockModalOpen] = useState(false);
@@ -138,6 +145,38 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
   const [lockReason, setLockReason] = useState("");
   const [blockingBarberId, setBlockingBarberId] = useState<string>(role === 'manager' ? "all" : (user?.uid || "all"));
   const [searchQuery, setSearchQuery] = useState("");
+
+  const [offlineQueue, setOfflineQueue] = useState<OfflineAction[]>([]);
+  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    setOfflineQueue(getOfflineQueue());
+
+    const handleQueueChange = () => {
+      setOfflineQueue(getOfflineQueue());
+    };
+
+    const handleOnline = () => {
+      setIsOnline(true);
+      syncOfflineQueue();
+    };
+
+    const handleOffline = () => {
+      setIsOnline(false);
+    };
+
+    window.addEventListener("ms-offline-queue-changed", handleQueueChange);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("ms-offline-queue-changed", handleQueueChange);
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
 
   useEffect(() => {
     if (role === 'barber' && user?.uid) {
@@ -219,6 +258,87 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
 
   const handleStatusUpdate = async (app: any, newStatus: string, extraData: any = {}) => {
     const firestore = db || getFirestore();
+    
+    // Intercept cancellation to request reason via custom modal
+    if (newStatus === 'cancelled' && !extraData.cancellationReason) {
+      setManagerAppToCancel(app);
+      setManagerCancelReason("");
+      return;
+    }
+
+    const description = `Atualizar status de ${app.clientName} (${app.serviceName}) para "${newStatus === 'completed' ? 'Finalizado' : newStatus === 'cancelled' ? 'Cancelado' : newStatus}"`;
+
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      // Offline mode!
+      const updatePayload: any = { status: newStatus, ...extraData };
+      if (newStatus === 'completed') {
+        updatePayload.paymentStatus = 'paid';
+        updatePayload.paidAt = new Date().toISOString(); 
+      }
+
+      let clientMsg = `Seu agendamento para ${app.serviceName} foi atualizado para: ${newStatus}`;
+      let staffType = 'update';
+      let staffMsg = `Atualização: ${app.clientName} teve o status alterado para ${newStatus} (${app.serviceName})`;
+
+      if (newStatus === 'completed') {
+        clientMsg = `Seu agendamento de ${app.serviceName} foi concluído e o pagamento de R$ ${app.totalPrice?.toFixed(2) || '0,00'} foi registrado. Obrigado!`;
+        staffType = 'payment';
+        staffMsg = `Pagamento: ${app.clientName} pagou o serviço ${app.serviceName}`;
+      } else if (newStatus === 'cancelled') {
+        const reasonStr = extraData.cancellationReason || "Não informado";
+        clientMsg = `Seu agendamento de ${app.serviceName} foi cancelado pela barbearia. Motivo: ${reasonStr}`;
+        staffType = 'cancellation';
+        staffMsg = `Cancelamento: ${app.clientName} teve o atendimento (${app.serviceName}) cancelado pela barbearia. Motivo: ${reasonStr}`;
+      }
+
+      const notifications = [
+        {
+          collectionName: "notifications",
+          clientId: app.clientId || "",
+          clientEmail: app.clientEmail || "",
+          loginCode: app.loginCode || "",
+          type: newStatus === 'cancelled' ? 'cancellation' : 'status_update',
+          message: clientMsg,
+          read: false,
+          appointmentId: app.id
+        },
+        {
+          collectionName: "staff_notifications",
+          type: staffType,
+          message: staffMsg,
+          read: false,
+          clientId: app.clientId || "",
+          appointmentId: app.id,
+          barberId: app.barberId || ""
+        }
+      ];
+
+      // Add task to our persistent queue
+      addToOfflineQueue('update_status', {
+        appointmentId: app.id,
+        newStatus,
+        extraData: updatePayload,
+        notifications
+      }, description);
+
+      // Attempt immediate cache side-write triggers
+      try {
+        await updateDoc(doc(firestore, "appointments", app.id), updatePayload);
+      } catch (e) {
+        console.warn("Postponed writing to firestore server - local cache updated:", e);
+      }
+
+      if (newStatus === 'cancelled') {
+        setStatusMsg('Agendamento cancelado offline (sincronização pendente)!');
+        setTimeout(() => setStatusMsg(null), 3000);
+      } else if (newStatus === 'completed') {
+        setStatusMsg('Atendimento concluído offline (sincronização pendente)!');
+        setSelectedAppointment(null);
+        setTimeout(() => setStatusMsg(null), 3000);
+      }
+      return;
+    }
+
     try {
       const updatePayload: any = { status: newStatus, ...extraData };
       if (newStatus === 'completed') {
@@ -227,12 +347,28 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
       }
       
       await updateDoc(doc(firestore, "appointments", app.id), updatePayload);
+      
+      let clientMsg = `Seu agendamento para ${app.serviceName} foi atualizado para: ${newStatus}`;
+      let staffType = 'update';
+      let staffMsg = `Atualização: ${app.clientName} teve o status alterado para ${newStatus} (${app.serviceName})`;
+
+      if (newStatus === 'completed') {
+        clientMsg = `Seu agendamento de ${app.serviceName} foi concluído e o pagamento de R$ ${app.totalPrice?.toFixed(2) || '0,00'} foi registrado. Obrigado!`;
+        staffType = 'payment';
+        staffMsg = `Pagamento: ${app.clientName} pagou o serviço ${app.serviceName}`;
+      } else if (newStatus === 'cancelled') {
+        const reasonStr = extraData.cancellationReason || "Não informado";
+        clientMsg = `Seu agendamento de ${app.serviceName} foi cancelado pela barbearia. Motivo: ${reasonStr}`;
+        staffType = 'cancellation';
+        staffMsg = `Cancelamento: ${app.clientName} teve o atendimento (${app.serviceName}) cancelado pela barbearia. Motivo: ${reasonStr}`;
+      }
+
       await addDoc(collection(firestore, "notifications"), {
         clientId: app.clientId || "",
         clientEmail: app.clientEmail || "",
         loginCode: app.loginCode || "",
-        type: 'status_update',
-        message: `Seu agendamento foi atualizado para: ${newStatus}${newStatus === 'completed' ? ' e o pagamento foi registrado.' : ''}`,
+        type: newStatus === 'cancelled' ? 'cancellation' : 'status_update',
+        message: clientMsg,
         timestamp: serverTimestamp(),
         read: false,
         appointmentId: app.id
@@ -240,12 +376,13 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
 
       // Staff notification
       await addDoc(collection(firestore, "staff_notifications"), {
-        type: newStatus === 'cancelled' ? 'cancellation' : (newStatus === 'completed' ? 'payment' : 'update'),
-        message: `${newStatus === 'cancelled' ? 'Cancelamento' : (newStatus === 'completed' ? 'Pagamento' : 'Atualização')}: ${app.clientName} ${newStatus === 'cancelled' ? 'desmarcou' : (newStatus === 'completed' ? 'pagou o serviço' : 'teve o status alterado para ' + newStatus)} (${app.serviceName})`,
+        type: staffType,
+        message: staffMsg,
         timestamp: serverTimestamp(),
         read: false,
-        clientId: app.clientId,
-        appointmentId: app.id
+        clientId: app.clientId || "",
+        appointmentId: app.id,
+        barberId: app.barberId || ""
       });
 
       if (newStatus === 'cancelled') {
@@ -263,6 +400,22 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
 
   const handleDelete = async (app: any) => {
     const firestore = db || getFirestore();
+    const description = `Excluir agendamento de ${app.clientName}`;
+
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      addToOfflineQueue('delete_appointment', { appointmentId: app.id }, description);
+      try {
+        const { deleteDoc, doc } = await import("firebase/firestore");
+        await deleteDoc(doc(firestore, "appointments", app.id));
+      } catch (err) {
+        console.warn("Postponed deleting from firestore server - local cache deleted:", err);
+      }
+      setSelectedAppointment(null);
+      setStatusMsg('Agendamento excluído offline (sincronização pendente)!');
+      setTimeout(() => setStatusMsg(null), 3000);
+      return;
+    }
+
     try {
       const { deleteDoc, doc } = await import("firebase/firestore");
       await deleteDoc(doc(firestore, "appointments", app.id));
@@ -437,6 +590,48 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
       {statusMsg && (
         <div className="fixed top-6 left-4 right-4 bg-emerald-500 text-white p-4 rounded-3xl font-black text-xs uppercase tracking-widest text-center z-50 shadow-2xl">
           {statusMsg}
+        </div>
+      )}
+
+      {/* 📶 Persistent Offline Synchronization alerts */}
+      {!isOnline && (
+        <div className="max-w-xl mx-auto mb-4 bg-rose-500/10 border border-rose-500/20 p-4 rounded-3xl flex items-center gap-3 relative overflow-hidden shadow-2xl animate-pulse">
+          <div className="w-8 h-8 rounded-full bg-rose-500/20 flex items-center justify-center border border-rose-500/30 text-rose-500 shrink-0">
+            <WifiOff className="w-4 h-4" />
+          </div>
+          <div className="space-y-0.5">
+            <span className="text-[9px] text-rose-500 font-sans uppercase font-black tracking-widest block">Sem Internet • Operando Offline 📶</span>
+            <p className="text-[10px] text-neutral-400 leading-normal font-semibold">
+              Suas alterações na agenda estão salvas de forma segura localmente e serão sincronizadas com o servidor assim que a conexão for restabelecida.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {offlineQueue.length > 0 && (
+        <div className="max-w-xl mx-auto mb-4 bg-amber-500/10 border border-amber-500/20 p-4 rounded-3xl flex flex-col gap-3 relative overflow-hidden shadow-2xl">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="flex h-2 w-2 rounded-full bg-amber-500 animate-ping" />
+              <span className="text-[10px] text-amber-500 font-sans uppercase font-black tracking-widest block">Sincronização offline pendente ({offlineQueue.length})</span>
+            </div>
+            <button 
+              onClick={() => syncOfflineQueue()}
+              disabled={!isOnline}
+              className="text-[9px] bg-amber-500 hover:bg-amber-400 disabled:opacity-40 disabled:cursor-not-allowed text-black px-3 py-1.5 rounded-full font-black uppercase italic tracking-widest transition-all cursor-pointer flex items-center gap-1 shrink-0"
+              title={isOnline ? "Enviar alterações imediatamente" : "Conecte-se para sincronizar"}
+            >
+              Sincronizar Agora
+            </button>
+          </div>
+          <div className="space-y-1.5 max-h-[120px] overflow-y-auto pr-1">
+            {offlineQueue.map((action) => (
+              <div key={action.id} className="text-[10px] text-neutral-400 flex justify-between items-center bg-black/40 px-3 py-1.5 rounded-xl border border-white/5">
+                <span className="font-semibold">{action.description}</span>
+                <span className="text-[8px] font-mono text-neutral-500 uppercase">{new Date(action.timestamp).toLocaleTimeString("pt-BR")}</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
       
@@ -804,7 +999,10 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                           <p className="text-[10px] text-neutral-700 uppercase font-black tracking-widest">Nesta categoria para o filtro atual</p>
                         </div>
                       ) : (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <motion.div 
+                          layout
+                          className="grid grid-cols-1 md:grid-cols-2 gap-4"
+                        >
                               {filteredAppointmentsList.map((app, index) => {
                                   const dateVal = app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date);
                                   const isExpanded = expandedAppointmentId === app.id;
@@ -839,10 +1037,19 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
 
                                   return (
                                       <motion.div 
-                                           initial={{ opacity: 0, y: 15 }}
-                                           animate={{ opacity: 1, y: 0 }}
-                                           transition={{ duration: 0.3, delay: index * 0.05 }}
-                                           key={app.id} 
+                                           layout
+                                           initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                                           animate={{ opacity: 1, y: 0, scale: 1 }}
+                                           exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                                           whileHover={{ y: -4, borderColor: "rgba(245, 158, 11, 0.2)" }}
+                                           whileTap={{ scale: 0.98 }}
+                                           transition={{ 
+                                             type: "spring",
+                                             stiffness: 150,
+                                             damping: 18,
+                                             delay: Math.min(index * 0.03, 0.2)
+                                           }}
+                                           key={`${app.id}_${filterStatus}_${currentDate.toDateString()}`} 
                                            className={`bg-neutral-900 rounded-[2rem] border border-white/5 border-l-4 ${borderAccent} p-5 shadow-xl group cursor-pointer hover:bg-neutral-800 transition-all relative overflow-hidden`}
                                            onClick={() => setExpandedAppointmentId(isExpanded ? null : app.id)}
                                       >
@@ -993,7 +1200,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                                       </motion.div>
                                   );
                               })}
-                          </div>
+                          </motion.div>
                       )}
                   </div>
               )}
@@ -1334,6 +1541,103 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
               </div>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* PROFESSIONAL CANCEL AGENDAMENTO CONFIRM DIALOG */}
+      <AnimatePresence>
+        {managerAppToCancel && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => {
+                if (!isManagerCancelling) {
+                  setManagerAppToCancel(null);
+                  setManagerCancelReason("");
+                }
+              }}
+              className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            />
+            
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 15 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 15 }}
+              className="bg-neutral-950 border border-white/5 rounded-[2.5rem] p-8 max-w-sm w-full text-center relative z-10 shadow-2xl space-y-6 text-left"
+            >
+              <div className="w-14 h-14 bg-red-500/10 border border-red-500/25 rounded-3xl mx-auto flex items-center justify-center text-red-500">
+                <XCircle className="w-6 h-6 animate-pulse" />
+              </div>
+
+              <div className="space-y-2 text-center">
+                <h3 className="text-lg font-black uppercase italic tracking-wider text-white">Cancelar Atendimento?</h3>
+                <p className="text-xs text-neutral-400 font-bold uppercase leading-relaxed">
+                  Deseja realmente cancelar o agendamento de <span className="text-white font-black">{managerAppToCancel.clientName}</span> para:
+                </p>
+              </div>
+
+              <div className="bg-neutral-900 rounded-2xl p-4 border border-white/5 space-y-2 text-left">
+                <p className="text-[10px] font-black uppercase tracking-wider text-amber-500 flex items-center gap-1.5 leading-none">
+                  <Calendar className="w-3 h-3" />
+                  {format(managerAppToCancel.date instanceof Timestamp ? managerAppToCancel.date.toDate() : (typeof managerAppToCancel.date === 'string' ? parseISO(managerAppToCancel.date) : managerAppToCancel.date), "dd 'de' MMMM", { locale: ptBR })}
+                </p>
+                <p className="text-[10px] font-black uppercase tracking-wider text-amber-500 flex items-center gap-1.5 leading-none">
+                  <Clock className="w-3 h-3" />
+                  às {managerAppToCancel.time} ({managerAppToCancel.serviceName})
+                </p>
+              </div>
+
+              <div className="space-y-2 text-left">
+                <label className="text-[10px] font-extrabold uppercase text-neutral-400 tracking-wider">
+                  Motivo do Cancelamento
+                </label>
+                <textarea
+                  value={managerCancelReason}
+                  onChange={(e) => setManagerCancelReason(e.target.value)}
+                  placeholder="Por que você está cancelando? (ex: Falta de energia / Imprevisto na agenda)"
+                  maxLength={150}
+                  className="w-full bg-neutral-950 border border-white/5 rounded-2xl p-4 text-xs text-white placeholder-neutral-700 focus:border-red-500/50 outline-none resize-none h-20 transition-all font-medium"
+                />
+              </div>
+
+              <div className="flex flex-col gap-2 pt-2">
+                <button 
+                  onClick={async () => {
+                    setIsManagerCancelling(true);
+                    try {
+                      await handleStatusUpdate(managerAppToCancel, 'cancelled', { cancellationReason: managerCancelReason });
+                    } catch (err) {
+                      console.error(err);
+                    } finally {
+                      setIsManagerCancelling(false);
+                      setManagerAppToCancel(null);
+                      setManagerCancelReason("");
+                    }
+                  }}
+                  disabled={isManagerCancelling}
+                  className="w-full bg-red-600 hover:bg-red-700 text-white py-4 rounded-xl text-[10px] font-black uppercase italic tracking-widest transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 shadow-lg shadow-red-500/5 disabled:cursor-not-allowed"
+                >
+                  {isManagerCancelling ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      CANCELANDO...
+                    </>
+                  ) : (
+                    "SIM, CANCELAR AGENDAMENTO"
+                  )}
+                </button>
+                <button 
+                  onClick={() => { setManagerAppToCancel(null); setManagerCancelReason(""); }}
+                  disabled={isManagerCancelling}
+                  className="w-full bg-neutral-900 hover:bg-neutral-800 text-neutral-300 py-4 rounded-xl text-[10px] font-black uppercase italic tracking-widest transition-all cursor-pointer border border-white/5 disabled:cursor-not-allowed"
+                >
+                  MANTER AGENDAMENTO
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>

@@ -14,7 +14,7 @@ interface MyCutsScreenProps {
   onBack: () => void;
   onBookAgain?: (serviceId: string, barberId: string) => void;
   onReschedule?: (app: any) => void;
-  onCancel?: (app: any) => void;
+  onCancel?: (app: any, reason?: string) => void;
 }
 
 export function MyCutsScreen({ user, appointments, onBack, onBookAgain, onReschedule, onCancel }: MyCutsScreenProps) {
@@ -23,6 +23,7 @@ export function MyCutsScreen({ user, appointments, onBack, onBookAgain, onResche
   const [portfolioCuts, setPortfolioCuts] = useState<any[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [appToCancel, setAppToCancel] = useState<any | null>(null);
+  const [cancelReasonTxt, setCancelReasonTxt] = useState("");
   const [isCancelling, setIsCancelling] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<any | null>(null);
   const [filterFavsOnly, setFilterFavsOnly] = useState<boolean>(false);
@@ -762,7 +763,12 @@ export function MyCutsScreen({ user, appointments, onBack, onBookAgain, onResche
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => !isCancelling && setAppToCancel(null)}
+              onClick={() => {
+                if (!isCancelling) {
+                  setAppToCancel(null);
+                  setCancelReasonTxt("");
+                }
+              }}
               className="absolute inset-0 bg-black/80 backdrop-blur-md"
             />
             
@@ -794,17 +800,31 @@ export function MyCutsScreen({ user, appointments, onBack, onBookAgain, onResche
                 </p>
               </div>
 
+              <div className="space-y-2 text-left">
+                <label className="text-[10px] font-extrabold uppercase text-neutral-400 tracking-wider">
+                  Motivo do Cancelamento
+                </label>
+                <textarea
+                  value={cancelReasonTxt}
+                  onChange={(e) => setCancelReasonTxt(e.target.value)}
+                  placeholder="Por que você está cancelando? (ex: Tive um imprevisto)"
+                  maxLength={150}
+                  className="w-full bg-neutral-950 border border-white/5 rounded-2xl p-4 text-xs text-white placeholder-neutral-700 focus:border-red-500/50 outline-none resize-none h-20 transition-all font-medium"
+                />
+              </div>
+
               <div className="flex flex-col gap-2 pt-2">
                 <button 
                   onClick={async () => {
                     setIsCancelling(true);
                     try {
-                      await onCancel?.(appToCancel);
+                      await onCancel?.(appToCancel, cancelReasonTxt);
                     } catch (err) {
                       console.error(err);
                     } finally {
                       setIsCancelling(false);
                       setAppToCancel(null);
+                      setCancelReasonTxt("");
                     }
                   }}
                   disabled={isCancelling}
@@ -820,7 +840,7 @@ export function MyCutsScreen({ user, appointments, onBack, onBookAgain, onResche
                   )}
                 </button>
                 <button 
-                  onClick={() => setAppToCancel(null)}
+                  onClick={() => { setAppToCancel(null); setCancelReasonTxt(""); }}
                   disabled={isCancelling}
                   className="w-full bg-neutral-900 hover:bg-neutral-800 text-neutral-300 py-4 rounded-xl text-[10px] font-black uppercase italic tracking-widest transition-all cursor-pointer border border-white/5 disabled:cursor-not-allowed"
                 >

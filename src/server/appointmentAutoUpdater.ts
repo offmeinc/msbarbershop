@@ -2,6 +2,19 @@ import { collection, query, where, getDocs, updateDoc, Timestamp, doc, getDoc } 
 import { db } from "../lib/firebase";
 import { sendPushNotification } from "./pushNotificationService";
 
+export function getExactAppointmentDate(data: any): Date {
+  const baseDate = data.date instanceof Timestamp ? data.date.toDate() : new Date(data.date);
+  if (data.time && typeof data.time === "string") {
+    const parts = data.time.split(":");
+    if (parts.length >= 2) {
+      const hours = parseInt(parts[0], 10);
+      const minutes = parseInt(parts[1], 10);
+      baseDate.setHours(hours, minutes, 0, 0);
+    }
+  }
+  return baseDate;
+}
+
 export async function performHistoricalAppointmentUpdate() {
   console.log("[AutoUpdater] Performing historical appointment update...");
   try {
@@ -17,7 +30,7 @@ export async function performHistoricalAppointmentUpdate() {
       
       // We want to update if it's confirmed, pending, or undefined, AND it hasn't been cancelled.
       if (status !== 'cancelled' && status !== 'completed') {
-        const appointmentDate = data.date instanceof Timestamp ? data.date.toDate() : new Date(data.date);
+        const appointmentDate = getExactAppointmentDate(data);
         
         // If the appointment time passed
         if (appointmentDate < now) {
@@ -49,6 +62,7 @@ export function startAppointmentAutoUpdater() {
       const now = new Date();
       const appointmentsRef = collection(db, "appointments");
       const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
+      const twoHoursFromNow = new Date(now.getTime() + 2 * 60 * 60 * 1000);
       
       // Optimized query
       const q = query(
@@ -60,7 +74,7 @@ export function startAppointmentAutoUpdater() {
       
       const updates = snapshot.docs.map(async (d) => {
         const data = d.data();
-        const appointmentDate = data.date instanceof Timestamp ? data.date.toDate() : new Date(data.date);
+        const appointmentDate = getExactAppointmentDate(data);
         
         // 1. Auto-complete past appointments
         if (appointmentDate < now) {
@@ -72,7 +86,34 @@ export function startAppointmentAutoUpdater() {
           return;
         }
 
-        // 2. Reminder Notification (within 1 hour)
+        // 2. 2-Hour Reminder Push Notification
+        if (appointmentDate > now && appointmentDate <= twoHoursFromNow && !data.twoHourReminderSent) {
+          console.log(`[Reminders 2h] Preparing 2h reminder for appointment: ${d.id}`);
+          
+          // Double-check latest status in Firestore
+          const latestDoc = await getDoc(doc(db, "appointments", d.id));
+          const latestData = latestDoc.data();
+          
+          if (latestData && latestData.status === "confirmed" && !latestData.twoHourReminderSent) {
+            const rawTarget = latestData.clientId && latestData.clientId !== "guest" ? latestData.clientId : latestData.clientPhone;
+            const clientTarget = rawTarget ? rawTarget.replace(/[\s\-\(\)\+]/g, "") : "";
+            
+            if (clientTarget) {
+                console.log(`[Reminders 2h] Sending notification to ${clientTarget}`);
+                await sendPushNotification(clientTarget, {
+                    title: "Lembrete de Horário! 💈⏳",
+                    body: `Faltam 2 horas para o seu agendamento de ${latestData.serviceName} às ${latestData.time}. Te esperamos!`,
+                    url: "/"
+                });
+            }
+            
+            await updateDoc(doc(db, "appointments", d.id), {
+                twoHourReminderSent: true
+            });
+          }
+        }
+
+        // 3. 1-Hour Reminder Notification
         if (appointmentDate > now && appointmentDate <= oneHourFromNow && !data.reminderSent) {
           console.log(`[Reminders] Preparing reminder for appointment: ${d.id}`);
           
@@ -88,7 +129,7 @@ export function startAppointmentAutoUpdater() {
                 console.log(`[Reminders] Sending notification to ${clientTarget}`);
                 await sendPushNotification(clientTarget, {
                     title: "Lembrete de Horário! 💈",
-                    body: `Lembrete: seu agendamento de ${latestData.serviceName} é em breve!`,
+                    body: `Lembrete: seu agendamento de ${latestData.serviceName} é em breve (às ${latestData.time})!`,
                     url: "/"
                 });
             }

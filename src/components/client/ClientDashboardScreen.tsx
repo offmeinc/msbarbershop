@@ -22,6 +22,7 @@ import {
 } from "firebase/firestore";
 import { 
   X, 
+  XCircle,
   TrendingUp, 
   Scissors, 
   Wallet, 
@@ -77,6 +78,9 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
   const [appointments, setAppointments] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadChat, setUnreadChat] = useState(false);
+  const [appToCancel, setAppToCancel] = useState<any | null>(null);
+  const [cancelReasonTxt, setCancelReasonTxt] = useState("");
+  const [isCancelling, setIsCancelling] = useState(false);
   const [currentView, setCurrentView] = useState<"home" | "profile" | "booking" | "my-cuts" | "more-options" | "style-sheet" | "notifications" | "lookbook" | "wallet" | "chat">("home");
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
   const [initialBookingServiceId, setInitialBookingServiceId] = useState<string | undefined>();
@@ -342,16 +346,15 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
     return { totalSpent, completedCount, upcoming, daysToReturn, nextSuggestedDate };
   }, [appointments]);
 
-  const handleCancelAppointment = async (app: any) => {
-    if (!confirm("Deseja realmente cancelar este agendamento?")) return;
-    
+  const handleCancelAppointment = async (app: any, reason?: string) => {
     try {
       const res = await fetch(getBackendUrl("/api/appointments/cancel"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: safeStringify({
           appointmentId: app.id,
-          userId: user?.uid || user?.id
+          userId: user?.uid || user?.id,
+          reason: reason || ""
         })
       });
 
@@ -620,8 +623,11 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                           REAGENDAR
                         </button>
                         <button 
-                          onClick={() => handleCancelAppointment(stats.upcoming)} 
-                          className="px-6 bg-red-600 text-white font-black uppercase italic py-4 rounded-2xl text-[10px] tracking-widest hover:bg-red-700 transition-colors"
+                          onClick={() => {
+                            setAppToCancel(stats.upcoming);
+                            setCancelReasonTxt("");
+                          }} 
+                          className="px-6 bg-red-600 text-white font-black uppercase italic py-4 rounded-2xl text-[10px] tracking-widest hover:bg-red-700 transition-colors cursor-pointer"
                         >
                           CANCELAR
                         </button>
@@ -1379,6 +1385,102 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                 </div>
               </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+      {/* CANCEL AGENDAMENTO CONFIRM DIALOG */}
+      <AnimatePresence>
+        {appToCancel && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => {
+                if (!isCancelling) {
+                  setAppToCancel(null);
+                  setCancelReasonTxt("");
+                }
+              }}
+              className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            />
+            
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 15 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 15 }}
+              className="bg-neutral-950 border border-white/5 rounded-[2.5rem] p-8 max-w-sm w-full text-center relative z-10 shadow-2xl space-y-6 text-left"
+            >
+              <div className="w-14 h-14 bg-red-500/10 border border-red-500/25 rounded-3xl mx-auto flex items-center justify-center text-red-500">
+                <XCircle className="w-6 h-6 animate-pulse" />
+              </div>
+
+              <div className="space-y-2 text-center">
+                <h3 className="text-lg font-black uppercase italic tracking-wider text-white">Cancelar Agendamento?</h3>
+                <p className="text-xs text-neutral-400 font-bold uppercase leading-relaxed">
+                  Deseja realmente cancelar seu agendamento de <span className="text-white font-black">{appToCancel.serviceName}</span> para:
+                </p>
+              </div>
+
+              <div className="bg-neutral-900 rounded-2xl p-4 border border-white/5 space-y-2 text-left">
+                <p className="text-[10px] font-black uppercase tracking-wider text-amber-500 flex items-center gap-1.5 leading-none">
+                  <Calendar className="w-3 h-3" />
+                  {format(appToCancel.date instanceof Timestamp ? appToCancel.date.toDate() : parseISO(appToCancel.date), "dd 'de' MMMM", { locale: ptBR })}
+                </p>
+                <p className="text-[10px] font-black uppercase tracking-wider text-amber-500 flex items-center gap-1.5 leading-none">
+                  <Clock className="w-3 h-3" />
+                  às {appToCancel.time}
+                </p>
+              </div>
+
+              <div className="space-y-2 text-left">
+                <label className="text-[10px] font-extrabold uppercase text-neutral-400 tracking-wider">
+                  Motivo do Cancelamento
+                </label>
+                <textarea
+                  value={cancelReasonTxt}
+                  onChange={(e) => setCancelReasonTxt(e.target.value)}
+                  placeholder="Por que você está cancelando? (ex: Tive um imprevisto)"
+                  maxLength={150}
+                  className="w-full bg-neutral-950 border border-white/5 rounded-2xl p-4 text-xs text-white placeholder-neutral-700 focus:border-red-500/50 outline-none resize-none h-20 transition-all font-medium"
+                />
+              </div>
+
+              <div className="flex flex-col gap-2 pt-2">
+                <button 
+                  onClick={async () => {
+                    setIsCancelling(true);
+                    try {
+                      await handleCancelAppointment(appToCancel, cancelReasonTxt);
+                    } catch (err) {
+                      console.error(err);
+                    } finally {
+                      setIsCancelling(false);
+                      setAppToCancel(null);
+                      setCancelReasonTxt("");
+                    }
+                  }}
+                  disabled={isCancelling}
+                  className="w-full bg-red-600 hover:bg-red-700 text-white py-4 rounded-xl text-[10px] font-black uppercase italic tracking-widest transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 shadow-lg shadow-red-500/5 disabled:cursor-not-allowed"
+                >
+                  {isCancelling ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      CANCELANDO...
+                    </>
+                  ) : (
+                    "SIM, CANCELAR AGENDAMENTO"
+                  )}
+                </button>
+                <button 
+                  onClick={() => { setAppToCancel(null); setCancelReasonTxt(""); }}
+                  disabled={isCancelling}
+                  className="w-full bg-neutral-900 hover:bg-neutral-800 text-neutral-300 py-4 rounded-xl text-[10px] font-black uppercase italic tracking-widest transition-all cursor-pointer border border-white/5 disabled:cursor-not-allowed"
+                >
+                  MANTER AGENDAMENTO
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </motion.div>

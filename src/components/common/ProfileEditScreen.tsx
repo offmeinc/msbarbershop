@@ -3,7 +3,10 @@ import {
   doc, 
   updateDoc, 
   Timestamp, 
-  onSnapshot 
+  onSnapshot,
+  collection,
+  query,
+  where
 } from "firebase/firestore";
 import { 
   updateProfile 
@@ -21,7 +24,8 @@ import {
   Sparkles,
   LayoutGrid,
   Heart,
-  StickyNote
+  StickyNote,
+  Star
 } from "lucide-react";
 import { db } from "../../lib/firebase";
 import { toast } from "../ui/Toast";
@@ -41,6 +45,33 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [completedAppointments, setCompletedAppointments] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!isClient || !user) return;
+    const userId = user.uid || user.id;
+    const q = query(
+      collection(db, "appointments"),
+      where("clientId", "==", userId),
+      where("status", "==", "completed")
+    );
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const list = (snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as any[]).sort((a: any, b: any) => {
+        const dateA = a.date instanceof Timestamp ? a.date.toDate().getTime() : new Date(a.date).getTime();
+        const dateB = b.date instanceof Timestamp ? b.date.toDate().getTime() : new Date(b.date).getTime();
+        return dateB - dateA;
+      });
+      setCompletedAppointments(list);
+    }, (error) => {
+      console.error("Error fetching completed appointments on profile screen:", error);
+    });
+
+    return unsubscribe;
+  }, [isClient, user?.uid, user?.id]);
 
   useEffect(() => {
     const userId = user?.uid || user?.id;
@@ -425,6 +456,32 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
           </div>
         )}
 
+        {/* Avaliar Meus Atendimentos Section */}
+        {isClient && (
+          <div className="bg-white/[0.03] backdrop-blur-md rounded-[2.5rem] border border-white/10 p-6 space-y-6 text-left shadow-xl relative overflow-hidden">
+             <div className="border-b border-white/5 pb-3 flex items-center justify-between">
+                <span className="text-[10px] text-amber-500 font-sans uppercase font-black tracking-widest block flex items-center gap-2">
+                  <Star className="w-4 h-4 text-amber-500 fill-current" /> AVALIAR MEUS ATENDIMENTOS
+                </span>
+                <span className="text-[9px] bg-amber-500/10 text-amber-400 font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider font-mono">
+                  {completedAppointments.length} cortes realizados
+                </span>
+             </div>
+
+             {completedAppointments.length === 0 ? (
+               <div className="py-6 text-center text-[10px] text-neutral-500 uppercase font-black tracking-widest border border-dashed border-white/5 rounded-2xl">
+                 Nenhum atendimento finalizado para avaliar.
+               </div>
+             ) : (
+               <div className="space-y-4 max-h-[350px] overflow-y-auto pr-1">
+                 {completedAppointments.map((app) => (
+                   <AppointmentRatingCard key={app.id} app={app} />
+                 ))}
+               </div>
+             )}
+          </div>
+        )}
+
         {/* Global form submit button at the bottom */}
         <button 
           type="submit"
@@ -442,6 +499,114 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
         </button>
 
       </form>
+    </div>
+  );
+}
+
+function AppointmentRatingCard({ app }: { app: any; key?: any }) {
+  const [rating, setRating] = useState(app.rating || 0);
+  const [hoveredRating, setHoveredRating] = useState<number | null>(null);
+  const [comment, setComment] = useState(app.review?.comment || "");
+  const [loading, setLoading] = useState(false);
+
+  const hasChanges = rating !== (app.rating || 0) || comment !== (app.review?.comment || "");
+
+  const handleSave = async () => {
+    if (rating === 0) {
+      toast.error("Por favor, selecione uma nota de 1 a 5 estrelas! ⭐");
+      return;
+    }
+    setLoading(true);
+    try {
+      await updateDoc(doc(db, "appointments", app.id), {
+        rating,
+        review: {
+          rating,
+          comment: comment.trim(),
+          createdAt: Timestamp.now()
+        }
+      });
+      toast.success("Muito obrigado pela sua avaliação! ✨");
+    } catch (e) {
+      console.error(e);
+      toast.error("Erro ao salvar a avaliação.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const appDate = app.date instanceof Timestamp ? app.date.toDate() : new Date(app.date);
+
+  return (
+    <div className="bg-black/40 border border-white/5 rounded-2xl p-4 space-y-3 relative hover:border-white/10 transition-all text-left">
+      <div className="flex justify-between items-start">
+        <div className="space-y-0.5">
+          <h4 className="text-xs font-black text-white uppercase italic tracking-tight text-sans">
+            {app.serviceName}
+          </h4>
+          <p className="text-[9px] text-neutral-400 font-extrabold uppercase">
+            Com {app.barberName || "Barbeiro"} • {app.time}
+          </p>
+          <p className="text-[8px] text-neutral-500 font-bold uppercase tracking-wider font-mono">
+            {appDate.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
+          </p>
+        </div>
+        
+        {app.rating && !hasChanges && (
+          <span className="bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[8px] font-black px-2 py-1 rounded-lg uppercase tracking-widest">
+            AVALIADO
+          </span>
+        )}
+      </div>
+
+      {/* Star Selector */}
+      <div className="flex items-center gap-1.5 py-1">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <button
+            key={star}
+            type="button"
+            onMouseEnter={() => setHoveredRating(star)}
+            onMouseLeave={() => setHoveredRating(null)}
+            onClick={() => setRating(star)}
+            className={`transition-all active:scale-125 focus:outline-none ${
+              (hoveredRating !== null ? hoveredRating >= star : rating >= star)
+                ? "text-amber-500 scale-105"
+                : "text-neutral-800"
+            }`}
+          >
+            <Star className={`w-5 h-5 ${ (hoveredRating !== null ? hoveredRating >= star : rating >= star) ? "fill-current" : ""}`} />
+          </button>
+        ))}
+      </div>
+
+      {/* Optional Comment Input */}
+      {rating > 0 && (
+        <div className="space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+          <input
+            type="text"
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            placeholder="Deixe um comentário sobre o atendimento (opcional)"
+            className="w-full bg-neutral-900 border border-white/5 focus:border-amber-500/50 rounded-xl px-3 py-2 text-[11px] text-white placeholder-neutral-700 outline-none transition-all font-medium"
+            maxLength={100}
+          />
+
+          {hasChanges && (
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={loading}
+              className="w-full bg-amber-500 hover:bg-amber-400 text-black py-2 rounded-xl text-[9px] font-black uppercase italic tracking-widest transition-all cursor-pointer flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                "SALVAR NOTA"
+              )}
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

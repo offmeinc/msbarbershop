@@ -7,7 +7,7 @@ import multer from "multer";
 import cors from "cors";
 import axios from "axios";
 import FormData from "form-data";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 import { initVapid, startAppointmentsListener, sendPushNotification, sendNotificationToCollaborators } from "./src/server/pushNotificationService";
 import { startAppointmentAutoUpdater } from "./src/server/appointmentAutoUpdater";
 import { db } from "./src/lib/firebase";
@@ -218,6 +218,70 @@ Seja motivador, conciso e profissional em português do Brasil! Garanta que os v
       console.error("[Mercado Pago Route Error]:", error.response?.data || error.message);
       const errMsg = error.response?.data?.message || error.message || "Erro de Integração com o Mercado Pago";
       return res.status(500).json({ error: errMsg });
+    }
+  });
+
+  // Natural Language & Voice Scheduling Parsing Interface
+  app.post("/api/voice-booking", async (req, res) => {
+    const { prompt, clientLocalDate, services, barbers } = req.body;
+    try {
+      if (!prompt) {
+        return res.status(400).json({ error: "O comando de texto/voz é obrigatório" });
+      }
+
+      const clientDate = clientLocalDate ? new Date(clientLocalDate) : new Date();
+      const options: Intl.DateTimeFormatOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+      const formattedClientDate = clientDate.toLocaleDateString('pt-BR', options);
+
+      const ai = getGeminiClient();
+      const response = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: `Analise a entrada de agendamento em linguagem natural e extraia os dados correspondentes.
+Contexto do Cliente (Data de hoje): ${formattedClientDate} (ISO: ${clientLocalDate || new Date().toISOString()})
+
+Lista de Serviços Disponíveis na Barbearia:
+${JSON.stringify(services || [], null, 2)}
+
+Lista de Barbeiros Disponíveis na Barbearia:
+${JSON.stringify(barbers || [], null, 2)}
+
+Entrada do Usuário: "${prompt}"`,
+        config: {
+          systemInstruction: `Você é um robô inteligente especialista em extração de entidades em linguagem natural para a MS Barbearia.
+Analise a entrada do usuário e extraia o agendamento de cabelo/barba desejado.
+Sua missão é extrair exatamente:
+1. "serviceId": ID do serviço na lista disponível (se encontrar correspondência próxima, ex: 'corte default' ou 'barba'). Se não encontrar, retorne nulo.
+2. "barberId": ID do barbeiro da lista disponível (se o cliente disser algum nome que corresponda próximo). Se não encontrar, ou se disser "qualquer um" ou similar, use "all" ou nulo.
+3. "date": A data calculada no formato YYYY-MM-DD. Se disser "amanhã", calcule 1 dia adiante de hoje. Se "depois de amanhã", 2 dias adiante. Se "quinta", encontre o dia correspondente à próxima quinta-feira (se hoje já for quinta e o horário sugerido já passou ou se o usuário explicitamente se referir ao próximo ciclo, encontre o dia correto correspondente).
+4. "time": O horário no formato HH:MM. Se não falar, ou falar vago tipo "à tarde", estime algo razoável como "15:00" ou retorne nulo.
+5. "serviceName": O nome do serviço associado.
+6. "barberName": O nome de exibição do barbeiro associado.
+7. "explanation": Explicação amigável em português dizendo o que entendeu e preencheu (ex: "Claro, mestre! Agendei um Corte Social com o Marcos para esta quinta, dia 12/06 às 15:30. Já preenchi o formulário para você, basta conferir e confirmar!").
+
+Retorne a resposta rigorosamente em formato JSON estruturado seguindo o esquema definido.`,
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              serviceId: { type: Type.STRING, description: "ID do serviço correspondente" },
+              barberId: { type: Type.STRING, description: "ID do barbeiro correspondente" },
+              date: { type: Type.STRING, description: "A data correspondente calculada formatada em YYYY-MM-DD" },
+              time: { type: Type.STRING, description: "O horário correspondente formatado em HH:MM" },
+              serviceName: { type: Type.STRING, description: "Nome do serviço" },
+              barberName: { type: Type.STRING, description: "Nome do barbeiro" },
+              explanation: { type: Type.STRING, description: "Uma mensagem simpática em português de confirmação" }
+            },
+            required: ["explanation"]
+          }
+        }
+      });
+
+      const resultText = response.text || "{}";
+      const parsedData = JSON.parse(resultText);
+      res.json(parsedData);
+    } catch (error: any) {
+      console.error("[Voice Booking API Error]:", error);
+      res.status(500).json({ error: "Falha ao processar o agendamento por voz. Tente digitar seu pedido." });
     }
   });
 
@@ -665,7 +729,7 @@ Seja motivador, conciso e profissional em português do Brasil! Garanta que os v
 
   // API Route for appointment cancellation with atomic refund
   app.post("/api/appointments/cancel", async (req, res) => {
-    const { appointmentId, userId } = req.body;
+    const { appointmentId, userId, reason } = req.body;
     if (!appointmentId || !userId) {
       return res.status(400).json({ error: "Missing appointmentId or userId" });
     }
@@ -696,6 +760,7 @@ Seja motivador, conciso e profissional em português do Brasil! Garanta que os v
         const updates: any = {
            status: "cancelled",
            cancelledBy: "client",
+           cancellationReason: reason || "Motivo não informado",
            updatedAt: serverTimestamp()
         };
 
@@ -716,22 +781,35 @@ Seja motivador, conciso e profissional em português do Brasil! Garanta que os v
         t.update(appointmentRef, updates);
       });
 
-      // Staff notification
+      // Notifications
       if (appData) {
         try {
           const dateVal = appData.date instanceof Timestamp ? appData.date.toDate() : new Date(appData.date);
           const formattedDate = dateVal.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+          const displayReason = reason || "Não informado";
           
+          // Staff notification (to the barber/staff)
           await addDoc(collection(db, "staff_notifications"), {
             type: "cancellation",
-            message: `Agendamento Cancelado: ${appData.clientName} cancelou ${appData.serviceName} marcado para ${formattedDate}`,
+            message: `Agendamento Cancelado: ${appData.clientName} cancelou ${appData.serviceName} marcado para ${formattedDate}. Motivo: ${displayReason}`,
             timestamp: serverTimestamp(),
             read: false,
             clientId: userId,
             appointmentId: appointmentId
           });
+
+          // Client notification (to the client)
+          await addDoc(collection(db, "notifications"), {
+            clientId: appData.clientId || userId || "",
+            clientEmail: appData.clientEmail || "",
+            type: "cancellation",
+            message: `Seu agendamento para ${appData.serviceName} no dia ${formattedDate} foi cancelado. Motivo: ${displayReason}`,
+            timestamp: serverTimestamp(),
+            read: false,
+            appointmentId: appointmentId
+          });
         } catch (notifierErr) {
-          console.error("Error creating staff notification:", notifierErr);
+          console.error("Error creating notifications:", notifierErr);
         }
       }
 

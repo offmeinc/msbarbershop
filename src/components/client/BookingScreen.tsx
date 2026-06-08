@@ -43,6 +43,9 @@ import {
   Calendar as CalendarIcon,
   AlertTriangle,
   Sparkles,
+  Star,
+  Mic,
+  MicOff,
 } from "lucide-react";
 import { setupPushSubscription, getNotificationPermissionState, queryNotificationSupport, getBackendUrl } from "../../lib/pushRegister";
 import { db, handleFirestoreError, OperationType, safeStringify } from "../../lib/firebase";
@@ -702,6 +705,61 @@ interface PortfolioModalProps {
 }
 
 function PortfolioModal({ barber, onClose }: PortfolioModalProps) {
+  const [ratingsStats, setRatingsStats] = useState<{ average: number; count: number } | null>(null);
+  const [recentReviews, setRecentReviews] = useState<any[]>([]);
+  const [loadingStats, setLoadingStats] = useState(true);
+
+  useEffect(() => {
+    if (!barber?.id) return;
+    const firestore = db || getFirestore();
+    const q = query(
+      collection(firestore, "appointments"),
+      where("barberId", "==", barber.id),
+      where("status", "==", "completed")
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      let sum = 0;
+      let count = 0;
+      const reviewsList: any[] = [];
+      
+      snapshot.docs.forEach((d) => {
+        const data = d.data();
+        if (data.rating && typeof data.rating === "number" && data.rating >= 1 && data.rating <= 5) {
+          sum += data.rating;
+          count++;
+          if (data.review?.comment) {
+            reviewsList.push({
+              id: d.id,
+              clientName: data.clientName || "Cliente",
+              rating: data.rating,
+              comment: data.review.comment,
+              date: data.review.createdAt || data.date
+            });
+          }
+        }
+      });
+      
+      reviewsList.sort((a, b) => {
+        const dateA = a.date instanceof Timestamp ? a.date.toDate().getTime() : new Date(a.date).getTime();
+        const dateB = b.date instanceof Timestamp ? b.date.toDate().getTime() : new Date(b.date).getTime();
+        return dateB - dateA;
+      });
+
+      setRecentReviews(reviewsList.slice(0, 3));
+      setRatingsStats({
+        average: count > 0 ? parseFloat((sum / count).toFixed(1)) : 0,
+        count
+      });
+      setLoadingStats(false);
+    }, (err) => {
+      console.error("Error loading ratings statistics for barber:", err);
+      setLoadingStats(false);
+    });
+
+    return () => unsubscribe();
+  }, [barber?.id]);
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -730,13 +788,24 @@ function PortfolioModal({ barber, onClose }: PortfolioModalProps) {
               </div>
             )}
           </div>
-          <div className="text-left">
+          <div className="text-left flex-1">
             <h3 className="text-xl font-black text-white italic uppercase tracking-tight">
               {barber.name}
             </h3>
-            <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">
-              Portfólio & Cortes
-            </p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">
+                Portfólio & Cortes
+              </p>
+              {!loadingStats && ratingsStats && ratingsStats.count > 0 && (
+                <>
+                  <span className="w-1 h-1 rounded-full bg-neutral-800" />
+                  <div className="flex items-center gap-1 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-md text-amber-500 text-[10px] font-black">
+                    <Star className="w-3 h-3 fill-current" />
+                    <span>{ratingsStats.average} ({ratingsStats.count})</span>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
@@ -754,6 +823,30 @@ function PortfolioModal({ barber, onClose }: PortfolioModalProps) {
             </div>
           )}
         </div>
+
+        {/* Recent Client Reviews */}
+        {!loadingStats && recentReviews.length > 0 && (
+          <div className="space-y-2.5 text-left border-t border-white/5 pt-4">
+            <p className="text-[9px] text-neutral-400 font-black uppercase tracking-widest text-sans">Avaliações Recentes</p>
+            <div className="space-y-2 max-h-[140px] overflow-y-auto pr-1">
+              {recentReviews.map((rev) => (
+                <div key={rev.id} className="bg-neutral-900/40 border border-white/5 rounded-2xl p-3 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-extrabold text-white uppercase">{rev.clientName}</p>
+                    <div className="flex items-center gap-0.5 text-amber-500">
+                      {Array.from({ length: rev.rating }).map((_, i) => (
+                        <Star key={i} className="w-2.5 h-2.5 fill-current" />
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-neutral-400 italic font-medium leading-relaxed">
+                    "{rev.comment}"
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <button
           onClick={onClose}
@@ -854,6 +947,124 @@ export function BookingScreen({
   const [validatingCoupon, setValidatingCoupon] = useState(false);
   const [couponError, setCouponError] = useState<string | null>(null);
   const [couponSuccess, setCouponSuccess] = useState<string | null>(null);
+
+  const [voiceInput, setVoiceInput] = useState("");
+  const [isListening, setIsListening] = useState(false);
+  const [processingVoice, setProcessingVoice] = useState(false);
+  const [voiceExplanation, setVoiceExplanation] = useState<string | null>(null);
+
+  // Web Speech API initialization
+  const startSpeechRecognition = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      toast.error("O reconhecimento de voz não é suportado pelo seu navegador atual. Você pode digitar seu pedido!");
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.lang = "pt-BR";
+      recognition.continuous = false;
+      recognition.interimResults = false;
+
+      recognition.onstart = () => {
+        setIsListening(true);
+        setVoiceExplanation(null);
+        toast.info("Ouvindo... Fale o serviço, barbeiro, dia e hora que deseja! 🎙️");
+      };
+
+      recognition.onerror = (e: any) => {
+        console.error("Speech recognition error", e);
+        setIsListening(false);
+        toast.error("Erro na escuta. Tente falar um pouco mais alto ou digite seu agendamento!");
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        if (transcript) {
+          setVoiceInput(transcript);
+          toast.success("Transcrito com sucesso! Carregando preenchimento...");
+          handleVoiceBookingSubmit(transcript);
+        }
+      };
+
+      recognition.start();
+    } catch (e) {
+      console.error(e);
+      setIsListening(false);
+    }
+  };
+
+  const handleVoiceBookingSubmit = async (promptToSend?: string) => {
+    const textPrompt = promptToSend || voiceInput;
+    if (!textPrompt.trim()) {
+      toast.error("Por favor, digite ou fale algo antes de enviar! 🎯");
+      return;
+    }
+
+    setProcessingVoice(true);
+    setVoiceExplanation(null);
+
+    try {
+      const response = await fetch(getBackendUrl("/api/voice-booking"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt: textPrompt,
+          clientLocalDate: new Date().toISOString(),
+          services: services.map(s => ({ id: s.id, name: s.name, price: s.price })),
+          barbers: barbers.map(b => ({ id: b.id, name: b.name })),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Erro na rede do processador");
+      }
+
+      const data = await response.json();
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      // Preencher o formulário baseado no retorno de IA
+      if (data.serviceId) {
+        setSelectedService(data.serviceId);
+      }
+      if (data.barberId) {
+        setSelectedBarber(data.barberId);
+      }
+      if (data.date) {
+        setSelectedDate(new Date(data.date));
+      }
+      if (data.time) {
+        setSelectedTime(data.time);
+      }
+
+      // Auto-avance de etapas dependendo do que foi preenchido
+      if (data.serviceId && data.barberId && data.date && data.time) {
+        setStep(4);
+      } else if (data.serviceId && data.barberId) {
+        setStep(3);
+      } else if (data.serviceId) {
+        setStep(2);
+      }
+
+      setVoiceExplanation(data.explanation || "Agendamento pré-preenchido com sucesso pelo assistente de IA!");
+      toast.success("Campos preenchidos pela IA! ✨");
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Falha ao processar comando de voz. Tente preencher manualmente!");
+    } finally {
+      setProcessingVoice(false);
+    }
+  };
 
   const selectedServiceObj = useMemo(() => {
     return services.find((s) => s.id === selectedService);
@@ -1491,6 +1702,82 @@ export function BookingScreen({
                 exit={{ x: -20, opacity: 0 }}
                 className="space-y-6"
               >
+                {/* Voice & IA Booking Box */}
+                <div className="bg-gradient-to-r from-neutral-900 via-amber-500/10 to-neutral-900 border border-amber-500/20 rounded-3xl p-5 relative overflow-hidden shadow-xl">
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-2xl pointer-events-none" />
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="flex h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
+                        <span className="text-[9px] text-amber-500 font-sans uppercase font-black tracking-widest block font-extrabold">AGENDAMENTO POR VOZ / SINTETIZADOR DE IA</span>
+                      </div>
+                      <h3 className="text-sm font-black text-white uppercase italic tracking-tight">Faça seu pedido em linguagem natural!</h3>
+                      <p className="text-[10px] text-neutral-400 leading-relaxed font-semibold">
+                        Grave ou digite o que você quer agendar (ex: <span className="text-amber-500 font-bold">"Quero corte de cabelo social para amanhã às 15h com o Marcos"</span>).
+                      </p>
+                    </div>
+                    <div className="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 shrink-0">
+                      <Sparkles className="w-5 h-5 animate-pulse" />
+                    </div>
+                  </div>
+
+                  <div className="mt-4 space-y-3">
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <input
+                          type="text"
+                          value={voiceInput}
+                          onChange={(e) => setVoiceInput(e.target.value)}
+                          placeholder="Microfone desligado. Digite ou clique no microfone para falar..."
+                          className="w-full bg-black/40 border border-white/5 focus:border-amber-500/40 rounded-2xl pl-4 pr-12 py-3.5 text-xs text-white placeholder-neutral-700 outline-none transition-all font-medium"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              handleVoiceBookingSubmit();
+                            }
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={startSpeechRecognition}
+                          className={`absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-xl flex items-center justify-center transition-all ${
+                            isListening
+                              ? "bg-red-500 text-white animate-pulse"
+                              : "bg-neutral-900 border border-white/5 hover:bg-neutral-800 text-amber-500"
+                          }`}
+                          title="Falar agendamento"
+                        >
+                          {isListening ? <MicOff className="w-4 h-4 animate-bounce" /> : <Mic className="w-4 h-4" />}
+                        </button>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleVoiceBookingSubmit()}
+                        disabled={processingVoice || !voiceInput.trim()}
+                        className="bg-amber-500 hover:bg-amber-400 text-black px-5 rounded-2xl text-[10px] font-black uppercase italic tracking-widest transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                      >
+                        {processingVoice ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          "PROCESSAR"
+                        )}
+                      </button>
+                    </div>
+
+                    {voiceExplanation && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-neutral-950 border border-amber-500/10 p-3.5 rounded-2xl text-[10.5px] text-neutral-300 font-semibold leading-relaxed"
+                      >
+                        <div className="flex items-center gap-1.5 mb-1 text-amber-400 font-extrabold uppercase text-[9px] tracking-widest">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-amber-500 fill-black" /> ENTENDIDO:
+                        </div>
+                        {voiceExplanation}
+                      </motion.div>
+                    )}
+                  </div>
+                </div>
                 {/* Search & Category Filter Section */}
                 <div className="space-y-4">
                   <div className="relative">

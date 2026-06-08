@@ -60,7 +60,9 @@
         "totalPrice": { "type": "number" },
         "paymentStatus": { "type": "string", "enum": ["unpaid", "paid"] },
         "createdAt": { "type": "string", "format": "date-time" },
-        "loginCode": { "type": "string" }
+        "loginCode": { "type": "string" },
+        "reminderSent": { "type": "boolean" },
+        "twoHourReminderSent": { "type": "boolean" }
       },
       "required": ["clientId", "barberId", "serviceId", "date", "status"]
     },

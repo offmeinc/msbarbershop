@@ -224,11 +224,47 @@ export default function App() {
   const [selectedClient, setSelectedClient] = useState<any | null>(null);
   const isSigningUp = useRef(false);
 
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("theme");
+      if (stored) return stored === "dark";
+      return window.matchMedia("(prefers-color-scheme: dark)").matches;
+    }
+    return true;
+  });
+
   const toggleTheme = () => {
-    console.log("toggleTheme called. Current state:", isDarkMode);
-    setIsDarkMode(!isDarkMode);
+    const nextMode = !isDarkMode;
+    console.log("toggleTheme called. Changing state to:", nextMode);
+    setIsDarkMode(nextMode);
+    localStorage.setItem("theme", nextMode ? "dark" : "light");
   };
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+
+    const handleChange = (e: MediaQueryListEvent) => {
+      const stored = localStorage.getItem("theme");
+      if (!stored) {
+        setIsDarkMode(e.matches);
+      }
+    };
+
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener("change", handleChange);
+    } else {
+      mediaQuery.addListener(handleChange);
+    }
+
+    return () => {
+      if (mediaQuery.removeEventListener) {
+        mediaQuery.removeEventListener("change", handleChange);
+      } else {
+        mediaQuery.removeListener(handleChange);
+      }
+    };
+  }, []);
   
   useEffect(() => {
     // 1. Web Push (PWA)
