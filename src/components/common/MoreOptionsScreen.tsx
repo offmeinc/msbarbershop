@@ -15,7 +15,8 @@ import {
   LogOut, 
   ChevronLeft,
   Star,
-  Package
+  Package,
+  Gift
 } from "lucide-react";
 import { setupPushSubscription, getNotificationPermissionState, queryNotificationSupport, getBackendUrl } from "../../lib/pushRegister";
 import { BlockScreen } from "../manager/BlockScreen";
@@ -35,7 +36,7 @@ import { toast } from "../ui/Toast";
 // Dummy components
 const DarkScreen = ({ onBack }: { onBack: () => void }) => <div className="p-4">Dark Screen <button onClick={onBack}>Voltar</button></div>;
 
-export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotifications, appointments, onClearNotifications, onToggleTheme, isDarkMode }: { user: any, role: string, onLogout: () => void, onBack: () => void, key?: any, staffNotifications: any[], appointments: any[], onClearNotifications: () => void, onToggleTheme: () => void, isDarkMode: boolean }) {
+export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotifications, appointments, onClearNotifications, onToggleTheme, isDarkMode, onReferrals }: { user: any, role: string, onLogout: () => void, onBack: () => void, key?: any, staffNotifications: any[], appointments: any[], onClearNotifications: () => void, onToggleTheme: () => void, isDarkMode: boolean, onReferrals?: () => void }) {
   const [activeSubScreen, setActiveSubScreen] = useState<
     'main' | 'profile' | 'dashboard' | 'notif' | 'block' | 'share' | 'earnings' | 'week' | 'recon' | 'recurrence' | 'promotions' | 'inventory'
   >('main');
@@ -74,6 +75,13 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
           icon: <UserCircle className="w-5 h-5 text-amber-500" />, 
           onClick: () => setActiveSubScreen('profile') 
         },
+        ...(role === 'client' && onReferrals ? [{
+          id: 'referrals', 
+          label: 'Indicações & Prêmios', 
+          desc: 'Seu código promocional e acompanhamento de amigos indicados',
+          icon: <Gift className="w-5 h-5 text-amber-500" />, 
+          onClick: onReferrals 
+        }] : []),
         ...(role === 'client' ? [] : [{ 
           id: 'dashboard', 
           label: 'Ver como Cliente', 

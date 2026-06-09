@@ -34,6 +34,7 @@ import {
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Timestamp } from "firebase/firestore";
+import { triggerSuccessHaptic, triggerWarningHaptic, triggerLightHaptic } from "../lib/haptics";
 
 // Premium Barber Colors scheme resembling Google Calendar blocks
 const BARBER_COLORS = [
@@ -118,17 +119,17 @@ export function AppointmentModal({ appointment, onClose, onUpdate, onEdit, onDel
 
         <div className="space-y-2">
             <div className="grid grid-cols-2 gap-2.5">
-               <button onClick={() => { onUpdate(appointment, 'confirmed'); onClose(); }} className="py-3 bg-white/5 hover:bg-amber-500 hover:text-black border border-white/5 rounded-xl font-black uppercase tracking-widest text-[9px] transition-all">CONFIRMAR</button>
-               <button onClick={() => { onUpdate(appointment, 'completed', { payerName: payerName || appointment.clientName }); onClose(); }} className="py-3 bg-green-500 hover:bg-green-600 text-black rounded-xl font-black uppercase tracking-widest text-[9px] transition-all" title="Registra o comparecimento e atualiza os ganhos automaticamente">COMPARECEU ✅</button>
+               <button onClick={() => { triggerSuccessHaptic(); onUpdate(appointment, 'confirmed'); onClose(); }} className="py-3 bg-white/5 hover:bg-amber-500 hover:text-black border border-white/5 rounded-xl font-black uppercase tracking-widest text-[9px] transition-all">CONFIRMAR</button>
+               <button onClick={() => { triggerSuccessHaptic(); onUpdate(appointment, 'completed', { payerName: payerName || appointment.clientName }); onClose(); }} className="py-3 bg-green-500 hover:bg-green-600 text-black rounded-xl font-black uppercase tracking-widest text-[9px] transition-all" title="Registra o comparecimento e atualiza os ganhos automaticamente">COMPARECEU ✅</button>
             </div>
             <div className="grid grid-cols-2 gap-2.5">
-               <button onClick={() => { onUpdate(appointment, 'cancelled'); onClose(); }} className="py-3 bg-red-500/10 hover:bg-red-500/25 text-red-500 border border-red-500/20 rounded-xl font-black uppercase tracking-widest text-[9px] transition-all">CANCELAR</button>
+               <button onClick={() => { triggerWarningHaptic(); onUpdate(appointment, 'cancelled'); onClose(); }} className="py-3 bg-red-500/10 hover:bg-red-500/25 text-red-500 border border-red-500/20 rounded-xl font-black uppercase tracking-widest text-[9px] transition-all">CANCELAR</button>
                {onDelete && (
-                   <button onClick={() => { onDelete(appointment); onClose(); }} className="py-3 bg-neutral-950 hover:bg-red-950/40 text-red-400 border border-red-500/10 rounded-xl font-black uppercase tracking-widest text-[9px] transition-all">EXCLUIR</button>
+                   <button onClick={() => { triggerWarningHaptic(); onDelete(appointment); onClose(); }} className="py-3 bg-neutral-950 hover:bg-red-950/40 text-red-400 border border-red-500/10 rounded-xl font-black uppercase tracking-widest text-[9px] transition-all">EXCLUIR</button>
                )}
             </div>
             {onEdit && (
-                <button onClick={() => { if (onEdit) onEdit(appointment); onClose(); }} className="w-full py-3.5 bg-neutral-950 text-neutral-300 border border-white/5 rounded-xl font-black uppercase tracking-widest text-[9px] hover:text-white hover:bg-neutral-800 transition-all">EDITAR AGENDAMENTO</button>
+                <button onClick={() => { triggerLightHaptic(); if (onEdit) onEdit(appointment); onClose(); }} className="w-full py-3.5 bg-neutral-950 text-neutral-300 border border-white/5 rounded-xl font-black uppercase tracking-widest text-[9px] hover:text-white hover:bg-neutral-800 transition-all">EDITAR AGENDAMENTO</button>
             )}
         </div>
       </motion.div>

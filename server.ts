@@ -837,6 +837,16 @@ Retorne a resposta rigorosamente em formato JSON estruturado seguindo o esquema 
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
+    
+    // Mercado Pago Access Token verification log
+    const mpToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
+    if (mpToken) {
+      // Safely show presence with length and a tiny redacted hint to avoid exposing private credentials
+      const maskedToken = mpToken.length > 10 ? `${mpToken.substring(0, 6)}...${mpToken.substring(mpToken.length - 4)}` : 'configurado';
+      console.log(`[Mercado Pago] MERCADO_PAGO_ACCESS_TOKEN carregado com sucesso! (Token: ${maskedToken}, Comprimento: ${mpToken.length})`);
+    } else {
+      console.warn(`[Mercado Pago] ALERTA: MERCADO_PAGO_ACCESS_TOKEN não está definido. Verifique suas variáveis de ambiente para produção/pagamentos reais.`);
+    }
   });
 }
 

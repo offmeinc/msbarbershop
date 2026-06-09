@@ -306,10 +306,17 @@ export const NotificationsScreen = ({ notifications, appointments, onBack, onCle
                 return (
                   <motion.div 
                     key={n.id} 
-                    initial={{ opacity: 0, scale: 0.96, y: 15 }}
+                    initial={{ opacity: 0, scale: 0.94, y: 18 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.93, y: -10 }}
-                    transition={{ delay: Math.min(idx * 0.03, 0.25) }}
+                    exit={{ opacity: 0, scale: 0.92, y: -12 }}
+                    whileHover={{ scale: 1.01, y: -2, transition: { duration: 0.2 } }}
+                    whileTap={{ scale: 0.99 }}
+                    transition={{ 
+                      type: "spring",
+                      stiffness: 220,
+                      damping: 18,
+                      delay: Math.min(idx * 0.025, 0.2) 
+                    }}
                     onClick={() => isUnread && !isMarking && handleMarkAsRead(n.id)}
                     className={`text-left p-4 rounded-[2rem] border transition-all relative overflow-hidden group cursor-pointer ${
                       isUnread 
@@ -416,9 +423,16 @@ export const NotificationsScreen = ({ notifications, appointments, onBack, onCle
               return (
                 <motion.div 
                   key={app.id} 
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: Math.min(idx * 0.035, 0.3) }}
+                  initial={{ opacity: 0, scale: 0.95, y: 15 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                  transition={{ 
+                    type: "spring",
+                    stiffness: 220,
+                    damping: 18,
+                    delay: Math.min(idx * 0.03, 0.2) 
+                  }}
                   className="p-4 rounded-[2rem] bg-neutral-950/40 border border-white/5 hover:border-white/10 flex items-center justify-between group transition-all text-left"
                 >
                   <div className="flex items-center gap-3.5">

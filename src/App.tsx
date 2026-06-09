@@ -839,57 +839,66 @@ export default function App() {
       <main className="pt-[calc(5rem+env(safe-area-inset-top))] max-w-7xl mx-auto px-4 md:px-6 pb-12">
         <Suspense fallback={<LoadingFallback />}>
           <AnimatePresence mode="wait">
-            {displayScreen === "home" && (
-              (['manager', 'barber'].includes(userRole)) 
-              ? <ProfessionalHome 
+            <motion.div
+              key={displayScreen}
+              initial={{ opacity: 0, x: 24 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -24 }}
+              transition={{ duration: 0.28, ease: [0.25, 0.1, 0.25, 1.0] }}
+              className="w-full"
+            >
+              {displayScreen === "home" && (
+                (['manager', 'barber'].includes(userRole)) 
+                ? <ProfessionalHome 
+                    user={user} 
+                    role={userRole} 
+                    setCurrentScreen={(screen) => {
+                      if (screen === "agenda") {
+                        setDashboardView("list");
+                      }
+                      setCurrentScreen(screen);
+                    }} 
+                  /> 
+                : <HomeScreen services={services} onStartBooking={() => setCurrentScreen("booking")} />
+              )}
+              {displayScreen === "login" && <CollaboratorLoginScreen onLogin={handleLogin} setCurrentScreen={setCurrentScreen} setRequestedRole={setRequestedRole} />}
+              {displayScreen === "client-login" && <ClientPortalScreen onLogin={handleClientLogin} onBack={() => setCurrentScreen("home")} />}
+              {(displayScreen === "client-dashboard" || displayScreen === "checkout") && <ClientDashboardScreen user={loggedInClient} onBack={() => setCurrentScreen("home")} />}
+              {displayScreen === "booking" && <BookingScreen user={user} role={userRole} services={services} onBack={() => { setCurrentScreen("home"); setAppointmentToEdit(null); setClientToSchedule(null); }} editAppointment={appointmentToEdit} initialClient={clientToSchedule} />}
+              {displayScreen === "agenda" && <DashboardScreen user={user} role={userRole} services={services} dashboardView={dashboardView} onBack={() => setCurrentScreen("home")} onNewBooking={() => setCurrentScreen("booking")} onEditBooking={(app) => { setAppointmentToEdit(app); setCurrentScreen("booking"); }} />}
+              {displayScreen === "collaborators" && <DashboardScreen user={user} role={userRole} services={services} dashboardView="collaborators" onBack={() => setCurrentScreen("home")} onNewBooking={() => setCurrentScreen("booking")} onEditBooking={(app) => { setAppointmentToEdit(app); setCurrentScreen("booking"); }} />}
+              {displayScreen === "services" && <DashboardScreen user={user} role={userRole} services={services} dashboardView="services" onBack={() => setCurrentScreen("home")} onNewBooking={() => setCurrentScreen("booking")} onEditBooking={(app) => { setAppointmentToEdit(app); setCurrentScreen("booking"); }} />}
+              {displayScreen === "earnings" && <EarningsScreen onBack={() => setCurrentScreen("home")} />}
+              {displayScreen === "promotions" && <PromotionsManager onBack={() => setCurrentScreen("home")} />}
+              {displayScreen === "clients" && <ClientsScreen onBack={() => setCurrentScreen("home")} onScheduleClient={(client) => { setClientToSchedule(client); setCurrentScreen("booking"); }} onClientClick={(client) => { setSelectedClient(client); setCurrentScreen("client-details"); }} />}
+              {displayScreen === "client-details" && selectedClient && <ClientDetailsScreen client={selectedClient} onBack={() => { setCurrentScreen("clients"); setSelectedClient(null); }} onScheduleClient={(client) => { setClientToSchedule(client); setCurrentScreen("booking"); }} onMessageClient={(client) => { setSelectedClient(client); setCurrentScreen("professional-chat"); }} />}
+              {displayScreen === "portfolio" && <PortfolioManager onBack={() => setCurrentScreen("home")} />}
+              {displayScreen === "barber-management" && <BarbershopManagement user={user} role={userRole} onBack={() => setCurrentScreen("home")} />}
+              {displayScreen === "professional-chat" && (
+                <ProfessionalClientChatsScreen 
                   user={user} 
+                  onBack={() => { setCurrentScreen("home"); setSelectedClient(null); }} 
+                  initialClientId={selectedClient?.id} 
+                  initialClientName={selectedClient?.name} 
+                />
+              )}
+              {displayScreen === "more" && (
+                <MoreOptionsScreen 
+                  user={user || loggedInClient} 
                   role={userRole} 
-                  setCurrentScreen={(screen) => {
-                    if (screen === "agenda") {
-                      setDashboardView("list");
-                    }
-                    setCurrentScreen(screen);
-                  }} 
-                /> 
-              : <HomeScreen services={services} onStartBooking={() => setCurrentScreen("booking")} />
-            )}
-            {displayScreen === "login" && <CollaboratorLoginScreen onLogin={handleLogin} setCurrentScreen={setCurrentScreen} setRequestedRole={setRequestedRole} />}
-            {displayScreen === "client-login" && <ClientPortalScreen onLogin={handleClientLogin} onBack={() => setCurrentScreen("home")} />}
-            {(displayScreen === "client-dashboard" || displayScreen === "checkout") && <ClientDashboardScreen user={loggedInClient} onBack={() => setCurrentScreen("home")} />}
-            {displayScreen === "booking" && <BookingScreen user={user} role={userRole} services={services} onBack={() => { setCurrentScreen("home"); setAppointmentToEdit(null); setClientToSchedule(null); }} editAppointment={appointmentToEdit} initialClient={clientToSchedule} />}
-            {displayScreen === "agenda" && <DashboardScreen user={user} role={userRole} services={services} dashboardView={dashboardView} onBack={() => setCurrentScreen("home")} onNewBooking={() => setCurrentScreen("booking")} onEditBooking={(app) => { setAppointmentToEdit(app); setCurrentScreen("booking"); }} />}
-            {displayScreen === "collaborators" && <DashboardScreen user={user} role={userRole} services={services} dashboardView="collaborators" onBack={() => setCurrentScreen("home")} onNewBooking={() => setCurrentScreen("booking")} onEditBooking={(app) => { setAppointmentToEdit(app); setCurrentScreen("booking"); }} />}
-            {displayScreen === "services" && <DashboardScreen user={user} role={userRole} services={services} dashboardView="services" onBack={() => setCurrentScreen("home")} onNewBooking={() => setCurrentScreen("booking")} onEditBooking={(app) => { setAppointmentToEdit(app); setCurrentScreen("booking"); }} />}
-            {displayScreen === "earnings" && <EarningsScreen onBack={() => setCurrentScreen("home")} />}
-            {displayScreen === "promotions" && <PromotionsManager onBack={() => setCurrentScreen("home")} />}
-            {displayScreen === "clients" && <ClientsScreen onBack={() => setCurrentScreen("home")} onScheduleClient={(client) => { setClientToSchedule(client); setCurrentScreen("booking"); }} onClientClick={(client) => { setSelectedClient(client); setCurrentScreen("client-details"); }} />}
-            {displayScreen === "client-details" && selectedClient && <ClientDetailsScreen client={selectedClient} onBack={() => { setCurrentScreen("clients"); setSelectedClient(null); }} onScheduleClient={(client) => { setClientToSchedule(client); setCurrentScreen("booking"); }} onMessageClient={(client) => { setSelectedClient(client); setCurrentScreen("professional-chat"); }} />}
-            {displayScreen === "portfolio" && <PortfolioManager onBack={() => setCurrentScreen("home")} />}
-            {displayScreen === "barber-management" && <BarbershopManagement user={user} role={userRole} onBack={() => setCurrentScreen("home")} />}
-            {displayScreen === "professional-chat" && (
-              <ProfessionalClientChatsScreen 
-                user={user} 
-                onBack={() => { setCurrentScreen("home"); setSelectedClient(null); }} 
-                initialClientId={selectedClient?.id} 
-                initialClientName={selectedClient?.name} 
-              />
-            )}
-            {displayScreen === "more" && (
-              <MoreOptionsScreen 
-                user={user || loggedInClient} 
-                role={userRole} 
-                onLogout={handleLogout} 
-                onBack={() => setCurrentScreen("home")}
-                staffNotifications={staffNotifications}
-                appointments={appointments}
-                onClearNotifications={async () => {
-                  const unread = staffNotifications.filter(n => !n.read);
-                  await Promise.all(unread.map(n => updateDoc(doc(db, "staff_notifications", n.id), { read: true })));
-                }}
-                onToggleTheme={toggleTheme}
-                isDarkMode={isDarkMode}
-              />
-            )}
+                  onLogout={handleLogout} 
+                  onBack={() => setCurrentScreen("home")}
+                  staffNotifications={staffNotifications}
+                  appointments={appointments}
+                  onClearNotifications={async () => {
+                    const unread = staffNotifications.filter(n => !n.read);
+                    await Promise.all(unread.map(n => updateDoc(doc(db, "staff_notifications", n.id), { read: true })));
+                  }}
+                  onToggleTheme={toggleTheme}
+                  isDarkMode={isDarkMode}
+                />
+              )}
+            </motion.div>
           </AnimatePresence>
         </Suspense>
       </main>

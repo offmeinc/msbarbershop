@@ -46,6 +46,7 @@ import {
   Clock,
   MessageSquare,
   MessageCircle,
+  Lock,
   Image as ImageIcon,
   CreditCard,
   ShieldCheck,
@@ -66,8 +67,10 @@ import { LookbookScreen } from "./LookbookScreen";
 import { PreferencesSummary } from "./PreferencesSummary";
 import { NotificationsScreen } from "../NotificationsScreen";
 import { ChatScreen } from "../ChatScreens";
+import { ReferralsScreen } from "./ReferralsScreen";
 import { GOOGLE_REVIEW_URL } from "../../constants";
 import { toast } from "../ui/Toast";
+import { triggerLightHaptic } from "../../lib/haptics";
 
 interface ClientDashboardScreenProps {
   user: any;
@@ -81,7 +84,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
   const [appToCancel, setAppToCancel] = useState<any | null>(null);
   const [cancelReasonTxt, setCancelReasonTxt] = useState("");
   const [isCancelling, setIsCancelling] = useState(false);
-  const [currentView, setCurrentView] = useState<"home" | "profile" | "booking" | "my-cuts" | "more-options" | "style-sheet" | "notifications" | "lookbook" | "wallet" | "chat">("home");
+  const [currentView, setCurrentView] = useState<"home" | "profile" | "booking" | "my-cuts" | "more-options" | "style-sheet" | "notifications" | "lookbook" | "wallet" | "chat" | "referrals">("home");
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
   const [initialBookingServiceId, setInitialBookingServiceId] = useState<string | undefined>();
   const [initialBookingBarberId, setInitialBookingBarberId] = useState<string | undefined>();
@@ -213,13 +216,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
     }
   };
 
-  useEffect(() => {
-    if (user?.uid && !user.referralCode && !referralCode) {
-      const newRef = Math.random().toString(36).substring(2, 8).toUpperCase();
-      updateDoc(doc(db, "users", user.uid), { referralCode: newRef })
-        .then(() => setReferralCode(newRef));
-    }
-  }, [user?.uid, user?.referralCode, referralCode]);
+
 
   useEffect(() => {
     if (isRecharging && rechargeStep === "pix" && rechargeMpData?.payment_id && !rechargeSuccess) {
@@ -345,6 +342,14 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
 
     return { totalSpent, completedCount, upcoming, daysToReturn, nextSuggestedDate };
   }, [appointments]);
+
+  useEffect(() => {
+    if (user?.uid && !liveUser?.referralCode && !referralCode && stats.completedCount > 0) {
+      const newRef = Math.random().toString(36).substring(2, 8).toUpperCase();
+      updateDoc(doc(db, "users", user.uid), { referralCode: newRef })
+        .then(() => setReferralCode(newRef));
+    }
+  }, [user?.uid, liveUser?.referralCode, referralCode, stats.completedCount]);
 
   const handleCancelAppointment = async (app: any, reason?: string) => {
     try {
@@ -743,55 +748,57 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                         </div>
                      </div>
                   </div>
-              </div>
+               </div>
 
-
-              {/* Referral Section */}
-              {stats.completedCount > 0 && (
-                <div className="bg-neutral-900 border border-white/5 p-8 rounded-[3rem] shadow-2xl relative overflow-hidden group mt-6">
-                  <div className="absolute -right-4 -bottom-4 text-white/5 group-hover:scale-110 transition-transform duration-700">
-                    <Gift size={160} />
+              {/* Referral Section Card */}
+              <div 
+                onClick={() => {
+                  triggerLightHaptic();
+                  setCurrentView('referrals');
+                }}
+                className="bg-neutral-900 hover:bg-neutral-850 border border-white/5 hover:border-amber-500/10 p-8 rounded-[3rem] shadow-2xl relative overflow-hidden group mt-6 cursor-pointer transition-all duration-300"
+              >
+                <div className="absolute -right-4 -bottom-4 text-white/5 group-hover:scale-110 transition-transform duration-700">
+                  <Gift size={160} />
+                </div>
+                <div className="relative z-10">
+                  <div className="flex items-center gap-2 mb-4">
+                      <Gift className="w-4 h-4 text-amber-500" />
+                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-500">Indique & Ganhe</span>
+                      {stats.completedCount > 0 ? (
+                        <span className="ml-auto bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[8px] font-black px-2 py-0.5 rounded-full uppercase italic tracking-tighter">Ativo</span>
+                      ) : (
+                        <span className="ml-auto bg-neutral-800 text-neutral-400 border border-white/5 text-[8px] font-black px-2 py-0.5 rounded-full uppercase italic tracking-tighter">Pendente</span>
+                      )}
                   </div>
-                  <div className="relative z-10">
-                    <div className="flex items-center gap-2 mb-4">
-                        <Share2 className="w-4 h-4 text-amber-500" />
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-500">Convide um amigo</span>
-                        <span className="ml-auto bg-amber-500/10 text-amber-500 border border-amber-500/20 text-[8px] font-black px-2 py-0.5 rounded-full uppercase italic tracking-tighter shadow-[0_0_10px_rgba(250,204,21,0.2)]">Ativo</span>
+                  
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="text-left">
+                      <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white mb-2 leading-none flex items-center gap-1.5">
+                        Central de Indicações <ChevronRight className="w-5 h-5 text-amber-500 group-hover:translate-x-1 transition-transform" />
+                      </h3>
+                      <p className="text-xs text-neutral-400 font-medium max-w-sm">
+                        {stats.completedCount > 0 
+                          ? `Indique amigos usando seu código exclusivo e acumule bônus de R$ 5,00 diretamente na sua carteira digital!` 
+                          : `Ganhe R$ 5,00 na carteira a cada amigo indicado! Complete seu primeiro corte com a gente para desbloquear o programa.`
+                        }
+                      </p>
                     </div>
-                    <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white mb-2 leading-none">Indique e Ganhe R$ 5,00</h3>
-                    <p className="text-xs text-neutral-400 font-medium mb-6">Compartilhe seu código com um amigo. Quando ele agendar o primeiro corte e pagar, você ganha R$ 5,00 de desconto no seu próximo corte!</p>
-                    
-                    <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-black rounded-2xl p-4 border border-white/10 flex items-center justify-between">
-                            <span className="text-base font-black tracking-widest text-white">{referralCode}</span>
-                            <button 
-                                onClick={() => {
-                                  navigator.clipboard.writeText(referralCode);
-                                  toast.success("Código de indicação copiado!");
-                                }} 
-                                className="text-neutral-500 hover:text-white transition-colors"
-                            >
-                                <Copy className="w-5 h-5" />
-                            </button>
-                        </div>
-                        <button 
-                            onClick={() => {
-                              const text = `Use meu código ${referralCode} ao agendar seu corte na barbearia! Você e eu ganhamos R$5,00 de desconto no corte! Acesse o app e reserve!`;
-                              if (navigator.share) {
-                                navigator.share({ title: "Agende seu corte com Desconto", text }).catch(console.error);
-                              } else {
-                                navigator.clipboard.writeText(text);
-                                toast.success("Link de convite copiado!");
-                              }
-                            }}
-                            className="bg-amber-500 text-black p-4 rounded-2xl font-black hover:bg-amber-400 active:scale-95 transition-all shadow-lg shadow-amber-500/20"
-                        >
-                            <Share2 className="w-5 h-5" />
-                        </button>
+                  </div>
+
+                  <div className="mt-6 flex items-center justify-between bg-black/40 border border-white/5 p-4 rounded-2xl">
+                    <div className="text-left">
+                      <span className="text-[8px] font-black uppercase text-neutral-500 tracking-wider">Código de Cupom</span>
+                      <p className="text-[13px] font-mono font-black text-amber-500 tracking-wider">
+                        {stats.completedCount > 0 ? (referralCode || liveUser?.referralCode || "GERANDO...") : "🔒 BLOQUEADO"}
+                      </p>
                     </div>
+                    <span className="text-[10px] font-black uppercase text-amber-500 shrink-0 italic tracking-wider group-hover:underline">
+                      Gerenciar Convidados →
+                    </span>
                   </div>
                 </div>
-              )}
+              </div>
 
               {/* Live Chat Card */}
               <div className="bg-neutral-900 border border-white/5 p-8 rounded-[3.5rem] shadow-2xl relative overflow-hidden group">
@@ -957,6 +964,14 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
           />
         )}
         {currentView === 'notifications' && <NotificationsScreen user={user} notifications={notifications} appointments={appointments} onClear={handleClearNotifications} onBack={() => setCurrentView('home')} />}
+        {currentView === 'referrals' && (
+          <ReferralsScreen 
+            user={user} 
+            onBack={() => setCurrentView('home')} 
+            stats={stats} 
+            appointments={appointments} 
+          />
+        )}
         {currentView === 'style-sheet' && <StyleSheet user={user} onBack={() => setCurrentView('home')} />}
         {currentView === 'wallet' && (
           <motion.div
@@ -1168,6 +1183,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                 onClearNotifications={() => {}}
                 onToggleTheme={() => {}}
                 isDarkMode={true}
+                onReferrals={() => setCurrentView('referrals')}
             />
         )}
       </AnimatePresence>

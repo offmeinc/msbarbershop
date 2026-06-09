@@ -51,6 +51,7 @@ import { setupPushSubscription, getNotificationPermissionState, queryNotificatio
 import { db, handleFirestoreError, OperationType, safeStringify } from "../../lib/firebase";
 import { signInWithGoogleCalendar, addEventToCalendar, getCalendarAccessToken } from "../../lib/calendar";
 import { toast } from "../ui/Toast";
+import { triggerSuccessHaptic, triggerLightHaptic } from "../../lib/haptics";
 
 import { QRCodeCanvas } from "qrcode.react";
 import { generatePixString } from "../../lib/pix";
@@ -1382,6 +1383,7 @@ export function BookingScreen({
   }, [selectedDate, barberAppointments, blockedTimes, customDuration]);
 
   const handleConfirmBooking = async () => {
+    triggerSuccessHaptic();
     if (!selectedService || !selectedBarber || !selectedDate || !selectedTime) {
       setError("Todos os campos são obrigatórios.");
       return;
@@ -1830,6 +1832,7 @@ export function BookingScreen({
                           whileHover={{ y: -3, scale: 1.01 }}
                           whileTap={{ scale: 0.99 }}
                           onClick={() => {
+                            triggerLightHaptic();
                             setSelectedService(s.id);
                             setCustomDuration(s.duration || 30);
                             setStep(2);
@@ -1911,6 +1914,7 @@ export function BookingScreen({
                         >
                           <button
                             onClick={() => {
+                              triggerLightHaptic();
                               setSelectedBarber(b.id);
                               setStep(3);
                             }}
@@ -2104,6 +2108,7 @@ export function BookingScreen({
                                     whileHover={available ? { scale: 1.05 } : {}}
                                     whileTap={available ? { scale: 0.95 } : {}}
                                     onClick={() => {
+                                      triggerLightHaptic();
                                       setSelectedTime(time);
                                       setStep(4);
                                     }}

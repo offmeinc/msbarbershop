@@ -41,9 +41,15 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ notificati
     <AnimatePresence>
       {latestNotification && (
         <motion.div
-          initial={{ opacity: 0, y: 50, scale: 0.9 }}
+          initial={{ opacity: 0, y: 35, scale: 0.92 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 50, scale: 0.9 }}
+          exit={{ opacity: 0, y: 20, scale: 0.95 }}
+          transition={{
+            type: "spring",
+            stiffness: 280,
+            damping: 24,
+            mass: 0.9
+          }}
           className="fixed bottom-24 left-4 right-4 md:left-auto md:right-8 z-[100] bg-neutral-900/90 backdrop-blur-lg border border-amber-500/30 p-4 rounded-2xl shadow-2xl flex items-start gap-4"
         >
           <div className="p-2 bg-amber-500/20 text-amber-500 rounded-full shrink-0">

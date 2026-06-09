@@ -19,15 +19,27 @@ export function urlBase64ToUint8Array(base64String: string): Uint8Array {
 export function getBackendUrl(path: string): string {
   const cleanPath = path.startsWith("/") ? path : `/${path}`;
   
-  // Support custom backend domain via ENV when accessing directly
-  const extBackend = import.meta.env?.VITE_BACKEND_URL;
-  if (extBackend && extBackend.trim() !== "") {
-    const baseUrl = extBackend.endsWith("/") ? extBackend.slice(0, -1) : extBackend;
-    console.log(`[getBackendUrl] external origin path=${path}, result=${baseUrl}${cleanPath}`);
-    return `${baseUrl}${cleanPath}`;
+  // Checking if running inside Capacitor native app webview
+  const isCapacitor = typeof window !== "undefined" && (
+    (window as any).Capacitor || 
+    navigator.userAgent.includes("Capacitor") || 
+    window.location.protocol === "file:" ||
+    window.location.protocol.startsWith("capacitor")
+  );
+
+  // In native platforms (Capacitor), we must use VITE_BACKEND_URL because same-origin relative paths resolve to local assets
+  if (isCapacitor) {
+    const extBackend = import.meta.env?.VITE_BACKEND_URL;
+    if (extBackend && extBackend.trim() !== "") {
+      const baseUrl = extBackend.endsWith("/") ? extBackend.slice(0, -1) : extBackend;
+      console.log(`[getBackendUrl] Capacitor environment path=${path}, result=${baseUrl}${cleanPath}`);
+      return `${baseUrl}${cleanPath}`;
+    }
   }
   
-  console.log(`[getBackendUrl] relative origin path=${path}, result=${cleanPath}`);
+  // In standard web environments, always use relative same-origin paths.
+  // This ensures immunity against CORS mismatches or mixed secure content issues.
+  console.log(`[getBackendUrl] Web standard relative path=${path}, result=${cleanPath}`);
   return cleanPath;
 }
 

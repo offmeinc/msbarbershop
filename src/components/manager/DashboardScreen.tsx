@@ -58,9 +58,12 @@ import {
   addDoc, 
   deleteDoc,
   serverTimestamp,
-  getFirestore
+  getFirestore,
+  getDoc,
+  getDocs
 } from "firebase/firestore";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
+import { triggerLightHaptic } from "../../lib/haptics";
 import { addToOfflineQueue, getOfflineQueue, syncOfflineQueue, OfflineAction } from "../../lib/offlineQueue";
 import { AnalyticsScreen } from "./AnalyticsScreen";
 import { CalendarWidget, AppointmentModal } from "../CalendarWidget";
@@ -120,6 +123,15 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
   const [barbers, setBarbers] = useState<any[]>([]);
   const [selectedBarberId, setSelectedBarberId] = useState<string>("all");
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 20000);
+    return () => clearInterval(timer);
+  }, []);
+
   const [currentView, setCurrentView] = useState<"agenda" | "list" | "services" | "hours" | "collaborators" | "earnings">(dashboardView || (role === 'client' ? 'list' : 'agenda'));
   const [agendaMode, setAgendaMode] = useState<"day" | "week" | "month">("day");
   const [loading, setLoading] = useState(true);
@@ -347,6 +359,48 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
       }
       
       await updateDoc(doc(firestore, "appointments", app.id), updatePayload);
+
+      // Process offline/manual referral bonus when appointment completed
+      if (newStatus === 'completed' && app.clientId && app.clientId !== "guest") {
+        try {
+          const clientDocRef = doc(firestore, "users", app.clientId);
+          const clientSnap = await getDoc(clientDocRef);
+          if (clientSnap.exists()) {
+            const userData = clientSnap.data();
+            if (userData.referredBy && !userData.referralRewardTriggered) {
+              const rQuery = query(collection(firestore, "users"), where("referralCode", "==", userData.referredBy));
+              const rSnap = await getDocs(rQuery);
+              if (!rSnap.empty) {
+                const referrerDoc = rSnap.docs[0];
+                const rRef = doc(firestore, "users", rSnap.docs[0].id);
+                const currentBal = Number(referrerDoc.data().walletBalance || 0);
+
+                await updateDoc(rRef, {
+                  walletBalance: currentBal + 5,
+                  updatedAt: serverTimestamp()
+                });
+
+                await updateDoc(clientDocRef, {
+                  referralRewardTriggered: true,
+                  updatedAt: serverTimestamp()
+                });
+
+                await addDoc(collection(firestore, "notifications"), {
+                  clientId: referrerDoc.id,
+                  type: "bonus",
+                  message: `Bônus de Indicação! Você ganhou R$ 5,00 de crédito em sua carteira pois seu amigo ${app.clientName || "indicado"} concluiu o primeiro corte! 💇‍♂️`,
+                  timestamp: serverTimestamp(),
+                  read: false
+                });
+
+                console.log(`[Referral] Manually completed: Referrer ${referrerDoc.id} rewarded R$ 5.00 for client ${app.clientId}`);
+              }
+            }
+          }
+        } catch (refErr) {
+          console.error("Error processing manual referral bonus:", refErr);
+        }
+      }
       
       let clientMsg = `Seu agendamento para ${app.serviceName} foi atualizado para: ${newStatus}`;
       let staffType = 'update';
@@ -452,54 +506,66 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
     document.body.removeChild(link);
   };
 
-  const filteredAppointmentsList = useMemo(() => {
-	  return appointments.filter(app => {
-		  // Status Filter
-		  if (filterStatus !== 'all') {
-			  const isPending = !app.status || app.status === 'pending';
-			  if (filterStatus === 'pending') {
-				  if (!isPending) return false;
-			  } else {
-				  if (app.status !== filterStatus) return false;
-			  }
-		  }
-
-		  // Barber Filter
-		  if (selectedBarberId !== 'all' && app.barberId !== selectedBarberId) {
-			  return false;
-		  }
-
-		  // Date Filter (if scope is 'day')
-		  if (listScope === 'day') {
-			  if (!app.date) return false;
-			  const appDate = app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date);
-			  if (!(appDate instanceof Date) || isNaN(appDate.getTime())) return false;
-			  return isSameDay(appDate, currentDate);
-		  }
-
-		  return true;
-	  });
-  }, [appointments, filterStatus, selectedBarberId, listScope, currentDate]);
-
-  const statsForListMode = useMemo(() => {
-    const listApps = appointments.filter(app => {
+  const baseFilteredAppointments = useMemo(() => {
+    return appointments.filter(app => {
       // Barber Filter
       if (selectedBarberId !== 'all' && app.barberId !== selectedBarberId) {
-		  return false;
-	  }
+        return false;
+      }
 
-      // Date Filter
+      // Date Filter (if scope is 'day')
       if (listScope === 'day') {
-		  if (!app.date) return false;
-		  const appDate = app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date);
-		  if (!(appDate instanceof Date) || isNaN(appDate.getTime())) return false;
-		  return isSameDay(appDate, currentDate);
-	  }
-	  return true;
+        if (!app.date) return false;
+        const appDate = app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date);
+        if (!(appDate instanceof Date) || isNaN(appDate.getTime())) return false;
+        return isSameDay(appDate, currentDate);
+      }
+
+      return true;
     });
-    
-    const completed = listApps.filter(app => app.status === 'completed' && app.status !== 'cancelled');
-    const scheduled = listApps.filter(app => (app.status === 'confirmed' || app.status === 'pending') && app.status !== 'cancelled');
+  }, [appointments, selectedBarberId, listScope, currentDate]);
+
+  const filteredAppointmentsList = useMemo(() => {
+    return baseFilteredAppointments.filter(app => {
+      // Status Filter
+      if (filterStatus !== 'all') {
+        const isPending = !app.status || app.status === 'pending';
+        if (filterStatus === 'pending') {
+          if (!isPending) return false;
+        } else {
+          if (app.status !== filterStatus) return false;
+        }
+      }
+      return true;
+    });
+  }, [baseFilteredAppointments, filterStatus]);
+
+  const statusCounts = useMemo(() => {
+    const counts = {
+      all: baseFilteredAppointments.length,
+      pending: 0,
+      confirmed: 0,
+      completed: 0,
+      cancelled: 0,
+    };
+    baseFilteredAppointments.forEach(app => {
+      const isPending = !app.status || app.status === 'pending';
+      if (isPending) {
+        counts.pending++;
+      } else if (app.status === 'confirmed') {
+        counts.confirmed++;
+      } else if (app.status === 'completed') {
+        counts.completed++;
+      } else if (app.status === 'cancelled') {
+        counts.cancelled++;
+      }
+    });
+    return counts;
+  }, [baseFilteredAppointments]);
+
+  const statsForListMode = useMemo(() => {
+    const completed = baseFilteredAppointments.filter(app => app.status === 'completed' && app.status !== 'cancelled');
+    const scheduled = baseFilteredAppointments.filter(app => (app.status === 'confirmed' || app.status === 'pending') && app.status !== 'cancelled');
     
     const totalValue = completed.reduce((sum, app) => {
       const rawPrice = app.totalPrice || app.price || 0;
@@ -966,22 +1032,80 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                       </div>
 
                       {/* Styled Filter Controls */}
-                      <div className="flex gap-2 pb-2 overflow-x-auto no-scrollbar border-b border-white/5 mb-4">
+                      <div className="flex gap-2 pb-2.5 overflow-x-auto no-scrollbar border-b border-white/5 mb-5 select-none scroll-smooth">
                         {[
-                          { id: 'all', label: 'Todos' },
-                          { id: 'pending', label: 'Pendentes' },
-                          { id: 'confirmed', label: 'Confirmados' },
-                          { id: 'completed', label: 'Atendidos' },
-                          { id: 'cancelled', label: 'Cancelados' }
+                          { id: 'all', label: 'Todos', icon: Calendar, color: 'amber' },
+                          { id: 'pending', label: 'Pendentes', icon: Clock, color: 'orange' },
+                          { id: 'confirmed', label: 'Confirmados', icon: CheckCircle2, color: 'amber' },
+                          { id: 'completed', label: 'Atendidos', icon: Sparkles, color: 'emerald' },
+                          { id: 'cancelled', label: 'Cancelados', icon: XCircle, color: 'rose' }
                         ].map((tab) => {
-                          const isActive = filterStatus === tab.id;
+                          const id = tab.id;
+                          const isActive = filterStatus === id;
+                          const count = statusCounts[id as keyof typeof statusCounts] ?? 0;
+                          const IconComponent = tab.icon;
+                          
+                          // Active and Hover border/bg colors mapping
+                          let activeClass = "";
+                          let inactiveHoverClass = "";
+                          
+                          if (tab.color === 'orange') {
+                            activeClass = "bg-orange-500/10 border-orange-500/40 text-orange-400 shadow-md shadow-orange-500/5";
+                            inactiveHoverClass = "hover:border-orange-500/20 hover:text-orange-300";
+                          } else if (tab.color === 'emerald') {
+                            activeClass = "bg-emerald-500/10 border-emerald-500/40 text-emerald-400 shadow-md shadow-emerald-500/5";
+                            inactiveHoverClass = "hover:border-emerald-500/20 hover:text-emerald-300";
+                          } else if (tab.color === 'rose') {
+                            activeClass = "bg-rose-500/10 border-rose-500/40 text-rose-400 shadow-md shadow-rose-500/5";
+                            inactiveHoverClass = "hover:border-rose-500/20 hover:text-rose-300";
+                          } else { // 'amber'
+                            activeClass = "bg-amber-500/10 border-amber-500/40 text-amber-500 shadow-md shadow-amber-500/5";
+                            inactiveHoverClass = "hover:border-amber-500/20 hover:text-amber-400";
+                          }
+
                           return (
                             <button
-                              key={tab.id}
-                              onClick={() => setFilterStatus(tab.id as any)}
-                              className={`relative px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap active:scale-95 border ${isActive ? 'bg-amber-500 border-amber-500 text-black shadow-lg shadow-amber-500/10' : 'bg-neutral-950 border-white/5 text-neutral-500 hover:text-neutral-300 hover:bg-neutral-900'}`}
+                              key={id}
+                              onClick={() => {
+                                triggerLightHaptic();
+                                setFilterStatus(id as any);
+                              }}
+                              className={`group relative flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap active:scale-[0.96] border ${
+                                isActive 
+                                  ? `${activeClass} font-extrabold` 
+                                  : `bg-neutral-950 border-white/5 text-neutral-500 ${inactiveHoverClass} hover:bg-neutral-900`
+                              }`}
                             >
-                              {tab.label}
+                              <IconComponent className={`w-3.5 h-3.5 transition-transform group-hover:scale-110 duration-200 ${
+                                isActive 
+                                  ? "opacity-100" 
+                                  : "opacity-40 group-hover:opacity-80"
+                              }`} />
+                              <span>{tab.label}</span>
+                              
+                              <span className={`px-1.5 py-0.5 rounded-full text-[8.5px] font-extrabold leading-none transition-all ${
+                                isActive
+                                  ? tab.color === 'orange' ? 'bg-orange-500/20 text-orange-400'
+                                    : tab.color === 'emerald' ? 'bg-emerald-500/20 text-emerald-400'
+                                    : tab.color === 'rose' ? 'bg-rose-500/20 text-rose-400'
+                                    : 'bg-amber-500/20 text-amber-500'
+                                  : 'bg-white/5 text-neutral-600 group-hover:bg-white/10 group-hover:text-neutral-400'
+                              }`}>
+                                {count}
+                              </span>
+                              
+                              {isActive && (
+                                <motion.span 
+                                  layoutId="activeFilterTabIndicator" 
+                                  className={`absolute bottom-0 left-4 right-4 h-[1.5px] rounded-full ${
+                                    tab.color === 'orange' ? 'bg-orange-500/70'
+                                      : tab.color === 'emerald' ? 'bg-emerald-500/70'
+                                      : tab.color === 'rose' ? 'bg-rose-500/70'
+                                      : 'bg-amber-500/70'
+                                  }`} 
+                                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                                />
+                              )}
                             </button>
                           );
                         })}
@@ -1035,29 +1159,62 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                                     badgeDot = "bg-red-400";
                                   }
 
+                                  const timeUntilApp = dateVal.getTime() - currentTime.getTime();
+                                  const isUpcomingSoon = 
+                                    app.status !== 'completed' && 
+                                    app.status !== 'cancelled' && 
+                                    timeUntilApp > 0 && 
+                                    timeUntilApp <= 2 * 60 * 60 * 1000;
+
+                                  let remainingText = "";
+                                  if (isUpcomingSoon) {
+                                    const mins = Math.max(0, Math.round(timeUntilApp / 60000));
+                                    if (mins >= 60) {
+                                      const hrs = Math.floor(mins / 60);
+                                      const remMins = mins % 60;
+                                      remainingText = remMins > 0 ? `${hrs}h ${remMins}m` : `${hrs}h`;
+                                    } else {
+                                      remainingText = `${mins} min`;
+                                    }
+                                  }
+
+                                  const upcomingBorderClass = isUpcomingSoon 
+                                    ? "border-amber-500/40 shadow-[0_0_20px_rgba(245,158,11,0.15)] ring-1 ring-amber-500/20" 
+                                    : "border-white/5";
+
+                                  const borderHighlightClass = isExpanded 
+                                    ? "border-amber-500/60 shadow-[0_12px_40px_-5px_rgba(245,158,11,0.2)] z-10" 
+                                    : upcomingBorderClass;
+
                                   return (
                                       <motion.div 
                                            layout
                                            initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                                           animate={{ opacity: 1, y: 0, scale: 1 }}
+                                           animate={{ opacity: 1, y: 0, scale: isExpanded ? 1.03 : 1 }}
                                            exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                                           whileHover={{ y: -4, borderColor: "rgba(245, 158, 11, 0.2)" }}
-                                           whileTap={{ scale: 0.98 }}
+                                           whileHover={isExpanded ? {} : { y: -4, scale: 1.01, borderColor: "rgba(245, 158, 11, 0.25)" }}
+                                           whileTap={{ scale: 0.99 }}
                                            transition={{ 
                                              type: "spring",
-                                             stiffness: 150,
-                                             damping: 18,
-                                             delay: Math.min(index * 0.03, 0.2)
+                                             stiffness: 260,
+                                             damping: 24,
+                                             delay: isExpanded ? 0 : Math.min(index * 0.02, 0.15)
                                            }}
                                            key={`${app.id}_${filterStatus}_${currentDate.toDateString()}`} 
-                                           className={`bg-neutral-900 rounded-[2rem] border border-white/5 border-l-4 ${borderAccent} p-5 shadow-xl group cursor-pointer hover:bg-neutral-800 transition-all relative overflow-hidden`}
+                                           className={`bg-neutral-900 rounded-[2rem] border ${borderHighlightClass} border-l-4 ${borderAccent} p-5 shadow-xl group cursor-pointer hover:bg-neutral-800 transition-all relative overflow-hidden`}
                                            onClick={() => setExpandedAppointmentId(isExpanded ? null : app.id)}
                                       >
                                           <div className="flex justify-between items-start mb-3">
                                               <div>
                                                   <p className="text-[10px] text-neutral-500 uppercase font-black tracking-widest mb-1 flex items-center gap-1.5 leading-none">
-                                                    <Clock className="w-3 h-3 text-amber-500" />
-                                                    {format(dateVal, "PPP", { locale: ptBR })}
+                                                    <Clock className={`w-3.5 h-3.5 ${isUpcomingSoon ? "text-amber-500 animate-pulse scale-110" : "text-neutral-500"}`} />
+                                                    <span>{format(dateVal, "PPP 'às' HH:mm", { locale: ptBR })}</span>
+                                                    {isUpcomingSoon && (
+                                                      <span className="ml-1.5 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-[8px] text-amber-500 font-extrabold flex items-center gap-1 animate-pulse uppercase">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+                                                        Em Breve • {remainingText}
+                                                      </span>
+                                                    )}
                                                   </p>
                                                   <h4 className="font-medium text-lg text-white tracking-tight mt-1 leading-none">{app.serviceName}</h4>
                                               </div>

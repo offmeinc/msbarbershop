@@ -10,7 +10,9 @@ import {
   deleteDoc, 
   doc, 
   getDoc,
-  Timestamp 
+  Timestamp,
+  addDoc,
+  updateDoc
 } from "firebase/firestore";
 import { db } from "../lib/firebase";
 
@@ -198,6 +200,113 @@ export async function sendNotificationToCollaborators(
   }
 }
 
+async function checkAndNotifyReferralFirstAppointmentConfirmed(
+  clientId: string,
+  clientName: string,
+  serviceName: string,
+  formattedDateStr: string,
+  docId: string
+) {
+  if (!clientId || clientId === "guest") return;
+  
+  try {
+    const clientDocRef = doc(db, "users", clientId);
+    const clientSnap = await getDoc(clientDocRef);
+    if (!clientSnap.exists()) return;
+    
+    const userData = clientSnap.data();
+    if (!userData.referredBy || userData.referralConfirmationNotificationTriggered) {
+      return;
+    }
+    
+    // To be absolutely sure it's their FIRST confirmed/completed appointment,
+    // verify there are no other confirmed/completed appointments for this client.
+    const appointmentsQuery = query(
+      collection(db, "appointments"),
+      where("clientId", "==", clientId)
+    );
+    const appointmentsSnap = await getDocs(appointmentsQuery);
+    const otherConfirmedOrCompleted = appointmentsSnap.docs.filter((d) => {
+      const dData = d.data();
+      return d.id !== docId && (dData.status === "confirmed" || dData.status === "completed" || dData.status === "done");
+    });
+    
+    if (otherConfirmedOrCompleted.length > 0) {
+      // Not first confirmed/completed appointment! Mark triggered to avoid re-checking
+      await updateDoc(clientDocRef, {
+        referralConfirmationNotificationTriggered: true
+      });
+      return;
+    }
+    
+    // It's their first confirmed appointment!
+    // Set flag in user doc to prevent duplicate triggers
+    await updateDoc(clientDocRef, {
+      referralConfirmationNotificationTriggered: true
+    });
+    
+    // Find the referrer who has the referralCode matching userData.referredBy
+    const referrersQuery = query(
+      collection(db, "users"),
+      where("referralCode", "==", userData.referredBy)
+    );
+    const referrersSnap = await getDocs(referrersQuery);
+    
+    // 1. Notify the new client (the invitee)
+    // Send standard DB in-app notification
+    await addDoc(collection(db, "notifications"), {
+      clientId: clientId,
+      clientEmail: userData.email || "",
+      message: `Seu primeiro agendamento foi confirmado! Você já garantiu R$ 5,00 de saldo inicial pela indicação para usar no pagamento. 🎉`,
+      timestamp: new Date(),
+      read: false,
+      type: "referral_confirmed"
+    });
+    
+    // Send push notification
+    const cleanClientPhone = clientId.replace(/[\s\-\(\)\+]/g, "");
+    await sendPushNotification(cleanClientPhone, {
+      title: "Primeiro Agendamento Confirmado! ✂️",
+      body: "Seu primeiro agendamento foi confirmado! Você já garantiu R$ 5,00 de saldo inicial pela indicação para usar no pagamento.",
+      url: "/"
+    });
+    
+    // 2. Notify the referrer (if they exist)
+    if (!referrersSnap.empty) {
+      const referrerDoc = referrersSnap.docs[0];
+      const referrerId = referrerDoc.id;
+      const referrerData = referrerDoc.data();
+      const referrerName = referrerData.name || "Colega";
+      
+      const shortClientName = clientName.trim().split(" ")[0];
+      
+      // Send standard DB in-app notification
+      await addDoc(collection(db, "notifications"), {
+        clientId: referrerId,
+        clientEmail: referrerData.email || "",
+        message: `Seu amigo ${shortClientName} confirmou o primeiro corte! Quando o corte for concluído, você receberá R$ 5,00 de bônus em sua carteira. 🎁`,
+        timestamp: new Date(),
+        read: false,
+        type: "referral_confirmed"
+      });
+      
+      // Send push notification to referrer
+      const cleanReferrerPhone = referrerId.replace(/[\s\-\(\)\+]/g, "");
+      await sendPushNotification(cleanReferrerPhone, {
+        title: "Seu amigo confirmou o corte! 🎁",
+        body: `Seu amigo ${shortClientName} confirmou o primeiro agendamento! Quando o corte for concluído, você receberá R$ 5,00 de bônus em sua carteira.`,
+        url: "/referrals"
+      });
+      
+      console.log(`[Referral Confirm Notification] Successfully sent to referrer (${referrerId}) and referee (${clientId})`);
+    } else {
+      console.log(`[Referral Confirm Notification] Referee (${clientId}) notified. Referrer code (${userData.referredBy}) not found in database.`);
+    }
+  } catch (err: any) {
+    console.error("[Referral Confirm Notification] Error executing check & notify:", err.message);
+  }
+}
+
 // Central snapshot listener on "appointments" collection to auto-trigger notifications
 export function startAppointmentsListener() {
   console.log("[Push Service] Initializing appointments snapshot service...");
@@ -270,6 +379,10 @@ export function startAppointmentsListener() {
             url: "/"
           });
         }
+
+        if (data.status === "confirmed") {
+          await checkAndNotifyReferralFirstAppointmentConfirmed(clientId, clientName, serviceName, formattedDateStr, docId);
+        }
       }
 
       if (change.type === "modified") {
@@ -287,6 +400,7 @@ export function startAppointmentsListener() {
             body: `Excelente! Seu agendamento de ${serviceName} com ${barberName} foi confirmado para ${formattedDateStr}.`,
             url: urlPath
           });
+          await checkAndNotifyReferralFirstAppointmentConfirmed(clientId, clientName, serviceName, formattedDateStr, docId);
         } else if (status === "cancelled") {
           if (clientTarget) {
             await sendPushNotification(clientTarget, {

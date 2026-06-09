@@ -10,8 +10,19 @@ const ASSETS_TO_CACHE = [
 // 1. Install Event (Precache essential offline materials)
 self.addEventListener("install", function (event) {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(function (cache) {
-      return cache.addAll(ASSETS_TO_CACHE);
+    caches.open(CACHE_NAME).then(async function (cache) {
+      console.log("[PWA] Installing Service Worker and caching assets individually...");
+      for (const asset of ASSETS_TO_CACHE) {
+        try {
+          const fetchOptions = asset.startsWith("http") ? { mode: "no-cors" } : {};
+          const response = await fetch(asset, fetchOptions);
+          // cache.put handles response.type === 'opaque' for no-cors responses perfectly
+          await cache.put(asset, response);
+          console.log(`[PWA] Cached asset successfully: ${asset}`);
+        } catch (err) {
+          console.warn(`[PWA] Optional asset cache skipped: ${asset}`, err);
+        }
+      }
     }).then(() => self.skipWaiting())
   );
 });
@@ -37,12 +48,23 @@ self.addEventListener("fetch", function (event) {
 
   const url = event.request.url;
 
-  // Ignore firestore, API endpoints or external auth systems
+  // Only intercept same-origin static assets to prevent interfering with third-party APIs (like Google Calendar, Cloud Storage, webhooks, etc.)
+  if (!url.startsWith(self.location.origin)) {
+    return;
+  }
+
+  // Ignore firestore, API endpoints, external auth systems or raw Vite live development assets/hot reloads
   if (
     url.includes("/api/") || 
     url.includes("firestore.googleapis") || 
     url.includes("identitytoolkit") ||
-    url.includes("securetoken.googleapis")
+    url.includes("securetoken.googleapis") ||
+    url.includes("/node_modules/") ||
+    url.includes("/@vite/") ||
+    url.includes("/@react-refresh") ||
+    url.includes("/src/") ||
+    url.includes("vite") ||
+    url.includes("hot-reload")
   ) {
     return;
   }
@@ -59,15 +81,22 @@ self.addEventListener("fetch", function (event) {
         }
         return response;
       })
-      .catch(function () {
+      .catch(function (error) {
         return caches.match(event.request).then(function (cachedResponse) {
           if (cachedResponse) {
             return cachedResponse;
           }
           // Redirect navigation fallbacks to root index
           if (event.request.mode === "navigate") {
-            return caches.match("/index.html");
+            return caches.match("/index.html").then(function (indexResponse) {
+              if (indexResponse) {
+                return indexResponse;
+              }
+              throw error;
+            });
           }
+          // Rethrow the fetch error so we don't return undefined (which browser converts to 'Failed to fetch' error)
+          throw error;
         });
       })
   );
