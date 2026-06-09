@@ -28,7 +28,7 @@ export function GuestDashboardScreen({ loginCode, onBack }: { loginCode: string,
         <button onClick={onBack} className="text-[10px] font-black uppercase text-amber-500 tracking-[0.2em]">Sair do Painel</button>
       </div>
 
-      <div className="bg-neutral-900 border border-white/5 p-6 rounded-[2rem] flex items-center gap-4 mb-8">
+      <div className=" liquid-glass  p-6 rounded-[2rem] flex items-center gap-4 mb-8">
         <div className="w-12 h-12 bg-amber-500 rounded-2xl flex items-center justify-center text-black">
           <Ticket className="w-6 h-6 outline-none" />
         </div>
@@ -45,9 +45,9 @@ export function GuestDashboardScreen({ loginCode, onBack }: { loginCode: string,
               {appointments.map(app => {
                   const d = app.date instanceof Timestamp ? app.date.toDate() : parseISO(app.date);
                   return (
-                      <div key={app.id} className="bg-neutral-950 border border-white/5 p-6 rounded-[2.5rem] flex items-center justify-between group">
+                      <div key={app.id} className=" liquid-glass  p-6 rounded-[2.5rem] flex items-center justify-between group">
                           <div className="flex items-center gap-4">
-                              <div className="w-12 h-12 bg-neutral-900 rounded-2xl overflow-hidden flex items-center justify-center border border-white/5">
+                              <div className="w-12 h-12 liquid-glass rounded-2xl overflow-hidden flex items-center justify-center ">
                                 <img 
                                   src="https://i.ibb.co/LXjzGkFs/cd17f19f-71a4-453e-b9d7-f129a7ecfb2f.jpg" 
                                   alt="Logo"

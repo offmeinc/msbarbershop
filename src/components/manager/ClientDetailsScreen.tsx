@@ -148,7 +148,7 @@ export function ClientDetailsScreen({ client, onBack, onScheduleClient, onMessag
       className="max-w-4xl mx-auto py-8 px-4"
     >
       <div className="flex items-center justify-between mb-6">
-        <button onClick={onBack} className="flex items-center gap-2 text-neutral-500 hover:text-white transition-colors font-black uppercase text-[10px] tracking-widest bg-white/5 px-4 py-2.5 rounded-2xl border border-white/5 cursor-pointer">
+        <button onClick={onBack} className="liquid-glass flex items-center gap-2 text-neutral-500 hover:text-white transition-colors font-black uppercase text-[10px] tracking-widest px-4 py-2.5 rounded-2xl cursor-pointer">
           <ArrowLeft className="w-4 h-4 text-amber-500" />
           Voltar
         </button>
@@ -166,11 +166,11 @@ export function ClientDetailsScreen({ client, onBack, onScheduleClient, onMessag
       </div>
 
       {/* Main Glass Profile Card */}
-      <div className="relative overflow-hidden bg-white/[0.03] backdrop-blur-md p-6 sm:p-8 rounded-[2.5rem] border border-white/10 mb-8 shadow-2xl">
+      <div className="relative overflow-hidden liquid-glass backdrop-blur-md p-6 sm:p-8 rounded-[2.5rem]  mb-8 shadow-2xl">
          <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-3xl" />
          
          <div className="flex flex-col sm:flex-row items-center gap-6 text-center sm:text-left">
-            <div className="w-24 h-24 rounded-3xl bg-white/5 flex items-center justify-center text-neutral-500 font-bold overflow-hidden border border-white/10 shrink-0 shadow-lg">
+            <div className="liquid-glass w-24 h-24 rounded-3xl flex items-center justify-center text-neutral-500 font-bold overflow-hidden shrink-0 shadow-lg">
               {client.photoURL ? (
                 <img src={client.photoURL} alt={client.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
               ) : (
@@ -187,12 +187,12 @@ export function ClientDetailsScreen({ client, onBack, onScheduleClient, onMessag
               
               <div className="flex flex-wrap justify-center sm:justify-start gap-3 text-neutral-400 text-xs">
                 {client.whatsapp && (
-                  <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide bg-black/40 px-3 py-1.5 rounded-xl border border-white/5">
+                  <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide liquid-glass px-3 py-1.5 rounded-xl ">
                     <Phone className="w-3.5 h-3.5 text-amber-500" /> {client.whatsapp}
                   </span>
                 )}
                 {client.email && (
-                  <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide bg-black/40 px-3 py-1.5 rounded-xl border border-white/5">
+                  <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide liquid-glass px-3 py-1.5 rounded-xl ">
                     <Mail className="w-3.5 h-3.5 text-amber-500" /> {client.email}
                   </span>
                 )}
@@ -208,7 +208,7 @@ export function ClientDetailsScreen({ client, onBack, onScheduleClient, onMessag
 
          {/* Client quick details section with statistics grids */}
          <div className={`grid grid-cols-2 ${(client.walletBalance !== undefined && Number(client.walletBalance) > 0) ? 'lg:grid-cols-5' : 'md:grid-cols-4'} gap-4 mt-8 pt-6 border-t border-white/5`}>
-            <div className="bg-black/40 border border-white/5 p-4 rounded-2xl text-left space-y-1">
+            <div className=" liquid-glass  p-4 rounded-2xl text-left space-y-1">
               <span className="text-[8px] text-neutral-500 uppercase font-black tracking-widest block">Saldo Fidelidade</span>
               <p className="text-xl font-black text-amber-500 flex items-center gap-1">
                 <Gift className="w-4 h-4" />
@@ -226,7 +226,7 @@ export function ClientDetailsScreen({ client, onBack, onScheduleClient, onMessag
               </div>
             )}
 
-            <div className="bg-black/40 border border-white/5 p-4 rounded-2xl text-left space-y-1">
+            <div className=" liquid-glass  p-4 rounded-2xl text-left space-y-1">
               <span className="text-[8px] text-neutral-500 uppercase font-black tracking-widest block">Total Gasto</span>
               <p className="text-xl font-black text-white flex items-center gap-1">
                 <DollarSign className="w-4 h-4 text-emerald-500" />
@@ -234,7 +234,7 @@ export function ClientDetailsScreen({ client, onBack, onScheduleClient, onMessag
               </p>
             </div>
 
-            <div className="bg-black/40 border border-white/5 p-4 rounded-2xl text-left space-y-1">
+            <div className=" liquid-glass  p-4 rounded-2xl text-left space-y-1">
               <span className="text-[8px] text-neutral-500 uppercase font-black tracking-widest block">Cortes Concluídos</span>
               <p className="text-xl font-black text-white flex items-center gap-1.5">
                 <Scissors className="w-4 h-4 text-amber-500" />
@@ -242,7 +242,7 @@ export function ClientDetailsScreen({ client, onBack, onScheduleClient, onMessag
               </p>
             </div>
 
-            <div className="bg-black/40 border border-white/5 p-4 rounded-2xl text-left space-y-1 col-span-2 md:col-span-1">
+            <div className=" liquid-glass  p-4 rounded-2xl text-left space-y-1 col-span-2 md:col-span-1">
               <span className="text-[8px] text-neutral-500 uppercase font-black tracking-widest block">Última Visita</span>
               {lastApp ? (
                 <div className="space-y-0.5">
@@ -282,7 +282,7 @@ export function ClientDetailsScreen({ client, onBack, onScheduleClient, onMessag
               )}
 
               {revisitRecommendation && (
-                <div className="bg-black/40 border border-white/5 p-4 rounded-2xl flex items-center justify-between text-left">
+                <div className=" liquid-glass  p-4 rounded-2xl flex items-center justify-between text-left">
                   <div className="space-y-1">
                     <span className="text-[8px] text-neutral-500 uppercase font-black tracking-widest block flex items-center gap-1.5">
                       <Zap className="w-3.5 h-3.5 text-amber-500 animate-pulse" /> PREVISÃO DE PRÓXIMO RETORNO
@@ -319,7 +319,7 @@ export function ClientDetailsScreen({ client, onBack, onScheduleClient, onMessag
               {onScheduleClient && (
                 <button 
                   onClick={() => onScheduleClient(client)}
-                  className="flex items-center gap-2 bg-white/5 hover:bg-white/10 text-white border border-white/5 hover:border-white/10 px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 cursor-pointer"
+                  className="liquid-glass flex items-center gap-2  text-white  px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 cursor-pointer"
                 >
                     <Repeat className="w-4 h-4 text-amber-500 shrink-0" /> Agendar Novo Corte
                 </button>
@@ -342,10 +342,10 @@ export function ClientDetailsScreen({ client, onBack, onScheduleClient, onMessag
           {sortedClientApps.map(app => {
             const dateVal = getAppDate(app);
             return (
-              <div key={app.id} className="bg-white/[0.02] p-5 rounded-[2rem] border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 group hover:border-amber-500/20 transition-all">
+              <div key={app.id} className=" liquid-glass p-5 rounded-[2rem]  flex flex-col sm:flex-row sm:items-center justify-between gap-4 group hover:border-amber-500/20 transition-all">
                  <div className="flex items-start sm:items-center gap-4 text-left">
                     <div className="relative">
-                      <div className="bg-white/5 p-4 rounded-2xl text-neutral-400 group-hover:bg-amber-500/10 group-hover:text-amber-500 transition-colors shrink-0">
+                      <div className="liquid-glass p-4 rounded-2xl text-neutral-400  group-hover:text-amber-500 transition-colors shrink-0">
                         <Scissors className="w-5 h-5" />
                       </div>
                       {app.reviewPhotoUrl && (
@@ -381,7 +381,7 @@ export function ClientDetailsScreen({ client, onBack, onScheduleClient, onMessag
                         Profissional: <span className="text-white font-black capitalize">{app.barberName || "Profissional"}</span>
                       </p>
                       {app.notes && (
-                        <p className="text-[10px] text-neutral-500 bg-black/40 border border-white/5 px-2.5 py-1.5 rounded-xl mt-1.5 italic font-medium">
+                        <p className="text-[10px] text-neutral-500 liquid-glass  px-2.5 py-1.5 rounded-xl mt-1.5 italic font-medium">
                           Obs: {app.notes}
                         </p>
                       )}
@@ -397,7 +397,7 @@ export function ClientDetailsScreen({ client, onBack, onScheduleClient, onMessag
             );
           })}
           {sortedClientApps.length === 0 && (
-            <div className="text-center py-20 bg-white/[0.01] rounded-[2rem] border border-white/5 space-y-1">
+            <div className="text-center py-20 liquid-glass rounded-[2rem]  space-y-1">
               <p className="text-neutral-500 text-sm font-black uppercase tracking-widest">Nenhum atendimento realizado ainda</p>
               <p className="text-[10px] text-neutral-600 font-bold uppercase tracking-widest">O histórico de agendamentos está sincronizado em tempo real</p>
             </div>

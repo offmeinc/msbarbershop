@@ -52,7 +52,7 @@ export function ReviewModal({ appointment, onClose }: { appointment: any, onClos
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-2xl flex items-center justify-center p-6">
-       <div className="bg-neutral-900 border border-white/5 p-8 rounded-[3rem] w-full max-w-sm relative">
+       <div className=" liquid-glass  p-8 rounded-[3rem] w-full max-w-sm relative">
          <button onClick={onClose} className="absolute top-6 right-6 text-neutral-500"><X className="w-6 h-6"/></button>
          <h2 className="text-2xl font-black italic uppercase text-white mb-2">Avaliar Atendimento</h2>
          <p className="text-xs text-neutral-500 mb-8 uppercase font-bold tracking-widest">{appointment.serviceName}</p>
@@ -78,14 +78,14 @@ export function ReviewModal({ appointment, onClose }: { appointment: any, onClos
                     <img src={photoUrl} className="w-full h-full object-cover" alt="Sua avaliação" />
                     <button 
                         onClick={() => setPhotoUrl("")}
-                        className="absolute top-2 right-2 p-2 bg-black/60 backdrop-blur-md rounded-xl text-red-500 opacity-0 group-hover:opacity-100 transition-opacity border border-white/5"
+                        className="absolute top-2 right-2 p-2 liquid-glass backdrop-blur-md rounded-xl text-red-500 opacity-0 group-hover:opacity-100 transition-opacity "
                     >
                         <X className="w-4 h-4" />
                     </button>
                 </div>
             ) : (
-                <label className="flex flex-col items-center justify-center p-6 bg-black/40 border border-dashed border-white/10 rounded-2xl gap-2 cursor-pointer hover:border-amber-500/30 hover:bg-white/5 transition-all group">
-                    <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-neutral-500 group-hover:text-amber-500 transition-colors">
+                <label className="liquid-glass flex flex-col items-center justify-center p-6 -dashed rounded-2xl gap-2 cursor-pointer hover:-amber-500/30  transition-all group">
+                    <div className="liquid-glass w-8 h-8 rounded-xl flex items-center justify-center text-neutral-500 group-hover:text-amber-500 transition-colors">
                         {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
                     </div>
                     <span className="text-[9px] font-black text-neutral-500 uppercase tracking-widest group-hover:text-neutral-300">

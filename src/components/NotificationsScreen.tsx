@@ -131,7 +131,7 @@ export const NotificationsScreen = ({ notifications, appointments, onBack, onCle
         <div className="flex items-center gap-3">
           <button 
             onClick={onBack} 
-            className="p-2.5 bg-neutral-900 border border-white/5 rounded-2xl text-neutral-400 hover:text-white transition-all cursor-pointer shadow-md hover:scale-105 active:scale-95"
+            className="p-2.5 liquid-glass  rounded-2xl text-neutral-400 hover:text-white transition-all cursor-pointer shadow-md hover:scale-105 active:scale-95"
           >
             <ChevronLeft className="w-5 h-5 text-amber-500" />
           </button>
@@ -146,7 +146,7 @@ export const NotificationsScreen = ({ notifications, appointments, onBack, onCle
             {unreadCount > 0 && (
               <button
                 onClick={handleMarkAllAsRead}
-                className="text-[9px] text-neutral-400 hover:text-white font-extrabold uppercase tracking-widest bg-neutral-900 hover:bg-neutral-800 px-3 py-2 rounded-xl border border-white/5 hover:border-white/10 transition-all flex items-center gap-1.5"
+                className="text-[9px] text-neutral-400 hover:text-white font-extrabold uppercase tracking-widest bg-neutral-900  liquid-glass px-3 py-2 rounded-xl  hover:border-white/10 transition-all flex items-center gap-1.5"
                 title="Marcar todas como lidas"
               >
                 <CheckCheck className="w-3.5 h-3.5 text-amber-500" />
@@ -164,7 +164,7 @@ export const NotificationsScreen = ({ notifications, appointments, onBack, onCle
       </div>
 
       {/* Tabs Selector: Recent (Push-feed notifications) vs History (Historic appointments) */}
-      <div className="flex gap-1.5 p-1 bg-neutral-950 rounded-2xl mb-6 border border-white/5 shadow-inner">
+      <div className="flex gap-1.5 p-1 liquid-glass rounded-2xl mb-6  shadow-inner">
         <button 
           onClick={() => setActiveTab('recent')}
           className={`flex-1 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1.5 ${
@@ -389,7 +389,7 @@ export const NotificationsScreen = ({ notifications, appointments, onBack, onCle
                     <button
                       onClick={(e) => handleDeleteNotification(n.id, e)}
                       disabled={isDeleting}
-                      className="absolute bottom-2.5 right-2 w-7 h-7 bg-black/40 hover:bg-red-500/10 border border-white/5 hover:border-red-500/20 text-neutral-500 hover:text-red-400 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 active:scale-90"
+                      className="absolute bottom-2.5 right-2 w-7 h-7 liquid-glass hover:bg-red-500/10  hover:border-red-500/20 text-neutral-500 hover:text-red-400 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 active:scale-90"
                       title="Excluir notificação permanently"
                     >
                       {isDeleting ? (
@@ -404,7 +404,7 @@ export const NotificationsScreen = ({ notifications, appointments, onBack, onCle
             </AnimatePresence>
 
             {filteredNotifications.length === 0 && (
-              <div className="py-20 text-center space-y-4 bg-black/10 rounded-[2.5rem] border border-dashed border-white/5">
+              <div className="liquid-glass py-20 text-center space-y-4 rounded-[2.5rem] -dashed">
                 <BellOff className="w-12 h-12 text-neutral-800 mx-auto" />
                 <div className="space-y-0.5">
                   <p className="text-xs text-neutral-500 uppercase font-black tracking-widest">Nenhuma notificação filtrada.</p>
@@ -433,7 +433,7 @@ export const NotificationsScreen = ({ notifications, appointments, onBack, onCle
                     damping: 18,
                     delay: Math.min(idx * 0.03, 0.2) 
                   }}
-                  className="p-4 rounded-[2rem] bg-neutral-950/40 border border-white/5 hover:border-white/10 flex items-center justify-between group transition-all text-left"
+                  className="p-4 rounded-[2rem] liquid-glass/40  hover:border-white/10 flex items-center justify-between group transition-all text-left"
                 >
                   <div className="flex items-center gap-3.5">
                     <div className={`w-10 h-10 rounded-2xl flex items-center justify-center border shrink-0 ${
@@ -470,7 +470,7 @@ export const NotificationsScreen = ({ notifications, appointments, onBack, onCle
             })}
 
             {history.length === 0 && (
-              <div className="py-20 text-center space-y-4 bg-black/10 rounded-[2.5rem] border border-dashed border-white/5">
+              <div className="liquid-glass py-20 text-center space-y-4 rounded-[2.5rem] -dashed">
                 <CalendarX className="w-12 h-12 text-neutral-800 mx-auto" />
                 <div className="space-y-0.5">
                   <p className="text-xs text-neutral-500 uppercase font-black tracking-widest">Nenhum histórico ativo.</p>

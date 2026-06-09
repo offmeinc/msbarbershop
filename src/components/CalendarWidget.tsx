@@ -61,7 +61,7 @@ export function AppointmentModal({ appointment, onClose, onUpdate, onEdit, onDel
         initial={{ scale: 0.95, y: 15 }}
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.95, y: 15 }}
-        className="bg-neutral-900 border border-white/5 p-8 rounded-[2.5rem] w-full max-w-sm text-center relative shadow-2xl"
+        className=" liquid-glass  p-8 rounded-[2.5rem] w-full max-w-sm text-center relative shadow-2xl"
       >
         <button onClick={onClose} className="absolute top-6 right-6 text-neutral-500 hover:text-white transition-colors p-1" id="close-modal">
           <X className="w-5 h-5"/>
@@ -78,7 +78,7 @@ export function AppointmentModal({ appointment, onClose, onUpdate, onEdit, onDel
         <h2 className="text-xl font-black uppercase italic text-white leading-none tracking-tight mb-2">{appointment.clientName}</h2>
         <p className="text-amber-500 text-[9px] font-black uppercase tracking-widest bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full inline-block mb-6">{appointment.serviceName}</p>
 
-        <div className="bg-black/45 p-5 rounded-2xl border border-white/5 space-y-3.5 mb-6 text-left text-xs uppercase tracking-widest font-black text-neutral-400">
+        <div className=" liquid-glass p-5 rounded-2xl  space-y-3.5 mb-6 text-left text-xs uppercase tracking-widest font-black text-neutral-400">
             <div className="flex items-center gap-3">
                 <CalendarIcon className="w-4 h-4 text-neutral-600" />
                 <span className="text-white/90 text-[10px]">{format(d, "dd 'de' MMMM", { locale: ptBR })}</span>
@@ -94,7 +94,7 @@ export function AppointmentModal({ appointment, onClose, onUpdate, onEdit, onDel
         </div>
 
         {appointment.selectedStyle && (
-          <div className="bg-neutral-950 p-4 rounded-[1.25rem] border border-amber-500/10 mb-6 text-left flex items-center gap-3">
+          <div className="liquid-glass p-4 rounded-[1.25rem] -amber-500/10 mb-6 text-left flex items-center gap-3">
             <img src={appointment.selectedStyle.imageUrl} className="w-11 h-11 object-cover rounded-xl border border-white/10 shrink-0" alt="Referência" referrerPolicy="no-referrer" />
             <div className="overflow-hidden">
               <span className="text-[7px] font-black uppercase text-amber-500 tracking-wider block">Estilo de Referência</span>
@@ -112,24 +112,24 @@ export function AppointmentModal({ appointment, onClose, onUpdate, onEdit, onDel
               placeholder="Quem pagou? (Opcional)" 
               value={payerName}
               onChange={(e) => setPayerName(e.target.value)}
-              className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-[10px] font-black uppercase tracking-widest text-white placeholder:text-neutral-700 focus:border-amber-500 outline-none transition-all"
+              className="w-full liquid-glass  rounded-2xl p-4 text-[10px] font-black uppercase tracking-widest text-white placeholder:text-neutral-700 focus:border-amber-500 outline-none transition-all"
             />
           </div>
         )}
 
         <div className="space-y-2">
             <div className="grid grid-cols-2 gap-2.5">
-               <button onClick={() => { triggerSuccessHaptic(); onUpdate(appointment, 'confirmed'); onClose(); }} className="py-3 bg-white/5 hover:bg-amber-500 hover:text-black border border-white/5 rounded-xl font-black uppercase tracking-widest text-[9px] transition-all">CONFIRMAR</button>
+               <button onClick={() => { triggerSuccessHaptic(); onUpdate(appointment, 'confirmed'); onClose(); }} className="liquid-glass py-3  hover:text-black rounded-xl font-black uppercase tracking-widest text-[9px] transition-all">CONFIRMAR</button>
                <button onClick={() => { triggerSuccessHaptic(); onUpdate(appointment, 'completed', { payerName: payerName || appointment.clientName }); onClose(); }} className="py-3 bg-green-500 hover:bg-green-600 text-black rounded-xl font-black uppercase tracking-widest text-[9px] transition-all" title="Registra o comparecimento e atualiza os ganhos automaticamente">COMPARECEU ✅</button>
             </div>
             <div className="grid grid-cols-2 gap-2.5">
                <button onClick={() => { triggerWarningHaptic(); onUpdate(appointment, 'cancelled'); onClose(); }} className="py-3 bg-red-500/10 hover:bg-red-500/25 text-red-500 border border-red-500/20 rounded-xl font-black uppercase tracking-widest text-[9px] transition-all">CANCELAR</button>
                {onDelete && (
-                   <button onClick={() => { triggerWarningHaptic(); onDelete(appointment); onClose(); }} className="py-3 bg-neutral-950 hover:bg-red-950/40 text-red-400 border border-red-500/10 rounded-xl font-black uppercase tracking-widest text-[9px] transition-all">EXCLUIR</button>
+                   <button onClick={() => { triggerWarningHaptic(); onDelete(appointment); onClose(); }} className="liquid-glass py-3  text-red-400 -red-500/10 rounded-xl font-black uppercase tracking-widest text-[9px] transition-all">EXCLUIR</button>
                )}
             </div>
             {onEdit && (
-                <button onClick={() => { triggerLightHaptic(); if (onEdit) onEdit(appointment); onClose(); }} className="w-full py-3.5 bg-neutral-950 text-neutral-300 border border-white/5 rounded-xl font-black uppercase tracking-widest text-[9px] hover:text-white hover:bg-neutral-800 transition-all">EDITAR AGENDAMENTO</button>
+                <button onClick={() => { triggerLightHaptic(); if (onEdit) onEdit(appointment); onClose(); }} className="w-full py-3.5 liquid-glass text-neutral-300  rounded-xl font-black uppercase tracking-widest text-[9px] hover:text-white hover:bg-neutral-800 transition-all">EDITAR AGENDAMENTO</button>
             )}
         </div>
       </motion.div>
@@ -340,7 +340,7 @@ export function CalendarWidget({
     const miniDays = eachDayOfInterval({ start: dateStart, end: dateEnd });
 
     return (
-      <div className="bg-neutral-950/60 border border-white/5 p-4 rounded-[2rem] space-y-3.5 shadow-lg select-none">
+      <div className=" liquid-glass/60  p-4 rounded-[2rem] space-y-3.5 shadow-lg select-none">
         {/* Month Header selector */}
         <div className="flex items-center justify-between px-1">
           <span className="text-[10px] font-black uppercase tracking-wider text-neutral-300">
@@ -349,13 +349,13 @@ export function CalendarWidget({
           <div className="flex items-center gap-1.5">
             <button 
               onClick={() => handleMiniMonthNavigate(-1)} 
-              className="p-1 hover:bg-white/5 hover:text-white text-neutral-500 rounded-lg transition"
+              className="liquid-glass p-1  hover:text-white text-neutral-500 rounded-lg transition"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
             <button 
               onClick={() => handleMiniMonthNavigate(1)} 
-              className="p-1 hover:bg-white/5 hover:text-white text-neutral-500 rounded-lg transition"
+              className="liquid-glass p-1  hover:text-white text-neutral-500 rounded-lg transition"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -474,8 +474,8 @@ export function CalendarWidget({
     }
 
     return (
-      <div className="bg-neutral-900/40 rounded-[2rem] border border-white/5 shadow-2xl overflow-hidden mt-2">
-        <div className="grid grid-cols-7 bg-black/60 border-b border-white/5 select-none">
+      <div className=" liquid-glass/40 rounded-[2rem]  shadow-2xl overflow-hidden mt-2">
+        <div className="liquid-glass grid grid-cols-7 -b select-none">
           {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((d) => (
             <div key={d} className="py-3 text-center text-[10px] font-black uppercase tracking-widest text-neutral-500">
               {d}
@@ -495,9 +495,9 @@ export function CalendarWidget({
     return (
       <div className="space-y-4">
         {/* DESKTOP WEEK TIMELINE (Google Calendar style columns side-by-side) */}
-        <div className="hidden md:block bg-neutral-900/20 border border-white/5 rounded-[2.5rem] overflow-hidden shadow-2xl">
+        <div className="hidden md:block liquid-glass/20  rounded-[2.5rem] overflow-hidden shadow-2xl">
           {/* Calendar Header days row */}
-          <div className="grid grid-cols-8 border-b border-white/5 bg-black/30 select-none">
+          <div className="liquid-glass grid grid-cols-8 -b select-none">
             {/* Hour labels space */}
             <div className="p-4 border-r border-white/5 flex flex-col justify-center items-center">
               <Clock className="w-4 h-4 text-neutral-600" />
@@ -541,7 +541,7 @@ export function CalendarWidget({
           <div ref={scrollContainerRef} className="overflow-y-auto max-h-[600px] no-scrollbar">
             <div className="flex relative" style={{ height: `${hours.length * ROW_HEIGHT}px` }}>
               {/* Left Hour Tags gutter */}
-              <div className="w-[12.5%] border-r border-white/5 relative z-10 bg-black/10 select-none">
+              <div className="liquid-glass w-[12.5%] -r relative z-10 select-none">
                 {hours.map((hour, i) => (
                   <div 
                     key={hour} 
@@ -608,7 +608,7 @@ export function CalendarWidget({
                             
                             <div className="flex items-center justify-between pointer-events-none gap-1 mt-auto">
                               <span className="text-[7px] sm:text-[8px] font-bold text-white/50 shrink-0">{app.time || format(app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date), 'HH:mm')}</span>
-                              <span className="text-[6px] sm:text-[7px] font-black uppercase text-white/80 px-1 rounded bg-black/40 max-w-[50%] truncate hidden sm:inline-block">
+                              <span className="liquid-glass text-[6px] sm:text-[7px] font-black uppercase text-white/80 px-1 rounded max-w-[50%] truncate hidden sm:inline-block">
                                 {app.barberName?.split(' ')[0]}
                               </span>
                             </div>
@@ -636,7 +636,7 @@ export function CalendarWidget({
 
         {/* MOBILE WEEK TIMELINE (A compact visual list/carousel of cards optimized for touch targets) */}
         <div className="md:hidden space-y-4">
-          <div className="grid grid-cols-7 gap-1 bg-neutral-900 border border-white/5 p-1 rounded-2xl select-none">
+          <div className="grid grid-cols-7 gap-1 liquid-glass  p-1 rounded-2xl select-none">
             {days.map((day, idx) => {
               const isTodayDate = isToday(day);
               const isSelected = isSameDay(day, currentDate);
@@ -662,7 +662,7 @@ export function CalendarWidget({
 
           <div className="space-y-3">
             {getAppointmentsForDay(currentDate).length === 0 ? (
-              <div className="p-16 text-center border-2 border-dashed border-white/5 bg-neutral-900/20 rounded-3xl opacity-60">
+              <div className="liquid-glass p-16 text-center -2 -dashed rounded-3xl opacity-60">
                 <Clock className="w-6 h-6 text-neutral-500 mx-auto mb-2" />
                 <p className="text-[10px] text-neutral-400 font-black uppercase tracking-widest">Nenhuma reserva para este dia</p>
                 <p className="text-[8px] text-neutral-600 font-extrabold uppercase tracking-wide mt-1">Selecione outra data ou marque um corte</p>
@@ -677,7 +677,7 @@ export function CalendarWidget({
                     className={`bg-neutral-900/60 p-4 rounded-2xl border-l-4 flex items-center justify-between ${colorObj.accent} border border-white/5 shadow-md active:scale-98 transition`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-black/40 flex items-center justify-center border border-white/5 text-xs font-black text-amber-500 overflow-hidden">
+                      <div className="w-10 h-10 rounded-xl liquid-glass flex items-center justify-center  text-xs font-black text-amber-500 overflow-hidden">
                         {app.clientPhoto ? (
                           <img src={app.clientPhoto} alt={app.clientName} className="w-full h-full object-cover" />
                         ) : (
@@ -691,7 +691,7 @@ export function CalendarWidget({
                       </div>
                     </div>
                     <div className="text-right">
-                      <span className="text-[10px] font-black text-white bg-black/40 border border-white/5 px-2.5 py-1.5 rounded-xl block tracking-widest">{app.time || '00:00'}</span>
+                      <span className="text-[10px] font-black text-white liquid-glass  px-2.5 py-1.5 rounded-xl block tracking-widest">{app.time || '00:00'}</span>
                     </div>
                   </div>
                 );
@@ -709,7 +709,7 @@ export function CalendarWidget({
     const isTodayDate = isToday(currentDate);
 
     return (
-      <div className="bg-neutral-900/20 border border-white/5 rounded-[2.5rem] overflow-hidden shadow-2xl relative">
+      <div className=" liquid-glass/20  rounded-[2.5rem] overflow-hidden shadow-2xl relative">
         {/* Day header info indicator */}
         <div className="flex items-center justify-between p-5 border-b border-white/5 bg-black/15 select-none text-left">
           <div className="flex items-center gap-3">
@@ -764,7 +764,7 @@ export function CalendarWidget({
                     }}
                   >
                     <div className="flex items-start gap-2.5 h-full max-w-[75%] min-w-0">
-                      <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-black/40 border border-white/5 flex items-center justify-center shrink-0 overflow-hidden select-none">
+                      <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg liquid-glass  flex items-center justify-center shrink-0 overflow-hidden select-none">
                         {app.clientPhoto ? (
                           <img src={app.clientPhoto} alt={app.clientName} className="w-full h-full object-cover" />
                         ) : (
@@ -783,7 +783,7 @@ export function CalendarWidget({
                     </div>
 
                     <div className="flex flex-col justify-start sm:justify-between items-end h-full select-none shrink-0 gap-1">
-                      <span className="text-[9px] sm:text-[10px] font-black text-white bg-black/45 border border-white/10 px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-lg shadow-inner tracking-widest">{app.time || format(app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date), 'HH:mm')}</span>
+                      <span className="text-[9px] sm:text-[10px] font-black text-white liquid-glass  px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-lg shadow-inner tracking-widest">{app.time || format(app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date), 'HH:mm')}</span>
                       {app.status === 'confirmed' && (
                         <span className="text-[6px] sm:text-[7px] font-black bg-amber-500/20 text-amber-400 border border-amber-500/10 px-1.5 py-0.5 rounded-md uppercase tracking-widest hidden sm:inline-block">Confirmado</span>
                       )}
@@ -837,7 +837,7 @@ export function CalendarWidget({
 
           {/* Colored Barber Guide Card */}
           {uniqueBarbers.length > 0 && (
-            <div className="bg-neutral-900/30 border border-white/5 p-4 rounded-[2rem] space-y-3 shadow-lg select-none">
+            <div className=" liquid-glass/30  p-4 rounded-[2rem] space-y-3 shadow-lg select-none">
               <h4 className="text-[9px] font-black text-amber-500 uppercase tracking-widest border-b border-white/5 pb-2 pl-1 flex items-center gap-2">
                 <Users className="w-3.5 h-3.5 text-amber-500" /> Profissionais Atendendo
               </h4>
@@ -845,7 +845,7 @@ export function CalendarWidget({
                 {uniqueBarbers.map((barber, i) => {
                   const styleObj = barberColorMap.get(barber.id) || BARBER_COLORS[i % BARBER_COLORS.length];
                   return (
-                    <div key={barber.id} className="flex items-center justify-between p-2 rounded-xl bg-neutral-950/40 border border-white/5 group hover:border-white/10 transition-colors">
+                    <div key={barber.id} className="flex items-center justify-between p-2 rounded-xl liquid-glass/40  group hover:border-white/10 transition-colors">
                       <div className="flex items-center gap-2 truncate">
                         <div className={`w-2.5 h-2.5 rounded-full ${styleObj.dot}`} />
                         <span className="text-[10px] font-bold text-neutral-300 capitalize truncate">{barber.name}</span>
@@ -862,27 +862,27 @@ export function CalendarWidget({
         </div>
 
         {/* GLORIOUS RIGHT MAIN CALENDAR SHEET */}
-        <div className="flex-1 min-w-0 bg-neutral-900/30 rounded-[2.5rem] border border-white/5 p-4 sm:p-6 shadow-2xl relative">
+        <div className="flex-1 min-w-0 liquid-glass/30 rounded-[2.5rem]  p-4 sm:p-6 shadow-2xl relative">
           {/* Main Top Header Controls */}
           <div className="flex flex-col sm:flex-row items-center justify-between mb-6 px-1 gap-4 select-none">
              {/* Mode display title */}
              <div className="flex items-center gap-3 w-full sm:w-auto text-left">
-                <div className="flex items-center bg-black/40 p-1 rounded-xl border border-white/5 shadow-inner">
+                <div className="flex items-center liquid-glass p-1 rounded-xl  shadow-inner">
                    <button 
                      onClick={() => navigate(-1)} 
-                     className="p-1.5 hover:bg-white/5 rounded-lg text-neutral-500 hover:text-white transition active:scale-90"
+                     className="liquid-glass p-1.5  rounded-lg text-neutral-500 hover:text-white transition active:scale-90"
                    >
                      <ChevronLeft className="w-4 h-4" />
                    </button>
                    <button 
                      onClick={() => onDateChange(new Date())} 
-                     className="px-3.5 py-1 text-[9px] font-black uppercase tracking-widest text-neutral-300 hover:text-white hover:bg-white/5 rounded-lg transition"
+                     className="liquid-glass px-3.5 py-1 text-[9px] font-black uppercase tracking-widest text-neutral-300 hover:text-white  rounded-lg transition"
                    >
                      Hoje
                    </button>
                    <button 
                      onClick={() => navigate(1)} 
-                     className="p-1.5 hover:bg-white/5 rounded-lg text-neutral-500 hover:text-white transition active:scale-90"
+                     className="liquid-glass p-1.5  rounded-lg text-neutral-500 hover:text-white transition active:scale-90"
                    >
                      <ChevronRight className="w-4 h-4" />
                    </button>
@@ -896,7 +896,7 @@ export function CalendarWidget({
              </div>
 
              {/* Mode Toggler (Day, Week, Month) Segmented selector */}
-             <div className="flex bg-neutral-950 p-1.5 rounded-2xl border border-white/5 shadow-inner self-end sm:self-auto overflow-x-auto max-w-full">
+             <div className="flex liquid-glass p-1.5 rounded-2xl  shadow-inner self-end sm:self-auto overflow-x-auto max-w-full">
                {[
                  { id: 'day', label: 'Dia' },
                  { id: 'week', label: 'Semana' },

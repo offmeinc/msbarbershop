@@ -13,7 +13,7 @@ export function ClientPortalScreen({ onLogin, onBack }: { onLogin: (phone: strin
 
   return (
     <div className="max-w-md mx-auto py-12 px-6">
-      <button onClick={onBack} className="mb-8 p-3 bg-neutral-900 rounded-2xl text-neutral-500 hover:text-white border border-white/5 transition-all">
+      <button onClick={onBack} className="mb-8 p-3 liquid-glass rounded-2xl text-neutral-500 hover:text-white  transition-all">
         <ChevronLeft className="w-5 h-5" />
       </button>
       
@@ -34,7 +34,7 @@ export function ClientPortalScreen({ onLogin, onBack }: { onLogin: (phone: strin
               type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="w-full bg-neutral-950 border border-white/5 rounded-3xl p-5 pl-12 text-sm text-white focus:border-amber-500 outline-none transition-all"
+              className="w-full liquid-glass  rounded-3xl p-5 pl-12 text-sm text-white focus:border-amber-500 outline-none transition-all"
               placeholder="(00) 00000-0000"
               required
             />
@@ -78,12 +78,12 @@ export function CollaboratorLoginScreen({ onLogin, setCurrentScreen, setRequeste
 
   return (
     <div className="max-w-md mx-auto py-12 px-6">
-      <button onClick={() => setCurrentScreen('home')} className="mb-8 p-3 bg-neutral-900 rounded-2xl text-neutral-500 hover:text-white border border-white/5 transition-all">
+      <button onClick={() => setCurrentScreen('home')} className="mb-8 p-3 liquid-glass rounded-2xl text-neutral-500 hover:text-white  transition-all">
         <ChevronLeft className="w-5 h-5" />
       </button>
 
       <div className="text-center mb-12">
-        <div className="w-20 h-20 bg-neutral-900 border border-white/5 rounded-[2.5rem] mx-auto flex items-center justify-center mb-6 shadow-2xl overflow-hidden group">
+        <div className="w-20 h-20 liquid-glass  rounded-[2.5rem] mx-auto flex items-center justify-center mb-6 shadow-2xl overflow-hidden group">
           <motion.div 
             animate={{ rotate: loading ? 360 : 0 }}
             transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
@@ -106,7 +106,7 @@ export function CollaboratorLoginScreen({ onLogin, setCurrentScreen, setRequeste
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full bg-neutral-950 border border-white/5 rounded-[2rem] p-5 pl-14 text-sm text-white focus:border-amber-500 outline-none transition-all"
+                className="w-full liquid-glass  rounded-[2rem] p-5 pl-14 text-sm text-white focus:border-amber-500 outline-none transition-all"
                 placeholder="Seu nome"
                 required
               />
@@ -122,7 +122,7 @@ export function CollaboratorLoginScreen({ onLogin, setCurrentScreen, setRequeste
               type="text"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="w-full bg-neutral-950 border border-white/5 rounded-[2rem] p-5 pl-14 text-sm text-white focus:border-amber-500 outline-none transition-all"
+              className="w-full liquid-glass  rounded-[2rem] p-5 pl-14 text-sm text-white focus:border-amber-500 outline-none transition-all"
               placeholder="seu@email.com ou (00) 00000-0000"
               required
             />
@@ -137,7 +137,7 @@ export function CollaboratorLoginScreen({ onLogin, setCurrentScreen, setRequeste
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-neutral-950 border border-white/5 rounded-[2rem] p-5 pl-14 text-sm text-white focus:border-amber-500 outline-none transition-all"
+              className="w-full liquid-glass  rounded-[2rem] p-5 pl-14 text-sm text-white focus:border-amber-500 outline-none transition-all"
               placeholder="••••••••"
               required
             />

@@ -234,7 +234,7 @@ export function InventoryScreen({ onBack }: { onBack: () => void }) {
         <div className="flex items-center gap-3">
           <button 
             onClick={onBack} 
-            className="p-2.5 bg-neutral-900 border border-white/5 rounded-2xl text-neutral-400 hover:text-white transition-all cursor-pointer shadow-md hover:scale-105 active:scale-95"
+            className="p-2.5 liquid-glass  rounded-2xl text-neutral-400 hover:text-white transition-all cursor-pointer shadow-md hover:scale-105 active:scale-95"
           >
             <ArrowLeft className="w-5 h-5 text-amber-500" />
           </button>
@@ -318,7 +318,7 @@ export function InventoryScreen({ onBack }: { onBack: () => void }) {
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="bg-neutral-900 rounded-[2.5rem] p-6 border border-white/5 space-y-6 shadow-2xl relative overflow-hidden"
+            className=" liquid-glass rounded-[2.5rem] p-6  space-y-6 shadow-2xl relative overflow-hidden"
           >
             <div className="absolute top-0 right-0 w-16 h-16 bg-amber-500/[0.02] rounded-full blur-xl" />
             
@@ -396,7 +396,7 @@ export function InventoryScreen({ onBack }: { onBack: () => void }) {
                 <button 
                   type="button"
                   onClick={resetForm}
-                  className="flex-1 bg-white/5 border border-white/10 text-neutral-400 hover:text-white py-3.5 rounded-2xl font-black uppercase italic text-[8.5px] tracking-widest hover:bg-white/10 transition-all cursor-pointer"
+                  className="liquid-glass flex-1 text-neutral-400 hover:text-white py-3.5 rounded-2xl font-black uppercase italic text-[8.5px] tracking-widest  transition-all cursor-pointer"
                 >
                   Cancelar
                 </button>
@@ -430,12 +430,12 @@ export function InventoryScreen({ onBack }: { onBack: () => void }) {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Procurar mercadoria pelo nome ou marca..."
-                  className="w-full bg-neutral-900/90 text-white placeholder-neutral-500 text-xs pl-10 pr-4 py-3 rounded-2xl border border-white/5 focus:border-amber-500 focus:outline-none transition-all font-semibold"
+                  className="w-full liquid-glass/90 text-white placeholder-neutral-500 text-xs pl-10 pr-4 py-3 rounded-2xl  focus:border-amber-500 focus:outline-none transition-all font-semibold"
                 />
                 {searchQuery && (
                   <button 
                     onClick={() => setSearchQuery("")}
-                    className="absolute right-3 top-3 p-0.5 bg-neutral-800 rounded-lg"
+                    className="liquid-glass absolute right-3 top-3 p-0.5 rounded-lg"
                   >
                     <X className="w-3.5 h-3.5 text-neutral-400" />
                   </button>
@@ -562,7 +562,7 @@ export function InventoryScreen({ onBack }: { onBack: () => void }) {
                           {/* edit item properties configuration popup trigger */}
                           <button 
                             onClick={() => handleEdit(product)}
-                            className="p-2 bg-neutral-950 border border-white/5 hover:border-white/10 rounded-xl text-neutral-400 hover:text-white transition-all cursor-pointer hover:scale-105 active:scale-95 flex items-center justify-center shadow-md"
+                            className="p-2 liquid-glass  hover:border-white/10 rounded-xl text-neutral-400 hover:text-white transition-all cursor-pointer hover:scale-105 active:scale-95 flex items-center justify-center shadow-md"
                             title="Alterar metadados ou quantidade mínima"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
@@ -572,7 +572,7 @@ export function InventoryScreen({ onBack }: { onBack: () => void }) {
                           <button 
                             onClick={() => handleDelete(product.id, product.name)}
                             disabled={actionInProgress === product.id + "-delete"}
-                            className="p-2 bg-neutral-950 hover:bg-rose-900/10 border border-white/5 hover:border-rose-500/25 rounded-xl text-neutral-600 hover:text-rose-500 transition-all cursor-pointer hover:scale-105 active:scale-95 flex items-center justify-center shadow-md"
+                            className="p-2 liquid-glass hover:bg-rose-900/10  hover:border-rose-500/25 rounded-xl text-neutral-600 hover:text-rose-500 transition-all cursor-pointer hover:scale-105 active:scale-95 flex items-center justify-center shadow-md"
                             title="Remover produto do estoque"
                           >
                             {actionInProgress === product.id + "-delete" ? (
@@ -595,7 +595,7 @@ export function InventoryScreen({ onBack }: { onBack: () => void }) {
                           <button
                             onClick={() => handleInlineQuantityChange(product, -1)}
                             disabled={qty <= 0 || actionInProgress === product.id + "-qty"}
-                            className="w-8 h-8 rounded-lg bg-neutral-950 border border-white/5 flex items-center justify-center text-neutral-400 hover:text-rose-400 disabled:opacity-25 disabled:cursor-not-allowed hover:bg-rose-500/5 hover:border-rose-500/20 active:scale-95 transition-all shrink-0 cursor-pointer"
+                            className="w-8 h-8 rounded-lg liquid-glass  flex items-center justify-center text-neutral-400 hover:text-rose-400 disabled:opacity-25 disabled:cursor-not-allowed hover:bg-rose-500/5 hover:border-rose-500/20 active:scale-95 transition-all shrink-0 cursor-pointer"
                             title="Remover 1 item do estoque"
                           >
                             <Minus className="w-3.5 h-3.5" />
@@ -614,7 +614,7 @@ export function InventoryScreen({ onBack }: { onBack: () => void }) {
                           <button
                             onClick={() => handleInlineQuantityChange(product, 1)}
                             disabled={actionInProgress === product.id + "-qty"}
-                            className="w-8 h-8 rounded-lg bg-neutral-950 border border-white/5 flex items-center justify-center text-neutral-400 hover:text-emerald-400 hover:bg-emerald-500/5 hover:border-emerald-500/20 active:scale-95 transition-all shrink-0 cursor-pointer"
+                            className="w-8 h-8 rounded-lg liquid-glass  flex items-center justify-center text-neutral-400 hover:text-emerald-400 hover:bg-emerald-500/5 hover:border-emerald-500/20 active:scale-95 transition-all shrink-0 cursor-pointer"
                             title="Adicionar 1 item ao estoque"
                           >
                             <Plus className="w-3.5 h-3.5" />
@@ -627,7 +627,7 @@ export function InventoryScreen({ onBack }: { onBack: () => void }) {
               </AnimatePresence>
 
               {filteredProducts.length === 0 && (
-                <div className="py-20 text-center space-y-4 bg-black/10 rounded-[2.5rem] border border-dashed border-white/5">
+                <div className="liquid-glass py-20 text-center space-y-4 rounded-[2.5rem] -dashed">
                   <Archive className="w-12 h-12 text-neutral-800 mx-auto" />
                   <div>
                     <h3 className="text-xs font-black text-white uppercase italic tracking-widest">Nenhuma Mercadoria</h3>
@@ -641,7 +641,7 @@ export function InventoryScreen({ onBack }: { onBack: () => void }) {
                         setStockFilter("all");
                         setSearchQuery("");
                       }}
-                      className="px-3.5 py-2 bg-neutral-900 border border-white/5 hover:border-white/10 rounded-xl text-neutral-400 hover:text-white text-[8px] font-black uppercase tracking-widest shadow-md flex items-center gap-1.5 mx-auto active:scale-95 transition-all"
+                      className="px-3.5 py-2 liquid-glass  hover:border-white/10 rounded-xl text-neutral-400 hover:text-white text-[8px] font-black uppercase tracking-widest shadow-md flex items-center gap-1.5 mx-auto active:scale-95 transition-all"
                     >
                       Limpar Busca
                     </button>

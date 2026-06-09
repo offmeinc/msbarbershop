@@ -692,7 +692,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
           </div>
           <div className="space-y-1.5 max-h-[120px] overflow-y-auto pr-1">
             {offlineQueue.map((action) => (
-              <div key={action.id} className="text-[10px] text-neutral-400 flex justify-between items-center bg-black/40 px-3 py-1.5 rounded-xl border border-white/5">
+              <div key={action.id} className="text-[10px] text-neutral-400 flex justify-between items-center liquid-glass px-3 py-1.5 rounded-xl ">
                 <span className="font-semibold">{action.description}</span>
                 <span className="text-[8px] font-mono text-neutral-500 uppercase">{new Date(action.timestamp).toLocaleTimeString("pt-BR")}</span>
               </div>
@@ -704,7 +704,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
       {/* Modern View Segmented Selector at the header */}
       {(role === 'manager' || role === 'barber') && (currentView === 'agenda' || currentView === 'list') && (
         <div className="max-w-xl mx-auto mb-4 mt-2">
-          <div className="bg-neutral-900 border border-white/5 p-1.5 rounded-3xl flex items-center justify-between shadow-2xl relative overflow-hidden">
+          <div className=" liquid-glass  p-1.5 rounded-3xl flex items-center justify-between shadow-2xl relative overflow-hidden">
             <button 
               onClick={() => setCurrentView('agenda')}
               className={`flex-1 py-4 px-4 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 transition-all relative z-10 ${currentView === 'agenda' ? 'text-black font-black' : 'text-neutral-500 hover:text-white'}`}
@@ -854,11 +854,11 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
             <span className="text-neutral-500 font-bold text-sm">{format(currentDate, "dd/MM")}</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="bg-neutral-900 px-3 py-1.5 rounded-full flex items-center gap-2 border border-white/5">
+            <div className=" liquid-glass px-3 py-1.5 rounded-full flex items-center gap-2 ">
                <Clock className="w-3.5 h-3.5 text-neutral-500" />
                <span className="text-white font-bold text-xs">30min</span>
             </div>
-            <div className="bg-neutral-900 px-4 py-1.5 rounded-full border border-white/5">
+            <div className=" liquid-glass px-4 py-1.5 rounded-full ">
                <span className="text-white font-bold text-xs">{filteredAppointments.length} agendamentos</span>
             </div>
           </div>
@@ -916,7 +916,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                         
                         <div className="flex items-center gap-3">
                           {/* List Scope Control */}
-                          <div className="bg-neutral-900 border border-white/5 p-1 rounded-2xl flex items-center gap-1 shadow-inner">
+                          <div className=" liquid-glass  p-1 rounded-2xl flex items-center gap-1 shadow-inner">
                             <button
                               onClick={() => setListScope("day")}
                               className={`py-2 px-4 rounded-xl font-black uppercase text-[9px] tracking-widest transition-all ${listScope === 'day' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/10' : 'text-neutral-500 hover:text-white'}`}
@@ -933,7 +933,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
 
                           <button 
                             onClick={exportToCSV} 
-                            className="px-4 py-2.5 rounded-xl bg-white/5 border border-white/5 text-neutral-400 text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 hover:text-white hover:bg-white/10 active:scale-95 transition-all duration-300"
+                            className="liquid-glass px-4 py-2.5 rounded-xl text-neutral-400 text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 hover:text-white  active:scale-95 transition-all duration-300"
                           > 
                             <Download className="w-3.5 h-3.5 text-amber-500"/> Exportar CSV
                           </button>
@@ -948,7 +948,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: 0.05 }}
                           whileHover={{ y: -4, borderColor: "rgba(245, 158, 11, 0.25)" }}
-                          className="bg-neutral-900 border border-white/5 rounded-2xl p-3.5 space-y-2 relative overflow-hidden group shadow-xl"
+                          className=" liquid-glass  rounded-2xl p-3.5 space-y-2 relative overflow-hidden group shadow-xl"
                         >
                           <div className="flex justify-between items-center">
                             <p className="text-[9px] font-black text-neutral-500 uppercase tracking-widest">Faturamento</p>
@@ -970,7 +970,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: 0.08 }}
                           whileHover={{ y: -4, borderColor: "rgba(245, 158, 11, 0.25)" }}
-                          className="bg-neutral-900 border border-white/5 rounded-2xl p-3.5 space-y-2 relative overflow-hidden group shadow-xl"
+                          className=" liquid-glass  rounded-2xl p-3.5 space-y-2 relative overflow-hidden group shadow-xl"
                         >
                           <div className="flex justify-between items-center">
                             <p className="text-[9px] font-black text-neutral-500 uppercase tracking-widest">Previsão</p>
@@ -992,7 +992,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: 0.1 }}
                           whileHover={{ y: -4, borderColor: "rgba(245, 158, 11, 0.25)" }}
-                          className="bg-neutral-900 border border-white/5 rounded-2xl p-3.5 space-y-2 relative overflow-hidden group shadow-xl"
+                          className=" liquid-glass  rounded-2xl p-3.5 space-y-2 relative overflow-hidden group shadow-xl"
                         >
                           <div className="flex justify-between items-center">
                             <p className="text-[9px] font-black text-neutral-500 uppercase tracking-widest">Atendidos</p>
@@ -1014,7 +1014,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: 0.15 }}
                           whileHover={{ y: -4, borderColor: "rgba(245, 158, 11, 0.25)" }}
-                          className="bg-neutral-900 border border-white/5 rounded-2xl p-3.5 space-y-2 relative overflow-hidden group shadow-xl"
+                          className=" liquid-glass  rounded-2xl p-3.5 space-y-2 relative overflow-hidden group shadow-xl"
                         >
                           <div className="flex justify-between items-center">
                             <p className="text-[9px] font-black text-neutral-500 uppercase tracking-widest">Preço Médio</p>
@@ -1118,7 +1118,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                           <p className="text-neutral-500 text-[10px] uppercase tracking-widest font-black">Buscando Atendimentos...</p>
                         </div>
                       ) : filteredAppointmentsList.length === 0 ? (
-                        <div className="p-16 text-center bg-neutral-900/40 rounded-3xl border border-white/5">
+                        <div className="p-16 text-center liquid-glass/40 rounded-3xl ">
                           <p className="text-neutral-500 font-bold uppercase text-xs tracking-widest mb-1">Nenhum atendimento</p>
                           <p className="text-[10px] text-neutral-700 uppercase font-black tracking-widest">Nesta categoria para o filtro atual</p>
                         </div>
@@ -1257,7 +1257,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                                                 className="overflow-hidden border-t border-white/5 pt-4 text-white text-[10px] space-y-2.5 uppercase tracking-widest font-black"
                                               >
                                                   {app.reviewPhotoUrl && (
-                                                    <div className="mb-4 bg-black/40 p-3 rounded-2xl border border-white/5 space-y-2">
+                                                    <div className="mb-4 liquid-glass p-3 rounded-2xl  space-y-2">
                                                       <p className="text-neutral-500 uppercase text-[8px] tracking-wider font-bold">Feedback Visual do Cliente:</p>
                                                       <div className="aspect-[4/3] w-full rounded-xl overflow-hidden border border-white/10 group-hover:border-amber-500/30 transition-colors">
                                                           <img src={app.reviewPhotoUrl} className="w-full h-full object-cover" alt="Review" />
@@ -1265,24 +1265,24 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                                                     </div>
                                                   )}
 
-                                                  <div className="flex justify-between items-center bg-black/40 px-4 py-2 rounded-xl border border-white/5">
+                                                  <div className="flex justify-between items-center liquid-glass px-4 py-2 rounded-xl ">
                                                     <span className="text-neutral-500">Preço Total</span>
                                                     <span className="text-emerald-400 text-xs font-black">R$ {app.price || app.totalPrice || '0,00'}</span>
                                                   </div>
-                                                  <div className="flex justify-between items-center bg-black/40 px-4 py-2 rounded-xl border border-white/5">
+                                                  <div className="flex justify-between items-center liquid-glass px-4 py-2 rounded-xl ">
                                                     <span className="text-neutral-500">Status Financeiro</span>
                                                     <span className={`px-2 py-0.5 rounded-md text-[9px] ${app.paymentStatus === 'paid' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
                                                       {app.paymentStatus === 'paid' ? 'Pago ✅' : 'Pendente 💳'}
                                                     </span>
                                                   </div>
                                                   {app.payerName && (
-                                                    <div className="flex justify-between items-center bg-black/40 px-4 py-2 rounded-xl border border-white/5">
+                                                    <div className="flex justify-between items-center liquid-glass px-4 py-2 rounded-xl ">
                                                       <span className="text-neutral-500">Responsável Pagamento</span>
                                                       <span className="text-amber-500 font-bold">{app.payerName}</span>
                                                     </div>
                                                   )}
                                                   {app.notes && (
-                                                    <div className="bg-black/40 p-3 rounded-xl border border-white/5 text-[9px] text-neutral-400 normal-case font-medium tracking-normal mt-2">
+                                                    <div className=" liquid-glass p-3 rounded-xl  text-[9px] text-neutral-400 normal-case font-medium tracking-normal mt-2">
                                                       <p className="font-bold text-neutral-500 uppercase text-[8px] tracking-wider mb-1">Notas do Agendamento:</p>
                                                       {app.notes}
                                                     </div>
@@ -1400,13 +1400,13 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md overflow-y-auto"
+            className="liquid-glass fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md overflow-y-auto"
           >
             <motion.div 
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
-              className="bg-neutral-900 border border-white/5 rounded-[2.5rem] p-6 max-w-lg w-full shadow-2xl relative space-y-6"
+              className=" liquid-glass  rounded-[2.5rem] p-6 max-w-lg w-full shadow-2xl relative space-y-6"
             >
               <button 
                 onClick={() => setIsLockModalOpen(false)}
@@ -1505,7 +1505,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                     blockedTimes.map(b => {
                       const dateVal = b.date instanceof Timestamp ? b.date.toDate() : (typeof b.date === 'string' ? parseISO(b.date) : b.date);
                       return (
-                        <div key={b.id} className="bg-black/60 border border-white/5 p-3 rounded-2xl flex justify-between items-center group hover:border-amber-500/20 transition-all">
+                        <div key={b.id} className=" liquid-glass  p-3 rounded-2xl flex justify-between items-center group hover:border-amber-500/20 transition-all">
                           <div className="text-left space-y-1">
                             <p className="text-[10px] text-white font-black uppercase tracking-wide leading-none">{b.reason || "Bloqueio de Horário"}</p>
                             <p className="text-[8px] text-neutral-500 font-medium tracking-tight">
@@ -1540,13 +1540,13 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+            className="liquid-glass fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md"
           >
             <motion.div 
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
-              className="bg-neutral-900 border border-white/5 rounded-[2.5rem] p-6 max-w-lg w-full shadow-2xl relative space-y-4"
+              className=" liquid-glass  rounded-[2.5rem] p-6 max-w-lg w-full shadow-2xl relative space-y-4"
             >
               <button 
                 onClick={() => {
@@ -1594,7 +1594,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                           setIsSearchModalOpen(false);
                           setSearchQuery("");
                         }}
-                        className="bg-black/60 border border-white/5 p-4 rounded-2xl text-left hover:border-amber-500 hover:bg-neutral-950 transition-all duration-300 cursor-pointer flex justify-between items-center group"
+                        className=" liquid-glass  p-4 rounded-2xl text-left hover:border-amber-500 hover:bg-neutral-950 transition-all duration-300 cursor-pointer flex justify-between items-center group"
                       >
                         <div className="space-y-1">
                           <p className="text-[10px] text-white font-black uppercase tracking-widest group-hover:text-amber-500 transition-colors">{app.clientName}</p>
@@ -1632,13 +1632,13 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+            className="liquid-glass fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md"
           >
             <motion.div 
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
-              className="bg-neutral-900 border border-white/5 rounded-[2.5rem] p-6 max-w-sm w-full shadow-2xl relative space-y-6"
+              className=" liquid-glass  rounded-[2.5rem] p-6 max-w-sm w-full shadow-2xl relative space-y-6"
             >
               <button 
                 onClick={() => setIsDatepickerModalOpen(false)}
@@ -1679,7 +1679,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                       setStatusMsg("Mostrando o dia de Hoje!");
                       setTimeout(() => setStatusMsg(null), 3000);
                     }}
-                    className="py-3 rounded-2xl bg-neutral-950 hover:bg-neutral-800 border border-white/5 text-neutral-300 font-black text-[9px] uppercase tracking-widest transition-all duration-300"
+                    className="py-3 rounded-2xl bg-neutral-950  liquid-glass  text-neutral-300 font-black text-[9px] uppercase tracking-widest transition-all duration-300"
                   >
                     Dia de Hoje
                   </button>
@@ -1690,7 +1690,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                       setStatusMsg("Mostrando o dia de Amanhã!");
                       setTimeout(() => setStatusMsg(null), 3000);
                     }}
-                    className="py-3 rounded-2xl bg-neutral-950 hover:bg-neutral-800 border border-white/5 text-neutral-300 font-black text-[9px] uppercase tracking-widest transition-all duration-300"
+                    className="py-3 rounded-2xl bg-neutral-950  liquid-glass  text-neutral-300 font-black text-[9px] uppercase tracking-widest transition-all duration-300"
                   >
                     Amanhã
                   </button>
@@ -1715,14 +1715,14 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                   setManagerCancelReason("");
                 }
               }}
-              className="absolute inset-0 bg-black/80 backdrop-blur-md"
+              className="liquid-glass absolute inset-0 backdrop-blur-md"
             />
             
             <motion.div 
               initial={{ scale: 0.9, opacity: 0, y: 15 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 15 }}
-              className="bg-neutral-950 border border-white/5 rounded-[2.5rem] p-8 max-w-sm w-full text-center relative z-10 shadow-2xl space-y-6 text-left"
+              className=" liquid-glass  rounded-[2.5rem] p-8 max-w-sm w-full text-center relative z-10 shadow-2xl space-y-6 text-left"
             >
               <div className="w-14 h-14 bg-red-500/10 border border-red-500/25 rounded-3xl mx-auto flex items-center justify-center text-red-500">
                 <XCircle className="w-6 h-6 animate-pulse" />
@@ -1735,7 +1735,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                 </p>
               </div>
 
-              <div className="bg-neutral-900 rounded-2xl p-4 border border-white/5 space-y-2 text-left">
+              <div className=" liquid-glass rounded-2xl p-4  space-y-2 text-left">
                 <p className="text-[10px] font-black uppercase tracking-wider text-amber-500 flex items-center gap-1.5 leading-none">
                   <Calendar className="w-3 h-3" />
                   {format(managerAppToCancel.date instanceof Timestamp ? managerAppToCancel.date.toDate() : (typeof managerAppToCancel.date === 'string' ? parseISO(managerAppToCancel.date) : managerAppToCancel.date), "dd 'de' MMMM", { locale: ptBR })}
@@ -1755,7 +1755,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                   onChange={(e) => setManagerCancelReason(e.target.value)}
                   placeholder="Por que você está cancelando? (ex: Falta de energia / Imprevisto na agenda)"
                   maxLength={150}
-                  className="w-full bg-neutral-950 border border-white/5 rounded-2xl p-4 text-xs text-white placeholder-neutral-700 focus:border-red-500/50 outline-none resize-none h-20 transition-all font-medium"
+                  className="w-full liquid-glass  rounded-2xl p-4 text-xs text-white placeholder-neutral-700 focus:border-red-500/50 outline-none resize-none h-20 transition-all font-medium"
                 />
               </div>
 
@@ -1788,7 +1788,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                 <button 
                   onClick={() => { setManagerAppToCancel(null); setManagerCancelReason(""); }}
                   disabled={isManagerCancelling}
-                  className="w-full bg-neutral-900 hover:bg-neutral-800 text-neutral-300 py-4 rounded-xl text-[10px] font-black uppercase italic tracking-widest transition-all cursor-pointer border border-white/5 disabled:cursor-not-allowed"
+                  className="w-full bg-neutral-900  liquid-glass text-neutral-300 py-4 rounded-xl text-[10px] font-black uppercase italic tracking-widest transition-all cursor-pointer  disabled:cursor-not-allowed"
                 >
                   MANTER AGENDAMENTO
                 </button>

@@ -176,11 +176,11 @@ export function MyCutsScreen({ user, appointments, onBack, onBookAgain, onResche
     >
       {/* Premium Top Bar Dashboard Header */}
       <div className="max-w-6xl mx-auto space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-neutral-900/40 p-6 rounded-[2.5rem] border border-white/5 backdrop-blur-md">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 liquid-glass/40 p-6 rounded-[2.5rem]  backdrop-blur-md">
           <div className="flex items-center gap-4 text-left">
             <button 
               onClick={onBack}
-              className="p-3.5 bg-neutral-950 hover:bg-neutral-900 rounded-2xl text-neutral-400 hover:text-amber-500 border border-white/5 transition-all hover:scale-105 active:scale-95"
+              className="p-3.5 bg-neutral-950  liquid-glass rounded-2xl text-neutral-400 hover:text-amber-500  transition-all hover:scale-105 active:scale-95"
               title="Voltar"
             >
               <ArrowLeft className="w-5 h-5" />
@@ -201,19 +201,19 @@ export function MyCutsScreen({ user, appointments, onBack, onBookAgain, onResche
           {/* Core Personal Statistics row */}
           <div className="grid grid-cols-3 gap-2 sm:gap-3 shrink-0">
             {/* Total Completed */}
-            <div className="bg-black/40 border border-white/5 py-2.5 px-3 sm:px-4 rounded-2xl text-center flex flex-col justify-center items-center">
+            <div className=" liquid-glass  py-2.5 px-3 sm:px-4 rounded-2xl text-center flex flex-col justify-center items-center">
               <Award className="w-4 h-4 text-amber-500 mb-1" />
               <span className="text-xs font-black tracking-tight leading-none text-white">{totalCutsCount}</span>
               <span className="text-[7px] text-neutral-500 uppercase font-bold tracking-wider mt-0.5 whitespace-nowrap">Cortes Feitos</span>
             </div>
             {/* Favorites */}
-            <div className="bg-black/40 border border-white/5 py-2.5 px-3 sm:px-4 rounded-2xl text-center flex flex-col justify-center items-center">
+            <div className=" liquid-glass  py-2.5 px-3 sm:px-4 rounded-2xl text-center flex flex-col justify-center items-center">
               <Heart className="w-4 h-4 text-rose-500 fill-rose-500 mb-1" />
               <span className="text-xs font-black tracking-tight leading-none text-white">{favoriteCutsCount}</span>
               <span className="text-[7px] text-neutral-500 uppercase font-bold tracking-wider mt-0.5 whitespace-nowrap">Favoritos</span>
             </div>
             {/* Next Booking Info */}
-            <div className="bg-black/40 border border-white/5 py-2.5 px-3 sm:px-4 rounded-2xl text-center flex flex-col justify-center items-center">
+            <div className=" liquid-glass  py-2.5 px-3 sm:px-4 rounded-2xl text-center flex flex-col justify-center items-center">
               {nextBookingInfo ? (
                 <>
                   <CalendarCheck className="w-4 h-4 text-teal-400 mb-1 animate-pulse" />
@@ -280,18 +280,18 @@ export function MyCutsScreen({ user, appointments, onBack, onBookAgain, onResche
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-neutral-400">
-                        <div className="flex items-center gap-1.5 bg-black/50 px-3 py-1.5 rounded-xl border border-white/5 font-bold">
+                        <div className="flex items-center gap-1.5 liquid-glass px-3 py-1.5 rounded-xl  font-bold">
                           <Calendar className="w-3.5 h-3.5 text-amber-500" />
                           <span>
                             {format(app.date instanceof Timestamp ? app.date.toDate() : parseISO(app.date), "dd 'de' MMMM", { locale: ptBR })}
                           </span>
                         </div>
-                        <div className="flex items-center gap-1.5 bg-black/50 px-3 py-1.5 rounded-xl border border-white/5 font-bold">
+                        <div className="flex items-center gap-1.5 liquid-glass px-3 py-1.5 rounded-xl  font-bold">
                           <Clock className="w-3.5 h-3.5 text-amber-500" />
                           <span>{app.time}</span>
                         </div>
                         {app.totalPrice && (
-                          <div className="flex items-center gap-1.5 bg-black/50 px-3 py-1.5 rounded-xl border border-white/5 font-mono text-white text-xs">
+                          <div className="flex items-center gap-1.5 liquid-glass px-3 py-1.5 rounded-xl  font-mono text-white text-xs">
                             <span className="text-[10px] text-neutral-500 mr-0.5">R$</span>
                             <span>{Number(app.totalPrice).toFixed(2).replace('.', ',')}</span>
                           </div>
@@ -335,11 +335,11 @@ export function MyCutsScreen({ user, appointments, onBack, onBookAgain, onResche
                 <div className="flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                   <h3 className="text-[9px] font-black uppercase tracking-[0.25em] text-neutral-500">Minha Galeria de Cortes</h3>
-                  <span className="text-[8.5px] font-black px-2 py-0.5 bg-neutral-900 text-amber-500 rounded-md border border-white/5">{portfolioCuts.length} FOTOS</span>
+                  <span className="text-[8.5px] font-black px-2 py-0.5 liquid-glass text-amber-500 rounded-md ">{portfolioCuts.length} FOTOS</span>
                 </div>
 
                 {/* Aesthetic Filter Tabs */}
-                <div className="flex bg-neutral-900/60 p-1 rounded-2xl border border-white/5 self-start sm:self-auto select-none">
+                <div className="flex liquid-glass/60 p-1 rounded-2xl  self-start sm:self-auto select-none">
                   <button
                     onClick={() => setFilterFavsOnly(false)}
                     className={`px-3.5 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
@@ -370,7 +370,7 @@ export function MyCutsScreen({ user, appointments, onBack, onBookAgain, onResche
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0 }}
-                    className="py-16 text-center space-y-3 bg-neutral-900/10 rounded-[2.5rem] border border-dashed border-white/5"
+                    className="liquid-glass py-16 text-center space-y-3 rounded-[2.5rem] -dashed"
                   >
                     <Heart className="w-10 h-10 text-neutral-700 mx-auto" />
                     <p className="text-[10px] font-black uppercase text-neutral-500 tracking-widest">Nenhum favorito selecionado</p>
@@ -392,7 +392,7 @@ export function MyCutsScreen({ user, appointments, onBack, onBookAgain, onResche
                           exit={{ opacity: 0, scale: 0.92 }}
                           transition={{ duration: 0.3 }}
                           whileHover={{ y: -4 }}
-                          className="relative aspect-square rounded-[2.2rem] overflow-hidden group border border-white/5 bg-neutral-900 cursor-pointer"
+                          className="liquid-glass relative aspect-square rounded-[2.2rem] overflow-hidden group cursor-pointer"
                         >
                           {/* Image */}
                           <img 
@@ -460,7 +460,7 @@ export function MyCutsScreen({ user, appointments, onBack, onBookAgain, onResche
                           {/* Quick details magnifier icon when hovered */}
                           <div 
                             onClick={() => setSelectedPhoto(item)}
-                            className="absolute top-4 left-4 p-2.5 bg-black/50 backdrop-blur-md rounded-xl border border-white/5 text-neutral-400 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-auto cursor-pointer hover:text-white"
+                            className="absolute top-4 left-4 p-2.5 liquid-glass backdrop-blur-md rounded-xl  text-neutral-400 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-auto cursor-pointer hover:text-white"
                           >
                             <Maximize2 className="w-3.5 h-3.5" />
                           </div>
@@ -510,7 +510,7 @@ export function MyCutsScreen({ user, appointments, onBack, onBookAgain, onResche
 
             {/* List of past cut operations */}
             {pastAppointments.length === 0 ? (
-              <div className="py-14 text-center space-y-2 bg-neutral-900/20 rounded-[2.5rem] border border-white/5">
+              <div className="py-14 text-center space-y-2 liquid-glass/20 rounded-[2.5rem] ">
                 <CalendarCheck className="w-8 h-8 text-neutral-700 mx-auto" />
                 <p className="text-[10px] font-black uppercase text-neutral-500 tracking-widest">Nenhum atendimento anterior registrado</p>
               </div>
@@ -542,7 +542,7 @@ export function MyCutsScreen({ user, appointments, onBack, onBookAgain, onResche
                               </span>
                               {app.barberName && (
                                 <>
-                                  <span className="w-1 h-1 rounded-full bg-neutral-800" />
+                                  <span className="liquid-glass w-1 h-1 rounded-full" />
                                   <span className="text-amber-500 uppercase tracking-widest flex items-center gap-1">
                                     💈 {app.barberName}
                                   </span>
@@ -562,7 +562,7 @@ export function MyCutsScreen({ user, appointments, onBack, onBookAgain, onResche
                       {/* Interactive Client Rating star selectors & uploaded photo frame */}
                       {isCompleted && (
                         <div className="pt-4 border-t border-white/5 space-y-4">
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-neutral-900/30 p-3.5 rounded-2xl border border-white/5 text-left">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 liquid-glass/30 p-3.5 rounded-2xl  text-left">
                             <div className="space-y-0.5">
                               <span className="text-[8px] font-black uppercase text-neutral-500 tracking-wider">Avaliação da Experiência</span>
                               <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-tight">
@@ -598,23 +598,23 @@ export function MyCutsScreen({ user, appointments, onBack, onBookAgain, onResche
                             <span className="text-[8px] font-black uppercase text-neutral-500 tracking-widest pl-1">Visual do Corte Registrado</span>
                             
                             {app.reviewPhotoUrl ? (
-                              <div className="relative aspect-square sm:aspect-[4/3] w-full max-w-md rounded-3xl overflow-hidden group border border-white/5 bg-neutral-950">
+                              <div className="liquid-glass relative aspect-square sm:aspect-[4/3] w-full max-w-md rounded-3xl overflow-hidden group">
                                 <img src={app.reviewPhotoUrl} className="w-full h-full object-cover" alt="Sua foto de corte" />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-4">
-                                  <span className="text-[9px] font-black uppercase text-white tracking-widest bg-black/60 px-2.5 py-1.5 rounded-xl border border-white/5">
+                                  <span className="text-[9px] font-black uppercase text-white tracking-widest liquid-glass px-2.5 py-1.5 rounded-xl ">
                                     📸 FOTO DA VISITA
                                   </span>
                                   <div className="flex gap-2">
                                     <button 
                                       onClick={() => setSelectedPhoto({ imageUrl: app.reviewPhotoUrl, caption: `${app.serviceName} (${app.barberName})`, createdAt: app.date, serviceId: app.serviceId, barberId: app.barberId })}
-                                      className="p-2.5 bg-black/70 backdrop-blur-sm rounded-xl text-white hover:text-amber-500 transition-colors border border-white/5 cursor-pointer hover:border-amber-500/20"
+                                      className="p-2.5 liquid-glass backdrop-blur-sm rounded-xl text-white hover:text-amber-500 transition-colors  cursor-pointer hover:border-amber-500/20"
                                       title="Ver ampliada"
                                     >
                                       <Maximize2 className="w-4 h-4" />
                                     </button>
                                     <button 
                                       onClick={() => removeReviewPhoto(app.id)}
-                                      className="p-2.5 bg-black/70 backdrop-blur-sm rounded-xl text-red-500 hover:text-red-400 hover:bg-red-950/35 transition-colors border border-white/5 cursor-pointer"
+                                      className="p-2.5 liquid-glass backdrop-blur-sm rounded-xl text-red-500 hover:text-red-400 hover:bg-red-950/35 transition-colors  cursor-pointer"
                                       title="Remover foto"
                                     >
                                       <Trash2 className="w-4 h-4" />
@@ -623,8 +623,8 @@ export function MyCutsScreen({ user, appointments, onBack, onBookAgain, onResche
                                 </div>
                               </div>
                             ) : (
-                              <label className="flex flex-col items-center justify-center p-8 bg-black/30 border border-dashed border-white/5 rounded-3xl gap-3 cursor-pointer hover:border-amber-500/30 hover:bg-[#0c0c0c] transition-all group max-w-md select-none">
-                                <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-neutral-500 group-hover:text-amber-500 group-hover:bg-amber-500/10 transition-colors border border-white/5">
+                              <label className="liquid-glass flex flex-col items-center justify-center p-8 -dashed rounded-3xl gap-3 cursor-pointer hover:-amber-500/30 hover:] transition-all group max-w-md select-none">
+                                <div className="liquid-glass w-12 h-12 rounded-2xl flex items-center justify-center text-neutral-500 group-hover:text-amber-500  transition-colors">
                                   {uploadingFor === app.id ? <Loader2 className="w-5 h-5 animate-spin text-amber-500" /> : <Camera className="w-5 h-5" />}
                                 </div>
                                 <div className="text-center">
@@ -649,7 +649,7 @@ export function MyCutsScreen({ user, appointments, onBack, onBookAgain, onResche
                           {onBookAgain && (
                             <button
                               onClick={() => onBookAgain(app.serviceId, app.barberId)}
-                              className="w-full bg-white/5 hover:bg-white/10 hover:text-white text-neutral-300 font-black uppercase tracking-wider text-[10px] py-4 rounded-2xl transition-colors border border-white/5 cursor-pointer italic"
+                              className="liquid-glass w-full  hover:text-white text-neutral-300 font-black uppercase tracking-wider text-[10px] py-4 rounded-2xl transition-colors cursor-pointer italic"
                             >
                               Agendar Novamente Este Procedimento
                             </button>
@@ -681,10 +681,10 @@ export function MyCutsScreen({ user, appointments, onBack, onBookAgain, onResche
               initial={{ scale: 0.95, opacity: 0, y: 15 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 15 }}
-              className="bg-neutral-950 border border-white/5 rounded-[3rem] overflow-hidden max-w-xl w-full relative z-10 shadow-2xl flex flex-col text-left"
+              className=" liquid-glass  rounded-[3rem] overflow-hidden max-w-xl w-full relative z-10 shadow-2xl flex flex-col text-left"
             >
               {/* Image window frame */}
-              <div className="relative aspect-square w-full bg-black/40">
+              <div className="liquid-glass relative aspect-square w-full">
                 <img 
                   src={selectedPhoto.imageUrl} 
                   className="w-full h-full object-cover" 
@@ -692,7 +692,7 @@ export function MyCutsScreen({ user, appointments, onBack, onBookAgain, onResche
                 />
                 <button 
                   onClick={() => setSelectedPhoto(null)}
-                  className="absolute top-5 right-5 p-3 bg-black/70 backdrop-blur-md rounded-2xl text-neutral-400 hover:text-white hover:bg-black transition-colors border border-white/10 cursor-pointer"
+                  className="absolute top-5 right-5 p-3 liquid-glass backdrop-blur-md rounded-2xl text-neutral-400 hover:text-white hover:bg-black transition-colors  cursor-pointer"
                   title="Fechar"
                 >
                   <X className="w-5 h-5" />
@@ -719,7 +719,7 @@ export function MyCutsScreen({ user, appointments, onBack, onBookAgain, onResche
                 </div>
 
                 {/* Info Alert info badge */}
-                <div className="bg-neutral-900 border border-white/5 p-4 rounded-2xl flex items-start gap-3">
+                <div className=" liquid-glass  p-4 rounded-2xl flex items-start gap-3">
                   <span className="text-xl leading-none">🧠</span>
                   <div className="space-y-0.5">
                     <h5 className="text-[9px] font-black uppercase text-amber-500 tracking-wider">Anotação do Estilo</h5>
@@ -744,7 +744,7 @@ export function MyCutsScreen({ user, appointments, onBack, onBookAgain, onResche
                   </button>
                   <button 
                     onClick={() => setSelectedPhoto(null)}
-                    className="px-6 py-4 bg-neutral-900 hover:bg-neutral-800 text-neutral-400 hover:text-white text-[10px] font-black uppercase italic tracking-widest rounded-2xl transition-colors cursor-pointer border border-white/5"
+                    className="px-6 py-4 bg-neutral-900  liquid-glass text-neutral-400 hover:text-white text-[10px] font-black uppercase italic tracking-widest rounded-2xl transition-colors cursor-pointer "
                   >
                     FECHAR
                   </button>
@@ -769,14 +769,14 @@ export function MyCutsScreen({ user, appointments, onBack, onBookAgain, onResche
                   setCancelReasonTxt("");
                 }
               }}
-              className="absolute inset-0 bg-black/80 backdrop-blur-md"
+              className="liquid-glass absolute inset-0 backdrop-blur-md"
             />
             
             <motion.div 
               initial={{ scale: 0.9, opacity: 0, y: 15 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 15 }}
-              className="bg-neutral-950 border border-white/5 rounded-[2.5rem] p-8 max-w-sm w-full text-center relative z-10 shadow-2xl space-y-6 text-left"
+              className=" liquid-glass  rounded-[2.5rem] p-8 max-w-sm w-full text-center relative z-10 shadow-2xl space-y-6 text-left"
             >
               <div className="w-14 h-14 bg-red-500/10 border border-red-500/25 rounded-3xl mx-auto flex items-center justify-center text-red-500">
                 <XCircle className="w-6 h-6 animate-pulse" />
@@ -789,7 +789,7 @@ export function MyCutsScreen({ user, appointments, onBack, onBookAgain, onResche
                 </p>
               </div>
 
-              <div className="bg-neutral-900 rounded-2xl p-4 border border-white/5 space-y-2 text-left">
+              <div className=" liquid-glass rounded-2xl p-4  space-y-2 text-left">
                 <p className="text-[10px] font-black uppercase tracking-wider text-amber-500 flex items-center gap-1.5 leading-none">
                   <Calendar className="w-3 h-3" />
                   {format(appToCancel.date instanceof Timestamp ? appToCancel.date.toDate() : parseISO(appToCancel.date), "dd 'de' MMMM", { locale: ptBR })}
@@ -809,7 +809,7 @@ export function MyCutsScreen({ user, appointments, onBack, onBookAgain, onResche
                   onChange={(e) => setCancelReasonTxt(e.target.value)}
                   placeholder="Por que você está cancelando? (ex: Tive um imprevisto)"
                   maxLength={150}
-                  className="w-full bg-neutral-950 border border-white/5 rounded-2xl p-4 text-xs text-white placeholder-neutral-700 focus:border-red-500/50 outline-none resize-none h-20 transition-all font-medium"
+                  className="w-full liquid-glass  rounded-2xl p-4 text-xs text-white placeholder-neutral-700 focus:border-red-500/50 outline-none resize-none h-20 transition-all font-medium"
                 />
               </div>
 
@@ -842,7 +842,7 @@ export function MyCutsScreen({ user, appointments, onBack, onBookAgain, onResche
                 <button 
                   onClick={() => { setAppToCancel(null); setCancelReasonTxt(""); }}
                   disabled={isCancelling}
-                  className="w-full bg-neutral-900 hover:bg-neutral-800 text-neutral-300 py-4 rounded-xl text-[10px] font-black uppercase italic tracking-widest transition-all cursor-pointer border border-white/5 disabled:cursor-not-allowed"
+                  className="w-full bg-neutral-900  liquid-glass text-neutral-300 py-4 rounded-xl text-[10px] font-black uppercase italic tracking-widest transition-all cursor-pointer  disabled:cursor-not-allowed"
                 >
                   MANTER AGENDAMENTO
                 </button>

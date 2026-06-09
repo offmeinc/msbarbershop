@@ -74,13 +74,13 @@ export function StyleSheet({ user, onBack }: StyleSheetProps) {
             <p className="text-[10px] text-neutral-500 font-black uppercase tracking-widest">Suas preferências salvas</p>
           </div>
         </div>
-        <button onClick={onBack} className="p-3 bg-neutral-900 rounded-2xl text-neutral-500 hover:text-white border border-white/5">
+        <button onClick={onBack} className="p-3 liquid-glass rounded-2xl text-neutral-500 hover:text-white ">
           <X className="w-5 h-5" />
         </button>
       </div>
 
       <div className="space-y-6">
-        <section className="bg-neutral-900/50 border border-white/5 rounded-[2.5rem] p-6 space-y-6">
+        <section className=" liquid-glass/50  rounded-[2.5rem] p-6 space-y-6">
           <div className="flex items-center gap-3 mb-2">
             <Scissors className="w-4 h-4 text-amber-500" />
             <h3 className="text-xs font-black uppercase tracking-widest text-neutral-400">Preferências de Corte</h3>
@@ -132,7 +132,7 @@ export function StyleSheet({ user, onBack }: StyleSheetProps) {
           </div>
         </section>
 
-        <section className="bg-neutral-900/50 border border-white/5 rounded-[2.5rem] p-6 space-y-6">
+        <section className=" liquid-glass/50  rounded-[2.5rem] p-6 space-y-6">
           <div className="flex items-center gap-3 mb-2">
             <Coffee className="w-4 h-4 text-amber-500" />
             <h3 className="text-xs font-black uppercase tracking-widest text-neutral-400">Gostos Pessoais</h3>
@@ -165,7 +165,7 @@ export function StyleSheet({ user, onBack }: StyleSheetProps) {
           </div>
         </section>
 
-        <section className="bg-neutral-900/50 border border-white/5 rounded-[2.5rem] p-6">
+        <section className=" liquid-glass/50  rounded-[2.5rem] p-6">
           <div className="flex items-center gap-3 mb-4">
             <Info className="w-4 h-4 text-amber-500" />
             <h3 className="text-xs font-black uppercase tracking-widest text-neutral-400">Observações Extras</h3>

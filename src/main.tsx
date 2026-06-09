@@ -10,9 +10,14 @@ if (typeof window !== "undefined" && "serviceWorker" in navigator) {
       .register("/sw-push.js", { scope: "/" })
       .then((reg) => {
         console.log("[PWA] Service Worker registered on load successfully:", reg.scope);
+        reg.update().catch(() => {}); // Force update to prevent old SW bugs
       })
       .catch((err) => {
-        console.error("[PWA] Service Worker registration on load failed:", err);
+        if (err.message?.includes("Failed to fetch") || String(err).includes("Failed to fetch")) {
+           console.warn("[PWA] Service Worker fetch aborted (expected in dev preview)");
+        } else {
+           console.error("[PWA] Service Worker registration on load failed:", err);
+        }
       });
   });
 }

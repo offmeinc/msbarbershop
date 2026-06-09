@@ -67,7 +67,7 @@ function RecurrenceUI({
 }) {
   if (userRole !== "barber" && userRole !== "manager") return null;
   return (
-    <div className="bg-neutral-900/50 border border-white/5 rounded-[2rem] p-6 space-y-4">
+    <div className=" liquid-glass/50  rounded-[2rem] p-6 space-y-4">
       <div className="flex items-center gap-2">
         <RefreshCw className="w-4 h-4 text-amber-500" />
         <h4 className="text-xs font-black uppercase text-neutral-400 tracking-widest">
@@ -377,7 +377,7 @@ function ConfirmationModal({
         </div>
 
         {/* Summary Info Box */}
-        <div className="bg-neutral-900/50 p-6 rounded-[2.5rem] border border-white/5 space-y-3">
+        <div className=" liquid-glass/50 p-6 rounded-[2.5rem]  space-y-3">
           <div className="space-y-0.5">
             <p className="text-[9px] font-black text-neutral-600 uppercase tracking-widest">
               Procedimento
@@ -386,7 +386,7 @@ function ConfirmationModal({
               {service?.name}
             </p>
           </div>
-          <div className="h-[1px] bg-white/5" />
+          <div className="liquid-glass h-[1px]" />
           <div className="space-y-0.5">
             <p className="text-[9px] font-black text-neutral-600 uppercase tracking-widest">
               Data e Hora
@@ -401,7 +401,7 @@ function ConfirmationModal({
 
         {/* Paying Section */}
         {mpPixActive === null ? (
-          <div className="bg-neutral-900 border border-white/5 p-6 rounded-[2.5rem] space-y-4 text-center">
+          <div className=" liquid-glass  p-6 rounded-[2.5rem] space-y-4 text-center">
             <div className="w-12 h-12 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-2">
               <Sparkles className="w-6 h-6 text-amber-500" />
             </div>
@@ -519,14 +519,14 @@ function ConfirmationModal({
               <button
                 type="button"
                 onClick={() => setMpPixActive(false)}
-                className="w-full py-4 rounded-[1.5rem] bg-white/5 text-white border border-white/10 text-[10px] font-black uppercase tracking-widest hover:bg-white/10 active:scale-95 transition-all text-center block font-sans"
+                className="liquid-glass w-full py-4 rounded-[1.5rem] text-white text-[10px] font-black uppercase tracking-widest  active:scale-95 transition-all text-center block font-sans"
               >
                 NÃO, PAGAREI NA BARBEARIA
               </button>
             </div>
           </div>
         ) : mpPixActive === true ? (
-          <div className="bg-neutral-900 border border-white/5 p-6 rounded-[2.5rem] space-y-4 text-center">
+          <div className=" liquid-glass  p-6 rounded-[2.5rem] space-y-4 text-center">
             <div className="space-y-4 py-4 text-center">
               <div className="w-12 h-12 bg-amber-500/10 border border-amber-500/20 rounded-2xl mx-auto flex items-center justify-center text-amber-500">
                 <span className="text-xl">⚡</span>
@@ -582,7 +582,7 @@ function ConfirmationModal({
                   <button
                     type="button"
                     onClick={() => handleCopyPix(mpData.qr_code)}
-                    className="w-full py-4 bg-white/5 border border-white/10 rounded-[1.2rem] text-[10px] font-black uppercase text-white hover:bg-white/10 transition-colors flex items-center justify-center gap-2"
+                    className="liquid-glass w-full py-4 rounded-[1.2rem] text-[10px] font-black uppercase text-white  transition-colors flex items-center justify-center gap-2"
                   >
                     {copiedPix ? (
                       <CheckCircle2 className="w-4 h-4 text-green-500" />
@@ -680,7 +680,7 @@ function ConfirmationModal({
               <p className="text-[10px] text-neutral-400 font-bold leading-normal uppercase">
                 Seu navegador bloqueou o pop-up de login porque o aplicativo está sendo exibido dentro do painel do <span className="text-white">AI Studio (iframe)</span>.
               </p>
-              <div className="h-[1px] bg-white/5 my-1" />
+              <div className="liquid-glass h-[1px] my-1" />
               <p className="text-[10px] text-amber-500 font-black uppercase tracking-wide leading-normal">
                 👉 Como resolver: Clique no botão <span className="text-white">"Abrir em nova aba" ↗</span> no topo do painel à direita e faça login por lá!
               </p>
@@ -766,21 +766,21 @@ function PortfolioModal({ barber, onClose }: PortfolioModalProps) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[110] bg-black/90 backdrop-blur-xl flex items-center justify-center p-6"
+      className="liquid-glass fixed inset-0 z-[110] backdrop-blur-xl flex items-center justify-center p-6"
     >
-      <div className="bg-neutral-950 border border-white/10 rounded-[2.5rem] max-w-lg w-full p-6 relative overflow-hidden space-y-6">
+      <div className=" liquid-glass  rounded-[2.5rem] max-w-lg w-full p-6 relative overflow-hidden space-y-6">
         {/* Close Button */}
         <button
           onClick={onClose}
           type="button"
-          className="absolute top-4 right-4 text-neutral-400 hover:text-white p-2 rounded-full bg-white/5 hover:bg-white/10 transition-all"
+          className="liquid-glass absolute top-4 right-4 text-neutral-400 hover:text-white p-2 rounded-full  transition-all"
         >
           <XCircle className="w-5 h-5" />
         </button>
 
         {/* Barber Header */}
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-[1.2rem] bg-neutral-900 border border-white/10 overflow-hidden">
+          <div className="w-16 h-16 rounded-[1.2rem] liquid-glass  overflow-hidden">
             {barber.profilePic ? (
               <img src={barber.profilePic} alt={barber.name} className="w-full h-full object-cover" />
             ) : (
@@ -799,7 +799,7 @@ function PortfolioModal({ barber, onClose }: PortfolioModalProps) {
               </p>
               {!loadingStats && ratingsStats && ratingsStats.count > 0 && (
                 <>
-                  <span className="w-1 h-1 rounded-full bg-neutral-800" />
+                  <span className="liquid-glass w-1 h-1 rounded-full" />
                   <div className="flex items-center gap-1 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-md text-amber-500 text-[10px] font-black">
                     <Star className="w-3 h-3 fill-current" />
                     <span>{ratingsStats.average} ({ratingsStats.count})</span>
@@ -814,12 +814,12 @@ function PortfolioModal({ barber, onClose }: PortfolioModalProps) {
         <div className="grid grid-cols-2 gap-3 max-h-[300px] overflow-y-auto pr-1">
           {barber.portfolio && barber.portfolio.length > 0 ? (
             barber.portfolio.map((imgUrl: string, idx: number) => (
-              <div key={idx} className="aspect-square bg-neutral-900 rounded-2xl overflow-hidden border border-white/5 group relative">
+              <div key={idx} className="aspect-square liquid-glass rounded-2xl overflow-hidden  group relative">
                 <img src={imgUrl} alt={`Corte ${idx + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" referrerPolicy="no-referrer" />
               </div>
             ))
           ) : (
-            <div className="col-span-2 py-12 text-center text-neutral-500 text-[10px] uppercase font-black tracking-widest bg-neutral-900/50 border border-dashed border-white/5 rounded-2xl">
+            <div className="liquid-glass col-span-2 py-12 text-center text-neutral-500 text-[10px] uppercase font-black tracking-widest -dashed rounded-2xl">
               Nenhum corte no portfólio ainda
             </div>
           )}
@@ -831,7 +831,7 @@ function PortfolioModal({ barber, onClose }: PortfolioModalProps) {
             <p className="text-[9px] text-neutral-400 font-black uppercase tracking-widest text-sans">Avaliações Recentes</p>
             <div className="space-y-2 max-h-[140px] overflow-y-auto pr-1">
               {recentReviews.map((rev) => (
-                <div key={rev.id} className="bg-neutral-900/40 border border-white/5 rounded-2xl p-3 space-y-1">
+                <div key={rev.id} className=" liquid-glass/40  rounded-2xl p-3 space-y-1">
                   <div className="flex items-center justify-between">
                     <p className="text-[10px] font-extrabold text-white uppercase">{rev.clientName}</p>
                     <div className="flex items-center gap-0.5 text-amber-500">
@@ -1594,7 +1594,7 @@ export function BookingScreen({
           className="max-w-xl md:max-w-4xl lg:max-w-5xl mx-auto py-8 px-6"
         >
           {/* Custom Sleek Step Indicator Navigation (Desktop & Tablet) */}
-          <div className="hidden sm:flex items-center justify-center gap-2 mb-10 bg-neutral-950/40 p-2.5 rounded-[1.75rem] border border-white/5">
+          <div className="hidden sm:flex items-center justify-center gap-2 mb-10 liquid-glass/40 p-2.5 rounded-[1.75rem] ">
             {[
               { id: 1, label: "Serviço" },
               { id: 2, label: "Profissional" },
@@ -1632,7 +1632,7 @@ export function BookingScreen({
           <div className="flex items-center justify-between mb-8 sm:mb-6">
             <button
               onClick={step === 1 ? onBack : () => setStep(step - 1)}
-              className="w-11 h-11 rounded-2xl bg-neutral-900 hover:bg-neutral-800 flex items-center justify-center text-neutral-400 hover:text-amber-500 border border-white/5 active:scale-95 transition-all cursor-pointer"
+              className="w-11 h-11 rounded-2xl bg-neutral-900  liquid-glass flex items-center justify-center text-neutral-400 hover:text-amber-500  active:scale-95 transition-all cursor-pointer"
             >
               <ChevronLeft className="w-6 h-6" />
             </button>
@@ -1654,7 +1654,7 @@ export function BookingScreen({
               id="selected-lookbook-banner"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="bg-neutral-900 border border-amber-500/10 p-4 rounded-[1.75rem] mb-8 flex items-center justify-between gap-4 relative overflow-hidden text-left"
+              className="liquid-glass -amber-500/10 p-4 rounded-[1.75rem] mb-8 flex items-center justify-between gap-4 relative overflow-hidden text-left"
             >
               <div className="absolute top-0 right-0 w-12 h-12 bg-amber-500/5 rounded-full blur-xl pointer-events-none" />
               <div className="flex items-center gap-3.5">
@@ -1672,7 +1672,7 @@ export function BookingScreen({
 
           {/* Real-time Summary Badges for Mobile */}
           {(selectedServiceObj || selectedBarberObj || selectedTime) && (
-            <div className="flex sm:hidden flex-wrap gap-2 mb-6 bg-neutral-900/40 p-3 rounded-2xl border border-white/5 items-center justify-start text-left">
+            <div className="flex sm:hidden flex-wrap gap-2 mb-6 liquid-glass/40 p-3 rounded-2xl  items-center justify-start text-left">
               <span className="text-[7.5px] font-black uppercase text-neutral-500 tracking-wider mr-1">RESUMO:</span>
               {selectedServiceObj && (
                 <div className="bg-amber-500/15 border border-amber-500/10 rounded-lg px-2.5 py-1 text-[8.5px] font-bold text-amber-500 flex items-center gap-1">
@@ -1680,12 +1680,12 @@ export function BookingScreen({
                 </div>
               )}
               {selectedBarberObj && (
-                <div className="bg-white/5 border border-white/5 rounded-lg px-2.5 py-1 text-[8.5px] font-bold text-neutral-300 flex items-center gap-1">
+                <div className="liquid-glass rounded-lg px-2.5 py-1 text-[8.5px] font-bold text-neutral-300 flex items-center gap-1">
                   <span>💈</span> {selectedBarberObj.name}
                 </div>
               )}
               {selectedTime && (
-                <div className="bg-white/5 border border-white/5 rounded-lg px-2.5 py-1 text-[8.5px] font-bold text-neutral-300 flex items-center gap-1">
+                <div className="liquid-glass rounded-lg px-2.5 py-1 text-[8.5px] font-bold text-neutral-300 flex items-center gap-1">
                   <span>📅</span> {format(selectedDate, "dd/MM")} às {selectedTime}
                 </div>
               )}
@@ -1731,7 +1731,7 @@ export function BookingScreen({
                           value={voiceInput}
                           onChange={(e) => setVoiceInput(e.target.value)}
                           placeholder="Microfone desligado. Digite ou clique no microfone para falar..."
-                          className="w-full bg-black/40 border border-white/5 focus:border-amber-500/40 rounded-2xl pl-4 pr-12 py-3.5 text-xs text-white placeholder-neutral-700 outline-none transition-all font-medium"
+                          className="w-full liquid-glass  focus:border-amber-500/40 rounded-2xl pl-4 pr-12 py-3.5 text-xs text-white placeholder-neutral-700 outline-none transition-all font-medium"
                           onKeyDown={(e) => {
                             if (e.key === "Enter") {
                               handleVoiceBookingSubmit();
@@ -1770,7 +1770,7 @@ export function BookingScreen({
                       <motion.div
                         initial={{ opacity: 0, y: 5 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="bg-neutral-950 border border-amber-500/10 p-3.5 rounded-2xl text-[10.5px] text-neutral-300 font-semibold leading-relaxed"
+                        className="liquid-glass -amber-500/10 p-3.5 rounded-2xl text-[10.5px] text-neutral-300 font-semibold leading-relaxed"
                       >
                         <div className="flex items-center gap-1.5 mb-1 text-amber-400 font-extrabold uppercase text-[9px] tracking-widest">
                           <CheckCircle2 className="w-3.5 h-3.5 text-amber-500 fill-black" /> ENTENDIDO:
@@ -1787,7 +1787,7 @@ export function BookingScreen({
                     <input
                       type="text"
                       placeholder="Pesquisar serviço (ex: Degradê, Barba, Combo...)"
-                      className="w-full pl-12 pr-4 py-4 bg-neutral-900/40 hover:bg-neutral-900/60 transition-all border border-white/5 rounded-2xl text-white text-xs placeholder-neutral-600 focus:border-amber-500/30 outline-none font-medium"
+                      className="w-full pl-12 pr-4 py-4 bg-neutral-900/40  liquid-glass/60 transition-all  rounded-2xl text-white text-xs placeholder-neutral-600 focus:border-amber-500/30 outline-none font-medium"
                       value={serviceSearchQuery}
                       onChange={(e) => setServiceSearchQuery(e.target.value)}
                     />
@@ -1813,8 +1813,8 @@ export function BookingScreen({
                 </div>
 
                 {filteredServicesList.length === 0 ? (
-                  <div className="py-20 text-center space-y-4 bg-neutral-900/20 rounded-[2.5rem] border border-dashed border-white/5">
-                    <div className="w-12 h-12 bg-neutral-900 rounded-xl flex items-center justify-center mx-auto text-neutral-600">
+                  <div className="liquid-glass py-20 text-center space-y-4 rounded-[2.5rem] -dashed">
+                    <div className="liquid-glass w-12 h-12 rounded-xl flex items-center justify-center mx-auto text-neutral-600">
                       <Search className="w-5 h-5 animate-pulse" />
                     </div>
                     <div className="space-y-1 px-4">
@@ -1890,8 +1890,8 @@ export function BookingScreen({
               >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {barbers.length === 0 ? (
-                    <div className="py-20 text-center space-y-4 bg-neutral-900/40 rounded-[2.5rem] border border-dashed border-white/5 col-span-1 md:col-span-2">
-                      <div className="w-16 h-16 bg-neutral-900 rounded-2xl flex items-center justify-center mx-auto text-neutral-600">
+                    <div className="liquid-glass py-20 text-center space-y-4 rounded-[2.5rem] -dashed col-span-1 md:col-span-2">
+                      <div className="liquid-glass w-16 h-16 rounded-2xl flex items-center justify-center mx-auto text-neutral-600">
                         <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
                       </div>
                       <div className="space-y-1">
@@ -1946,7 +1946,7 @@ export function BookingScreen({
                                   <p className="text-[9.5px] text-neutral-500 font-extrabold uppercase">Atendimento Premium</p>
                                   {b.portfolio && b.portfolio.length > 0 && (
                                     <>
-                                      <span className="w-1 h-1 rounded-full bg-neutral-800" />
+                                      <span className="liquid-glass w-1 h-1 rounded-full" />
                                       <p className="text-[9px] text-neutral-400 font-black uppercase tracking-tight flex items-center gap-1">
                                         📸 {b.portfolio.length} Trabalhos
                                       </p>
@@ -1965,7 +1965,7 @@ export function BookingScreen({
                                 e.stopPropagation();
                                 setViewingPortfolio(b);
                               }}
-                              className="absolute right-14 top-1/2 -translate-y-1/2 p-3 bg-neutral-900 border border-white/5 rounded-2xl text-neutral-400 hover:text-amber-500 hover:border-amber-500/30 active:scale-95 transition-all shadow-inner cursor-pointer"
+                              className="absolute right-14 top-1/2 -translate-y-1/2 p-3 liquid-glass  rounded-2xl text-neutral-400 hover:text-amber-500 hover:border-amber-500/30 active:scale-95 transition-all shadow-inner cursor-pointer"
                               title="Ver Portfólio de Trabalhos"
                             >
                               <ImageIcon className="w-5 h-5" />
@@ -2005,7 +2005,7 @@ export function BookingScreen({
                   className="space-y-8"
                 >
                   {(role === "manager" || role === "barber") && (
-                    <div className="bg-neutral-900/60 border border-white/5 p-5 rounded-[2.2rem] flex flex-col gap-2 text-left">
+                    <div className=" liquid-glass/60  p-5 rounded-[2.2rem] flex flex-col gap-2 text-left">
                       <span className="text-[8.5px] font-black uppercase text-amber-500 tracking-[0.2em] pl-1">
                         Duração Personalizada do Serviço (Minutos)
                       </span>
@@ -2013,7 +2013,7 @@ export function BookingScreen({
                         type="number"
                         step="10"
                         min="10"
-                        className="w-full bg-black/60 border border-white/5 focus:border-amber-500/50 outline-none rounded-2xl p-4 text-white text-xs font-bold transition-all"
+                        className="w-full liquid-glass  focus:border-amber-500/50 outline-none rounded-2xl p-4 text-white text-xs font-bold transition-all"
                         value={customDuration}
                         onChange={(e) => {
                           setCustomDuration(Number(e.target.value));
@@ -2156,7 +2156,7 @@ export function BookingScreen({
                     <button
                       disabled={!selectedTime}
                       onClick={() => setStep(4)}
-                      className="w-full bg-amber-500 hover:bg-amber-400 disabled:bg-neutral-900 disabled:text-neutral-700 hover:scale-[1.01] active:scale-95 text-black py-4.5 rounded-2xl font-black uppercase italic tracking-widest flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-amber-500/5 disabled:shadow-none"
+                      className="liquid-glass w-full   disabled:text-neutral-700 hover:scale-[1.01] active:scale-95 text-black py-4.5 rounded-2xl font-black uppercase italic tracking-widest flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-amber-500/5 disabled:shadow-none"
                     >
                       Próximo Passo <ChevronRight className="w-4 h-4" />
                     </button>
@@ -2174,7 +2174,7 @@ export function BookingScreen({
                 className="space-y-6"
               >
                 {(!user || role === "manager" || role === "barber") && (
-                  <div className="bg-neutral-900 p-6 rounded-[2rem] border border-white/5 space-y-4">
+                  <div className=" liquid-glass p-6 rounded-[2rem]  space-y-4">
                     {(!user || role === "manager" || role === "barber") && (
                       <div className="space-y-3">
                         <div className="flex items-center gap-2 mb-1">
@@ -2219,12 +2219,12 @@ export function BookingScreen({
 
                         {/* Dropdown Options */}
                         {showDropdown && filteredClients.length > 0 && (
-                          <div className="bg-neutral-950/80 border border-white/5 rounded-2xl overflow-hidden max-h-52 overflow-y-auto divide-y divide-white/5">
+                          <div className=" liquid-glass/80  rounded-2xl overflow-hidden max-h-52 overflow-y-auto divide-y divide-white/5">
                             {filteredClients.map((client) => (
                               <button
                                 key={client.id}
                                 type="button"
-                                className="w-full px-4 py-3 text-left hover:bg-white/5 transition-all flex items-center justify-between group"
+                                className="liquid-glass w-full px-4 py-3 text-left  transition-all flex items-center justify-between group"
                                 onClick={() => {
                                   setGuestName(client.name || "");
                                   setGuestPhone(client.whatsapp || "");
@@ -2235,7 +2235,7 @@ export function BookingScreen({
                                 }}
                               >
                                 <div className="flex items-center gap-3">
-                                  <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-xs font-bold text-neutral-400 border border-white/10 overflow-hidden shrink-0">
+                                  <div className="liquid-glass w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold text-neutral-400 overflow-hidden shrink-0">
                                     {client.photoURL ? (
                                       <img
                                         src={client.photoURL}
@@ -2269,7 +2269,7 @@ export function BookingScreen({
                         {showDropdown &&
                           searchQuery.trim() &&
                           filteredClients.length === 0 && (
-                            <div className="py-3 px-4 bg-neutral-950/50 rounded-2xl border border-white/5 text-center">
+                            <div className="py-3 px-4 liquid-glass/50 rounded-2xl  text-center">
                               <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-wider">
                                 {role === "manager" || role === "barber"
                                   ? "Nenhum cliente cadastrado encontrado"
@@ -2278,7 +2278,7 @@ export function BookingScreen({
                             </div>
                           )}
 
-                        <div className="h-[1px] bg-white/5 my-2" />
+                        <div className="liquid-glass h-[1px] my-2" />
                       </div>
                     )}
 
@@ -2369,7 +2369,7 @@ export function BookingScreen({
                   </div>
                 )}
                 {/* Visual Coupon Code Selector Input */}
-                <div className="bg-neutral-900 p-6 rounded-[2rem] border border-white/5 space-y-3 text-left">
+                <div className=" liquid-glass p-6 rounded-[2rem]  space-y-3 text-left">
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-black uppercase text-neutral-500 tracking-wider">
                       Possui Cupom de Desconto?
@@ -2414,7 +2414,7 @@ export function BookingScreen({
                   )}
                 </div>
 
-                <div className="bg-neutral-900 p-8 rounded-[2.5rem] border border-white/5 space-y-6">
+                <div className=" liquid-glass p-8 rounded-[2.5rem]  space-y-6">
                   <div className="flex justify-between items-center border-b border-white/5 pb-4">
                     <span className="text-neutral-500 font-bold uppercase text-[10px]">
                       Procedimento
@@ -2466,7 +2466,7 @@ export function BookingScreen({
 
             {/* Sidebar Ticket Summary Block (hidden on mobile, styled gorgeously on large screens) */}
             <div className="hidden lg:block lg:col-span-4 lg:sticky lg:top-6 space-y-5">
-              <div className="bg-neutral-950 border border-white/5 rounded-[2.5rem] p-6 text-left relative overflow-hidden shadow-2xl shadow-black/80">
+              <div className=" liquid-glass  rounded-[2.5rem] p-6 text-left relative overflow-hidden shadow-2xl shadow-black/80">
                 {/* Decorative Ticket Circles (tear lines) */}
                 <div className="absolute top-1/2 -left-3.5 w-7 h-7 bg-black rounded-full border border-white/5" />
                 <div className="absolute top-1/2 -right-3.5 w-7 h-7 bg-black rounded-full border border-white/5" />
@@ -2486,7 +2486,7 @@ export function BookingScreen({
                 {/* Content */}
                 <div className="space-y-4 text-xs font-bold uppercase tracking-wide text-neutral-400">
                   {/* Service Info */}
-                  <div className="bg-neutral-900/60 p-4 rounded-3xl border border-white/5 space-y-2">
+                  <div className=" liquid-glass/60 p-4 rounded-3xl  space-y-2">
                     <span className="text-[7.5px] font-black uppercase text-neutral-500 tracking-wider">SERVIÇO</span>
                     {selectedServiceObj ? (
                       <div>
@@ -2502,7 +2502,7 @@ export function BookingScreen({
                   </div>
 
                   {/* Barber Info */}
-                  <div className="bg-neutral-900/60 p-4 rounded-3xl border border-white/5 space-y-2">
+                  <div className=" liquid-glass/60 p-4 rounded-3xl  space-y-2">
                     <span className="text-[7.5px] font-black uppercase text-neutral-500 tracking-wider">PROFISSIONAL</span>
                     {selectedBarberObj ? (
                       <div className="flex items-center gap-3">
@@ -2523,7 +2523,7 @@ export function BookingScreen({
                   </div>
 
                   {/* Date & Time Info */}
-                  <div className="bg-neutral-900/60 p-4 rounded-3xl border border-white/5 space-y-2">
+                  <div className=" liquid-glass/60 p-4 rounded-3xl  space-y-2">
                     <span className="text-[7.5px] font-black uppercase text-neutral-500 tracking-wider">DATA & HORÁRIO</span>
                     {selectedTime ? (
                       <div>

@@ -3,7 +3,7 @@ import { RefreshCw } from "lucide-react";
 export function RecurrenceUI({ userRole, recurrence, setRecurrence }: { userRole: string, recurrence: any, setRecurrence: any }) {
   if (userRole !== 'barber' && userRole !== 'manager') return null;
   return (
-    <div className="bg-neutral-900/50 border border-white/5 rounded-[2rem] p-6 space-y-4">
+    <div className=" liquid-glass/50  rounded-[2rem] p-6 space-y-4">
       <div className="flex items-center gap-2">
         <RefreshCw className="w-4 h-4 text-amber-500" />
         <h4 className="text-xs font-black uppercase text-neutral-400 tracking-widest">Deseja tornar recorrente?</h4>

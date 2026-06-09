@@ -127,7 +127,7 @@ export function ProfessionalHome({ user, role, setCurrentScreen }: ProfessionalH
         <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-2xl pointer-events-none" />
         
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-[1.75rem] overflow-hidden bg-neutral-900 border border-amber-500/20 shadow-lg shadow-amber-500/10 shrink-0 relative group">
+          <div className="liquid-glass w-16 h-16 rounded-[1.75rem] overflow-hidden -amber-500/20 shadow-lg shadow-amber-500/10 shrink-0 relative group">
             <img 
               src={user?.photoURL || user?.photoUrl || `https://ui-avatars.com/api/?name=${user?.displayName || user?.name || 'Profissional'}&background=1a1a1a&color=fff`} 
               alt="Avatar" 
@@ -164,7 +164,7 @@ export function ProfessionalHome({ user, role, setCurrentScreen }: ProfessionalH
           {/* Earnings card */}
           <button 
             onClick={() => setCurrentScreen("earnings")}
-            className="bg-neutral-900/40 hover:bg-neutral-900/80 backdrop-blur-md p-6 rounded-[2rem] border border-white/5 hover:border-emerald-500/20 text-left relative overflow-hidden group active:scale-95 transition-all flex flex-col justify-between min-h-[140px] cursor-pointer"
+            className="bg-neutral-900/40  liquid-glass/80 backdrop-blur-md p-6 rounded-[2rem]  hover:border-emerald-500/20 text-left relative overflow-hidden group active:scale-95 transition-all flex flex-col justify-between min-h-[140px] cursor-pointer"
           >
             <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/[0.02] rounded-full blur-xl pointer-events-none" />
             <div className="flex justify-between items-start w-full">
@@ -186,7 +186,7 @@ export function ProfessionalHome({ user, role, setCurrentScreen }: ProfessionalH
           {/* Appointments Count Card */}
           <button 
             onClick={() => setCurrentScreen("agenda")}
-            className="bg-neutral-900/40 hover:bg-neutral-900/80 backdrop-blur-md p-6 rounded-[2rem] border border-white/5 hover:border-blue-500/20 text-left relative overflow-hidden group active:scale-95 transition-all flex flex-col justify-between min-h-[140px] cursor-pointer"
+            className="bg-neutral-900/40  liquid-glass/80 backdrop-blur-md p-6 rounded-[2rem]  hover:border-blue-500/20 text-left relative overflow-hidden group active:scale-95 transition-all flex flex-col justify-between min-h-[140px] cursor-pointer"
           >
             <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/[0.02] rounded-full blur-xl pointer-events-none" />
             <div className="flex justify-between items-start w-full">
@@ -206,7 +206,7 @@ export function ProfessionalHome({ user, role, setCurrentScreen }: ProfessionalH
           </button>
 
           {/* Attendance performance */}
-          <div className="bg-neutral-900/40 p-6 rounded-[2rem] border border-white/5 flex flex-col justify-between min-h-[140px] relative overflow-hidden text-left">
+          <div className=" liquid-glass/40 p-6 rounded-[2rem]  flex flex-col justify-between min-h-[140px] relative overflow-hidden text-left">
             <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/[0.01] rounded-full blur-xl pointer-events-none" />
             <div className="flex justify-between items-start w-full">
               <span className="text-[9px] font-black text-neutral-500 uppercase tracking-widest">Comparecimento</span>
@@ -225,7 +225,7 @@ export function ProfessionalHome({ user, role, setCurrentScreen }: ProfessionalH
           </div>
 
           {/* Unique clients key stats */}
-          <div className="bg-neutral-900/40 p-6 rounded-[2rem] border border-white/5 flex flex-col justify-between min-h-[140px] relative overflow-hidden text-left">
+          <div className=" liquid-glass/40 p-6 rounded-[2rem]  flex flex-col justify-between min-h-[140px] relative overflow-hidden text-left">
             <div className="absolute top-0 right-0 w-24 h-24 bg-pink-500/[0.01] rounded-full blur-xl pointer-events-none" />
             <div className="flex justify-between items-start w-full">
               <span className="text-[9px] font-black text-neutral-500 uppercase tracking-widest">Clientes Únicos</span>
@@ -258,7 +258,7 @@ export function ProfessionalHome({ user, role, setCurrentScreen }: ProfessionalH
           {role === 'manager' && (
             <button 
               onClick={() => setCurrentScreen("barber-management")}
-              className="bg-neutral-900/30 hover:bg-neutral-900/80 border border-white/5 hover:border-amber-500/20 p-5 rounded-[1.75rem] flex flex-col justify-between min-h-[145px] sm:min-h-[160px] transition-all group active:scale-95 text-left cursor-pointer relative overflow-hidden"
+              className="bg-neutral-900/30  liquid-glass/80  hover:border-amber-500/20 p-5 rounded-[1.75rem] flex flex-col justify-between min-h-[145px] sm:min-h-[160px] transition-all group active:scale-95 text-left cursor-pointer relative overflow-hidden"
             >
               <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-amber-500/[0.02] pointer-events-none" />
               <div className="w-10 h-10 rounded-xl bg-black border border-white/5 group-hover:border-amber-500/20 flex items-center justify-center text-amber-500 group-hover:bg-amber-500 group-hover:text-black transition-all relative">
@@ -279,7 +279,7 @@ export function ProfessionalHome({ user, role, setCurrentScreen }: ProfessionalH
           <button 
             id="agenda-box-link"
             onClick={() => setCurrentScreen("agenda")}
-            className="bg-neutral-900/30 hover:bg-neutral-900/80 border border-white/5 hover:border-amber-500/20 p-5 rounded-[1.75rem] flex flex-col justify-between min-h-[145px] sm:min-h-[160px] transition-all group active:scale-95 text-left cursor-pointer relative overflow-hidden"
+            className="bg-neutral-900/30  liquid-glass/80  hover:border-amber-500/20 p-5 rounded-[1.75rem] flex flex-col justify-between min-h-[145px] sm:min-h-[160px] transition-all group active:scale-95 text-left cursor-pointer relative overflow-hidden"
           >
             <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-blue-500/[0.02] pointer-events-none" />
             <div className="w-10 h-10 rounded-xl bg-black border border-white/5 group-hover:border-amber-500/20 flex items-center justify-center text-blue-400 group-hover:bg-amber-500 group-hover:text-black transition-all relative">
@@ -298,7 +298,7 @@ export function ProfessionalHome({ user, role, setCurrentScreen }: ProfessionalH
           {/* Message Inbox */}
           <button 
             onClick={() => setCurrentScreen("professional-chat")}
-            className="bg-neutral-900/30 hover:bg-neutral-900/80 border border-white/5 hover:border-amber-500/20 p-5 rounded-[1.75rem] flex flex-col justify-between min-h-[145px] sm:min-h-[160px] transition-all group active:scale-95 text-left cursor-pointer relative overflow-hidden"
+            className="bg-neutral-900/30  liquid-glass/80  hover:border-amber-500/20 p-5 rounded-[1.75rem] flex flex-col justify-between min-h-[145px] sm:min-h-[160px] transition-all group active:scale-95 text-left cursor-pointer relative overflow-hidden"
           >
             <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-emerald-500/[0.02] pointer-events-none" />
             <div className="w-10 h-10 rounded-xl bg-black border border-white/5 group-hover:border-amber-500/20 flex items-center justify-center text-emerald-400 group-hover:bg-amber-500 group-hover:text-black transition-all relative">
@@ -322,7 +322,7 @@ export function ProfessionalHome({ user, role, setCurrentScreen }: ProfessionalH
           {/* Client directory */}
           <button 
             onClick={() => setCurrentScreen("clients")}
-            className="bg-neutral-900/30 hover:bg-neutral-900/80 border border-white/5 hover:border-amber-500/20 p-5 rounded-[1.75rem] flex flex-col justify-between min-h-[145px] sm:min-h-[160px] transition-all group active:scale-95 text-left cursor-pointer relative overflow-hidden"
+            className="bg-neutral-900/30  liquid-glass/80  hover:border-amber-500/20 p-5 rounded-[1.75rem] flex flex-col justify-between min-h-[145px] sm:min-h-[160px] transition-all group active:scale-95 text-left cursor-pointer relative overflow-hidden"
           >
             <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-pink-500/[0.02] pointer-events-none" />
             <div className="w-10 h-10 rounded-xl bg-black border border-white/5 group-hover:border-amber-500/20 flex items-center justify-center text-pink-500 group-hover:bg-amber-500 group-hover:text-black transition-all relative">
@@ -341,7 +341,7 @@ export function ProfessionalHome({ user, role, setCurrentScreen }: ProfessionalH
           {/* Image Portfolio lookbook */}
           <button 
             onClick={() => setCurrentScreen("portfolio")}
-            className="bg-neutral-900/30 hover:bg-neutral-900/80 border border-white/5 hover:border-amber-500/20 p-5 rounded-[1.75rem] flex flex-col justify-between min-h-[145px] sm:min-h-[160px] transition-all group active:scale-95 text-left cursor-pointer relative overflow-hidden"
+            className="bg-neutral-900/30  liquid-glass/80  hover:border-amber-500/20 p-5 rounded-[1.75rem] flex flex-col justify-between min-h-[145px] sm:min-h-[160px] transition-all group active:scale-95 text-left cursor-pointer relative overflow-hidden"
           >
             <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-cyan-500/[0.02] pointer-events-none" />
             <div className="w-10 h-10 rounded-xl bg-black border border-white/5 group-hover:border-amber-500/20 flex items-center justify-center text-cyan-400 group-hover:bg-amber-500 group-hover:text-black transition-all relative">
@@ -361,7 +361,7 @@ export function ProfessionalHome({ user, role, setCurrentScreen }: ProfessionalH
           {role === 'manager' && (
             <button 
               onClick={() => setCurrentScreen("promotions")}
-              className="bg-neutral-900/30 hover:bg-neutral-900/80 border border-white/5 hover:border-amber-500/20 p-5 rounded-[1.75rem] flex flex-col justify-between min-h-[145px] sm:min-h-[160px] transition-all group active:scale-95 text-left cursor-pointer relative overflow-hidden"
+              className="bg-neutral-900/30  liquid-glass/80  hover:border-amber-500/20 p-5 rounded-[1.75rem] flex flex-col justify-between min-h-[145px] sm:min-h-[160px] transition-all group active:scale-95 text-left cursor-pointer relative overflow-hidden"
             >
               <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-purple-500/[0.02] pointer-events-none" />
               <div className="w-10 h-10 rounded-xl bg-black border border-white/5 group-hover:border-amber-500/20 flex items-center justify-center text-purple-400 group-hover:bg-amber-500 group-hover:text-black transition-all relative">
@@ -382,7 +382,7 @@ export function ProfessionalHome({ user, role, setCurrentScreen }: ProfessionalH
       </div>
 
       {/* 4. Upcoming Schedules Section */}
-      <div className="p-6 bg-neutral-900/40 rounded-[2.5rem] border border-white/5 shadow-inner">
+      <div className="p-6 liquid-glass/40 rounded-[2.5rem]  shadow-inner">
         <div className="flex items-center justify-between mb-6 px-1">
           <div className="text-left">
             <h3 className="text-lg font-black text-white uppercase italic tracking-tight leading-none text-left">Próximos da Agenda</h3>
@@ -411,7 +411,7 @@ export function ProfessionalHome({ user, role, setCurrentScreen }: ProfessionalH
             stats.upcoming.map((app) => (
               <div 
                 key={app.id} 
-                className="bg-neutral-950/40 hover:bg-neutral-950/85 p-5 rounded-[1.75rem] border border-white/5 flex items-center justify-between hover:border-amber-500/20 transition-all group relative overflow-hidden text-left"
+                className="bg-neutral-950/40  liquid-glass/85 p-5 rounded-[1.75rem]  flex items-center justify-between hover:border-amber-500/20 transition-all group relative overflow-hidden text-left"
               >
                 <div className="absolute top-0 right-0 w-12 h-12 bg-gradient-to-bl from-white/[0.005] pointer-events-none" />
                 
@@ -431,7 +431,7 @@ export function ProfessionalHome({ user, role, setCurrentScreen }: ProfessionalH
                   <span className="text-sm font-black text-amber-500 italic">
                     {format(app.date instanceof Timestamp ? app.date.toDate() : parseISO(app.date), "HH:mm")}
                   </span>
-                  <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-neutral-600 group-hover:border-amber-500/20 group-hover:text-amber-500 transition-all">
+                  <div className="liquid-glass w-8 h-8 rounded-full flex items-center justify-center text-neutral-600 group-hover:-amber-500/20 group-hover:text-amber-500 transition-all">
                     <CheckCircle2 className="w-4 h-4 cursor-pointer" />
                   </div>
                 </div>

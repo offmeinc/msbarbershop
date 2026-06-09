@@ -48,7 +48,7 @@ export function HelpScreen({ onBack }: { onBack: () => void }) {
         <button onClick={onBack} className="text-neutral-500 mb-4 flex items-center gap-2 hover:text-amber-500 transition-colors">
            <ChevronLeft className="w-5 h-5" /> Voltar
         </button>
-        <div className="bg-neutral-900 rounded-[2.5rem] p-8 shadow-2xl border border-white/5 space-y-6 text-center">
+        <div className=" liquid-glass rounded-[2.5rem] p-8 shadow-2xl  space-y-6 text-center">
             <h2 className="text-xl font-bold text-white">Central de Ajuda</h2>
             <p className="text-neutral-500">Dúvidas? Entre em contato com nosso suporte.</p>
         </div>
@@ -282,7 +282,7 @@ export function ShareScreen({ onBack }: { onBack: () => void }) {
       <div className="flex items-center gap-3 mb-6">
         <button 
           onClick={onBack} 
-          className="p-2.5 bg-neutral-900 border border-white/5 rounded-2xl text-neutral-400 hover:text-white transition-all cursor-pointer shadow-md hover:scale-105 active:scale-95"
+          className="p-2.5 liquid-glass  rounded-2xl text-neutral-400 hover:text-white transition-all cursor-pointer shadow-md hover:scale-105 active:scale-95"
         >
           <ChevronLeft className="w-5 h-5 text-amber-500" />
         </button>
@@ -309,7 +309,7 @@ export function ShareScreen({ onBack }: { onBack: () => void }) {
         <div className="md:col-span-7 space-y-5">
           
           {/* Section 1: Data & Barber filters */}
-          <div className="bg-neutral-900 p-6 rounded-[2.2rem] border border-white/5 space-y-4">
+          <div className=" liquid-glass p-6 rounded-[2.2rem]  space-y-4">
             <h3 className="text-[9.5px] font-black text-amber-500 uppercase tracking-[0.2em] mb-1">
               1. Selecionar Vagas da Agenda
             </h3>
@@ -370,7 +370,7 @@ export function ShareScreen({ onBack }: { onBack: () => void }) {
           </div>
 
           {/* Section 2: Poster visual styles selection */}
-          <div className="bg-neutral-900 p-6 rounded-[2.2rem] border border-white/5 space-y-4">
+          <div className=" liquid-glass p-6 rounded-[2.2rem]  space-y-4">
             <h3 className="text-[9.5px] font-black text-amber-500 uppercase tracking-[0.2em] mb-1">
               2. Escolher Identidade Visual
             </h3>
@@ -400,7 +400,7 @@ export function ShareScreen({ onBack }: { onBack: () => void }) {
           </div>
 
           {/* Section 3: Text elements customization fields */}
-          <div className="bg-neutral-900 p-6 rounded-[2.2rem] border border-white/5 space-y-4">
+          <div className=" liquid-glass p-6 rounded-[2.2rem]  space-y-4">
             <h3 className="text-[9.5px] font-black text-amber-500 uppercase tracking-[0.2em] mb-1">
               3. Personalizar Textos do Template
             </h3>
@@ -430,7 +430,7 @@ export function ShareScreen({ onBack }: { onBack: () => void }) {
 
               {/* Elements Toggles checks */}
               <div className="grid grid-cols-2 gap-2 pt-1 font-sans">
-                <label className="flex items-center gap-2.5 p-3.5 bg-black/30 rounded-2xl border border-white/5 cursor-pointer hover:bg-black/50 select-none">
+                <label className="flex items-center gap-2.5 p-3.5 liquid-glass rounded-2xl  cursor-pointer hover:bg-black/50 select-none">
                   <input 
                     type="checkbox" 
                     checked={showLogo}
@@ -439,7 +439,7 @@ export function ShareScreen({ onBack }: { onBack: () => void }) {
                   />
                   <span className="text-[8px] font-black uppercase text-neutral-400 tracking-widest">Exibir Logo</span>
                 </label>
-                <label className="flex items-center gap-2.5 p-3.5 bg-black/30 rounded-2xl border border-white/5 cursor-pointer hover:bg-black/50 select-none">
+                <label className="flex items-center gap-2.5 p-3.5 liquid-glass rounded-2xl  cursor-pointer hover:bg-black/50 select-none">
                   <input 
                     type="checkbox" 
                     checked={showAddress}
@@ -492,7 +492,7 @@ export function ShareScreen({ onBack }: { onBack: () => void }) {
           <div className="bg-black border border-white/10 rounded-[2.5rem] p-4 p-b-5 shadow-2xl relative overflow-hidden flex flex-col items-center">
             
             {/* Phone notch deco */}
-            <div className="w-24 h-4.5 bg-neutral-900 border-x border-b border-white/10 rounded-b-xl mb-3 absolute top-0 z-20" />
+            <div className="liquid-glass w-24 h-4.5 -x -b rounded-b-xl mb-3 absolute top-0 z-20" />
 
             {/* Beautiful aspect-ratio representation screen */}
             <div 
@@ -504,7 +504,7 @@ export function ShareScreen({ onBack }: { onBack: () => void }) {
               {/* Header inside mockup */}
               <div className="w-full text-center space-y-2.5 relative z-10 pt-4">
                 {showLogo && (
-                  <div className="w-14 h-14 bg-white/5 rounded-2xl border border-white/5 flex items-center justify-center mx-auto shadow-md relative overflow-hidden">
+                  <div className="liquid-glass w-14 h-14 rounded-2xl flex items-center justify-center mx-auto shadow-md relative overflow-hidden">
                     <img 
                       src="https://i.ibb.co/LXjzGkFs/cd17f19f-71a4-453e-b9d7-f129a7ecfb2f.jpg" 
                       alt="Logo"
@@ -627,7 +627,7 @@ export function ShareScreen({ onBack }: { onBack: () => void }) {
           {/* Header */}
           <div className="w-full text-center space-y-12 relative z-10 pt-16">
             {showLogo && (
-              <div className="w-48 h-48 bg-white/5 rounded-[4rem] border border-white/5 flex items-center justify-center mx-auto shadow-2xl relative overflow-hidden">
+              <div className="liquid-glass w-48 h-48 rounded-[4rem] flex items-center justify-center mx-auto shadow-2xl relative overflow-hidden">
                 <img 
                   src="https://i.ibb.co/LXjzGkFs/cd17f19f-71a4-453e-b9d7-f129a7ecfb2f.jpg" 
                   alt="Logo"
@@ -893,7 +893,7 @@ export function RecurrenceScreen({ onBack }: { onBack: () => void }) {
       <div className="flex items-center gap-3 mb-6">
         <button 
           onClick={onBack} 
-          className="p-2.5 bg-neutral-900 border border-white/5 rounded-2xl text-neutral-400 hover:text-white transition-all cursor-pointer shadow-md hover:scale-105 active:scale-95 animate-fade-in"
+          className="p-2.5 liquid-glass  rounded-2xl text-neutral-400 hover:text-white transition-all cursor-pointer shadow-md hover:scale-105 active:scale-95 animate-fade-in"
         >
           <ChevronLeft className="w-5 h-5 text-amber-500" />
         </button>
@@ -962,12 +962,12 @@ export function RecurrenceScreen({ onBack }: { onBack: () => void }) {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Buscar por cliente, barbeiro, serviço..."
-            className="w-full bg-neutral-900/90 text-white placeholder-neutral-500 text-xs pl-10 pr-4 py-3 rounded-2xl border border-white/5 focus:border-amber-500 focus:outline-none transition-all font-semibold"
+            className="w-full liquid-glass/90 text-white placeholder-neutral-500 text-xs pl-10 pr-4 py-3 rounded-2xl  focus:border-amber-500 focus:outline-none transition-all font-semibold"
           />
           {searchTerm && (
             <button 
               onClick={() => setSearchTerm("")}
-              className="absolute right-3 top-3 p-0.5 bg-neutral-800 rounded-lg"
+              className="liquid-glass absolute right-3 top-3 p-0.5 rounded-lg"
             >
               <X className="w-3.5 h-3.5 text-neutral-400" />
             </button>
@@ -1046,7 +1046,7 @@ export function RecurrenceScreen({ onBack }: { onBack: () => void }) {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: -10 }}
                 transition={{ delay: Math.min(idx * 0.02, 0.2) }}
-                className="bg-neutral-900/90 text-left p-5 rounded-[2rem] border border-white/5 shadow-xl hover:border-amber-500/20 transition-all relative overflow-hidden group"
+                className=" liquid-glass/90 text-left p-5 rounded-[2rem]  shadow-xl hover:border-amber-500/20 transition-all relative overflow-hidden group"
               >
                 {/* Glow accent decorative */}
                 <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-amber-500/[0.02] to-transparent pointer-events-none" />
@@ -1165,7 +1165,7 @@ export function RecurrenceScreen({ onBack }: { onBack: () => void }) {
         </AnimatePresence>
 
         {filteredAppointments.length === 0 && (
-          <div className="py-20 text-center space-y-4 bg-black/10 rounded-[2.5rem] border border-dashed border-white/5">
+          <div className="liquid-glass py-20 text-center space-y-4 rounded-[2.5rem] -dashed">
             <RefreshCw className="w-12 h-12 text-neutral-800 mx-auto" />
             <div className="space-y-0.5">
               <p className="text-xs text-neutral-500 uppercase font-black tracking-widest">Nenhuma Recorrência</p>
@@ -1179,7 +1179,7 @@ export function RecurrenceScreen({ onBack }: { onBack: () => void }) {
                   setRecurrenceFilter("all");
                   setSearchTerm("");
                 }}
-                className="px-3.5 py-2 bg-neutral-900 border border-white/5 hover:border-white/10 rounded-xl text-neutral-400 hover:text-white text-[8px] font-black uppercase tracking-widest shadow-md flex items-center gap-1.5 mx-auto active:scale-95 transition-all"
+                className="px-3.5 py-2 liquid-glass  hover:border-white/10 rounded-xl text-neutral-400 hover:text-white text-[8px] font-black uppercase tracking-widest shadow-md flex items-center gap-1.5 mx-auto active:scale-95 transition-all"
               >
                 Limpar Busca
               </button>

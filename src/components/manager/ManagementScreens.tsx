@@ -85,7 +85,7 @@ export function CollaboratorsManager() {
 
   return (
     <div className="space-y-8 max-w-2xl mx-auto pb-20">
-      <form onSubmit={handleAddBarber} className="bg-neutral-900 p-8 rounded-[2rem] border border-white/5 shadow-2xl space-y-4">
+      <form onSubmit={handleAddBarber} className=" liquid-glass p-8 rounded-[2rem]  shadow-2xl space-y-4">
         <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center text-black shadow-[0_0_20px_rgba(245,158,11,0.2)]">
                 <User className="w-5 h-5" />
@@ -106,9 +106,9 @@ export function CollaboratorsManager() {
         <h4 className="text-xs font-black uppercase tracking-widest text-neutral-500">Time de Especialistas</h4>
         <div className="grid grid-cols-1 gap-3">
             {barbers.map(barber => (
-              <div key={barber.id} className="bg-neutral-900 p-4 rounded-3xl border border-white/5 flex items-center justify-between shadow-lg">
+              <div key={barber.id} className=" liquid-glass p-4 rounded-3xl  flex items-center justify-between shadow-lg">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-neutral-500 border border-white/5 overflow-hidden">
+                  <div className="liquid-glass w-12 h-12 rounded-2xl flex items-center justify-center text-neutral-500 overflow-hidden">
                     {barber.photoURL ? <img src={barber.photoURL} alt={barber.name} className="w-full h-full object-cover" /> : <User className="w-6 h-6" />}
                   </div>
                   <div>
@@ -200,7 +200,7 @@ function BarberHoursItem({ barber }: { barber: any; key?: any }) {
   };
 
   return (
-    <div className="bg-neutral-900 p-6 rounded-[2.5rem] border border-white/5 shadow-2xl space-y-6">
+    <div className=" liquid-glass p-6 rounded-[2.5rem]  shadow-2xl space-y-6">
       <div className="flex items-center gap-4 border-b border-white/5 pb-4">
         <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
             <Clock className="w-6 h-6" />
@@ -216,7 +216,7 @@ function BarberHoursItem({ barber }: { barber: any; key?: any }) {
           const dayName = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"][day];
           const workingDay = hours.find(h => h.dayOfWeek === day);
           return (
-            <div key={day} className="bg-black/40 p-4 rounded-2xl flex items-center justify-between border border-white/5 group hover:border-amber-500/20 transition-all">
+            <div key={day} className=" liquid-glass p-4 rounded-2xl flex items-center justify-between  group hover:border-amber-500/20 transition-all">
               <span className="text-xs font-black uppercase text-neutral-500 w-10">{dayName}</span>
               <div className="flex gap-4 items-center">
                 <input 
@@ -345,7 +345,7 @@ export function ServicesManagement({ services }: { services: any[] }) {
           <div className="flex gap-2">
             <button 
               onClick={importServices}
-              className="bg-neutral-800 text-white px-6 py-2 rounded-2xl font-black uppercase text-[10px] flex items-center gap-2 hover:bg-neutral-700 transition-all"
+              className="liquid-glass text-white px-6 py-2 rounded-2xl font-black uppercase text-[10px] flex items-center gap-2  transition-all"
             >
               <Sparkles className="w-4 h-4" /> Importar Padrão
             </button>
@@ -367,7 +367,7 @@ export function ServicesManagement({ services }: { services: any[] }) {
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden"
           >
-            <form onSubmit={handleSubmit} className="bg-neutral-900 border border-white/5 p-8 rounded-[2.5rem] shadow-2xl space-y-6">
+            <form onSubmit={handleSubmit} className=" liquid-glass  p-8 rounded-[2.5rem] shadow-2xl space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase text-neutral-500 ml-2 tracking-widest">Nome do Serviço</label>
@@ -426,7 +426,7 @@ export function ServicesManagement({ services }: { services: any[] }) {
                 <button 
                   type="button"
                   onClick={resetForm}
-                  className="bg-white/5 text-neutral-400 px-10 py-4 rounded-2xl font-black uppercase text-xs hover:bg-white/10 transition-all"
+                  className="liquid-glass text-neutral-400 px-10 py-4 rounded-2xl font-black uppercase text-xs  transition-all"
                 >
                   Cancelar
                 </button>
@@ -471,7 +471,7 @@ export function ServicesManagement({ services }: { services: any[] }) {
                 <div className="flex gap-2">
                   <button 
                     onClick={() => handleEdit(service)}
-                    className="w-10 h-10 bg-white/5 hover:bg-amber-500 hover:text-black text-neutral-500 rounded-xl transition-all flex items-center justify-center"
+                    className="liquid-glass w-10 h-10  hover:text-black text-neutral-500 rounded-xl transition-all flex items-center justify-center"
                     title="Editar"
                   >
                     <Pencil className="w-4 h-4" />

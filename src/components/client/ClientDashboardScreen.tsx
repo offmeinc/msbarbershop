@@ -540,10 +540,10 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
           >
-            <div className="pt-12 px-6 pb-6 sticky top-0 bg-black/90 backdrop-blur-2xl z-20 border-b border-white/[0.02]">
+            <div className="liquid-glass pt-12 px-6 pb-6 sticky top-0 backdrop-blur-2xl z-20 -b -white/[0.02]">
               <div className="flex items-center justify-between w-full">
                   <div className="flex items-center gap-4">
-                     <div className="w-14 h-14 rounded-full bg-neutral-900 overflow-hidden shadow-xl shrink-0 border border-white/5 relative group">
+                     <div className="w-14 h-14 rounded-full liquid-glass overflow-hidden shadow-xl shrink-0  relative group">
                         <img src={currentClientPhoto} alt="Avatar" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                         <div className="absolute inset-0 rounded-full shadow-[inset_0_2px_4px_rgba(255,255,255,0.1)] pointer-events-none" />
                      </div>
@@ -556,19 +556,19 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                      </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                      <button onClick={() => setCurrentView('notifications')} className="relative p-2.5 bg-neutral-900/50 rounded-full text-neutral-400 hover:text-white hover:bg-neutral-800 border border-transparent hover:border-white/10 transition-all">
+                      <button onClick={() => setCurrentView('notifications')} className="liquid-glass relative p-2.5 rounded-full text-neutral-400 hover:text-white   transition-all">
                         <Bell className="w-5 h-5 md:w-5 md:h-5" strokeWidth={1.5} />
                         {notifications.filter(n => !n.read).length > 0 && (
                           <span className="absolute top-2 right-2 w-2 h-2 bg-amber-500 rounded-full border border-black" />
                         )}
                       </button>
-                      <button onClick={() => setCurrentView('chat')} className="relative p-2.5 bg-neutral-900/50 rounded-full text-neutral-400 hover:text-white hover:bg-neutral-800 border border-transparent hover:border-white/10 transition-all" title="Chat com Profissional">
+                      <button onClick={() => setCurrentView('chat')} className="liquid-glass relative p-2.5 rounded-full text-neutral-400 hover:text-white   transition-all" title="Chat com Profissional">
                         <MessageSquare className="w-5 h-5 md:w-5 md:h-5" strokeWidth={1.5} />
                         {unreadChat && (
                           <span className="absolute top-2 right-2 w-2 h-2 bg-amber-500 rounded-full border border-black animate-pulse" />
                         )}
                       </button>
-                      <button onClick={() => setCurrentView('more-options')} className="p-2.5 bg-neutral-900/50 rounded-full text-neutral-400 hover:text-white hover:bg-neutral-800 border border-transparent hover:border-white/10 transition-all">
+                      <button onClick={() => setCurrentView('more-options')} className="liquid-glass p-2.5 rounded-full text-neutral-400 hover:text-white   transition-all">
                         <Menu className="w-5 h-5 md:w-5 md:h-5" strokeWidth={1.5} />
                       </button>
                   </div>
@@ -642,7 +642,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                 <div className="col-span-2 bg-[#0A0A0A] p-6 rounded-[2.5rem] border border-white/5 relative overflow-hidden group">
+                 <div className="col-span-2 liquid-glass p-6 rounded-[2.5rem]  relative overflow-hidden group">
                     <div className="absolute -right-2 -bottom-2 text-amber-500/10 group-hover:scale-110 transition-transform duration-700">
                       <TrendingUp size={120} strokeWidth={3} />
                     </div>
@@ -655,12 +655,12 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                     </div>
                  </div>
                  
-                  <div className="bg-[#0A0A0A] p-5 rounded-[2rem] border border-white/5">
+                  <div className=" liquid-glass p-5 rounded-[2rem] ">
                      <p className="text-[10px] font-black uppercase tracking-widest text-neutral-500 mb-1">Visitas</p>
                      <p className="text-2xl font-black italic underline decoration-amber-500 decoration-2 underline-offset-4">{stats.completedCount}</p>
                   </div>
                  
-                 <div className="bg-[#0A0A0A] p-5 rounded-[2rem] border border-white/5">
+                 <div className=" liquid-glass p-5 rounded-[2rem] ">
                     <p className="text-[10px] font-black uppercase tracking-widest text-neutral-500 mb-1">Rank</p>
                     <p className="text-2xl font-black italic text-amber-500 leading-none">
                       {stats.completedCount >= 20 ? 'GOLD' : stats.completedCount >= 10 ? 'SILVER' : 'BRONZE'}
@@ -670,7 +670,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
 
               {/* Return Reminder Widget */}
               {!stats.upcoming && stats.nextSuggestedDate && (
-                <div className="bg-neutral-900 border border-white/5 p-8 rounded-[3rem] relative overflow-hidden group shadow-xl">
+                <div className=" liquid-glass  p-8 rounded-[3rem] relative overflow-hidden group shadow-xl">
                    <div className="absolute right-0 top-0 p-8 opacity-10 group-hover:scale-125 transition-transform duration-1000">
                        <Calendar className="w-20 h-20 text-amber-500" />
                    </div>
@@ -711,7 +711,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                               <h4 className="text-sm font-black text-white uppercase italic tracking-tighter">Planos e Créditos</h4>
                            </div>
                         </div>
-                        <span className="bg-neutral-800 text-neutral-400 text-[8px] font-black px-2 py-1 rounded-lg uppercase tracking-tight">VIP</span>
+                        <span className="liquid-glass text-neutral-400 text-[8px] font-black px-2 py-1 rounded-lg uppercase tracking-tight">VIP</span>
                      </div>
 
                      <div className="flex items-end justify-between gap-4">
@@ -738,11 +738,11 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                      </div>
 
                      <div className="mt-8 pt-6 border-t border-white/5 flex gap-4">
-                        <div className="flex-1 bg-black/40 rounded-2xl p-4 border border-white/5">
+                        <div className="flex-1 liquid-glass rounded-2xl p-4 ">
                            <p className="text-[8px] font-black text-neutral-500 uppercase tracking-widest mb-1">Cortes Restantes</p>
                            <p className="text-xl font-black italic text-white">{liveUser?.cutsBalance || 0}</p>
                         </div>
-                        <div className="flex-1 bg-black/40 rounded-2xl p-4 border border-white/5">
+                        <div className="flex-1 liquid-glass rounded-2xl p-4 ">
                            <p className="text-[8px] font-black text-neutral-500 uppercase tracking-widest mb-1">Pontos Fidelidade</p>
                            <p className="text-xl font-black italic text-amber-500">{(stats.completedCount % 10) * 100}</p>
                         </div>
@@ -756,7 +756,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                   triggerLightHaptic();
                   setCurrentView('referrals');
                 }}
-                className="bg-neutral-900 hover:bg-neutral-850 border border-white/5 hover:border-amber-500/10 p-8 rounded-[3rem] shadow-2xl relative overflow-hidden group mt-6 cursor-pointer transition-all duration-300"
+                className="bg-neutral-900  liquid-glass  hover:border-amber-500/10 p-8 rounded-[3rem] shadow-2xl relative overflow-hidden group mt-6 cursor-pointer transition-all duration-300"
               >
                 <div className="absolute -right-4 -bottom-4 text-white/5 group-hover:scale-110 transition-transform duration-700">
                   <Gift size={160} />
@@ -768,7 +768,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                       {stats.completedCount > 0 ? (
                         <span className="ml-auto bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[8px] font-black px-2 py-0.5 rounded-full uppercase italic tracking-tighter">Ativo</span>
                       ) : (
-                        <span className="ml-auto bg-neutral-800 text-neutral-400 border border-white/5 text-[8px] font-black px-2 py-0.5 rounded-full uppercase italic tracking-tighter">Pendente</span>
+                        <span className="ml-auto liquid-glass text-neutral-400  text-[8px] font-black px-2 py-0.5 rounded-full uppercase italic tracking-tighter">Pendente</span>
                       )}
                   </div>
                   
@@ -786,7 +786,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                     </div>
                   </div>
 
-                  <div className="mt-6 flex items-center justify-between bg-black/40 border border-white/5 p-4 rounded-2xl">
+                  <div className="mt-6 flex items-center justify-between liquid-glass  p-4 rounded-2xl">
                     <div className="text-left">
                       <span className="text-[8px] font-black uppercase text-neutral-500 tracking-wider">Código de Cupom</span>
                       <p className="text-[13px] font-mono font-black text-amber-500 tracking-wider">
@@ -801,7 +801,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
               </div>
 
               {/* Live Chat Card */}
-              <div className="bg-neutral-900 border border-white/5 p-8 rounded-[3.5rem] shadow-2xl relative overflow-hidden group">
+              <div className=" liquid-glass  p-8 rounded-[3.5rem] shadow-2xl relative overflow-hidden group">
                   <div className="absolute -right-4 -bottom-4 text-amber-500/5 group-hover:scale-110 transition-transform duration-700">
                     <MessageSquare size={160} />
                   </div>
@@ -826,7 +826,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
               <div 
                 id="lookbook-bento-card"
                 onClick={() => setCurrentView('lookbook')}
-                className="bg-neutral-900 border border-white/5 p-8 rounded-[3.5rem] shadow-2xl relative overflow-hidden group cursor-pointer active:scale-95 transition-all text-left"
+                className=" liquid-glass  p-8 rounded-[3.5rem] shadow-2xl relative overflow-hidden group cursor-pointer active:scale-95 transition-all text-left"
               >
                   <div className="absolute -right-4 -bottom-4 text-amber-500/5 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
                     <ImageIcon size={160} />
@@ -891,7 +891,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                 ) : (
                   <div className="space-y-3">
                     {appointments.slice(0, 5).map(app => (
-                      <div key={app.id} className="p-5 bg-[#0A0A0A] rounded-[2rem] border border-white/5 flex items-center justify-between group hover:border-amber-500/20 transition-all">
+                      <div key={app.id} className="p-5 liquid-glass rounded-[2rem]  flex items-center justify-between group hover:border-amber-500/20 transition-all">
                         <div className="flex items-center gap-4">
                           <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border border-white/5 ${app.status === 'completed' ? 'bg-amber-500/10 text-amber-500' : 'bg-neutral-900 text-neutral-700'}`}>
                             <CheckCircle2 className="w-5 h-5" />
@@ -906,7 +906,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                         <div className="text-right flex flex-col items-end gap-2">
                           <p className="text-xs font-black text-white italic">R${(Number(app.totalPrice) || 0).toFixed(2)}</p>
                           {app.status === 'completed' && !app.rating && <button onClick={() => setShowReviewModal(app)} className="px-3 py-1.5 bg-amber-500 text-black text-[9px] font-black uppercase rounded-xl">AVALIAR</button>}
-                          {(app.status === 'completed' || app.status === 'cancelled') && <button onClick={() => handleHideAppointment(app.id)} className="px-3 py-1.5 bg-neutral-900 text-neutral-600 hover:text-red-500 text-[9px] font-black uppercase rounded-xl transition-all border border-white/5"><Trash2 className="w-3 h-3" /></button>}
+                          {(app.status === 'completed' || app.status === 'cancelled') && <button onClick={() => handleHideAppointment(app.id)} className="px-3 py-1.5 liquid-glass text-neutral-600 hover:text-red-500 text-[9px] font-black uppercase rounded-xl transition-all "><Trash2 className="w-3 h-3" /></button>}
                         </div>
                       </div>
                     ))}
@@ -1061,7 +1061,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
 
              {/* Dynamic Gauges: Cuts and Loyalty Points */}
              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-[#0A0A0A] border border-white/5 p-4 rounded-3xl text-left flex flex-col justify-between space-y-2 group hover:border-amber-500/10 transition-colors">
+                <div className=" liquid-glass  p-4 rounded-3xl text-left flex flex-col justify-between space-y-2 group hover:border-amber-500/10 transition-colors">
                    <div className="flex items-center justify-between">
                      <span className="text-[7.5px] font-black text-[#555] uppercase tracking-[0.15em]">Cortes Grátis</span>
                      <Gift className="w-3.5 h-3.5 text-amber-500" />
@@ -1074,7 +1074,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                    </div>
                 </div>
 
-                <div className="bg-[#0A0A0A] border border-white/5 p-4 rounded-3xl text-left flex flex-col justify-between space-y-2 group hover:border-amber-500/10 transition-colors">
+                <div className=" liquid-glass  p-4 rounded-3xl text-left flex flex-col justify-between space-y-2 group hover:border-amber-500/10 transition-colors">
                    <div className="flex items-center justify-between">
                      <span className="text-[7.5px] font-black text-[#555] uppercase tracking-[0.15em]">Fidelidade</span>
                      <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
@@ -1091,12 +1091,12 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
              </div>
 
              {/* Fidelity Progress bar */}
-             <div className="bg-[#090909] border border-white/5 p-4 rounded-3xl space-y-2 text-left">
+             <div className=" liquid-glass  p-4 rounded-3xl space-y-2 text-left">
                 <div className="flex justify-between items-center text-[8px] font-black uppercase tracking-wider">
                   <span className="text-neutral-400">Progresso do Próximo Corte Cortesia</span>
                   <span className="text-amber-500">{((stats.completedCount || 0) % 10) * 10}%</span>
                 </div>
-                <div className="w-full h-2 bg-neutral-900 rounded-full overflow-hidden border border-white/5 relative">
+                <div className="w-full h-2 liquid-glass rounded-full overflow-hidden  relative">
                   <motion.div 
                     initial={{ width: 0 }}
                     animate={{ width: `${((stats.completedCount || 0) % 10) * 10}%` }}
@@ -1120,7 +1120,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
              </div>
 
              {/* Custom Value Top up expander */}
-             <div className="bg-[#090909] border border-white/5 rounded-3xl p-4.5 text-left">
+             <div className=" liquid-glass  rounded-3xl p-4.5 text-left">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-[8px] font-black text-neutral-500 uppercase tracking-[0.25em]">VALOR PERSONALIZADO</span>
                   <span className="text-[8.5px] font-mono text-neutral-600">Min. R$ 10,00</span>
@@ -1134,7 +1134,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                       setRechargeAmount(null);
                       setRechargeMpData(null);
                     }}
-                    className="w-full py-3.5 bg-neutral-900 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-white/5 hover:border-white/10 rounded-2xl text-[9px] font-black uppercase tracking-widest italic cursor-pointer transition-all active:scale-95 text-center flex items-center justify-center gap-1.5 shadow-md"
+                    className="w-full py-3.5 bg-neutral-900  liquid-glass text-neutral-300 hover:text-white  hover:border-white/10 rounded-2xl text-[9px] font-black uppercase tracking-widest italic cursor-pointer transition-all active:scale-95 text-center flex items-center justify-center gap-1.5 shadow-md"
                   >
                      <Zap className="w-3 h-3 text-amber-500" /> RECARREGAR OUTRO VALOR
                   </button>
@@ -1142,7 +1142,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
              </div>
 
              {/* Advantages Accordion Grid */}
-             <div className="bg-neutral-900/40 border border-white/5 p-6 rounded-[2.2rem] text-left space-y-4">
+             <div className=" liquid-glass/40  p-6 rounded-[2.2rem] text-left space-y-4">
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="w-4 h-4 text-amber-500 shrink-0" />
                   <h4 className="text-[10px] font-black uppercase tracking-[0.15em] text-amber-500 italic">TERMOS & BENEFÍCIOS DO SALDO</h4>
@@ -1188,19 +1188,19 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
         )}
       </AnimatePresence>
 
-      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-[#0A0A0A]/95 border border-white/10 backdrop-blur-3xl rounded-[2.5rem] p-1.5 flex items-center gap-1.5 z-50 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 liquid-glass  backdrop-blur-3xl rounded-[2.5rem] p-1.5 flex items-center gap-1.5 z-50 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
          <button onClick={() => setCurrentView('home')} className={`px-5 py-3.5 rounded-full ${currentView === 'home' ? 'bg-amber-500 text-black' : 'text-neutral-500'}`}><Home className="w-4 h-4" /></button>
          <button onClick={() => setCurrentView('my-cuts')} className={`px-5 py-3.5 rounded-full ${currentView === 'my-cuts' ? 'bg-amber-500 text-black' : 'text-neutral-500'}`}><Scissors className="w-4 h-4" /></button>
          <button onClick={() => setCurrentView('wallet')} className={`px-5 py-3.5 rounded-full ${currentView === 'wallet' ? 'bg-amber-500 text-black' : 'text-neutral-500'}`}><Wallet className="w-4 h-4" /></button>
          <button onClick={() => setCurrentView('profile')} className={`px-5 py-3.5 rounded-full ${currentView === 'profile' ? 'bg-amber-500 text-black' : 'text-neutral-500'}`}><User className="w-4 h-4" /></button>
-         <div className="w-[1px] h-4 bg-white/10 mx-1" />
+         <div className="liquid-glass w-[1px] h-4 mx-1" />
          <button onClick={onBack} className="p-4 text-neutral-600 hover:text-red-500 uppercase"><LogOut className="w-4 h-4" /></button>
       </div>
 
       <AnimatePresence>
         {showReviewModal && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-xl flex items-center justify-center p-6">
-              <div className="bg-neutral-900 border border-white/10 p-8 rounded-[3rem] w-full max-w-sm text-center relative overflow-hidden">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="liquid-glass fixed inset-0 z-[100] backdrop-blur-xl flex items-center justify-center p-6">
+              <div className=" liquid-glass  p-8 rounded-[3rem] w-full max-w-sm text-center relative overflow-hidden">
                 <button 
                   onClick={() => {
                     setShowReviewModal(null);
@@ -1255,7 +1255,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                           setComment("");
                           setRating(5);
                         }}
-                        className="w-full bg-neutral-800 hover:bg-neutral-700 text-neutral-300 py-4 rounded-2xl font-black uppercase italic tracking-widest transition-colors text-xs"
+                        className="liquid-glass w-full  text-neutral-300 py-4 rounded-2xl font-black uppercase italic tracking-widest transition-colors text-xs"
                       >
                         Agora Não
                       </button>
@@ -1268,7 +1268,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
 
         {isRecharging && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6">
-              <div className="bg-neutral-900 border border-white/10 p-7 rounded-[3rem] w-full max-w-sm text-center relative overflow-hidden my-auto shadow-2xl">
+              <div className=" liquid-glass  p-7 rounded-[3rem] w-full max-w-sm text-center relative overflow-hidden my-auto shadow-2xl">
                 <button 
                   onClick={() => setIsRecharging(false)}
                   className="absolute top-6 right-6 text-neutral-500 hover:text-white transition-colors z-20 cursor-pointer p-1"
@@ -1329,7 +1329,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
 
                         <button 
                            onClick={() => handleGenerateRechargePix(rechargeAmount || 50, rechargeBonus, rechargeCutsReward)}
-                           className="w-full py-2.5 bg-neutral-900 border border-white/5 rounded-xl text-[8.5px] text-neutral-405 font-black uppercase text-center hover:bg-neutral-800 cursor-pointer"
+                           className="w-full py-2.5 liquid-glass  rounded-xl text-[8.5px] text-neutral-405 font-black uppercase text-center hover:bg-neutral-800 cursor-pointer"
                         >
                            Tentar Conexão Novamente
                         </button>
@@ -1347,13 +1347,13 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                           toast.success("Código Copiado!");
                           setTimeout(() => setCopiedRechargePix(false), 2000);
                         }}
-                        className="w-full py-3.5 bg-white/5 border border-white/10 rounded-[1.1rem] text-[9.5px] font-mono text-white hover:bg-white/10 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                        className="liquid-glass w-full py-3.5 rounded-[1.1rem] text-[9.5px] font-mono text-white  transition-all flex items-center justify-center gap-2 cursor-pointer"
                       >
                         {copiedRechargePix ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                         {copiedRechargePix ? "RECORTE COPIADO!" : "COPIAR CÓDIGO COPIA E COLA"}
                       </button>
 
-                      <div className="h-[1px] bg-white/5 my-1" />
+                      <div className="liquid-glass h-[1px] my-1" />
                       
                       <div className="space-y-2">
                          <div className="text-center text-neutral-500 text-[8.5px] uppercase font-bold tracking-widest animate-pulse flex items-center justify-center gap-1.5 mb-1 justify-center">
@@ -1377,7 +1377,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                             value={customRechargeInput}
                             onChange={(e) => setCustomRechargeInput(e.target.value)}
                             placeholder="0,00"
-                            className="w-full bg-neutral-900 border-2 border-white/5 focus:border-amber-500 rounded-2xl py-4 pl-12 pr-4 text-white font-black text-xl italic outline-none transition-colors"
+                            className="liquid-glass w-full -2 focus:-amber-500 rounded-2xl py-4 pl-12 pr-4 text-white font-black text-xl italic outline-none transition-colors"
                           />
                         </div>
                       </div>
@@ -1392,7 +1392,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                           }
                         }}
                         disabled={!customRechargeInput}
-                        className="w-full bg-amber-500 hover:bg-amber-600 disabled:opacity-50 disabled:bg-neutral-800 disabled:text-neutral-500 text-black py-4 rounded-2xl font-black uppercase italic tracking-widest transition-colors text-xs"
+                        className="liquid-glass w-full  disabled:opacity-50  disabled:text-neutral-500 text-black py-4 rounded-2xl font-black uppercase italic tracking-widest transition-colors text-xs"
                       >
                         Gerar Pagamento Pix
                       </button>
@@ -1417,14 +1417,14 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                   setCancelReasonTxt("");
                 }
               }}
-              className="absolute inset-0 bg-black/80 backdrop-blur-md"
+              className="liquid-glass absolute inset-0 backdrop-blur-md"
             />
             
             <motion.div 
               initial={{ scale: 0.9, opacity: 0, y: 15 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 15 }}
-              className="bg-neutral-950 border border-white/5 rounded-[2.5rem] p-8 max-w-sm w-full text-center relative z-10 shadow-2xl space-y-6 text-left"
+              className=" liquid-glass  rounded-[2.5rem] p-8 max-w-sm w-full text-center relative z-10 shadow-2xl space-y-6 text-left"
             >
               <div className="w-14 h-14 bg-red-500/10 border border-red-500/25 rounded-3xl mx-auto flex items-center justify-center text-red-500">
                 <XCircle className="w-6 h-6 animate-pulse" />
@@ -1437,7 +1437,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                 </p>
               </div>
 
-              <div className="bg-neutral-900 rounded-2xl p-4 border border-white/5 space-y-2 text-left">
+              <div className=" liquid-glass rounded-2xl p-4  space-y-2 text-left">
                 <p className="text-[10px] font-black uppercase tracking-wider text-amber-500 flex items-center gap-1.5 leading-none">
                   <Calendar className="w-3 h-3" />
                   {format(appToCancel.date instanceof Timestamp ? appToCancel.date.toDate() : parseISO(appToCancel.date), "dd 'de' MMMM", { locale: ptBR })}
@@ -1457,7 +1457,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                   onChange={(e) => setCancelReasonTxt(e.target.value)}
                   placeholder="Por que você está cancelando? (ex: Tive um imprevisto)"
                   maxLength={150}
-                  className="w-full bg-neutral-950 border border-white/5 rounded-2xl p-4 text-xs text-white placeholder-neutral-700 focus:border-red-500/50 outline-none resize-none h-20 transition-all font-medium"
+                  className="w-full liquid-glass  rounded-2xl p-4 text-xs text-white placeholder-neutral-700 focus:border-red-500/50 outline-none resize-none h-20 transition-all font-medium"
                 />
               </div>
 
@@ -1490,7 +1490,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                 <button 
                   onClick={() => { setAppToCancel(null); setCancelReasonTxt(""); }}
                   disabled={isCancelling}
-                  className="w-full bg-neutral-900 hover:bg-neutral-800 text-neutral-300 py-4 rounded-xl text-[10px] font-black uppercase italic tracking-widest transition-all cursor-pointer border border-white/5 disabled:cursor-not-allowed"
+                  className="w-full bg-neutral-900  liquid-glass text-neutral-300 py-4 rounded-xl text-[10px] font-black uppercase italic tracking-widest transition-all cursor-pointer  disabled:cursor-not-allowed"
                 >
                   MANTER AGENDAMENTO
                 </button>

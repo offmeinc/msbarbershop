@@ -345,7 +345,7 @@ export function ReferralsScreen({ user, onBack, stats, appointments }: Referrals
             triggerLightHaptic();
             onBack();
           }} 
-          className="p-3 bg-neutral-950 hover:bg-neutral-900 border border-white/5 hover:border-white/10 rounded-2xl text-neutral-400 hover:text-white transition-all active:scale-95 cursor-pointer flex items-center justify-center"
+          className="p-3 bg-neutral-950  liquid-glass  hover:border-white/10 rounded-2xl text-neutral-400 hover:text-white transition-all active:scale-95 cursor-pointer flex items-center justify-center"
         >
           <ChevronLeft className="w-5 h-5" />
         </button>
@@ -382,7 +382,7 @@ export function ReferralsScreen({ user, onBack, stats, appointments }: Referrals
           <motion.div 
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-neutral-950 border border-rose-500/10 p-6 rounded-[2rem] text-left space-y-4 shadow-xl relative overflow-hidden"
+            className="liquid-glass -rose-500/10 p-6 rounded-[2rem] text-left space-y-4 shadow-xl relative overflow-hidden"
           >
             <div className="absolute right-[-10px] top-[-10px] text-rose-500/5 rotate-12">
               <Lock size={120} />
@@ -416,7 +416,7 @@ export function ReferralsScreen({ user, onBack, stats, appointments }: Referrals
           <motion.div 
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-neutral-900 border border-white/5 p-6 rounded-[2.5rem] text-center space-y-5 shadow-2xl relative overflow-hidden"
+            className=" liquid-glass  p-6 rounded-[2.5rem] text-center space-y-5 shadow-2xl relative overflow-hidden"
           >
             <div className="absolute left-[-20px] bottom-[-20px] text-white/5">
               <Coins size={140} />
@@ -432,7 +432,7 @@ export function ReferralsScreen({ user, onBack, stats, appointments }: Referrals
             <div className="flex items-center gap-2 relative z-10">
               <button 
                 onClick={handleCopyCode}
-                className="flex-1 py-3.5 bg-neutral-950 hover:bg-neutral-900 text-neutral-300 hover:text-white border border-white/5 rounded-2xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all active:scale-[0.97]"
+                className="flex-1 py-3.5 bg-neutral-950  liquid-glass text-neutral-300 hover:text-white  rounded-2xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all active:scale-[0.97]"
               >
                 <Copy className="w-3.5 h-3.5 text-amber-500" /> COPIAR CÓDIGO
               </button>
@@ -449,7 +449,7 @@ export function ReferralsScreen({ user, onBack, stats, appointments }: Referrals
 
         {/* Real-time Referral Stats Grid */}
         <div className="grid grid-cols-2 gap-4">
-          <div className="bg-neutral-900/50 border border-white/5 p-5 rounded-3xl text-left relative overflow-hidden">
+          <div className=" liquid-glass/50  p-5 rounded-3xl text-left relative overflow-hidden">
             <span className="text-[9px] font-black uppercase tracking-[0.15em] text-neutral-500 block mb-1">Amigos Inscritos</span>
             <div className="flex items-baseline gap-1.5">
               <p className="text-2xl font-black italic text-white leading-none">{referredUsers.length}</p>
@@ -458,7 +458,7 @@ export function ReferralsScreen({ user, onBack, stats, appointments }: Referrals
             <Users2 className="absolute right-3 bottom-3 w-8 h-8 text-white/5" />
           </div>
 
-          <div className="bg-neutral-900/50 border border-white/5 p-5 rounded-3xl text-left relative overflow-hidden">
+          <div className=" liquid-glass/50  p-5 rounded-3xl text-left relative overflow-hidden">
             <span className="text-[9px] font-black uppercase tracking-[0.15em] text-neutral-500 block mb-1">Prêmios Ganhos</span>
             <p className="text-2xl font-black italic text-amber-500 leading-none">
               {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalEarnedCash)}
@@ -468,7 +468,7 @@ export function ReferralsScreen({ user, onBack, stats, appointments }: Referrals
         </div>
 
         {/* Real-Time Competitors Referral Leaderboard */}
-        <div className="bg-neutral-900/30 border border-white/5 rounded-[2.5rem] p-6 text-left space-y-5 shadow-inner">
+        <div className=" liquid-glass/30  rounded-[2.5rem] p-6 text-left space-y-5 shadow-inner">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Trophy className="w-4 h-4 text-amber-500 animate-pulse" />
@@ -535,7 +535,7 @@ export function ReferralsScreen({ user, onBack, stats, appointments }: Referrals
                   })}
                 </div>
               ) : leaderboard.length <= 3 ? (
-                <div className="text-center py-3 bg-neutral-950/30 rounded-2xl border border-dashed border-white/5">
+                <div className="liquid-glass text-center py-3 rounded-2xl -dashed">
                   <p className="text-[9px] text-neutral-500 font-black leading-relaxed tracking-wider uppercase font-sans">
                     A disputa pelo topo está aberta! Indique seus amigos e seja o próximo coroado.
                   </p>
@@ -546,13 +546,13 @@ export function ReferralsScreen({ user, onBack, stats, appointments }: Referrals
         </div>
 
         {/* Dynamic List of Friends: "Meus Convidados" */}
-        <div className="bg-neutral-900/30 border border-white/5 rounded-[2.5rem] p-6 text-left space-y-4">
+        <div className=" liquid-glass/30  rounded-[2.5rem] p-6 text-left space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Users2 className="w-4 h-4 text-amber-500" />
               <h3 className="text-[10px] font-black uppercase tracking-wider text-white">Amigos Convidados</h3>
             </div>
-            <span className="bg-neutral-800 border border-white/5 text-neutral-400 text-[8px] font-black px-2 py-0.5 rounded-full uppercase">
+            <span className=" liquid-glass  text-neutral-400 text-[8px] font-black px-2 py-0.5 rounded-full uppercase">
               {referredUsers.length} total
             </span>
           </div>
@@ -562,7 +562,7 @@ export function ReferralsScreen({ user, onBack, stats, appointments }: Referrals
               <div className="h-5 w-5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
             </div>
           ) : referredUsers.length === 0 ? (
-            <div className="text-center py-8 px-4 bg-neutral-950/40 rounded-2xl border border-dashed border-white/5">
+            <div className="liquid-glass text-center py-8 px-4 rounded-2xl -dashed">
               <HelpCircle className="w-6 h-6 text-neutral-600 mx-auto mb-2" />
               <p className="text-[11px] text-neutral-500 font-bold uppercase tracking-wider">Nenhum convidado ainda</p>
               <p className="text-[9px] text-neutral-600 mt-1 uppercase font-semibold">Compartilhe seu código para começar!</p>
@@ -574,10 +574,10 @@ export function ReferralsScreen({ user, onBack, stats, appointments }: Referrals
                 return (
                   <div 
                     key={friend.id}
-                    className="flex items-center justify-between p-3.5 bg-neutral-950/70 border border-white/5 rounded-2xl hover:border-white/10 transition-colors"
+                    className="flex items-center justify-between p-3.5 liquid-glass/70  rounded-2xl hover:border-white/10 transition-colors"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-neutral-900 border border-white/10 flex items-center justify-center text-[10px] font-black text-amber-500">
+                      <div className="w-9 h-9 rounded-xl liquid-glass  flex items-center justify-center text-[10px] font-black text-amber-500">
                         {(friend.name || "A").slice(0, 1).toUpperCase()}
                       </div>
                       <div>
@@ -596,7 +596,7 @@ export function ReferralsScreen({ user, onBack, stats, appointments }: Referrals
                           <Sparkles className="w-2.5 h-2.5" /> Pago R$ 5,00
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-neutral-900 text-neutral-500 border border-white/5 text-[8px] font-extrabold uppercase rounded-full">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 liquid-glass text-neutral-500  text-[8px] font-extrabold uppercase rounded-full">
                           <Clock className="w-2.5 h-2.5" /> Aguardando 1º corte
                         </span>
                       )}
@@ -609,7 +609,7 @@ export function ReferralsScreen({ user, onBack, stats, appointments }: Referrals
         </div>
 
         {/* Summary of Rewards Progression Ledger: "Como funciona" */}
-        <div className="bg-neutral-900/30 border border-white/5 rounded-[2.5rem] p-6 text-left space-y-4">
+        <div className=" liquid-glass/30  rounded-[2.5rem] p-6 text-left space-y-4">
           <div className="flex items-center gap-2">
             <Info className="w-4 h-4 text-amber-500" />
             <h3 className="text-[10px] font-black uppercase tracking-wider text-white">Como Funciona o Programa</h3>
@@ -629,7 +629,7 @@ export function ReferralsScreen({ user, onBack, stats, appointments }: Referrals
 
             {/* Step 2 */}
             <div className="relative">
-              <span className="absolute -left-[29px] top-0 w-4 h-4 rounded-full bg-neutral-850 flex items-center justify-center border border-white/15 text-[7.5px] font-black text-neutral-400">2</span>
+              <span className="absolute -left-[29px] top-0 w-4 h-4 rounded-full liquid-glass flex items-center justify-center  text-[7.5px] font-black text-neutral-400">2</span>
               <div>
                 <h4 className="text-[10px] font-black uppercase text-white leading-none mb-1">Seu amigo ganha saldo</h4>
                 <p className="text-[10px] text-neutral-400 font-medium leading-relaxed">
@@ -640,7 +640,7 @@ export function ReferralsScreen({ user, onBack, stats, appointments }: Referrals
 
             {/* Step 3 */}
             <div className="relative">
-              <span className="absolute -left-[29px] top-0 w-4 h-4 rounded-full bg-neutral-850 flex items-center justify-center border border-white/15 text-[7.5px] font-black text-neutral-400">3</span>
+              <span className="absolute -left-[29px] top-0 w-4 h-4 rounded-full liquid-glass flex items-center justify-center  text-[7.5px] font-black text-neutral-400">3</span>
               <div>
                 <h4 className="text-[10px] font-black uppercase text-white leading-none mb-1">Ele realiza o corte</h4>
                 <p className="text-[10px] text-neutral-400 font-medium leading-relaxed">
@@ -672,14 +672,14 @@ export function ReferralsScreen({ user, onBack, stats, appointments }: Referrals
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-6"
+            className="liquid-glass fixed inset-0 backdrop-blur-md z-50 flex items-center justify-center p-6"
           >
             <motion.div
               initial={{ scale: 0.95, y: 15, opacity: 0 }}
               animate={{ scale: 1, y: 0, opacity: 1 }}
               exit={{ scale: 0.95, y: 15, opacity: 0 }}
               transition={{ type: "spring", duration: 0.4 }}
-              className="bg-neutral-900 border border-white/10 w-full max-w-md rounded-[2.5rem] p-6 shadow-2xl relative overflow-hidden flex flex-col max-h-[90vh]"
+              className=" liquid-glass  w-full max-w-md rounded-[2.5rem] p-6 shadow-2xl relative overflow-hidden flex flex-col max-h-[90vh]"
             >
               {/* Subtle ambient lighting inside modal */}
               <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -696,7 +696,7 @@ export function ReferralsScreen({ user, onBack, stats, appointments }: Referrals
                     triggerLightHaptic();
                     setIsHowItWorksOpen(false);
                   }}
-                  className="px-3.5 py-1.5 bg-neutral-950 border border-white/5 hover:border-white/10 text-neutral-400 hover:text-white rounded-xl text-[9px] font-black uppercase tracking-wider cursor-pointer transition-all active:scale-95"
+                  className="px-3.5 py-1.5 liquid-glass  hover:border-white/10 text-neutral-400 hover:text-white rounded-xl text-[9px] font-black uppercase tracking-wider cursor-pointer transition-all active:scale-95"
                 >
                   Fechar
                 </button>
@@ -718,7 +718,7 @@ export function ReferralsScreen({ user, onBack, stats, appointments }: Referrals
                   {/* Benefício Convidado */}
                   <motion.div 
                     whileHover={{ scale: 1.02 }}
-                    className="bg-neutral-950/80 p-4 border border-amber-500/20 rounded-2xl flex flex-col items-center text-center relative"
+                    className="liquid-glass p-4 -amber-500/20 rounded-2xl flex flex-col items-center text-center relative"
                   >
                     <span className="absolute -top-1.5 -right-1.5 bg-amber-500 text-black text-[6.5px] font-black px-1.5 py-0.5 rounded-full uppercase scale-90 tracking-wider">
                       Amigo Novo
@@ -734,9 +734,9 @@ export function ReferralsScreen({ user, onBack, stats, appointments }: Referrals
                   {/* Benefício Indicador */}
                   <motion.div 
                     whileHover={{ scale: 1.02 }}
-                    className="bg-neutral-950/80 p-4 border border-white/5 rounded-2xl flex flex-col items-center text-center relative"
+                    className=" liquid-glass/80 p-4  rounded-2xl flex flex-col items-center text-center relative"
                   >
-                    <div className="w-8 h-8 rounded-full bg-neutral-900 flex items-center justify-center border border-white/10 mb-2">
+                    <div className="w-8 h-8 rounded-full liquid-glass flex items-center justify-center  mb-2">
                       <Coins className="w-4 h-4 text-neutral-400" />
                     </div>
                     <h4 className="text-[9px] font-black uppercase text-neutral-400 tracking-wider mb-1">Você ganha</h4>
@@ -779,9 +779,9 @@ export function ReferralsScreen({ user, onBack, stats, appointments }: Referrals
                   ].map((item, idx) => (
                     <div
                       key={idx}
-                      className="flex items-start gap-3 p-3.5 bg-neutral-950/50 border border-white/5 rounded-2xl"
+                      className="flex items-start gap-3 p-3.5 liquid-glass/50  rounded-2xl"
                     >
-                      <div className="w-7 h-7 rounded-lg bg-neutral-900 border border-white/10 flex items-center justify-center shrink-0">
+                      <div className="w-7 h-7 rounded-lg liquid-glass  flex items-center justify-center shrink-0">
                         <span className="text-[9px] font-black text-amber-500 font-mono">#{item.step}</span>
                       </div>
                       <div>

@@ -50,7 +50,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ notificati
             damping: 24,
             mass: 0.9
           }}
-          className="fixed bottom-24 left-4 right-4 md:left-auto md:right-8 z-[100] bg-neutral-900/90 backdrop-blur-lg border border-amber-500/30 p-4 rounded-2xl shadow-2xl flex items-start gap-4"
+          className="liquid-glass fixed bottom-24 left-4 right-4 md:left-auto md:right-8 z-[100] backdrop-blur-lg -amber-500/30 p-4 rounded-2xl shadow-2xl flex items-start gap-4"
         >
           <div className="p-2 bg-amber-500/20 text-amber-500 rounded-full shrink-0">
             <Bell className="w-5 h-5" />

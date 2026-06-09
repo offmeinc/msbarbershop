@@ -153,13 +153,13 @@ export function PortfolioManager({ onBack }: { onBack: () => void }) {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen bg-black text-white p-6 pb-32 max-w-xl md:max-w-4xl lg:max-w-5xl mx-auto">
       <header className="flex items-center gap-4 mb-10">
-        <button onClick={onBack} className="p-3 bg-neutral-900 rounded-2xl text-neutral-500 hover:text-white transition-all">
+        <button onClick={onBack} className="liquid-glass p-3 rounded-2xl text-neutral-500 hover:text-white transition-all">
           <ArrowLeft className="w-5 h-5" />
         </button>
         <h2 className="text-3xl font-black italic uppercase tracking-tighter">Galeria</h2>
       </header>
 
-      <div className="bg-neutral-900/50 p-6 rounded-[2.5rem] border border-white/5 mb-10">
+      <div className=" liquid-glass/50 p-6 rounded-[2.5rem]  mb-10">
         <h3 className="text-xs font-black uppercase tracking-widest text-neutral-500 mb-6 flex items-center gap-2">
             <Plus className="w-4 h-4" /> Adicionar Novo Corte
         </h3>
@@ -229,7 +229,7 @@ export function PortfolioManager({ onBack }: { onBack: () => void }) {
                   ) : (
                     <div className="space-y-6">
                       <div className="flex flex-col items-center gap-2">
-                        <div className="p-4 bg-neutral-900 rounded-2xl text-neutral-400">
+                        <div className="liquid-glass p-4 rounded-2xl text-neutral-400">
                           <ImageIcon className="w-6 h-6" />
                         </div>
                         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 mt-2">
@@ -240,14 +240,14 @@ export function PortfolioManager({ onBack }: { onBack: () => void }) {
                       <div className="grid grid-cols-2 gap-3 max-w-sm mx-auto">
                         <button 
                           onClick={() => cameraInputRef.current?.click()}
-                          className="flex items-center justify-center gap-2 bg-neutral-900 hover:bg-neutral-800 border border-white/5 active:scale-95 text-xs font-black uppercase tracking-wider py-4 px-3 rounded-2xl transition-all"
+                          className="flex items-center justify-center gap-2 bg-neutral-900  liquid-glass  active:scale-95 text-xs font-black uppercase tracking-wider py-4 px-3 rounded-2xl transition-all"
                         >
                           <Camera className="w-4 h-4 text-amber-500" />
                           Tirar Foto
                         </button>
                         <button 
                           onClick={() => fileInputRef.current?.click()}
-                          className="flex items-center justify-center gap-2 bg-neutral-900 hover:bg-neutral-800 border border-white/5 active:scale-95 text-xs font-black uppercase tracking-wider py-4 px-3 rounded-2xl transition-all"
+                          className="flex items-center justify-center gap-2 bg-neutral-900  liquid-glass  active:scale-95 text-xs font-black uppercase tracking-wider py-4 px-3 rounded-2xl transition-all"
                         >
                           <Upload className="w-4 h-4 text-amber-500" />
                           Galeria
@@ -277,7 +277,7 @@ export function PortfolioManager({ onBack }: { onBack: () => void }) {
                 </div>
                 <button 
                   onClick={() => { setSelectedClient(null); setClientSearch(""); }}
-                  className="p-3 bg-neutral-900 hover:bg-neutral-800 rounded-2xl text-neutral-400 hover:text-red-500 transition-all border border-white/5 active:scale-95"
+                  className="p-3 bg-neutral-900  liquid-glass rounded-2xl text-neutral-400 hover:text-red-500 transition-all  active:scale-95"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -310,7 +310,7 @@ export function PortfolioManager({ onBack }: { onBack: () => void }) {
                 
                 {/* Search Dropdown */}
                 {showClientDropdown && (
-                  <div className="absolute left-0 right-0 max-h-52 overflow-y-auto bg-neutral-950 border border-white/10 rounded-2xl mt-2.5 z-[60] shadow-2xl divide-y divide-white/5 no-scrollbar">
+                  <div className="absolute left-0 right-0 max-h-52 overflow-y-auto liquid-glass  rounded-2xl mt-2.5 z-[60] shadow-2xl divide-y divide-white/5 no-scrollbar">
                     {clients
                       .filter(c => (c.name || "").toLowerCase().includes(clientSearch.toLowerCase()))
                       .map(c => (
@@ -322,10 +322,10 @@ export function PortfolioManager({ onBack }: { onBack: () => void }) {
                             setClientSearch(c.name || "");
                             setShowClientDropdown(false);
                           }}
-                          className="w-full text-left p-4 hover:bg-neutral-900 transition-colors flex items-center justify-between text-xs"
+                          className="liquid-glass w-full text-left p-4  transition-colors flex items-center justify-between text-xs"
                         >
                           <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-xl bg-neutral-900 border border-white/5 overflow-hidden flex items-center justify-center text-[10px] font-bold text-neutral-400">
+                            <div className="w-9 h-9 rounded-xl liquid-glass  overflow-hidden flex items-center justify-center text-[10px] font-bold text-neutral-400">
                               {c.photoURL ? <img src={c.photoURL} alt="" className="w-full h-full object-cover" /> : <User className="w-4 h-4" />}
                             </div>
                             <div>

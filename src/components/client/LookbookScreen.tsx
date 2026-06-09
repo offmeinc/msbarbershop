@@ -90,14 +90,14 @@ export function LookbookScreen({ onBack, onBook }: LookbookScreenProps) {
         </div>
         <button 
           onClick={onBack} 
-          className="p-3 bg-neutral-900 hover:bg-neutral-800 rounded-2xl text-neutral-400 hover:text-white border border-white/5 active:scale-95 transition-all cursor-pointer"
+          className="p-3 bg-neutral-900  liquid-glass rounded-2xl text-neutral-400 hover:text-white  active:scale-95 transition-all cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
       </div>
 
       {/* Tabs Menu in Bento grid style */}
-      <div className="bg-neutral-900/60 border border-white/5 p-1 rounded-2xl flex items-center gap-1 mb-8 shadow-inner">
+      <div className=" liquid-glass/60  p-1 rounded-2xl flex items-center gap-1 mb-8 shadow-inner">
         <button
           onClick={() => setActiveTab("team")}
           className={`flex-1 py-3 rounded-xl font-black uppercase text-[9.5px] tracking-widest transition-all ${
@@ -129,7 +129,7 @@ export function LookbookScreen({ onBack, onBook }: LookbookScreenProps) {
           </div>
         </div>
       ) : currentItems.length === 0 ? (
-        <div className="py-20 text-center border border-dashed border-white/10 rounded-[2.5rem] bg-neutral-900/10 flex flex-col items-center justify-center space-y-4">
+        <div className="liquid-glass py-20 text-center -dashed rounded-[2.5rem] flex flex-col items-center justify-center space-y-4">
           <ImageIcon className="w-10 h-10 text-neutral-800 animate-pulse" />
           <div className="space-y-1">
             <h4 className="text-xs font-black uppercase text-neutral-500 tracking-wide">Nenhuma foto no portfólio ainda</h4>
@@ -147,7 +147,7 @@ export function LookbookScreen({ onBack, onBook }: LookbookScreenProps) {
                 animate={{ opacity: 1, scale: 1 }}
                 whileHover={{ y: -4 }}
                 onClick={() => setSelectedItem(item)}
-                className="relative aspect-[3/4] rounded-[2rem] overflow-hidden group border border-white/5 bg-neutral-950 cursor-pointer shadow hover:border-amber-500/20 transition-all duration-300"
+                className="liquid-glass relative aspect-[3/4] rounded-[2rem] overflow-hidden group cursor-pointer shadow hover:-amber-500/20 transition-all duration-300"
               >
                 <img
                   src={item.imageUrl}
@@ -160,7 +160,7 @@ export function LookbookScreen({ onBack, onBook }: LookbookScreenProps) {
                 {/* Heart shortcut button */}
                 <button
                   onClick={(e) => toggleFavorite(item.id, e)}
-                  className="absolute top-3.5 right-3.5 w-8 h-8 rounded-xl bg-black/60 backdrop-blur-md flex items-center justify-center text-white border border-white/10 hover:border-amber-500/30 active:scale-90 transition-all"
+                  className="absolute top-3.5 right-3.5 w-8 h-8 rounded-xl liquid-glass backdrop-blur-md flex items-center justify-center text-white  hover:border-amber-500/30 active:scale-90 transition-all"
                 >
                   <Heart className={`w-4 h-4 ${isFav ? "text-amber-500 fill-amber-500" : "text-white/75"}`} />
                 </button>
@@ -191,7 +191,7 @@ export function LookbookScreen({ onBack, onBook }: LookbookScreenProps) {
       )}
 
       {/* Info Guide Card */}
-      <div className="mt-8 p-6 bg-neutral-900/40 rounded-[2.5rem] border border-white/5 flex items-start gap-4">
+      <div className="mt-8 p-6 liquid-glass/40 rounded-[2.5rem]  flex items-start gap-4">
         <div className="p-2.5 bg-amber-500/10 rounded-xl text-amber-500 shrink-0 shadow-inner">
           <Info className="w-4 h-4 animate-pulse" />
         </div>
@@ -218,11 +218,11 @@ export function LookbookScreen({ onBack, onBook }: LookbookScreenProps) {
               initial={{ scale: 0.95, y: 15 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 15 }}
-              className="bg-neutral-900 border border-white/10 p-6 rounded-[2.5rem] w-full max-w-sm relative overflow-hidden shadow-2xl"
+              className=" liquid-glass  p-6 rounded-[2.5rem] w-full max-w-sm relative overflow-hidden shadow-2xl"
             >
               <button 
                 onClick={() => setSelectedItem(null)} 
-                className="absolute top-6 right-6 w-9 h-9 rounded-full bg-black/50 border border-white/10 flex items-center justify-center text-neutral-400 hover:text-white transition-colors cursor-pointer"
+                className="absolute top-6 right-6 w-9 h-9 rounded-full liquid-glass  flex items-center justify-center text-neutral-400 hover:text-white transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>

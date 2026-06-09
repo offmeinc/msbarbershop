@@ -67,7 +67,7 @@ export function AnalyticsScreen({ appointments, services }: { appointments: any[
                     { label: "Ticket Médio", value: `R$ ${stats.avgValue.toFixed(2)}`, icon: Sparkles, color: "text-purple-400" },
                     { label: "Clientes", value: new Set(appointments.map(a => a.clientId)).size, icon: Users, color: "text-blue-400" },
                 ].map((stat, i) => (
-                    <motion.div key={i} whileHover={{ y: -5 }} className="bg-neutral-900 border border-white/5 rounded-2xl p-4">
+                    <motion.div key={i} whileHover={{ y: -5 }} className=" liquid-glass  rounded-2xl p-4">
                         <stat.icon className={`w-5 h-5 ${stat.color} mb-2`} />
                         <p className="text-[10px] font-black uppercase text-neutral-500 tracking-widest">{stat.label}</p>
                         <h3 className="text-lg font-black text-white">{stat.value}</h3>
@@ -77,7 +77,7 @@ export function AnalyticsScreen({ appointments, services }: { appointments: any[
 
             {/* Charts */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-neutral-900 border border-white/5 rounded-2xl p-6">
+                <div className=" liquid-glass  rounded-2xl p-6">
                     <h3 className="text-sm font-black text-white mb-4 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-amber-500"/> Faturamento (Últimos 7 dias)</h3>
                     <div className="h-[250px]">
                         <ResponsiveContainer width="100%" height="100%">
@@ -98,7 +98,7 @@ export function AnalyticsScreen({ appointments, services }: { appointments: any[
                     </div>
                 </div>
 
-                <div className="bg-neutral-900 border border-white/5 rounded-2xl p-6">
+                <div className=" liquid-glass  rounded-2xl p-6">
                     <h3 className="text-sm font-black text-white mb-4 flex items-center gap-2"><Scissors className="w-4 h-4 text-purple-500"/> Serviços Populares</h3>
                     <div className="h-[250px]">
                         <ResponsiveContainer width="100%" height="100%">

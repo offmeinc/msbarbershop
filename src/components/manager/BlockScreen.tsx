@@ -187,13 +187,13 @@ export function BlockScreen({ onBack }: { onBack: () => void }) {
       <div className="flex items-center justify-between mb-8">
         <button 
           onClick={onBack} 
-          className="flex items-center gap-2 text-neutral-500 hover:text-white transition-all font-black uppercase text-[10px] tracking-widest bg-white/5 px-4 py-2.5 rounded-2xl border border-white/5 cursor-pointer shadow-md"
+          className="liquid-glass flex items-center gap-2 text-neutral-500 hover:text-white transition-all font-black uppercase text-[10px] tracking-widest px-4 py-2.5 rounded-2xl cursor-pointer shadow-md"
         >
           <ArrowLeft className="w-4 h-4 text-amber-500" />
           Voltar ao menu
         </button>
 
-        <div className="flex items-center gap-1.5 text-neutral-500 text-[10px] font-black uppercase tracking-widest bg-neutral-900 px-4 py-2.5 rounded-2xl border border-white/5">
+        <div className="flex items-center gap-1.5 text-neutral-500 text-[10px] font-black uppercase tracking-widest liquid-glass px-4 py-2.5 rounded-2xl ">
           <ShieldAlert className="w-4 h-4 text-amber-500 shrink-0" />
           Controle da Agenda
         </div>
@@ -204,7 +204,7 @@ export function BlockScreen({ onBack }: { onBack: () => void }) {
         
         {/* Left Side: Create a New Block Column */}
         <div className="lg:col-span-5 space-y-6">
-          <div className="bg-white/[0.03] backdrop-blur-md rounded-[2.5rem] p-6 border border-white/10 shadow-2xl space-y-6 relative overflow-hidden">
+          <div className=" liquid-glass backdrop-blur-md rounded-[2.5rem] p-6  shadow-2xl space-y-6 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-2xl pointer-events-none" />
             
             <div className="text-left space-y-1">
@@ -227,7 +227,7 @@ export function BlockScreen({ onBack }: { onBack: () => void }) {
                     value={lockDate} 
                     onChange={e => setLockDate(e.target.value)} 
                     required
-                    className="w-full bg-black/60 border border-white/10 hover:border-white/20 focus:border-amber-500 rounded-2xl p-4 text-xs text-white transition-all outline-none" 
+                    className="w-full liquid-glass  hover:border-white/20 focus:border-amber-500 rounded-2xl p-4 text-xs text-white transition-all outline-none" 
                   />
                 </div>
               </div>
@@ -241,7 +241,7 @@ export function BlockScreen({ onBack }: { onBack: () => void }) {
                     value={startTime} 
                     onChange={e => setStartTime(e.target.value)} 
                     required
-                    className="w-full bg-black/60 border border-white/10 hover:border-white/20 focus:border-amber-500 rounded-2xl p-4 text-xs text-white transition-all outline-none" 
+                    className="w-full liquid-glass  hover:border-white/20 focus:border-amber-500 rounded-2xl p-4 text-xs text-white transition-all outline-none" 
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -251,7 +251,7 @@ export function BlockScreen({ onBack }: { onBack: () => void }) {
                     value={endTime} 
                     onChange={e => setEndTime(e.target.value)} 
                     required
-                    className="w-full bg-black/60 border border-white/10 hover:border-white/20 focus:border-amber-500 rounded-2xl p-4 text-xs text-white transition-all outline-none" 
+                    className="w-full liquid-glass  hover:border-white/20 focus:border-amber-500 rounded-2xl p-4 text-xs text-white transition-all outline-none" 
                   />
                 </div>
               </div>
@@ -262,7 +262,7 @@ export function BlockScreen({ onBack }: { onBack: () => void }) {
                 <select
                   value={blockingBarberId}
                   onChange={e => setBlockingBarberId(e.target.value)}
-                  className="w-full bg-black/60 border border-white/10 hover:border-white/20 focus:border-amber-500 rounded-2xl p-4 text-xs text-white transition-all outline-none appearance-none"
+                  className="w-full liquid-glass  hover:border-white/20 focus:border-amber-500 rounded-2xl p-4 text-xs text-white transition-all outline-none appearance-none"
                 >
                   <option value="all">🌍 Todos os Profissionais (Geral)</option>
                   {barbers.map(barber => (
@@ -281,7 +281,7 @@ export function BlockScreen({ onBack }: { onBack: () => void }) {
                   placeholder="Escreva um motivo ex: Almoço, Folga, etc."
                   value={lockReason} 
                   onChange={e => setLockReason(e.target.value)}
-                  className="w-full bg-black/60 border border-white/10 hover:border-white/20 focus:border-amber-500 rounded-2xl p-4 text-xs text-white transition-all outline-none"
+                  className="w-full liquid-glass  hover:border-white/20 focus:border-amber-500 rounded-2xl p-4 text-xs text-white transition-all outline-none"
                 />
 
                 {/* Quick suggestions badge clicks */}
@@ -329,7 +329,7 @@ export function BlockScreen({ onBack }: { onBack: () => void }) {
 
         {/* Right Side: Manage & List Active Blockers */}
         <div className="lg:col-span-7 space-y-6">
-          <div className="bg-white/[0.03] backdrop-blur-md rounded-[2.5rem] p-6 border border-white/10 shadow-2xl min-h-[500px] flex flex-col justify-between">
+          <div className=" liquid-glass backdrop-blur-md rounded-[2.5rem] p-6  shadow-2xl min-h-[500px] flex flex-col justify-between">
             <div>
               {/* Header section with Filter controls */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
@@ -341,7 +341,7 @@ export function BlockScreen({ onBack }: { onBack: () => void }) {
                 </div>
 
                 {/* Tab layout selectors */}
-                <div className="bg-black/60 border border-white/5 p-1 rounded-xl flex items-center self-start sm:self-auto shrink-0 shadow-inner">
+                <div className=" liquid-glass  p-1 rounded-xl flex items-center self-start sm:self-auto shrink-0 shadow-inner">
                   <button
                     onClick={() => setActiveTab("upcoming")}
                     className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all ${
@@ -373,7 +373,7 @@ export function BlockScreen({ onBack }: { onBack: () => void }) {
                   placeholder="Pesquisar por profissional, motivo ou data..."
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
-                  className="w-full bg-black/50 border border-white/5 hover:border-white/10 focus:border-amber-500 text-xs rounded-xl pl-10 pr-4 py-3 placeholder:text-neutral-600 text-white transition-all outline-none"
+                  className="w-full liquid-glass  hover:border-white/10 focus:border-amber-500 text-xs rounded-xl pl-10 pr-4 py-3 placeholder:text-neutral-600 text-white transition-all outline-none"
                 />
               </div>
 
@@ -397,7 +397,7 @@ export function BlockScreen({ onBack }: { onBack: () => void }) {
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, scale: 0.95 }}
                           transition={{ delay: Math.min(idx * 0.03, 0.3) }}
-                          className="bg-black/40 border border-white/5 hover:border-white/10 p-4 rounded-2xl flex items-center justify-between gap-4 transition-all group"
+                          className=" liquid-glass  hover:border-white/10 p-4 rounded-2xl flex items-center justify-between gap-4 transition-all group"
                         >
                           <div className="flex items-center gap-3.5 text-left">
                             <div className={`p-3 rounded-xl border ${
@@ -446,7 +446,7 @@ export function BlockScreen({ onBack }: { onBack: () => void }) {
                   </AnimatePresence>
 
                   {filteredBlocks.length === 0 && (
-                    <div className="text-center py-20 bg-black/20 rounded-2xl border border-dashed border-white/5 flex flex-col items-center justify-center space-y-2">
+                    <div className="liquid-glass text-center py-20 rounded-2xl -dashed flex flex-col items-center justify-center space-y-2">
                       <AlertCircle className="w-6 h-6 text-neutral-600" />
                       <div className="space-y-0.5">
                         <p className="text-neutral-500 text-[10px] font-black uppercase tracking-widest">Nenhum bloqueio encontrado</p>

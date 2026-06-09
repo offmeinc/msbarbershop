@@ -174,7 +174,7 @@ export const EarningsScreen = ({ onBack }: EarningsScreenProps) => {
         </header>
 
         {/* Time Range Selector */}
-        <div className="flex bg-neutral-900/50 p-1 rounded-2xl border border-white/5 mb-8 w-fit mx-auto">
+        <div className="flex liquid-glass/50 p-1 rounded-2xl  mb-8 w-fit mx-auto">
             {(["day", "week", "month"] as const).map((r) => (
                 <button 
                     key={r}
@@ -188,28 +188,28 @@ export const EarningsScreen = ({ onBack }: EarningsScreenProps) => {
 
         {/* Highlight Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <div className="bg-neutral-900/50 p-6 rounded-[2.0rem] border border-white/5 relative overflow-hidden group">
+            <div className=" liquid-glass/50 p-6 rounded-[2.0rem]  relative overflow-hidden group">
                 <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 transition-transform duration-500">
                     <DollarSign className="w-24 h-24 text-amber-500" />
                 </div>
                 <p className="text-[9px] font-black uppercase text-neutral-500 tracking-[0.2em] mb-4">Faturamento</p>
                 <h3 className="text-xl sm:text-2xl font-black italic text-amber-400">R$ {stats.totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
             </div>
-            <div className="bg-neutral-900/50 p-6 rounded-[2.0rem] border border-white/5 relative overflow-hidden group">
+            <div className=" liquid-glass/50 p-6 rounded-[2.0rem]  relative overflow-hidden group">
                 <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 transition-transform duration-500">
                     <Sparkles className="w-24 h-24 text-purple-500" />
                 </div>
                 <p className="text-[9px] font-black uppercase text-neutral-500 tracking-[0.2em] mb-4">Ticket Médio</p>
                 <h3 className="text-xl sm:text-2xl font-black italic text-purple-400">R$ {stats.avgTicket.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
             </div>
-            <div className="bg-neutral-900/50 p-6 rounded-[2.0rem] border border-white/5 relative overflow-hidden group">
+            <div className=" liquid-glass/50 p-6 rounded-[2.0rem]  relative overflow-hidden group">
                 <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 transition-transform duration-500">
                     <ReceiptText className="w-24 h-24 text-emerald-500" />
                 </div>
                 <p className="text-[9px] font-black uppercase text-neutral-500 tracking-[0.2em] mb-4">Receita Recorrente</p>
                 <h3 className="text-xl sm:text-2xl font-black italic text-emerald-400">R$ {stats.recurringRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
             </div>
-            <div className="bg-neutral-900/50 p-6 rounded-[2.0rem] border border-white/5 relative overflow-hidden group">
+            <div className=" liquid-glass/50 p-6 rounded-[2.0rem]  relative overflow-hidden group">
                 <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 transition-transform duration-500">
                     <TrendingUp className="w-24 h-24 text-blue-500" />
                 </div>
@@ -221,7 +221,7 @@ export const EarningsScreen = ({ onBack }: EarningsScreenProps) => {
         {/* Charts Container */}
         <div className="space-y-6">
           {/* Revenue Chart */}
-          <div className="bg-neutral-900 border border-white/5 rounded-[2.5rem] p-8">
+          <div className=" liquid-glass  rounded-[2.5rem] p-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
                 <div>
                    <h3 className="text-xs font-black uppercase tracking-widest text-neutral-400">Desempenho Financeiro</h3>
@@ -264,7 +264,7 @@ export const EarningsScreen = ({ onBack }: EarningsScreenProps) => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Popular Services */}
-              <div className="bg-neutral-900 border border-white/5 rounded-[2.5rem] p-8">
+              <div className=" liquid-glass  rounded-[2.5rem] p-8">
                 <h3 className="text-xs font-black uppercase tracking-widest text-neutral-400 mb-8">Serviços Mais Procurados</h3>
                 <div className="h-48">
                     <ResponsiveContainer width="100%" height="100%">
@@ -285,7 +285,7 @@ export const EarningsScreen = ({ onBack }: EarningsScreenProps) => {
               </div>
 
               {/* Retention Rate */}
-              <div className="bg-neutral-900 border border-white/5 rounded-[2.5rem] p-8 flex flex-col justify-center">
+              <div className=" liquid-glass  rounded-[2.5rem] p-8 flex flex-col justify-center">
                 <h3 className="text-xs font-black uppercase tracking-widest text-neutral-400 mb-6 flex items-center gap-2">
                     <Users className="w-4 h-4" /> Retenção de Clientes
                 </h3>

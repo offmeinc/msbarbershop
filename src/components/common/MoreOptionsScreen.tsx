@@ -231,7 +231,7 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
         <div className="flex items-center gap-3">
           <button 
             onClick={onBack} 
-            className="p-2.5 bg-neutral-900 border border-white/5 rounded-2xl text-neutral-400 hover:text-white transition-all cursor-pointer shadow-md hover:scale-105 active:scale-95"
+            className="p-2.5 liquid-glass  rounded-2xl text-neutral-400 hover:text-white transition-all cursor-pointer shadow-md hover:scale-105 active:scale-95"
           >
             <ChevronLeft className="w-5 h-5 text-amber-500" />
           </button>
@@ -302,7 +302,7 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
                 <button 
                   key={item.id} 
                   onClick={item.onClick}
-                  className="bg-neutral-900/40 hover:bg-neutral-900/90 border border-white/5 hover:border-amber-500/20 p-4 sm:p-5 rounded-[1.75rem] flex flex-col justify-between min-h-[140px] sm:min-h-[160px] transition-all group active:scale-95 text-left cursor-pointer relative overflow-hidden"
+                  className="bg-neutral-900/40  liquid-glass/90  hover:border-amber-500/20 p-4 sm:p-5 rounded-[1.75rem] flex flex-col justify-between min-h-[140px] sm:min-h-[160px] transition-all group active:scale-95 text-left cursor-pointer relative overflow-hidden"
                 >
                   <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-white/[0.01] pointer-events-none" />
 

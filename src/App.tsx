@@ -272,6 +272,7 @@ export default function App() {
       navigator.serviceWorker.register('/sw-push.js')
         .then(async (reg) => {
           console.log('[App] SW registered with scope:', reg.scope);
+          reg.update().catch(() => {});
           if (Notification.permission === 'granted') {
              subscribeUser(reg);
           } else if (Notification.permission !== 'denied') {
@@ -281,7 +282,13 @@ export default function App() {
              }
           }
         })
-        .catch(err => console.error('[App] SW registration failed', err));
+        .catch(err => {
+            if (err.message?.includes("Failed to fetch") || String(err).includes("Failed to fetch")) {
+               console.warn("[App] SW registration fetch aborted");
+            } else {
+               console.error('[App] SW registration failed', err)
+            }
+        });
     }
 
     // 2. Native Push (Capacitor iOS/Android)
@@ -450,6 +457,8 @@ export default function App() {
                 }
               }
             }
+          }).catch(error => {
+            console.error("Error inside getDoc logic:", error);
           });
         } catch (error) {
           console.error("Error fetching/creating user data", error);
@@ -612,7 +621,7 @@ export default function App() {
           ease: [0.33, 1, 0.68, 1], // Custom cubic-bezier for a smoother feel
           opacity: { duration: 0.25 }
         }}
-        className="fixed top-0 w-full z-50 border-b border-white/5 bg-black/80 backdrop-blur-xl pt-[env(safe-area-inset-top)]"
+        className="liquid-glass fixed top-0 w-full z-50 -b backdrop-blur-xl pt-[env(safe-area-inset-top)]"
       >
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <div 
@@ -694,7 +703,7 @@ export default function App() {
                         alt={user.displayName || "User avatar"}
                       />
                     ) : (
-                      <div className="w-10 h-10 rounded-xl border border-white/10 bg-white/5 flex items-center justify-center">
+                      <div className="liquid-glass w-10 h-10 rounded-xl flex items-center justify-center">
                         <User className="w-5 h-5 text-neutral-500" />
                       </div>
                     )}
@@ -720,7 +729,7 @@ export default function App() {
                             initial={{ opacity: 0, y: 10, scale: 0.95 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                            className="absolute right-0 mt-4 w-80 bg-neutral-900 border border-white/10 rounded-2xl shadow-2xl z-50 p-4 max-h-[32rem] flex flex-col"
+                            className="absolute right-0 mt-4 w-80 liquid-glass  rounded-2xl shadow-2xl z-50 p-4 max-h-[32rem] flex flex-col"
                           >
                             <div className="flex items-center justify-between mb-4">
                               <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white">Notificações</h3>
@@ -798,7 +807,7 @@ export default function App() {
                         alt={loggedInClient.name}
                       />
                     ) : (
-                      <div className="w-10 h-10 rounded-xl border border-white/10 bg-white/5 flex items-center justify-center">
+                      <div className="liquid-glass w-10 h-10 rounded-xl flex items-center justify-center">
                         <User className="w-5 h-5 text-neutral-500" />
                       </div>
                     )}
@@ -925,7 +934,7 @@ export default function App() {
       {currentScreen === "home" && (
         <>
           <div className="max-w-md mx-auto px-6 pt-8 pb-3 text-center space-y-4">
-            <div className="h-[1px] bg-white/5 w-1/4 mx-auto" />
+            <div className="liquid-glass h-[1px] w-1/4 mx-auto" />
             <span className="block text-[8px] text-neutral-500 font-extrabold uppercase tracking-[0.25em] leading-none">
               Meios de pagamento aceitos
             </span>
@@ -940,12 +949,12 @@ export default function App() {
                 </svg>
                 <span>Pix</span>
               </div>
-              <div className="w-[1px] h-2.5 bg-white/5" />
+              <div className="liquid-glass w-[1px] h-2.5" />
               <div className="flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest text-neutral-400">
                 <CreditCard className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                 <span>Crédito</span>
               </div>
-              <div className="w-[1px] h-2.5 bg-white/5" />
+              <div className="liquid-glass w-[1px] h-2.5" />
               <div className="flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest text-neutral-400">
                 <CreditCard className="w-3.5 h-3.5 text-blue-400 shrink-0" />
                 <span>Débito</span>
@@ -968,7 +977,7 @@ export default function App() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsMenuOpen(false)}
-              className="fixed inset-0 z-40 bg-black/70 backdrop-blur-md"
+              className="liquid-glass fixed inset-0 z-40 backdrop-blur-md"
             />
 
             {/* Sidebar Drawer */}
@@ -977,7 +986,7 @@ export default function App() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 220 }}
-              className="fixed top-0 right-0 h-full w-[85%] max-w-[340px] z-50 bg-neutral-950/95 backdrop-blur-2xl border-l border-white/5 flex flex-col justify-between shadow-2xl p-6"
+              className="liquid-glass fixed top-0 right-0 h-full w-[85%] max-w-[340px] z-50 backdrop-blur-2xl -l flex flex-col justify-between shadow-2xl p-6"
             >
               {/* Drawer Header */}
               <div className="flex items-center justify-between border-b border-white/5 pb-5">
@@ -993,7 +1002,7 @@ export default function App() {
 
                 <button 
                   onClick={() => setIsMenuOpen(false)} 
-                  className="p-2 bg-white/5 rounded-full text-neutral-400 hover:text-white border border-white/5 transition-all hover:rotate-90 duration-200"
+                  className="liquid-glass p-2 rounded-full text-neutral-400 hover:text-white transition-all hover:rotate-90 duration-200"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -1148,7 +1157,7 @@ export default function App() {
               <div className="border-t border-white/5 pt-5 mt-auto">
                 {user ? (
                   <div className="space-y-4">
-                    <div className="flex items-center gap-3 p-3 bg-white/5 rounded-2xl border border-white/5">
+                    <div className="liquid-glass flex items-center gap-3 p-3 rounded-2xl">
                       {user.photoURL ? (
                         <img src={user.photoURL} className="w-10 h-10 rounded-xl object-cover border border-amber-500/30" />
                       ) : (

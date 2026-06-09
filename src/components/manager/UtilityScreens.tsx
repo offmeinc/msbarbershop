@@ -282,7 +282,7 @@ export function ReconScreen({ onBack }: { onBack: () => void }) {
         <div className="flex items-center gap-3">
           <button 
             onClick={onBack} 
-            className="p-2.5 bg-neutral-900 border border-white/5 rounded-2xl text-neutral-400 hover:text-white transition-all cursor-pointer shadow-md hover:scale-105 active:scale-95"
+            className="p-2.5 liquid-glass  rounded-2xl text-neutral-400 hover:text-white transition-all cursor-pointer shadow-md hover:scale-105 active:scale-95"
           >
             <ChevronLeft className="w-5 h-5 text-amber-500" />
           </button>
@@ -309,7 +309,7 @@ export function ReconScreen({ onBack }: { onBack: () => void }) {
       </div>
 
       {/* Date Ranges selectors */}
-      <div className="flex gap-1.5 p-1 bg-neutral-950 rounded-2xl mb-6 border border-white/5 shadow-inner select-none">
+      <div className="flex gap-1.5 p-1 liquid-glass rounded-2xl mb-6  shadow-inner select-none">
         {(["today", "week", "month", "all"] as TimeRange[]).map((range) => {
           const labels: Record<TimeRange, string> = {
             today: "Hoje",
@@ -413,25 +413,25 @@ export function ReconScreen({ onBack }: { onBack: () => void }) {
         </span>
         <div className="grid grid-cols-4 gap-2">
           {/* PIX */}
-          <div className="bg-neutral-900/60 p-2.5 rounded-xl border border-white/5 text-center">
+          <div className=" liquid-glass/60 p-2.5 rounded-xl  text-center">
             <QrCode className="w-3.5 h-3.5 text-emerald-400 mx-auto mb-1" />
             <span className="text-[7px] font-black text-neutral-500 uppercase tracking-widest block">PIX</span>
             <span className="text-[10.5px] font-black text-white">R$ {metrics.pixSum.toFixed(0)}</span>
           </div>
           {/* Cartao */}
-          <div className="bg-neutral-900/60 p-2.5 rounded-xl border border-white/5 text-center">
+          <div className=" liquid-glass/60 p-2.5 rounded-xl  text-center">
             <CreditCard className="w-3.5 h-3.5 text-blue-400 mx-auto mb-1" />
             <span className="text-[7px] font-black text-neutral-500 uppercase tracking-widest block">Cartão</span>
             <span className="text-[10.5px] font-black text-white">R$ {metrics.cardSum.toFixed(0)}</span>
           </div>
           {/* Dinheiro */}
-          <div className="bg-neutral-900/60 p-2.5 rounded-xl border border-white/5 text-center">
+          <div className=" liquid-glass/60 p-2.5 rounded-xl  text-center">
             <Coins className="w-3.5 h-3.5 text-amber-500 mx-auto mb-1" />
             <span className="text-[7px] font-black text-neutral-500 uppercase tracking-widest block">Dinheiro</span>
             <span className="text-[10.5px] font-black text-white">R$ {metrics.moneySum.toFixed(0)}</span>
           </div>
           {/* Carteira */}
-          <div className="bg-neutral-900/60 p-2.5 rounded-xl border border-white/5 text-center">
+          <div className=" liquid-glass/60 p-2.5 rounded-xl  text-center">
             <Wallet className="w-3.5 h-3.5 text-purple-400 mx-auto mb-1" />
             <span className="text-[7px] font-black text-neutral-500 uppercase tracking-widest block">Carteira</span>
             <span className="text-[10.5px] font-black text-white">R$ {metrics.walletSum.toFixed(0)}</span>
@@ -449,12 +449,12 @@ export function ReconScreen({ onBack }: { onBack: () => void }) {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Pesquisar cliente, profissional, serviço..."
-            className="w-full bg-neutral-900/90 text-white placeholder-neutral-500 text-xs pl-10 pr-4 py-3 rounded-2xl border border-white/5 focus:border-amber-500 focus:outline-none transition-all font-semibold"
+            className="w-full liquid-glass/90 text-white placeholder-neutral-500 text-xs pl-10 pr-4 py-3 rounded-2xl  focus:border-amber-500 focus:outline-none transition-all font-semibold"
           />
           {searchTerm && (
             <button 
               onClick={() => setSearchTerm("")}
-              className="absolute right-3 top-3 p-0.5 bg-neutral-800 rounded-lg hover:text-white"
+              className="liquid-glass absolute right-3 top-3 p-0.5 rounded-lg hover:text-white"
             >
               <X className="w-3.5 h-3.5 text-neutral-400" />
             </button>
@@ -499,7 +499,7 @@ export function ReconScreen({ onBack }: { onBack: () => void }) {
             ✓ Conciliadas
           </button>
 
-          <span className="w-px h-4 bg-white/10 my-auto shrink-0" />
+          <span className="liquid-glass w-px h-4 my-auto shrink-0" />
 
           {/* Payment Method filter pills */}
           {(["all", "pix", "card", "money", "wallet"] as MethodFilter[]).map((method) => {
@@ -676,7 +676,7 @@ export function ReconScreen({ onBack }: { onBack: () => void }) {
         </AnimatePresence>
 
         {filteredAppointments.length === 0 && (
-          <div className="py-20 text-center space-y-4 bg-black/10 rounded-[2.5rem] border border-dashed border-white/5">
+          <div className="liquid-glass py-20 text-center space-y-4 rounded-[2.5rem] -dashed">
             <FileMinus className="w-12 h-12 text-neutral-800 mx-auto" />
             <div className="space-y-0.5">
               <p className="text-xs text-neutral-500 uppercase font-black tracking-widest">Lista Vazia</p>
@@ -691,7 +691,7 @@ export function ReconScreen({ onBack }: { onBack: () => void }) {
                   setMethodFilter("all");
                   setSearchTerm("");
                 }}
-                className="px-3.5 py-2 bg-neutral-900 border border-white/5 hover:border-white/10 rounded-xl text-neutral-400 hover:text-white text-[8px] font-black uppercase tracking-widest shadow-md flex items-center gap-1.5 mx-auto active:scale-95 transition-all cursor-pointer"
+                className="px-3.5 py-2 liquid-glass  hover:border-white/10 rounded-xl text-neutral-400 hover:text-white text-[8px] font-black uppercase tracking-widest shadow-md flex items-center gap-1.5 mx-auto active:scale-95 transition-all cursor-pointer"
               >
                 <RotateCcw className="w-3.1 h-3.1" /> Reiniciar Filtros
               </button>

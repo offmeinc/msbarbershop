@@ -483,7 +483,7 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
         <div className="flex items-center gap-4">
           <button 
             onClick={onBack} 
-            className="p-3 bg-neutral-900 border border-white/5 rounded-2xl hover:bg-neutral-800 transition-all text-neutral-400 hover:text-white"
+            className="p-3 liquid-glass  rounded-2xl hover:bg-neutral-800 transition-all text-neutral-400 hover:text-white"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
@@ -501,7 +501,7 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
         <div className="flex flex-wrap gap-2.5 items-center">
           <button 
             onClick={handlePrintReport}
-            className="px-4 py-2 bg-neutral-900 hover:bg-neutral-800 text-neutral-400 hover:text-white border border-white/5 rounded-2xl flex items-center gap-2 text-[10px] font-black uppercase tracking-wider transition-all"
+            className="px-4 py-2 bg-neutral-900  liquid-glass text-neutral-400 hover:text-white  rounded-2xl flex items-center gap-2 text-[10px] font-black uppercase tracking-wider transition-all"
             title="Imprimir relatório térmico"
           >
             <Printer className="w-4 h-4 text-amber-500" />
@@ -509,7 +509,7 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
           </button>
 
           {/* Period Selector Tabs */}
-          <div className="bg-neutral-900/80 border border-white/5 p-1 rounded-2xl flex">
+          <div className=" liquid-glass/80  p-1 rounded-2xl flex">
             {[
               { id: "today", label: "Hoje" },
               { id: "7days", label: "7D" },
@@ -577,7 +577,7 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
             {/* Visual Money Metres */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               
-              <div className="bg-neutral-900 border border-white/5 rounded-[2rem] p-6 space-y-3 relative overflow-hidden group">
+              <div className=" liquid-glass  rounded-[2rem] p-6 space-y-3 relative overflow-hidden group">
                 <div className="flex justify-between items-start">
                   <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">Faturamento Bruto</p>
                   <div className="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500">
@@ -592,7 +592,7 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
                 </div>
               </div>
 
-              <div className="bg-neutral-900 border border-white/5 rounded-[2rem] p-6 space-y-3 relative overflow-hidden group">
+              <div className=" liquid-glass  rounded-[2rem] p-6 space-y-3 relative overflow-hidden group">
                 <div className="flex justify-between items-start">
                   <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">Despesas Registradas</p>
                   <div className="w-8 h-8 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500">
@@ -622,7 +622,7 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
                 </div>
               </div>
 
-              <div className="bg-neutral-900 border border-white/5 rounded-[2rem] p-6 space-y-3 relative overflow-hidden group">
+              <div className=" liquid-glass  rounded-[2rem] p-6 space-y-3 relative overflow-hidden group">
                 <div className="flex justify-between items-start">
                   <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">Ticket Médio</p>
                   <div className="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
@@ -640,7 +640,7 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
             </div>
 
             {/* Quick Goals progress in Overview */}
-            <div className="bg-neutral-900 border border-white/5 rounded-3xl p-5 flex items-center justify-between flex-wrap gap-4">
+            <div className=" liquid-glass  rounded-3xl p-5 flex items-center justify-between flex-wrap gap-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-amber-500/15 flex items-center justify-center text-amber-500">
                   <Target className="w-5 h-5 animate-pulse" />
@@ -664,7 +664,7 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
               </div>
               <button 
                 onClick={() => setActiveTab("goals")}
-                className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-white font-extrabold text-[9px] uppercase tracking-wider rounded-xl transition-all"
+                className="liquid-glass px-4 py-2  text-white font-extrabold text-[9px] uppercase tracking-wider rounded-xl transition-all"
               >
                 Configurar Alvo
               </button>
@@ -674,14 +674,14 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               
               {/* Pie Breakdown Payment Methods */}
-              <div className="bg-neutral-900 border border-white/5 p-6 rounded-[2.5rem] space-y-4">
+              <div className=" liquid-glass  p-6 rounded-[2.5rem] space-y-4">
                 <div>
                   <h3 className="text-base font-black text-white">Métodos de Pagamento</h3>
                   <p className="text-[9px] text-neutral-500 font-extrabold uppercase tracking-widest mt-1">Canal de faturamento de entrada</p>
                 </div>
 
                 <div className="space-y-3">
-                  <div className="bg-black/30 p-3.5 rounded-2xl border border-white/5 flex items-center justify-between">
+                  <div className=" liquid-glass p-3.5 rounded-2xl  flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />
                       <span className="text-xs font-black text-white uppercase">PIX</span>
@@ -689,7 +689,7 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
                     <span className="text-xs font-black text-neutral-200">R$ {financialStats.payments.pix.toFixed(2)}</span>
                   </div>
 
-                  <div className="bg-black/30 p-3.5 rounded-2xl border border-white/5 flex items-center justify-between">
+                  <div className=" liquid-glass p-3.5 rounded-2xl  flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" />
                       <span className="text-xs font-black text-white uppercase">DINHEIRO</span>
@@ -697,7 +697,7 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
                     <span className="text-xs font-black text-neutral-200">R$ {financialStats.payments.money.toFixed(2)}</span>
                   </div>
 
-                  <div className="bg-black/30 p-3.5 rounded-2xl border border-white/5 flex items-center justify-between">
+                  <div className=" liquid-glass p-3.5 rounded-2xl  flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block" />
                       <span className="text-xs font-black text-white uppercase">CARTÃO CRÉDITO/DÉBITO</span>
@@ -708,7 +708,7 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
               </div>
 
               {/* Service Ranking List */}
-              <div className="bg-neutral-900 border border-white/5 p-6 rounded-[2.5rem] space-y-4">
+              <div className=" liquid-glass  p-6 rounded-[2.5rem] space-y-4">
                 <div>
                   <h3 className="text-base font-black text-white">Serviços Mais Procurados</h3>
                   <p className="text-[9px] text-neutral-500 font-extrabold uppercase tracking-widest mt-1">Preferência de tratamentos de cabelo e barba</p>
@@ -719,7 +719,7 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
                     <div className="text-center py-10 text-neutral-500 uppercase text-[10px] font-bold">Nenhum atendimento finalizado neste período</div>
                   ) : (
                     servicesRanking.map((serve, idx) => (
-                      <div key={serve.name} className="bg-black/30 p-3 rounded-2xl border border-white/5 flex items-center justify-between">
+                      <div key={serve.name} className=" liquid-glass p-3 rounded-2xl  flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-black text-amber-500 bg-amber-500/10 w-6 h-6 rounded-lg flex items-center justify-center italic">
                             #{idx + 1}
@@ -742,7 +742,7 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               
               {/* Quick overview of debts pending */}
-              <div className="bg-neutral-900 border border-white/5 p-6 rounded-[2.5rem] space-y-4">
+              <div className=" liquid-glass  p-6 rounded-[2.5rem] space-y-4">
                 <div className="flex justify-between items-center">
                   <div>
                     <h3 className="text-base font-black text-white">Fiados & Caderneta Pendente</h3>
@@ -755,7 +755,7 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
 
                 <div className="space-y-3 max-h-[180px] overflow-y-auto pr-2 no-scrollbar">
                   {debts.map(d => (
-                    <div key={d.id} className="bg-black/30 p-3 rounded-2xl border border-white/5 flex items-center justify-between">
+                    <div key={d.id} className=" liquid-glass p-3 rounded-2xl  flex items-center justify-between">
                       <div>
                         <p className="text-xs font-bold text-white uppercase">{d.clientName}</p>
                         <p className="text-[8px] text-neutral-500 font-bold mt-0.5">Data: {format(parseISO(d.date), "dd/MM")}</p>
@@ -769,14 +769,14 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
                 </div>
                 <button 
                   onClick={() => setActiveTab("debts")}
-                  className="w-full text-center bg-black/40 border border-white/5 hover:bg-black/70 text-[9px] font-black uppercase text-amber-500 tracking-wider py-2.5 rounded-xl block"
+                  className="w-full text-center liquid-glass  hover:bg-black/70 text-[9px] font-black uppercase text-amber-500 tracking-wider py-2.5 rounded-xl block"
                 >
                   Cobrar ou Registrar novo fiado
                 </button>
               </div>
 
               {/* Quick Stock Alerter */}
-              <div className="bg-neutral-900 border border-white/5 p-6 rounded-[2.5rem] space-y-4">
+              <div className=" liquid-glass  p-6 rounded-[2.5rem] space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-base font-black text-white">Alertas de Estoque Crítico</h3>
@@ -800,7 +800,7 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
                     </div>
                   ) : (
                     lowStockProducts.map(prod => (
-                      <div key={prod.id} className="bg-black/30 p-3 rounded-2xl border border-red-500/15 flex items-center justify-between">
+                      <div key={prod.id} className="liquid-glass p-3 rounded-2xl -red-500/15 flex items-center justify-between">
                         <div>
                           <p className="text-xs font-bold text-white truncate max-w-[140px]">{prod.name}</p>
                           <p className="text-[8px] text-red-400 font-black uppercase">Mínimo: {prod.minQuantity || 5} un.</p>
@@ -817,33 +817,33 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
             </div>
 
             {/* Quick action section */}
-            <div className="bg-neutral-900 border border-white/5 rounded-[2.5rem] p-6">
+            <div className=" liquid-glass  rounded-[2.5rem] p-6">
               <h3 className="text-base font-black text-white mb-4">Módulos Inteligentes Incorporados</h3>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <button 
                   onClick={() => setActiveTab("goals")} 
-                  className="bg-black/40 border border-white/5 hover:border-amber-500/30 p-4 rounded-2xl text-center space-y-2 group transition-all"
+                  className=" liquid-glass  hover:border-amber-500/30 p-4 rounded-2xl text-center space-y-2 group transition-all"
                 >
                   <Target className="w-5 h-5 text-amber-500 mx-auto group-hover:scale-110 transition-transform" />
                   <p className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">Alvo Mensal</p>
                 </button>
                 <button 
                   onClick={() => setActiveTab("loyalty")} 
-                  className="bg-black/40 border border-white/5 hover:border-amber-500/30 p-4 rounded-2xl text-center space-y-2 group transition-all"
+                  className=" liquid-glass  hover:border-amber-500/30 p-4 rounded-2xl text-center space-y-2 group transition-all"
                 >
                   <Gift className="w-5 h-5 text-amber-500 mx-auto group-hover:scale-110 transition-transform" />
                   <p className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">Cashback / Fidelidade</p>
                 </button>
                 <button 
                   onClick={() => setActiveTab("taxes")} 
-                  className="bg-black/40 border border-white/5 hover:border-amber-500/30 p-4 rounded-2xl text-center space-y-2 group transition-all"
+                  className=" liquid-glass  hover:border-amber-500/30 p-4 rounded-2xl text-center space-y-2 group transition-all"
                 >
                   <Scale className="w-5 h-5 text-amber-500 mx-auto group-hover:scale-110 transition-transform" />
                   <p className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">Calculadora Tributária</p>
                 </button>
                 <button 
                   onClick={() => setActiveTab("debts")} 
-                  className="bg-black/40 border border-white/5 hover:border-amber-500/30 p-4 rounded-2xl text-center space-y-2 group transition-all"
+                  className=" liquid-glass  hover:border-amber-500/30 p-4 rounded-2xl text-center space-y-2 group transition-all"
                 >
                   <BookOpen className="w-5 h-5 text-amber-500 mx-auto group-hover:scale-110 transition-transform" />
                   <p className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">Controle de Fiados</p>
@@ -863,7 +863,7 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
             exit={{ opacity: 0, y: -10 }}
             className="space-y-6"
           >
-            <div className="bg-neutral-900 border border-white/5 p-6 rounded-[2.5rem] space-y-4">
+            <div className=" liquid-glass  p-6 rounded-[2.5rem] space-y-4">
               <div>
                 <h3 className="text-lg font-black text-white flex items-center gap-2">
                   <Target className="w-5 h-5 text-amber-500" />
@@ -874,7 +874,7 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
                 </p>
               </div>
 
-              <div className="p-6 bg-black/40 rounded-3xl border border-white/5 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="p-6 liquid-glass rounded-3xl  grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-3">
                   <label className="block text-[10px] font-black uppercase text-neutral-400 tracking-wider">Metas Mensal Ativa (R$)</label>
                   <div className="flex gap-2">
@@ -888,7 +888,7 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
                   <p className="text-[9px] text-neutral-500 font-bold uppercase">Configure o teto ideal de vendas para sua barbearia</p>
                 </div>
 
-                <div className="bg-neutral-900 border border-white/5 p-5 rounded-2xl flex flex-col justify-center space-y-2">
+                <div className=" liquid-glass  p-5 rounded-2xl flex flex-col justify-center space-y-2">
                   <span className="text-[9px] font-black text-neutral-500 uppercase tracking-wide">Faturamento Atual</span>
                   <p className="text-2xl font-black text-amber-500 leading-none">R$ {financialStats.grossEarnings.toFixed(2)}</p>
                   <p className="text-[10px] text-neutral-400 uppercase font-black leading-none mt-1">Projeção: {goalPercent}% cumprida</p>
@@ -907,7 +907,7 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
             exit={{ opacity: 0, y: -10 }}
             className="space-y-6"
           >
-            <div className="bg-neutral-900 border border-white/5 p-6 rounded-[2.5rem] space-y-4">
+            <div className=" liquid-glass  p-6 rounded-[2.5rem] space-y-4">
               <div>
                 <h3 className="text-lg font-black text-white">Rateio de Comissões por Profissional</h3>
                 <p className="text-[9px] text-neutral-500 font-extrabold uppercase tracking-widest mt-1">
@@ -918,7 +918,7 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
               {/* Barber Rates adjustments */}
               <div className="space-y-4 pt-2">
                 {barberPerformance.map(barb => (
-                  <div key={barb.id} className="bg-black/30 p-5 rounded-3xl border border-white/5 space-y-4">
+                  <div key={barb.id} className=" liquid-glass p-5 rounded-3xl  space-y-4">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       
                       <div className="flex items-center gap-4">
@@ -947,7 +947,7 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
 
                     </div>
 
-                    <div className="bg-neutral-900 border border-white/5 p-4 rounded-2xl space-y-2">
+                    <div className=" liquid-glass  p-4 rounded-2xl space-y-2">
                       <div className="flex justify-between items-center text-[10px] font-black uppercase text-neutral-400 tracking-wider">
                         <span>Ajustar Taxa de Comissão</span>
                         <span className="text-amber-500 font-black text-sm">{barb.commissionRate}%</span>
@@ -1004,7 +1004,7 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
               <motion.div 
                 initial={{ opacity: 0, height: 0 }} 
                 animate={{ opacity: 1, height: "auto" }} 
-                className="bg-neutral-900 border border-white/5 p-6 rounded-[2.5rem] shadow-2xl overflow-hidden"
+                className=" liquid-glass  p-6 rounded-[2.5rem] shadow-2xl overflow-hidden"
               >
                 <form onSubmit={handleAddExpense} className="space-y-4">
                   <div className="flex items-center gap-2 mb-2">
@@ -1076,7 +1076,7 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
             )}
 
             {/* Expenses List */}
-            <div className="bg-neutral-900 border border-white/5 p-6 rounded-[2.5rem] space-y-4">
+            <div className=" liquid-glass  p-6 rounded-[2.5rem] space-y-4">
               <div className="flex justify-between items-center border-b border-white/5 pb-3">
                 <span className="text-xs font-black uppercase tracking-widest text-neutral-500">Histórico de Movimentações no Período</span>
                 <span className="text-xs font-black text-red-400">Total: R$ {financialStats.totalExpenses.toFixed(2)}</span>
@@ -1091,7 +1091,7 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
                   } catch (e) {}
 
                   return (
-                    <div key={exp.id} className="bg-black/45 hover:bg-black/60 p-4 rounded-3xl border border-white/5 flex items-center justify-between transition-colors group">
+                    <div key={exp.id} className="bg-black/45  liquid-glass p-4 rounded-3xl  flex items-center justify-between transition-colors group">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/10 flex items-center justify-center text-red-500 shrink-0">
                           <Receipt className="w-5 h-5" />
@@ -1099,7 +1099,7 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
                         <div>
                           <p className="text-xs font-bold text-white uppercase tracking-wide truncate max-w-[200px]">{exp.description}</p>
                           <div className="flex items-center gap-2 mt-1 text-[8px] font-black uppercase tracking-widest text-neutral-500">
-                            <span className="px-1.5 py-0.5 bg-neutral-800 rounded">{exp.category || 'Geral'}</span>
+                            <span className="liquid-glass px-1.5 py-0.5 rounded">{exp.category || 'Geral'}</span>
                             <span>•</span>
                             <span>{dateFormatted}</span>
                           </div>
@@ -1137,7 +1137,7 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
             className="space-y-6"
           >
             {/* Form for new debt */}
-            <div className="bg-neutral-900 border border-white/5 p-6 rounded-[2.5rem] space-y-4">
+            <div className=" liquid-glass  p-6 rounded-[2.5rem] space-y-4">
               <div className="flex items-center gap-3">
                 <BookOpen className="w-5 h-5 text-amber-500" />
                 <h3 className="text-base font-black text-white">Adicionar Pendência de Cliente (Fiado)</h3>
@@ -1187,12 +1187,12 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
             </div>
 
             {/* List Active Debts */}
-            <div className="bg-neutral-900 border border-white/5 p-6 rounded-[2.5rem] space-y-4">
+            <div className=" liquid-glass  p-6 rounded-[2.5rem] space-y-4">
               <h3 className="text-base font-black text-white">Caderneta de Contas a Receber</h3>
               
               <div className="space-y-3">
                 {debts.map(d => (
-                  <div key={d.id} className="bg-black/30 p-4 rounded-3xl border border-white/5 flex items-center justify-between">
+                  <div key={d.id} className=" liquid-glass p-4 rounded-3xl  flex items-center justify-between">
                     <div>
                       <p className="text-xs font-bold text-white uppercase">{d.clientName}</p>
                       <p className="text-[9px] text-neutral-500 font-black tracking-wider uppercase mt-1">Contato: {d.phone}</p>
@@ -1225,13 +1225,13 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
             exit={{ opacity: 0, y: -10 }}
             className="space-y-6"
           >
-            <div className="bg-neutral-900 border border-white/5 p-6 rounded-[2.5rem] space-y-4">
+            <div className=" liquid-glass  p-6 rounded-[2.5rem] space-y-4">
               <div className="flex items-center gap-3">
                 <Gift className="w-5 h-5 text-amber-500" />
                 <h3 className="text-base font-black text-white">Configuração do Cashback & Fidelidade</h3>
               </div>
 
-              <div className="p-6 bg-black/45 rounded-3xl border border-white/5 space-y-6">
+              <div className="p-6 liquid-glass rounded-3xl  space-y-6">
                 <div className="space-y-2">
                   <div className="flex justify-between items-center text-[10px] font-black uppercase text-neutral-400 tracking-wider">
                     <span>Taxa de Retorno de Pontos / Cashback (%)</span>
@@ -1262,28 +1262,28 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
             exit={{ opacity: 0, y: -10 }}
             className="space-y-6"
           >
-            <div className="bg-neutral-900 border border-white/5 p-6 rounded-[2.5rem] space-y-4">
+            <div className=" liquid-glass  p-6 rounded-[2.5rem] space-y-4">
               <div className="flex items-center gap-3">
                 <Scale className="w-5 h-5 text-amber-500" />
                 <h3 className="text-base font-black text-white">Calculadora Tributária Integrada</h3>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-                <div className="bg-black/30 border border-white/5 p-5 rounded-2xl text-center space-y-1">
+                <div className=" liquid-glass  p-5 rounded-2xl text-center space-y-1">
                   <span className="text-[9px] font-black uppercase text-neutral-500 tracking-wider">Simples Nacional (6%)</span>
                   <p className="text-xl font-black text-red-400">R$ {(financialStats.grossEarnings * 0.06).toFixed(2)}</p>
                 </div>
-                <div className="bg-black/30 border border-white/5 p-5 rounded-2xl text-center space-y-1">
+                <div className=" liquid-glass  p-5 rounded-2xl text-center space-y-1">
                   <span className="text-[9px] font-black uppercase text-neutral-500 tracking-wider">DAS MEI Mensal Fixo</span>
                   <p className="text-xl font-black text-neutral-300">R$ 82,10</p>
                 </div>
-                <div className="bg-black/30 border border-white/5 p-5 rounded-2xl text-center space-y-1">
+                <div className=" liquid-glass  p-5 rounded-2xl text-center space-y-1">
                   <span className="text-[9px] font-black uppercase text-neutral-500 tracking-wider">ISS sobre Serviços (2%)</span>
                   <p className="text-xl font-black text-amber-500">R$ {(financialStats.grossEarnings * 0.02).toFixed(2)}</p>
                 </div>
               </div>
 
-              <div className="p-5 bg-black/40 rounded-3xl border border-white/5">
+              <div className="p-5 liquid-glass rounded-3xl ">
                 <p className="text-xs text-neutral-400 leading-relaxed font-bold">
                   * Os valores acima são simulações empresariais para fins de precificação. Consulte sempre sua assessoria contábil para enquadramentos definitivos do Simples Nacional ou Lucro Presumido.
                 </p>
@@ -1301,7 +1301,7 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
             exit={{ opacity: 0, y: -10 }}
             className="space-y-6"
           >
-            <div className="bg-neutral-900 border border-white/5 p-6 rounded-[2.5rem] space-y-4">
+            <div className=" liquid-glass  p-6 rounded-[2.5rem] space-y-4">
               <div className="flex items-center justify-between border-b border-white/5 pb-3">
                 <div>
                   <h3 className="text-lg font-black text-white">Situação do Inventário de Vendas</h3>
@@ -1311,17 +1311,17 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
 
               {/* Inventory stats */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-                <div className="bg-black/30 border border-white/5 p-4 rounded-2xl text-center space-y-1">
+                <div className=" liquid-glass  p-4 rounded-2xl text-center space-y-1">
                   <span className="text-[9px] font-black uppercase text-neutral-500 tracking-wider">Produtos Cadastrados</span>
                   <p className="text-2xl font-black text-white">{inventory.length}</p>
                 </div>
-                <div className="bg-black/30 border border-white/5 p-4 rounded-2xl text-center space-y-1">
+                <div className=" liquid-glass  p-4 rounded-2xl text-center space-y-1">
                   <span className="text-[9px] font-black uppercase text-neutral-500 tracking-wider">Total em Unidades</span>
                   <p className="text-2xl font-black text-white">
                     {inventory.reduce((acc, curr) => acc + (curr.quantity || 0), 0)}
                   </p>
                 </div>
-                <div className="bg-black/30 border border-white/5 p-4 rounded-2xl text-center space-y-1">
+                <div className=" liquid-glass  p-4 rounded-2xl text-center space-y-1">
                   <span className="text-[9px] font-black uppercase text-neutral-500 tracking-wider">Valor total estocado</span>
                   <p className="text-2xl font-black text-amber-500">
                     R$ {inventory.reduce((acc, curr) => acc + ((curr.quantity || 0) * (curr.price || 0)), 0).toFixed(2)}
@@ -1335,7 +1335,7 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
                   {inventory.map(prod => {
                     const isAlert = prod.quantity <= (prod.minQuantity || 5);
                     return (
-                      <div key={prod.id} className="bg-black/40 border border-white/5 p-4 rounded-3xl flex items-center justify-between group">
+                      <div key={prod.id} className=" liquid-glass  p-4 rounded-3xl flex items-center justify-between group">
                         <div className="flex items-center gap-3">
                           <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${isAlert ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-neutral-800 text-neutral-400 border-white/5'}`}>
                             <ShoppingBag className="w-5 h-5" />

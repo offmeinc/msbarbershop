@@ -159,7 +159,7 @@ export const PromotionsManager = ({ onBack }: PromotionsManagerProps) => {
     try {
       const nextState = !promo.active;
       await updateDoc(doc(db, "promotions", promo.id), {
-        active: nextState,
+         nextState,
         updatedAt: serverTimestamp()
       });
       toast.success(nextState ? `Cupom ${promo.code} desbloqueado com sucesso!` : `Cupom ${promo.code} pausado temporariamente.`);
@@ -294,7 +294,7 @@ export const PromotionsManager = ({ onBack }: PromotionsManagerProps) => {
         <div className="flex items-center gap-3">
           <button 
             onClick={onBack} 
-            className="p-2.5 bg-neutral-900 border border-white/5 rounded-2xl text-neutral-400 hover:text-white transition-all cursor-pointer shadow-md hover:scale-105 active:scale-95"
+            className="p-2.5 liquid-glass  rounded-2xl text-neutral-400 hover:text-white transition-all cursor-pointer shadow-md hover:scale-105 active:scale-95"
           >
             <ChevronLeft className="w-5 h-5 text-amber-500" />
           </button>
@@ -357,7 +357,7 @@ export const PromotionsManager = ({ onBack }: PromotionsManagerProps) => {
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="bg-neutral-900 rounded-[2.5rem] p-6 border border-white/5 space-y-6 shadow-2xl relative overflow-hidden"
+            className=" liquid-glass rounded-[2.5rem] p-6  space-y-6 shadow-2xl relative overflow-hidden"
           >
             <div className="absolute top-0 right-0 w-16 h-16 bg-amber-500/[0.02] rounded-full blur-xl" />
             
@@ -427,7 +427,7 @@ export const PromotionsManager = ({ onBack }: PromotionsManagerProps) => {
               </div>
 
               {/* Status activator toggle */}
-              <div className="flex items-center justify-between p-4 bg-black/40 rounded-2xl border border-white/5 mt-2 select-none">
+              <div className="flex items-center justify-between p-4 liquid-glass rounded-2xl  mt-2 select-none">
                 <div className="space-y-0.5">
                   <span className="text-[8px] font-black text-neutral-400 uppercase tracking-widest block">Status Inicial</span>
                   <span className="text-[7.5px] text-neutral-600 block">Diz se o cupom já entra valendo.</span>
@@ -449,7 +449,7 @@ export const PromotionsManager = ({ onBack }: PromotionsManagerProps) => {
                 <button 
                   type="button"
                   onClick={resetForm}
-                  className="flex-1 bg-white/5 border border-white/10 text-neutral-400 hover:text-white py-3.5 rounded-2xl font-black uppercase italic text-[8.5px] tracking-widest hover:bg-white/10 transition-all cursor-pointer"
+                  className="liquid-glass flex-1 text-neutral-400 hover:text-white py-3.5 rounded-2xl font-black uppercase italic text-[8.5px] tracking-widest  transition-all cursor-pointer"
                 >
                   Cancelar
                 </button>
@@ -483,12 +483,12 @@ export const PromotionsManager = ({ onBack }: PromotionsManagerProps) => {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Pesquisar por nome de código..."
-                  className="w-full bg-neutral-900/90 text-white placeholder-neutral-500 text-xs pl-10 pr-4 py-3 rounded-2xl border border-white/5 focus:border-amber-500 focus:outline-none transition-all font-semibold"
+                  className="w-full liquid-glass/90 text-white placeholder-neutral-500 text-xs pl-10 pr-4 py-3 rounded-2xl  focus:border-amber-500 focus:outline-none transition-all font-semibold"
                 />
                 {searchTerm && (
                   <button 
                     onClick={() => setSearchTerm("")}
-                    className="absolute right-3 top-3 p-0.5 bg-neutral-800 rounded-lg"
+                    className="liquid-glass absolute right-3 top-3 p-0.5 rounded-lg"
                   >
                     <X className="w-3.5 h-3.5 text-neutral-400" />
                   </button>
@@ -594,7 +594,7 @@ export const PromotionsManager = ({ onBack }: PromotionsManagerProps) => {
 
                     {/* Timeline Expiration Progress micro visual Bar */}
                     {promo.active && todayStr <= promo.validUntil && (
-                      <div className="absolute bottom-0 left-0 w-full h-[3px] bg-neutral-950">
+                      <div className="liquid-glass absolute bottom-0 left-0 w-full h-[3px]">
                         <div 
                           className={`h-full transition-all duration-500 ${
                             validityProgressPercent < 20 
@@ -682,7 +682,7 @@ export const PromotionsManager = ({ onBack }: PromotionsManagerProps) => {
                         {/* Edit properties button */}
                         <button 
                           onClick={() => handleEdit(promo)}
-                          className="p-2.5 bg-neutral-950 border border-white/5 hover:border-white/10 rounded-xl text-neutral-400 hover:text-white transition-all cursor-pointer hover:scale-105 active:scale-95 flex items-center justify-center shadow-md"
+                          className="p-2.5 liquid-glass  hover:border-white/10 rounded-xl text-neutral-400 hover:text-white transition-all cursor-pointer hover:scale-105 active:scale-95 flex items-center justify-center shadow-md"
                           title="Fazer ajustes no código ou validade"
                         >
                           <Pencil className="w-4 h-4 text-neutral-400" />
@@ -692,7 +692,7 @@ export const PromotionsManager = ({ onBack }: PromotionsManagerProps) => {
                         <button 
                           onClick={() => handleDelete(promo.id, promo.code)}
                           disabled={actionInProgress === promo.id + "-delete"}
-                          className="p-2.5 bg-neutral-950 hover:bg-rose-900/10 border border-white/5 hover:border-rose-500/25 rounded-xl text-neutral-600 hover:text-rose-500 transition-all cursor-pointer hover:scale-105 active:scale-95 flex items-center justify-center shadow-md"
+                          className="p-2.5 liquid-glass hover:bg-rose-900/10  hover:border-rose-500/25 rounded-xl text-neutral-600 hover:text-rose-500 transition-all cursor-pointer hover:scale-105 active:scale-95 flex items-center justify-center shadow-md"
                           title="Excluir cupom永久mente"
                         >
                           {actionInProgress === promo.id + "-delete" ? (
@@ -717,7 +717,7 @@ export const PromotionsManager = ({ onBack }: PromotionsManagerProps) => {
 
             {/* Empty list template scenario */}
             {filteredPromotions.length === 0 && (
-              <div className="py-20 text-center space-y-4 bg-black/10 rounded-[2.5rem] border border-dashed border-white/5">
+              <div className="liquid-glass py-20 text-center space-y-4 rounded-[2.5rem] -dashed">
                 <FileMinus className="w-12 h-12 text-neutral-800 mx-auto" />
                 <div>
                   <h3 className="text-xs font-black text-white uppercase italic tracking-widest">Nenhum Registro</h3>
@@ -731,7 +731,7 @@ export const PromotionsManager = ({ onBack }: PromotionsManagerProps) => {
                       setStatusFilter("all");
                       setSearchTerm("");
                     }}
-                    className="px-3.5 py-2 bg-neutral-900 border border-white/5 hover:border-white/10 rounded-xl text-neutral-400 hover:text-white text-[8px] font-black uppercase tracking-widest shadow-md flex items-center gap-1.5 mx-auto active:scale-95"
+                    className="px-3.5 py-2 liquid-glass  hover:border-white/10 rounded-xl text-neutral-400 hover:text-white text-[8px] font-black uppercase tracking-widest shadow-md flex items-center gap-1.5 mx-auto active:scale-95"
                   >
                     Zerar Filtros
                   </button>

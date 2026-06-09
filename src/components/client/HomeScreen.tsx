@@ -73,7 +73,7 @@ export function HomeScreen({ services, onStartBooking }: { services: any[], onSt
 
       {/* Autoestima Section */}
       <div className="px-6 mb-12">
-        <div className="bg-neutral-900 border border-white/5 rounded-[3rem] p-12 md:py-16 flex flex-col items-center text-center relative overflow-hidden group">
+        <div className=" liquid-glass  rounded-[3rem] p-12 md:py-16 flex flex-col items-center text-center relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 blur-3xl rounded-full" />
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-amber-500/5 blur-3xl rounded-full" />
           
@@ -96,8 +96,8 @@ export function HomeScreen({ services, onStartBooking }: { services: any[], onSt
                   <h2 className="text-xs font-black uppercase tracking-[0.2em] text-neutral-500">Nossos Trabalhos</h2>
                   <div className="flex gap-1.5 md:hidden">
                       <div className="w-1 h-1 rounded-full bg-amber-500" />
-                      <div className="w-1 h-1 rounded-full bg-neutral-800" />
-                      <div className="w-1 h-1 rounded-full bg-neutral-800" />
+                      <div className="liquid-glass w-1 h-1 rounded-full" />
+                      <div className="liquid-glass w-1 h-1 rounded-full" />
                   </div>
               </div>
               <div className="flex md:grid gap-4 overflow-x-auto md:overflow-x-visible pb-4 no-scrollbar -mx-6 px-6 md:mx-0 md:px-0 md:grid-cols-4">
@@ -239,7 +239,7 @@ export function HomeScreen({ services, onStartBooking }: { services: any[], onSt
 
       {/* Footer Info */}
       <div className="px-6 grid grid-cols-2 gap-4">
-        <div className="bg-neutral-950 border border-white/5 p-5 rounded-[2rem] flex flex-col items-center text-center">
+        <div className=" liquid-glass  p-5 rounded-[2rem] flex flex-col items-center text-center">
           <Clock className="w-5 h-5 text-neutral-600 mb-3" />
           <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500 mb-1">Horário</p>
           <div className="space-y-1">
@@ -251,7 +251,7 @@ export function HomeScreen({ services, onStartBooking }: { services: any[], onSt
           href={`https://wa.me/${BARBERSHOP_PHONE}`} 
           target="_blank" 
           rel="noopener noreferrer"
-          className="bg-neutral-950 border border-white/5 p-5 rounded-[2rem] flex flex-col items-center text-center hover:bg-neutral-900 transition-colors"
+          className=" liquid-glass  p-5 rounded-[2rem] flex flex-col items-center text-center hover:bg-neutral-900 transition-colors"
         >
           <Phone className="w-5 h-5 text-neutral-600 mb-3" />
           <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500 mb-1">Contato</p>
@@ -283,7 +283,7 @@ export function HomeScreen({ services, onStartBooking }: { services: any[], onSt
             // Let's create a local state for the selector
             setLocationSelectorOpen(true);
           }}
-          className="w-full bg-neutral-950 border border-white/5 p-6 rounded-[2.5rem] flex items-start gap-4 group hover:bg-neutral-900 transition-colors text-left active:scale-[0.98]"
+          className="w-full liquid-glass  p-6 rounded-[2.5rem] flex items-start gap-4 group hover:bg-neutral-900 transition-colors text-left active:scale-[0.98]"
         >
           <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500 flex-shrink-0 group-hover:scale-110 transition-transform">
             <MapPin className="w-6 h-6" />
@@ -306,7 +306,7 @@ export function HomeScreen({ services, onStartBooking }: { services: any[], onSt
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={() => setLocationSelectorOpen(false)}
-                className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60]"
+                className="liquid-glass fixed inset-0 backdrop-blur-sm z-[60]"
               />
               <motion.div 
                 initial={{ y: "100%" }}
@@ -314,7 +314,7 @@ export function HomeScreen({ services, onStartBooking }: { services: any[], onSt
                 exit={{ y: "100%" }}
                 className="fixed bottom-0 left-0 right-0 bg-[#0a0a0a] border-t border-white/5 rounded-t-[2.5rem] p-8 z-[70] pb-[calc(2rem+env(safe-area-inset-bottom))]"
               >
-                <div className="w-12 h-1.5 bg-neutral-800 rounded-full mx-auto mb-8" />
+                <div className="liquid-glass w-12 h-1.5 rounded-full mx-auto mb-8" />
                 <h3 className="text-xl font-black uppercase italic text-white mb-6 text-center">Escolha seu Mapa</h3>
                 <div className="grid gap-3 animate-in fade-in slide-in-from-bottom-6">
                   {(() => {
@@ -333,7 +333,7 @@ export function HomeScreen({ services, onStartBooking }: { services: any[], onSt
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={() => setLocationSelectorOpen(false)}
-                        className="flex items-center justify-between p-5 bg-neutral-900 rounded-2xl border border-white/5 hover:border-amber-500/50 transition-all active:scale-[0.98]"
+                        className="flex items-center justify-between p-5 liquid-glass rounded-2xl  hover:border-amber-500/50 transition-all active:scale-[0.98]"
                       >
                         <div className="flex items-center gap-4">
                           <span className="text-2xl">{app.icon}</span>
@@ -362,7 +362,7 @@ export function HomeScreen({ services, onStartBooking }: { services: any[], onSt
             target="_blank" 
             rel="noopener noreferrer"
             title="Siga-nos"
-            className="w-14 h-14 bg-neutral-950 border border-white/5 rounded-2xl flex items-center justify-center text-neutral-400 hover:text-pink-500 hover:border-pink-500/20 hover:scale-105 active:scale-95 transition-all"
+            className="w-14 h-14 liquid-glass  rounded-2xl flex items-center justify-center text-neutral-400 hover:text-pink-500 hover:border-pink-500/20 hover:scale-105 active:scale-95 transition-all"
           >
             <Instagram className="w-6 h-6" />
           </a>
@@ -372,7 +372,7 @@ export function HomeScreen({ services, onStartBooking }: { services: any[], onSt
             target="_blank" 
             rel="noopener noreferrer"
             title="Avalie no Google"
-            className="w-14 h-14 bg-neutral-950 border border-white/5 rounded-2xl flex items-center justify-center text-neutral-400 hover:text-amber-500 hover:border-amber-500/20 hover:scale-105 active:scale-95 transition-all"
+            className="w-14 h-14 liquid-glass  rounded-2xl flex items-center justify-center text-neutral-400 hover:text-amber-500 hover:border-amber-500/20 hover:scale-105 active:scale-95 transition-all"
           >
             <Star className="w-6 h-6 fill-transparent hover:fill-amber-500/10" />
           </a>

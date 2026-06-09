@@ -78,7 +78,7 @@ export function StaffChatScreen({ user, onBack }: { user: any, onBack: () => voi
         <ChevronLeft className="w-4 h-4" /> Voltar
       </button>
       
-      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3.5 bg-neutral-950 rounded-3xl mb-4 border border-white/5 no-scrollbar">
+      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3.5 liquid-glass rounded-3xl mb-4  no-scrollbar">
         <div className="text-center py-2 border-b border-white/5 mb-2">
           <span className="bg-amber-500/10 text-amber-500 text-[9px] font-black uppercase px-2.5 py-1 rounded-full tracking-wider">
             Mural Interno da Equipe
@@ -112,7 +112,7 @@ export function StaffChatScreen({ user, onBack }: { user: any, onBack: () => voi
         <div ref={messagesEndRef} />
       </div>
       
-      <div className="flex gap-2 bg-neutral-900 border border-white/5 p-2 rounded-2xl">
+      <div className="flex gap-2 liquid-glass  p-2 rounded-2xl">
         <input 
           value={newMessage} 
           onChange={e => setNewMessage(e.target.value)} 
@@ -247,8 +247,8 @@ export function ChatScreen({ user, onBack }: { user: any, onBack: () => void }) 
   };
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-neutral-950 animate-in fade-in duration-300">
-      <div className="flex items-center justify-between p-4 border-b border-white/5 bg-neutral-950">
+    <div className="liquid-glass flex flex-col h-[100dvh] animate-in fade-in duration-300">
+      <div className="liquid-glass flex items-center justify-between p-4 -b">
         <button 
           onClick={onBack} 
           className="flex items-center gap-2 text-neutral-500 hover:text-white uppercase text-[10px] font-black tracking-widest transition-colors"
@@ -261,7 +261,7 @@ export function ChatScreen({ user, onBack }: { user: any, onBack: () => void }) 
         <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3.5 no-scrollbar bg-neutral-900/50">
+      <div className="liquid-glass flex-1 overflow-y-auto p-4 flex flex-col gap-3.5 no-scrollbar">
         {messages.length === 0 ? (
           <div className="flex-grow flex flex-col items-center justify-center text-center p-6 gap-3 opacity-50">
             <MessageCircle className="w-12 h-12 text-amber-500 animate-bounce" />
@@ -279,7 +279,7 @@ export function ChatScreen({ user, onBack }: { user: any, onBack: () => void }) 
               >
                 <div className={`flex items-end gap-2 ${isClientUser ? "flex-row-reverse" : ""}`}>
                     {isClientUser ? (
-                      <div className="w-8 h-8 rounded-full bg-neutral-800 flex items-center justify-center border border-white/5 shrink-0">
+                      <div className="w-8 h-8 rounded-full liquid-glass flex items-center justify-center  shrink-0">
                          <User className="w-4 h-4 text-neutral-500" />
                       </div>
                     ) : (
@@ -326,8 +326,8 @@ export function ChatScreen({ user, onBack }: { user: any, onBack: () => void }) 
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="flex gap-2 bg-neutral-900 border-t border-white/5 p-3 shrink-0">
-        <label className="p-3.5 rounded-xl border border-white/10 hover:bg-neutral-800 cursor-pointer">
+      <div className="liquid-glass flex gap-2 -t p-3 shrink-0">
+        <label className="liquid-glass p-3.5 rounded-xl  cursor-pointer">
             <Image className="w-4 h-4 text-neutral-400" />
             <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
                 const file = e.target.files?.[0];
@@ -360,7 +360,7 @@ export function ChatScreen({ user, onBack }: { user: any, onBack: () => void }) 
           value={newMessage} 
           onChange={e => setNewMessage(e.target.value)} 
           onKeyDown={e => e.key === "Enter" && sendMessage()}
-          className="flex-1 bg-neutral-800 rounded-xl px-4 py-2 text-xs text-white outline-none placeholder:text-neutral-500" 
+          className="liquid-glass flex-1 rounded-xl px-4 py-2 text-xs text-white outline-none placeholder:text-neutral-500" 
           placeholder="Escreva algo..."
         />
         <button 
@@ -565,7 +565,7 @@ export function ProfessionalClientChatsScreen({ user, onBack, initialClientId, i
                   </span>
                   <button 
                     onClick={() => setIsSelectingClient(true)}
-                    className="p-2 bg-neutral-900 border border-white/10 rounded-xl hover:bg-neutral-800 text-amber-500 transition-colors"
+                    className="p-2 liquid-glass  rounded-xl hover:bg-neutral-800 text-amber-500 transition-colors"
                   >
                     <Plus className="w-5 h-5" />
                   </button>
@@ -573,7 +573,7 @@ export function ProfessionalClientChatsScreen({ user, onBack, initialClientId, i
               </div>
 
               {/* Search bar */}
-              <div className="bg-neutral-900 border border-white/10 rounded-2xl p-4 flex items-center gap-3 mb-6 focus-within:border-amber-500/50 transition-colors">
+              <div className=" liquid-glass  rounded-2xl p-4 flex items-center gap-3 mb-6 focus-within:border-amber-500/50 transition-colors">
                 <Search className="w-4 h-4 text-amber-500 shrink-0" />
                 <input 
                   value={searchTerm}
@@ -607,7 +607,7 @@ export function ProfessionalClientChatsScreen({ user, onBack, initialClientId, i
                       }`}
                     >
                       <div className="flex items-center gap-3.5">
-                        <div className="w-11 h-11 rounded-2xl bg-neutral-950 border border-white/10 flex items-center justify-center relative overflow-hidden shrink-0">
+                        <div className="w-11 h-11 rounded-2xl liquid-glass  flex items-center justify-center relative overflow-hidden shrink-0">
                           {c.clientPhoto ? (
                             <img src={c.clientPhoto} alt="" className="w-full h-full object-cover" />
                           ) : (
@@ -623,7 +623,7 @@ export function ProfessionalClientChatsScreen({ user, onBack, initialClientId, i
                               {c.clientName || "Cliente"}
                             </h4>
                             {c.clientPhone && (
-                              <span className="text-[8px] font-black tracking-wider bg-white/5 border border-white/5 px-1.5 py-0.5 rounded-md text-neutral-500">
+                              <span className="liquid-glass text-[8px] font-black tracking-wider px-1.5 py-0.5 rounded-md text-neutral-500">
                                 {c.clientPhone}
                               </span>
                             )}
@@ -659,7 +659,7 @@ export function ProfessionalClientChatsScreen({ user, onBack, initialClientId, i
               <div className="flex items-center gap-2 mb-6">
                 <button 
                   onClick={() => setIsSelectingClient(false)}
-                  className="p-2 text-white hover:bg-neutral-800 rounded-xl"
+                  className="liquid-glass p-2 text-white  rounded-xl"
                 >
                   <ChevronLeft className="w-5 h-5" />
                 </button>
@@ -669,7 +669,7 @@ export function ProfessionalClientChatsScreen({ user, onBack, initialClientId, i
               </div>
 
               {/* Search bar */}
-              <div className="bg-neutral-900 border border-white/10 rounded-2xl p-4 flex items-center gap-3 mb-6 focus-within:border-amber-500/50 transition-colors">
+              <div className=" liquid-glass  rounded-2xl p-4 flex items-center gap-3 mb-6 focus-within:border-amber-500/50 transition-colors">
                 <Search className="w-4 h-4 text-amber-500 shrink-0" />
                 <input 
                   value={searchTerm}
@@ -688,9 +688,9 @@ export function ProfessionalClientChatsScreen({ user, onBack, initialClientId, i
                         setActiveClientName(client.name || "Cliente");
                         setIsSelectingClient(false);
                     }}
-                    className="w-full bg-neutral-900/50 border border-white/5 hover:border-amber-500/25 p-4 rounded-[1.8rem] text-left transition-all flex items-center gap-4"
+                    className="w-full liquid-glass/50  hover:border-amber-500/25 p-4 rounded-[1.8rem] text-left transition-all flex items-center gap-4"
                   >
-                    <div className="w-11 h-11 rounded-2xl bg-neutral-950 border border-white/10 flex items-center justify-center shrink-0">
+                    <div className="w-11 h-11 rounded-2xl liquid-glass  flex items-center justify-center shrink-0">
                        <User className="w-5 h-5 text-neutral-600" />
                     </div>
                     <div>
@@ -705,7 +705,7 @@ export function ProfessionalClientChatsScreen({ user, onBack, initialClientId, i
         </div>
       ) : (
         // DETAILS: CONVERSATION SCREEN WITH ACTIVE CLIENT
-        <div className="flex flex-col h-full bg-neutral-950 border border-white/5 rounded-[2.5rem] p-4">
+        <div className="flex flex-col h-full liquid-glass  rounded-[2.5rem] p-4">
           {/* Internal Header */}
           <div className="flex items-center justify-between pb-4 border-b border-white/5 mb-4 px-2">
             <button 
@@ -714,7 +714,7 @@ export function ProfessionalClientChatsScreen({ user, onBack, initialClientId, i
                 setMessages([]);
                 setNewMessage("");
               }}
-              className="flex items-center gap-1 bg-white/5 border border-white/5 hover:bg-white/10 text-white py-2 px-3 rounded-xl text-[10px] font-extrabold uppercase tracking-wider transition-all"
+              className="liquid-glass flex items-center gap-1  text-white py-2 px-3 rounded-xl text-[10px] font-extrabold uppercase tracking-wider transition-all"
             >
               <ChevronLeft className="w-4 h-4" /> Voltar
             </button>
@@ -751,7 +751,7 @@ export function ProfessionalClientChatsScreen({ user, onBack, initialClientId, i
                        clientPhoto && typeof clientPhoto === 'string' ? (
                            <img src={clientPhoto} alt={clientName} className="w-8 h-8 rounded-full object-cover shrink-0 border border-white/5" />
                        ) : (
-                           <div className="w-8 h-8 rounded-full bg-neutral-800 flex items-center justify-center border border-white/5 shrink-0">
+                           <div className="w-8 h-8 rounded-full liquid-glass flex items-center justify-center  shrink-0">
                                <User className="w-4 h-4 text-neutral-500" />
                            </div>
                        )
@@ -799,7 +799,7 @@ export function ProfessionalClientChatsScreen({ user, onBack, initialClientId, i
             >
                 {isRecording ? <Square className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
             </button>
-            <label className="p-3.5 rounded-2xl border border-white/10 hover:bg-neutral-800 cursor-pointer flex items-center justify-center">
+            <label className="liquid-glass p-3.5 rounded-2xl  cursor-pointer flex items-center justify-center">
               <Image className="w-5 h-5 text-neutral-400" />
               <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
                   const file = e.target.files?.[0];
@@ -828,7 +828,7 @@ export function ProfessionalClientChatsScreen({ user, onBack, initialClientId, i
               value={newMessage} 
               onChange={e => setNewMessage(e.target.value)} 
               onKeyDown={e => e.key === "Enter" && sendResponse()}
-              className="flex-1 bg-neutral-900 border border-white/5 rounded-2xl px-4 py-3 text-xs text-white outline-none placeholder:text-neutral-600 placeholder:font-black placeholder:uppercase placeholder:tracking-wider font-semibold" 
+              className="flex-1 liquid-glass  rounded-2xl px-4 py-3 text-xs text-white outline-none placeholder:text-neutral-600 placeholder:font-black placeholder:uppercase placeholder:tracking-wider font-semibold" 
               placeholder={`Escreva uma resposta para ${activeClientName.split(' ')[0]}...`}
             />
             <button 

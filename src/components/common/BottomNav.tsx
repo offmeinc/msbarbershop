@@ -47,7 +47,7 @@ export function BottomNav({ userRole, currentScreen, setCurrentScreen, user, unr
         ease: [0.33, 1, 0.68, 1],
         opacity: { duration: 0.25 }
       }}
-      className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-2xl border border-white/10 p-1.5 flex items-center gap-1 z-40 rounded-[2.5rem] shadow-2xl shadow-amber-500/5 ring-1 ring-white/5 pb-[max(0.375rem,env(safe-area-inset-bottom)/2)] mb-[env(safe-area-inset-bottom)]"
+      className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 liquid-glass backdrop-blur-2xl  p-1.5 flex items-center gap-1 z-40 rounded-[2.5rem] shadow-2xl shadow-amber-500/5 ring-1 ring-white/5 pb-[max(0.375rem,env(safe-area-inset-bottom)/2)] mb-[env(safe-area-inset-bottom)]"
     >
       {items.map(item => {
         const isActive = currentScreen === item.screen;

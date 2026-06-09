@@ -208,12 +208,12 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
       <div className="flex items-center justify-between mb-8">
         <button 
           onClick={onBack} 
-          className="flex items-center gap-2 text-neutral-500 hover:text-white transition-all font-black uppercase text-[10px] tracking-widest bg-white/5 px-4 py-2.5 rounded-2xl border border-white/5 cursor-pointer shadow-md"
+          className="liquid-glass flex items-center gap-2 text-neutral-500 hover:text-white transition-all font-black uppercase text-[10px] tracking-widest px-4 py-2.5 rounded-2xl cursor-pointer shadow-md"
         >
           <ChevronLeft className="w-4 h-4 text-amber-500" />
           Voltar
         </button>
-        <span className="text-[10px] font-black text-neutral-500 uppercase tracking-widest bg-neutral-900 px-4 py-2.5 rounded-2xl border border-white/5 flex items-center gap-1.5 label shadow-inner">
+        <span className="text-[10px] font-black text-neutral-500 uppercase tracking-widest liquid-glass px-4 py-2.5 rounded-2xl  flex items-center gap-1.5 label shadow-inner">
           <Sparkles className="w-3.5 h-3.5 text-amber-500" /> MEU CADASTRO
         </span>
       </div>
@@ -221,7 +221,7 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
       <form onSubmit={handleUpdate} className="space-y-6 pb-20">
         
         {/* Avatar Interactive Circle Block */}
-        <div className="flex flex-col items-center gap-3 py-6 bg-white/[0.01] border border-white/5 rounded-[2.5rem] relative overflow-hidden">
+        <div className="flex flex-col items-center gap-3 py-6 liquid-glass  rounded-[2.5rem] relative overflow-hidden">
           <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/[0.02] rounded-full blur-2xl pointer-events-none" />
           
           <div className="relative group cursor-pointer decoration-none">
@@ -236,7 +236,7 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
                 
                 {/* Loader Mask overlay on topup */}
                 {uploadingImage && (
-                  <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center gap-1.5 animate-fade-in z-20">
+                  <div className="liquid-glass absolute inset-0 flex flex-col items-center justify-center gap-1.5 animate-fade-in z-20">
                     <Loader2 className="w-6 h-6 text-amber-500 animate-spin" />
                     <span className="text-[8px] text-amber-500 uppercase font-black tracking-widest">Processando</span>
                   </div>
@@ -270,7 +270,7 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
         </div>
 
         {/* Basic Information Layout Fields Card */}
-        <div className="bg-white/[0.03] backdrop-blur-md rounded-[2.5rem] border border-white/10 p-6 space-y-5 text-left shadow-xl relative overflow-hidden">
+        <div className=" liquid-glass backdrop-blur-md rounded-[2.5rem]  p-6 space-y-5 text-left shadow-xl relative overflow-hidden">
           <div className="border-b border-white/5 pb-3">
              <span className="text-[10px] text-amber-500 font-sans uppercase font-black tracking-widest block flex items-center gap-2">
                <User className="w-4 h-4 text-amber-500" /> DADOS DO SEU PERFIL
@@ -287,7 +287,7 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
                   value={profileData.name} 
                   required
                   onChange={(e) => setProfileData(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full bg-black/60 border border-white/10 focus:border-amber-500 rounded-2xl p-4 text-xs font-bold text-white transition-all outline-none"
+                  className="w-full liquid-glass  focus:border-amber-500 rounded-2xl p-4 text-xs font-bold text-white transition-all outline-none"
                   placeholder="Insira seu nome completo"
                 />
               </div>
@@ -301,7 +301,7 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
                   type="text" 
                   value={profileData.whatsapp} 
                   onChange={(e) => setProfileData(prev => ({ ...prev, whatsapp: e.target.value }))}
-                  className="w-full bg-black/60 border border-white/10 focus:border-amber-500 rounded-2xl p-4 text-xs font-bold text-white transition-all outline-none"
+                  className="w-full liquid-glass  focus:border-amber-500 rounded-2xl p-4 text-xs font-bold text-white transition-all outline-none"
                   placeholder="Ex: (11) 99999-9999"
                 />
               </div>
@@ -315,7 +315,7 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
                   type="text" 
                   value={profileData.password} 
                   onChange={(e) => setProfileData(prev => ({ ...prev, password: e.target.value }))}
-                  className="w-full bg-black/60 border border-white/10 focus:border-amber-500 rounded-2xl p-4 text-xs text-white transition-all outline-none"
+                  className="w-full liquid-glass  focus:border-amber-500 rounded-2xl p-4 text-xs text-white transition-all outline-none"
                   placeholder="Mínimo de 4 caracteres para segurança"
                 />
               </div>
@@ -335,7 +335,7 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
                     type="text" 
                     value={profileData.pixKey} 
                     onChange={(e) => setProfileData(prev => ({ ...prev, pixKey: e.target.value }))}
-                    className="w-full bg-emerald-500/5 focus:bg-black/60 border border-emerald-500/20 focus:border-emerald-500 rounded-2xl p-4 text-xs font-bold text-emerald-300 transition-all outline-none placeholder:text-neutral-600"
+                    className="liquid-glass w-full  -emerald-500/20 focus:-emerald-500 rounded-2xl p-4 text-xs font-bold text-emerald-300 transition-all outline-none placeholder:text-neutral-600"
                     placeholder="E-mail, CPF, celular ou aleatória"
                   />
                 </div>
@@ -349,7 +349,7 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
 
         {/* Professional Profile Section */}
         {!isClient && (
-          <div className="bg-white/[0.03] backdrop-blur-md rounded-[2.5rem] border border-white/10 p-6 space-y-6 text-left shadow-xl">
+          <div className=" liquid-glass backdrop-blur-md rounded-[2.5rem]  p-6 space-y-6 text-left shadow-xl">
             <div className="border-b border-white/5 pb-3">
                <span className="text-[10px] text-amber-500 font-sans uppercase font-black tracking-widest block flex items-center gap-2">
                  <LayoutGrid className="w-4 h-4 text-amber-500" /> EXPOSIÇÃO PROFISSIONAL E BIO
@@ -365,7 +365,7 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
                 value={profileData.bio} 
                 onChange={(e) => setProfileData(prev => ({ ...prev, bio: e.target.value }))}
                 rows={4}
-                className="w-full bg-black/60 border border-white/10 focus:border-amber-500 rounded-2xl p-4 text-xs text-white transition-all resize-none outline-none"
+                className="w-full liquid-glass  focus:border-amber-500 rounded-2xl p-4 text-xs text-white transition-all resize-none outline-none"
                 placeholder="Descreva seu estilo, diferenciais ou quanto tempo atua na área profissional..."
               />
             </div>
@@ -383,7 +383,7 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
                   onChange={(e) => setNewSpecialty(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addSpecialty())}
                   placeholder="Ex: Degradê navalhado, Barba completa..."
-                  className="flex-1 bg-black/60 border border-white/10 focus:border-amber-500 rounded-2xl px-4 py-3 placeholder:text-neutral-600 text-xs text-white outline-none transition-all"
+                  className="flex-1 liquid-glass  focus:border-amber-500 rounded-2xl px-4 py-3 placeholder:text-neutral-600 text-xs text-white outline-none transition-all"
                 />
                 <button 
                   type="button"
@@ -421,12 +421,12 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
               
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {profileData.portfolio.map((img, index) => (
-                  <div key={index} className="relative group aspect-square rounded-2xl overflow-hidden border border-white/5 bg-black/60 shadow hover:border-amber-500/20 transition-all duration-300">
+                  <div key={index} className="liquid-glass relative group aspect-square rounded-2xl overflow-hidden shadow hover:-amber-500/20 transition-all duration-300">
                     <img src={img} alt={`Portfolio shot ${index}`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                     <button 
                       type="button"
                       onClick={() => removePortfolioImage(index)}
-                      className="absolute top-2 right-2 w-7 h-7 bg-black/80 backdrop-blur-md rounded-lg flex items-center justify-center text-red-500 opacity-0 group-hover:opacity-100 transition-opacity border border-white/10 shadow cursor-pointer active:scale-95"
+                      className="absolute top-2 right-2 w-7 h-7 liquid-glass backdrop-blur-md rounded-lg flex items-center justify-center text-red-500 opacity-0 group-hover:opacity-100 transition-opacity  shadow cursor-pointer active:scale-95"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
@@ -434,7 +434,7 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
                 ))}
 
                 {/* File picker button for portfolio inside grid */}
-                <label className="aspect-square rounded-[1.5rem] border-2 border-dashed border-white/5 bg-black/40 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-amber-500/40 hover:bg-black/60 transition-all duration-300 group">
+                <label className="liquid-glass aspect-square rounded-[1.5rem] -2 -dashed flex flex-col items-center justify-center gap-2 cursor-pointer hover:-amber-500/40  transition-all duration-300 group">
                   <div className="w-9 h-9 rounded-xl bg-amber-500/15 flex items-center justify-center text-amber-500 group-hover:scale-110 duration-300 shadow">
                     <Plus className="w-5 h-5" />
                   </div>
@@ -458,7 +458,7 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
 
         {/* Avaliar Meus Atendimentos Section */}
         {isClient && (
-          <div className="bg-white/[0.03] backdrop-blur-md rounded-[2.5rem] border border-white/10 p-6 space-y-6 text-left shadow-xl relative overflow-hidden">
+          <div className=" liquid-glass backdrop-blur-md rounded-[2.5rem]  p-6 space-y-6 text-left shadow-xl relative overflow-hidden">
              <div className="border-b border-white/5 pb-3 flex items-center justify-between">
                 <span className="text-[10px] text-amber-500 font-sans uppercase font-black tracking-widest block flex items-center gap-2">
                   <Star className="w-4 h-4 text-amber-500 fill-current" /> AVALIAR MEUS ATENDIMENTOS
@@ -538,7 +538,7 @@ function AppointmentRatingCard({ app }: { app: any; key?: any }) {
   const appDate = app.date instanceof Timestamp ? app.date.toDate() : new Date(app.date);
 
   return (
-    <div className="bg-black/40 border border-white/5 rounded-2xl p-4 space-y-3 relative hover:border-white/10 transition-all text-left">
+    <div className=" liquid-glass  rounded-2xl p-4 space-y-3 relative hover:border-white/10 transition-all text-left">
       <div className="flex justify-between items-start">
         <div className="space-y-0.5">
           <h4 className="text-xs font-black text-white uppercase italic tracking-tight text-sans">
@@ -587,7 +587,7 @@ function AppointmentRatingCard({ app }: { app: any; key?: any }) {
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             placeholder="Deixe um comentário sobre o atendimento (opcional)"
-            className="w-full bg-neutral-900 border border-white/5 focus:border-amber-500/50 rounded-xl px-3 py-2 text-[11px] text-white placeholder-neutral-700 outline-none transition-all font-medium"
+            className="w-full liquid-glass  focus:border-amber-500/50 rounded-xl px-3 py-2 text-[11px] text-white placeholder-neutral-700 outline-none transition-all font-medium"
             maxLength={100}
           />
 
