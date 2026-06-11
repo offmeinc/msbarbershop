@@ -2,6 +2,7 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { getFirestore, doc, getDocFromServer, initializeFirestore, enableMultiTabIndexedDbPersistence, enableIndexedDbPersistence } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
+import { getMessaging, isSupported } from 'firebase/messaging';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 export const app = initializeApp(firebaseConfig);
@@ -12,6 +13,17 @@ export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId || "(defa
 
 export const auth = getAuth(app);
 export const storage = getStorage(app);
+
+// Initialize Messaging conditionally (only in browser)
+export const messaging = async () => {
+  if (typeof window !== "undefined") {
+    const supported = await isSupported();
+    if (supported) {
+      return getMessaging(app);
+    }
+  }
+  return null;
+};
 
 // Set persistence to Local so users stay logged in across sessions
 if (typeof window !== "undefined") {

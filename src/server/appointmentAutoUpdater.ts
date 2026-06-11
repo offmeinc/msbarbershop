@@ -1,9 +1,9 @@
-import { collection, query, where, getDocs, updateDoc, Timestamp, doc, getDoc } from "firebase/firestore";
-import { db } from "../lib/firebase";
+import { adminDb } from "./firebaseAdmin";
+import { Timestamp as AdminTimestamp } from "firebase-admin/firestore";
 import { sendPushNotification } from "./pushNotificationService";
 
 export function getExactAppointmentDate(data: any): Date {
-  const baseDate = data.date instanceof Timestamp ? data.date.toDate() : new Date(data.date);
+  const baseDate = data.date instanceof AdminTimestamp ? data.date.toDate() : (data.date && data.date._seconds ? new Date(data.date._seconds * 1000) : new Date(data.date));
   if (data.time && typeof data.time === "string") {
     const parts = data.time.split(":");
     if (parts.length >= 2) {
@@ -16,26 +16,22 @@ export function getExactAppointmentDate(data: any): Date {
 }
 
 export async function performHistoricalAppointmentUpdate() {
-  console.log("[AutoUpdater] Performing historical appointment update...");
+  console.log("[AutoUpdater] Performing historical appointment update using Admin SDK...");
   try {
     const now = new Date();
-    const appointmentsRef = collection(db, "appointments");
-    const q = query(appointmentsRef);
-    const snapshot = await getDocs(q);
+    const snapshot = await adminDb.collection("appointments").get();
     
     let count = 0;
     const updates = snapshot.docs.map(async (d) => {
       const data = d.data();
       const status = data.status;
       
-      // We want to update if it's confirmed, pending, or undefined, AND it hasn't been cancelled.
       if (status !== 'cancelled' && status !== 'completed') {
         const appointmentDate = getExactAppointmentDate(data);
         
-        // If the appointment time passed
         if (appointmentDate < now) {
           count++;
-          await updateDoc(doc(db, "appointments", d.id), {
+          await d.ref.update({
             status: "completed",
             paymentStatus: "paid"
           });
@@ -53,96 +49,47 @@ export async function performHistoricalAppointmentUpdate() {
 export function startAppointmentAutoUpdater() {
   console.log("[AutoUpdater] Initializing appointment auto-updater service...");
   
-  // Run once immediately on start
   performHistoricalAppointmentUpdate();
 
-  // Run check every minute (60,000ms)
   setInterval(async () => {
     try {
       const now = new Date();
-      const appointmentsRef = collection(db, "appointments");
-      const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
       const twoHoursFromNow = new Date(now.getTime() + 2 * 60 * 60 * 1000);
       
-      // Optimized query
-      const q = query(
-        appointmentsRef,
-        where("status", "==", "confirmed")
-      );
-      
-      const snapshot = await getDocs(q);
+      const snapshot = await adminDb.collection("appointments").where("status", "==", "confirmed").get();
       
       const updates = snapshot.docs.map(async (d) => {
         const data = d.data();
         const appointmentDate = getExactAppointmentDate(data);
         
-        // 1. Auto-complete past appointments
         if (appointmentDate < now) {
           console.log(`[AutoUpdater] Auto-completing appointment: ${d.id}`);
-          await updateDoc(doc(db, "appointments", d.id), {
+          await d.ref.update({
             status: "completed",
             paymentStatus: "paid"
           });
           return;
         }
 
-        // 2. 2-Hour Reminder Push Notification
         if (appointmentDate > now && appointmentDate <= twoHoursFromNow && !data.twoHourReminderSent) {
-          console.log(`[Reminders 2h] Preparing 2h reminder for appointment: ${d.id}`);
+          const rawTarget = data.clientId && data.clientId !== "guest" ? data.clientId : data.clientPhone;
+          const clientTarget = rawTarget ? rawTarget.replace(/[\s\-\(\)\+]/g, "") : "";
           
-          // Double-check latest status in Firestore
-          const latestDoc = await getDoc(doc(db, "appointments", d.id));
-          const latestData = latestDoc.data();
-          
-          if (latestData && latestData.status === "confirmed" && !latestData.twoHourReminderSent) {
-            const rawTarget = latestData.clientId && latestData.clientId !== "guest" ? latestData.clientId : latestData.clientPhone;
-            const clientTarget = rawTarget ? rawTarget.replace(/[\s\-\(\)\+]/g, "") : "";
-            
-            if (clientTarget) {
-                console.log(`[Reminders 2h] Sending notification to ${clientTarget}`);
-                await sendPushNotification(clientTarget, {
-                    title: "Lembrete de Horário! 💈⏳",
-                    body: `Faltam 2 horas para o seu agendamento de ${latestData.serviceName} às ${latestData.time}. Te esperamos!`,
-                    url: "/"
-                });
-            }
-            
-            await updateDoc(doc(db, "appointments", d.id), {
-                twoHourReminderSent: true
-            });
+          if (clientTarget) {
+              await sendPushNotification(clientTarget, {
+                  title: "Lembrete de Horário! 💈⏳",
+                  body: `Faltam 2 horas para o seu agendamento de ${data.serviceName} às ${data.time}. Te esperamos!`,
+                  url: "/"
+              });
           }
-        }
-
-        // 3. 1-Hour Reminder Notification
-        if (appointmentDate > now && appointmentDate <= oneHourFromNow && !data.reminderSent) {
-          console.log(`[Reminders] Preparing reminder for appointment: ${d.id}`);
           
-          // Double-check latest status in Firestore per requirement
-          const latestDoc = await getDoc(doc(db, "appointments", d.id));
-          const latestData = latestDoc.data();
-          
-          if (latestData && latestData.status === "confirmed" && !latestData.reminderSent) {
-            const rawTarget = latestData.clientId && latestData.clientId !== "guest" ? latestData.clientId : latestData.clientPhone;
-            const clientTarget = rawTarget ? rawTarget.replace(/[\s\-\(\)\+]/g, "") : "";
-            
-            if (clientTarget) {
-                console.log(`[Reminders] Sending notification to ${clientTarget}`);
-                await sendPushNotification(clientTarget, {
-                    title: "Lembrete de Horário! 💈",
-                    body: `Lembrete: seu agendamento de ${latestData.serviceName} é em breve (às ${latestData.time})!`,
-                    url: "/"
-                });
-            }
-            
-            await updateDoc(doc(db, "appointments", d.id), {
-                reminderSent: true
-            });
-          }
+          await d.ref.update({
+              twoHourReminderSent: true
+          });
         }
       });
       
       await Promise.all(updates);
-      
     } catch (err: any) {
       console.error("[AutoUpdater] Error in auto-updater cycle:", err.message);
     }

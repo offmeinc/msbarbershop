@@ -10,8 +10,9 @@ import FormData from "form-data";
 import { GoogleGenAI, Type } from "@google/genai";
 import { initVapid, startAppointmentsListener, sendPushNotification, sendNotificationToCollaborators } from "./src/server/pushNotificationService";
 import { startAppointmentAutoUpdater } from "./src/server/appointmentAutoUpdater";
-import { db } from "./src/lib/firebase";
-import { doc, getDoc, updateDoc, setDoc, collection, addDoc, serverTimestamp, increment, Timestamp, runTransaction, query, where, getDocs, limit } from "firebase/firestore";
+import { adminMessaging, db, adminDb } from "./src/server/firebaseAdmin";
+import { Timestamp as AdminTimestamp } from "firebase-admin/firestore";
+import { doc, getDoc, updateDoc, setDoc, runTransaction, serverTimestamp, increment, deleteDoc } from "firebase/firestore";
 
 const _filename = typeof __filename !== 'undefined' ? __filename : fileURLToPath(import.meta.url);
 const _dirname = typeof __dirname !== 'undefined' ? __dirname : path.dirname(_filename);
@@ -60,7 +61,7 @@ async function startServer() {
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
   }));
   
-  // Initialize Push notifications (generation and registration of VAPID)
+  // Initialize Push notifications
   const vapid = await initVapid();
   startAppointmentsListener();
   startAppointmentAutoUpdater();
@@ -79,9 +80,7 @@ async function startServer() {
             },
         });
         
-        // Take the last message as the prompt
         const lastMessage = messages[messages.length - 1].text;
-        
         const response = await chat.sendMessage({ message: lastMessage });
         res.json({ reply: response.text });
     } catch (error) {
@@ -89,85 +88,6 @@ async function startServer() {
         res.status(500).json({ error: "Failed to process chat" });
     }
   });
-
-  // Helper function to generate local business intelligence reports
-  const generateLocalReport = (professionalName: string, appointments: any[]): string => {
-    const summaryAppointments = (appointments || []).map((app: any) => ({
-      totalPrice: Number(app.totalPrice || app.price || 0),
-      status: app.status,
-      serviceName: app.serviceName || "Serviço"
-    }));
-
-    const activeApps = summaryAppointments.filter(app => app.status === "confirmed" || app.status === "pending" || !app.status);
-    const completedApps = summaryAppointments.filter(app => app.status === "completed");
-    const cancelledApps = summaryAppointments.filter(app => app.status === "cancelled");
-
-    const totalFaturamento = completedApps.reduce((acc, curr) => acc + curr.totalPrice, 0) + 
-                             activeApps.reduce((acc, curr) => acc + curr.totalPrice, 0);
-
-    const totalCortes = completedApps.length;
-    const totalConfirmados = activeApps.length;
-    const totalCancelados = cancelledApps.length;
-    
-    const totalComparecimentos = totalCortes + totalConfirmados;
-    const taxaComparecimento = (totalCortes + totalCancelados) > 0 
-      ? Math.round((totalCortes / (totalCortes + totalCancelados)) * 100)
-      : 100;
-
-    // Find most requested services
-    const serviceCounts: { [key: string]: number } = {};
-    summaryAppointments.forEach(app => {
-      serviceCounts[app.serviceName] = (serviceCounts[app.serviceName] || 0) + 1;
-    });
-    let topService = "Cotes Variados";
-    let maxCount = 0;
-    Object.keys(serviceCounts).forEach(srv => {
-      if (serviceCounts[srv] > maxCount) {
-        maxCount = serviceCounts[srv];
-        topService = srv;
-      }
-    });
-
-    return `### 🌟 Bem-vindo ao seu Resumo Semanal!
-Olá, **${professionalName}**! Preparei um relatório local com base nos dados mais recentes da sua agenda na MS Barbearia. Parabéns pelo seu empenho e energia no atendimento dos clientes nesta semana! 💇‍♂️✨
-
-*(Nota: Nosso sistema de IA do Gemini está temporariamente em altíssima demanda global. Para garantir que suas metas não sofram impacto, geramos este resumo preciso e estruturado diretamente do nosso processador inteligente local).*
-
-### 📈 Métricas de Ocupação e Faturamento
-- **Faturamento Estimado:** R$ ${totalFaturamento.toFixed(2).replace(".", ",")}
-- **Atendimentos Confirmados:** ${totalConfirmados} agendamentos ativos
-- **Atendimentos Concluídos:** ${totalCortes} cortes
-- **Atendimentos Cancelados:** ${totalCancelados} cancelados
-- **Taxa de Comparecimento estimada:** ${taxaComparecimento}%
-
-### ⚡ Destaques de Demanda
-- Seu serviço mais procurado nesta semana foi **${topService}**, com destaque para horários no final da tarde.
-- A recomendação é manter a flexibilidade de horários nas quintas e sextas-feiras, que tradicionalmente concentram maior fluxo de caixa.
-
-### 🎯 Plano de Ação Estratégico AI
-- **1. Combo Especial:** Ofereça aos clientes de **${topService}** um serviço adicional de lavagem ou barboterapia com desconto de 15% nos dias de menor fluxo (segunda e terça-feira).
-- **2. Upsell de Pomadas:** Lembre-se de demonstrar a finalização do cabelo usando a pomada modeladora da MS Barbearia. A venda de apenas 3 pomadas por semana pode aumentar seu faturamento líquido de forma imediata!
-- **3. Resgate de Clientes:** Envie uma mensagem rápida no WhatsApp para aqueles clientes que não cortam há mais de 20 dias convidando-os para um retoque rápido.`;
-  };
-
-  // Helper function to handle friendly localized smart offline chat responses
-  const handleLocalChat = (professionalName: string, appointments: any[], messages: any[]): string => {
-    const lastMessage = (messages[messages.length - 1]?.content || "").toLowerCase();
-    
-    if (lastMessage.includes("faturamento") || lastMessage.includes("faturar") || lastMessage.includes("dinheiro") || lastMessage.includes("ticket")) {
-      return `Mestre **${professionalName}**, sobre melhorar seu faturamento e ticket médio:\n\n1. **Faça Upsell de Produtos:** Vender pomada de cabelo ou óleo de barba após o corte é a forma mais rápida de subir seu faturamento sem precisar cortar mais cabelo. Demonstre o produto no cabelo do cliente ao finalizar!\n2. **Promova Serviços Combinados:** Quando o cliente agendar apenas cabelo, pergunte se quer dar um tapa na barba por um valor promocional combinado.\n3. **Fidelização:** Garanta que ele saia com o próximo horário pré-agendado para daqui a 15 ou 20 dias!`;
-    }
-    
-    if (lastMessage.includes("agenda") || lastMessage.includes("ociosa") || lastMessage.includes("horário") || lastMessage.includes("lotar")) {
-      return `Parceiro, preencher as horas ociosas (geralmente terças e quartas de manhã) é o segredo de uma barbearia eficiente:\n\n1. **Desconto de Horário de Pico:** Ofereça 10% de desconto ou uma cerveja cortesia apenas para agendamentos realizados de quarta-feira até às 14h.\n2. **Clientes Recorrentes:** Mande mensagem para clientes Premium que costumam ter horários flexíveis (autônomos, empresários) oferecendo vaga nestas janelas mais tranquilas.\n3. **Divulgação Antecipada:** Use seus Stories no Instagram na segunda-feira à noite mostrando as poucas vagas disponíveis na sua semana. Isso gera gatinho de escassez!`;
-    }
-
-    if (lastMessage.includes("produto") || lastMessage.includes("pomada") || lastMessage.includes("venda")) {
-      return `Brother, vender produtos na cadeira é uma arte simples:\n\n1. **Apresente o Benefício, não o Preço:** Enquanto penteia o cabelo do cliente, aplique a pomada e comente: "Mestre, estou aplicando nossa pomada fosca de alta fixação para dar esse efeito profissional pro seu penteado durar o dia todo."\n2. **Coloque o produto na mão do cliente:** Deixe ele sentir a fragrância e ver a textura do pote enquanto você corta. Isso desperta o desejo de posse!\n3. **Ofereça na finalização:** Na hora de pagar, comente e encoraje: "Quer levar essa pomada premium pra conseguir o mesmo efeito modelado em casa?"`;
-    }
-
-    return `Mestre **${professionalName}**, nosso motor principal de IA do Gemini está recebendo muitas requisições temporariamente, mas aqui vai uma dica estratégica de ouro de negócios: foque em encantar cada cliente no detalhe final (uma massagem pós-barba ou toalha quente). Clientes felizes indicam amigos e aumentam sua receita de forma recorrente! O que mais gostaria de saber na gestão da sua semana?`;
-  };
 
   // Gemini Weekly Report Generation API Route
   app.post("/api/gemini/week-report", async (req, res) => {
@@ -184,28 +104,8 @@ Olá, **${professionalName}**! Preparei um relatório local com base nos dados m
       }));
 
       const prompt = `Analise a agenda semanal do profissional ${professionalName || "Profissional"} na MS Barbearia.
-Aqui estão os agendamentos cadastrados nesta semana:
-${JSON.stringify(summaryAppointments, null, 2)}
-
-Por favor, gere uma avaliação de desempenho semanal premium, amigável, acolhedora e extremamente estratégica de negócios em português brasileiro (pt-BR). Organize exatamente com as seguintes seções em Markdown elegante:
-
-### 🌟 Bem-vindo ao seu Resumo Semanal!
-(Uma saudação empolgante, reconhecendo o trabalho duro do profissional).
-
-### 📈 Métricas de Ocupação e Faturamento
-- **Faturamento Estimado:** R$ [Soma dos preços de agendamentos onde status != 'cancelled']
-- **Atendimentos Confirmados:** [Quantidade em confirmed] agendamentos ativos
-- **Atendimentos Concluídos:** [Quantidade em completed] cortes
-- **Atendimentos Cancelados:** [Quantidade em cancelled] cancelados
-- **Taxa de Comparecimento estimada:** [Porcentagem baseada em concluídos/(concluídos + cancelados), se aplicável]
-
-### ⚡ Destaques de Demanda
-(Indicar os serviços que foram mais procurados no período e os horários de pico).
-
-### 🎯 Plano de Ação Estratégico AI
-(2 a 3 sugestões super práticas exclusivas para este profissional: como preencher horários de menor movimento, técnicas de upsell de produtos como pomadas/óleos ou serviços combinados barbinha+cabelo).
-
-Seja motivador, conciso e profissional em português do Brasil! Garanta que os valores estimados em reais sejam calculados de maneira razoavelmente correta baseando-se nos preços de agendamentos não cancelados informados.`;
+Aqui estão os agendamentos registrados: ${JSON.stringify(summaryAppointments)}
+Gere um relatório de desempenho em português (pt-BR).`;
 
       const ai = getGeminiClient();
       const response = await ai.models.generateContent({
@@ -215,9 +115,8 @@ Seja motivador, conciso e profissional em português do Brasil! Garanta que os v
 
       res.json({ report: response.text });
     } catch (error: any) {
-      console.error("[Mercado Pago Route Error]:", error.response?.data || error.message);
-      const errMsg = error.response?.data?.message || error.message || "Erro de Integração com o Mercado Pago";
-      return res.status(500).json({ error: errMsg });
+      console.error("[Gemini Report Error]:", error.message);
+      res.status(500).json({ error: "Erro ao gerar relatório" });
     }
   });
 
@@ -225,63 +124,28 @@ Seja motivador, conciso e profissional em português do Brasil! Garanta que os v
   app.post("/api/voice-booking", async (req, res) => {
     const { prompt, clientLocalDate, services, barbers } = req.body;
     try {
-      if (!prompt) {
-        return res.status(400).json({ error: "O comando de texto/voz é obrigatório" });
-      }
-
-      const clientDate = clientLocalDate ? new Date(clientLocalDate) : new Date();
-      const options: Intl.DateTimeFormatOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-      const formattedClientDate = clientDate.toLocaleDateString('pt-BR', options);
-
       const ai = getGeminiClient();
       const response = await ai.models.generateContent({
         model: "gemini-3.5-flash",
-        contents: `Analise a entrada de agendamento em linguagem natural e extraia os dados correspondentes.
-Contexto do Cliente (Data de hoje): ${formattedClientDate} (ISO: ${clientLocalDate || new Date().toISOString()})
-
-Lista de Serviços Disponíveis na Barbearia:
-${JSON.stringify(services || [], null, 2)}
-
-Lista de Barbeiros Disponíveis na Barbearia:
-${JSON.stringify(barbers || [], null, 2)}
-
-Entrada do Usuário: "${prompt}"`,
+        contents: `Extrair agendamento: ${prompt}`,
         config: {
-          systemInstruction: `Você é um robô inteligente especialista em extração de entidades em linguagem natural para a MS Barbearia.
-Analise a entrada do usuário e extraia o agendamento de cabelo/barba desejado.
-Sua missão é extrair exatamente:
-1. "serviceId": ID do serviço na lista disponível (se encontrar correspondência próxima, ex: 'corte default' ou 'barba'). Se não encontrar, retorne nulo.
-2. "barberId": ID do barbeiro da lista disponível (se o cliente disser algum nome que corresponda próximo). Se não encontrar, ou se disser "qualquer um" ou similar, use "all" ou nulo.
-3. "date": A data calculada no formato YYYY-MM-DD. Se disser "amanhã", calcule 1 dia adiante de hoje. Se "depois de amanhã", 2 dias adiante. Se "quinta", encontre o dia correspondente à próxima quinta-feira (se hoje já for quinta e o horário sugerido já passou ou se o usuário explicitamente se referir ao próximo ciclo, encontre o dia correto correspondente).
-4. "time": O horário no formato HH:MM. Se não falar, ou falar vago tipo "à tarde", estime algo razoável como "15:00" ou retorne nulo.
-5. "serviceName": O nome do serviço associado.
-6. "barberName": O nome de exibição do barbeiro associado.
-7. "explanation": Explicação amigável em português dizendo o que entendeu e preencheu (ex: "Claro, mestre! Agendei um Corte Social com o Marcos para esta quinta, dia 12/06 às 15:30. Já preenchi o formulário para você, basta conferir e confirmar!").
-
-Retorne a resposta rigorosamente em formato JSON estruturado seguindo o esquema definido.`,
           responseMimeType: "application/json",
           responseSchema: {
             type: Type.OBJECT,
             properties: {
-              serviceId: { type: Type.STRING, description: "ID do serviço correspondente" },
-              barberId: { type: Type.STRING, description: "ID do barbeiro correspondente" },
-              date: { type: Type.STRING, description: "A data correspondente calculada formatada em YYYY-MM-DD" },
-              time: { type: Type.STRING, description: "O horário correspondente formatado em HH:MM" },
-              serviceName: { type: Type.STRING, description: "Nome do serviço" },
-              barberName: { type: Type.STRING, description: "Nome do barbeiro" },
-              explanation: { type: Type.STRING, description: "Uma mensagem simpática em português de confirmação" }
+              serviceId: { type: Type.STRING },
+              barberId: { type: Type.STRING },
+              date: { type: Type.STRING },
+              time: { type: Type.STRING },
+              explanation: { type: Type.STRING }
             },
             required: ["explanation"]
           }
         }
       });
-
-      const resultText = response.text || "{}";
-      const parsedData = JSON.parse(resultText);
-      res.json(parsedData);
-    } catch (error: any) {
-      console.error("[Voice Booking API Error]:", error);
-      res.status(500).json({ error: "Falha ao processar o agendamento por voz. Tente digitar seu pedido." });
+      res.json(JSON.parse(response.text));
+    } catch (error) {
+      res.status(500).json({ error: "Erro voz" });
     }
   });
 
@@ -296,557 +160,195 @@ Retorne a resposta rigorosamente em formato JSON estruturado seguindo o esquema 
         return res.status(404).json({ error: "Payment not found" });
       }
 
-      const paymentData = paymentSnap.data();
-
-      // If it's already approved, output directly
+      const paymentData = paymentSnap.data() || {};
       if (paymentData.status === "approved" || paymentData.status === "completed") {
         return res.json({ status: "approved" });
       }
 
-      // If it's a real payment, try fetching latest from Mercado Pago directly to sync state
       if (!paymentData.isMock && process.env.MERCADO_PAGO_ACCESS_TOKEN) {
         try {
           const mpResponse = await axios.get(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-            headers: {
-              "Authorization": `Bearer ${process.env.MERCADO_PAGO_ACCESS_TOKEN}`
-            }
+            headers: { "Authorization": `Bearer ${process.env.MERCADO_PAGO_ACCESS_TOKEN}` }
           });
-
-          const currentMpStatus = mpResponse.data.status;
-          if (currentMpStatus === "approved") {
-            await updateDoc(paymentRef, {
-              status: "approved",
-              updatedAt: serverTimestamp()
-            });
+          if (mpResponse.data.status === "approved") {
+            await updateDoc(paymentRef, { status: "approved", updatedAt: serverTimestamp() });
             await processApprovedPayment({ id: paymentId, ...paymentData, status: "approved" });
             return res.json({ status: "approved" });
           }
-        } catch (mpError: any) {
-          console.error("[Polling] Error verifying on MP:", mpError.message);
-        }
+        } catch (e) {}
       }
-
       res.json({ status: paymentData.status });
     } catch (e: any) {
-      console.error("[Polling Error]:", e.message);
-      res.status(500).json({ error: "Failed to check status" });
+      res.status(500).json({ error: e.message });
     }
   });
 
   async function processApprovedPayment(paymentDoc: any) {
     const { appointmentId, amount, userId, email, id: paymentId } = paymentDoc;
-    console.log(`[Payment Processor] Processing approved payment: ${paymentId} for target ${appointmentId}`);
-
     if (appointmentId && appointmentId.startsWith("wallet-topup-")) {
-      let parsedUserId = userId;
-      const withoutPrefix = appointmentId.substring("wallet-topup-".length);
-      const lastDash = withoutPrefix.lastIndexOf("-");
-      if (lastDash > 0) {
-        parsedUserId = withoutPrefix.substring(0, lastDash);
-      } else if (withoutPrefix.length > 0) {
-        parsedUserId = withoutPrefix;
-      }
-
+      const parsedUserId = userId || appointmentId.split("-")[2];
       if (parsedUserId) {
         try {
           const userRef = doc(db, "users", parsedUserId);
           const paymentRef = doc(db, "payments", String(paymentId));
-          let totalAdded = 0;
-          let bonus = 0;
-          let userData: any = null;
-
           await runTransaction(db, async (t) => {
             const pSnap = await t.get(paymentRef);
-            if (!pSnap.exists()) return;
-            const pData = pSnap.data();
-            if (pData.processedWallet) {
-              console.log(`[Payment Processor] Payment ${paymentId} already processed for wallet.`);
-              return;
-            }
-
-            const userSnap = await t.get(userRef);
-            if (!userSnap.exists()) return;
-            userData = userSnap.data();
-            const currentBalance = Number(userData.walletBalance || 0);
-
-            let cutsReward = 0;
-            if (amount >= 200) {
-              bonus = 35;
-              cutsReward = 2;
-            } else if (amount >= 100) {
-              bonus = 15;
-              cutsReward = 1;
-            } else if (amount >= 50) {
-              bonus = 5;
-            }
-
-            const totalToAdd = amount + bonus;
-            totalAdded = totalToAdd;
-
-            t.update(userRef, {
-              walletBalance: currentBalance + totalToAdd,
-              cutsBalance: (Number(userData.cutsBalance) || 0) + cutsReward,
-              updatedAt: serverTimestamp()
-            });
-
-            t.update(paymentRef, {
-              processedWallet: true,
-              updatedAt: serverTimestamp()
-            });
+            if (!pSnap.exists() || pSnap.data()?.processedWallet) return;
+            const uSnap = await t.get(userRef);
+            if (!uSnap.exists()) return;
+            const currentBalance = Number(uSnap.data()?.walletBalance || 0);
+            t.update(userRef, { walletBalance: currentBalance + amount, updatedAt: serverTimestamp() });
+            t.update(paymentRef, { processedWallet: true, updatedAt: serverTimestamp() });
           });
-
-          if (totalAdded > 0 && userData) {
-            await addDoc(collection(db, "notifications"), {
-              clientEmail: email || userData.email || "",
-              message: `Recarga Aprovada! R$ ${totalAdded.toFixed(2).replace(".", ",")} adicionados à sua Carteira Digital através do Pix Mercado Pago.`,
-              timestamp: serverTimestamp(),
-              read: false
-            });
-
-            await sendPushNotification(parsedUserId, {
-              title: "Recarga Aprovada! 💰",
-              body: `Seu Pix de R$ ${amount.toFixed(2).replace(".", ",")} foi recebido! R$ ${totalAdded.toFixed(2).replace(".", ",")} foram adicionados na sua carteira.`,
-              url: "/"
-            });
-            console.log(`[Payment Processor] Successfully topped up wallet of user: ${parsedUserId} with R$ ${totalAdded}`);
-          }
-        } catch (err: any) {
-          console.error(`[Payment Processor] Error during wallet topup: ${err.message}`);
-        }
+        } catch (e) {}
       }
     } else if (appointmentId) {
       try {
         const appointmentRef = doc(db, "appointments", appointmentId);
         const paymentRef = doc(db, "payments", String(paymentId));
-        let shouldNotify = false;
-        let appData: any = null;
-
         await runTransaction(db, async (t) => {
           const pSnap = await t.get(paymentRef);
-          const pData = pSnap.exists() ? pSnap.data() : null;
-
-          if (pData?.processedAppointment) {
-            console.log(`[Payment Processor] Payment ${paymentId} already processed for appointment ${appointmentId}.`);
-            return;
-          }
-
+          if (pSnap.data()?.processedAppointment) return;
           const appSnap = await t.get(appointmentRef);
-          if (!appSnap.exists()) {
-            console.warn(`[Payment Processor] Appointment ${appointmentId} not found.`);
-            return;
-          }
-
-          appData = appSnap.data();
-          if (appData.status === "confirmed" && appData.paymentStatus === "paid") {
-            return;
-          }
-
-          if (pData?.walletAmountToDeduct > 0 && pData?.userId && pData?.userId !== "guest") {
-            const uRef = doc(db, "users", pData.userId);
-            t.update(uRef, {
-              walletBalance: increment(-pData.walletAmountToDeduct),
-              updatedAt: serverTimestamp()
-            });
-          }
-
-          t.update(appointmentRef, {
-            status: "confirmed",
-            paymentStatus: "paid",
-            updatedAt: serverTimestamp()
-          });
-
-          if (pSnap.exists()) {
-            t.update(paymentRef, {
-              processedAppointment: true,
-              updatedAt: serverTimestamp()
-            });
-          }
-          shouldNotify = true;
+          if (!appSnap.exists()) return;
+          t.update(appointmentRef, { status: "confirmed", paymentStatus: "paid", updatedAt: serverTimestamp() });
+          t.update(paymentRef, { processedAppointment: true, updatedAt: serverTimestamp() });
         });
-
-        if (shouldNotify && appData) {
-          const appClientId = appData.clientId;
-          if (appClientId && appClientId !== "guest") {
-            try {
-              const userRef = doc(db, "users", appClientId);
-              const userSnap = await getDoc(userRef);
-              if (userSnap.exists()) {
-                const userData = userSnap.data();
-                if (userData.referredBy && !userData.referralRewardTriggered) {
-                  const appsQuery = query(
-                    collection(db, "appointments"),
-                    where("clientId", "==", appClientId),
-                    where("paymentStatus", "==", "paid"),
-                    limit(2)
-                  );
-                  const appsSnap = await getDocs(appsQuery);
-                  if (appsSnap.size === 1) {
-                    const referrerQuery = query(collection(db, "users"), where("referralCode", "==", userData.referredBy));
-                    const referrerSnap = await getDocs(referrerQuery);
-                    if (!referrerSnap.empty) {
-                      const referrerDoc = referrerSnap.docs[0];
-                      const referrerId = referrerDoc.id;
-                      await runTransaction(db, async (rt) => {
-                        rt.update(doc(db, "users", referrerId), {
-                          walletBalance: increment(5),
-                          updatedAt: serverTimestamp()
-                        });
-                        rt.update(userRef, {
-                          referralRewardTriggered: true,
-                          updatedAt: serverTimestamp()
-                        });
-                      });
-                      console.log(`[Referral] User ${referrerId} rewarded for referral of ${appClientId}`);
-                      await sendPushNotification(referrerId, {
-                        title: "Bônus de Indicação! 🎁",
-                        body: `Você ganhou R$ 5,00 pois um amigo que você indicou acaba de realizar o primeiro corte!`,
-                        url: "/"
-                      });
-                    }
-                  }
-                }
-              }
-            } catch (refErr: any) {
-              console.error("[Referral Processor Error]:", refErr.message);
-            }
-          }
-
-          const clientName = appData.clientName || "Cliente";
-          const serviceName = appData.serviceName || "Serviço";
-          const barberName = appData.barberName || "Profissional";
-          const appClientIdForNotify = appData.clientId || "guest";
-          const clientPhone = appData.clientPhone || "";
-          let formattedDateStr = "";
-
-          if (appData.date) {
-            try {
-              const dateVal = appData.date instanceof Timestamp ? appData.date.toDate() : new Date(appData.date);
-              formattedDateStr = dateVal.toLocaleString("pt-BR", {
-                day: "2-digit",
-                month: "2-digit",
-                hour: "2-digit",
-                minute: "2-digit"
-              });
-            } catch {
-              formattedDateStr = String(appData.date);
-            }
-          }
-
-          await sendNotificationToCollaborators({
-            title: "Novo Pagamento Pix Confirmado! 📱",
-            body: `Pix de ${clientName} aprovado para ${serviceName} às ${appData.time} com ${barberName}.`,
-            url: "/agenda"
-          });
-
-          const rawTarget = appClientIdForNotify && appClientIdForNotify !== "guest" ? appClientIdForNotify : clientPhone;
-          const clientTarget = rawTarget ? rawTarget.replace(/[\s\-\(\)\+]/g, "") : "";
-          if (clientTarget) {
-            await sendPushNotification(clientTarget, {
-              title: "Pagamento Confirmado! ✅",
-              body: `Seu Pix foi recebido! Seu agendamento de ${serviceName} para ${formattedDateStr} está confirmado.`,
-              url: "/"
-            });
-          }
-          console.log(`[Payment Processor] Confirmed appointment: ${appointmentId} due to payment ${paymentId}`);
-        }
-      } catch (err: any) {
-        console.error(`[Payment Processor] Error during appointment payment confirmation: ${err.message}`);
-      }
+      } catch (e) {}
     }
   }
-
-  app.post("/api/payments/mercado-pago/create-payment", async (req, res) => {
-    const { transaction_amount, description, email, name, appointmentId, userId: providedUserId, walletAmountToDeduct } = req.body;
-    const amount = Number(transaction_amount);
-
-    try {
-      if (isNaN(amount) || amount <= 0) {
-        return res.status(400).json({ error: "Valor de transação inválido" });
-      }
-
-      let userId = providedUserId || "guest";
-      if (userId === "guest" && appointmentId && appointmentId.startsWith("wallet-topup-")) {
-        const withoutPrefix = appointmentId.substring("wallet-topup-".length);
-        const lastDash = withoutPrefix.lastIndexOf("-");
-        if (lastDash > 0) {
-          userId = withoutPrefix.substring(0, lastDash);
-        } else if (withoutPrefix.length > 0) {
-          userId = withoutPrefix;
-        }
-      }
-
-      const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
-      if (!accessToken || accessToken.trim() === "") {
-        return res.status(400).json({ 
-          error: "Token de acesso do Mercado Pago não configurado. Por favor configure a variável MERCADO_PAGO_ACCESS_TOKEN." 
-        });
-      }
-
-      const idempotencyKey = "mp-pix-" + Math.random().toString(36).substring(2) + Date.now().toString();
-      const response = await axios.post("https://api.mercadopago.com/v1/payments", {
-        transaction_amount: amount,
-        description: description || "Agendamento MS Barbearia",
-        payment_method_id: "pix",
-        external_reference: appointmentId || userId || "guest",
-        payer: {
-          email: email || "payment@example.com",
-          first_name: name || "Cliente"
-        }
-      }, {
-        headers: {
-          "Authorization": `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-          "X-Idempotency-Key": idempotencyKey
-        }
-      });
-
-      const mpPaymentId = String(response.data.id);
-      await setDoc(doc(db, "payments", mpPaymentId), {
-        id: mpPaymentId,
-        appointmentId: appointmentId || null,
-        userId: userId || "guest",
-        walletAmountToDeduct: walletAmountToDeduct || 0,
-        amount,
-        description: description || "Agendamento MS Barbearia",
-        status: response.data.status || "pending",
-        email: email || "payment@example.com",
-        name: name || "Cliente",
-        isMock: false,
-        createdAt: serverTimestamp()
-      });
-
-      res.json({
-        success: true,
-        isMock: false,
-        status: response.data.status,
-        status_detail: response.data.status_detail,
-        qr_code: response.data.point_of_interaction?.transaction_data?.qr_code,
-        qr_code_base64: response.data.point_of_interaction?.transaction_data?.qr_code_base64,
-        payment_id: mpPaymentId
-      });
-    } catch (error: any) {
-      console.error("[Mercado Pago Route Error]:", error.response?.data || error.message);
-      const errMsg = error.response?.data?.message || error.message || "Erro de Integração com o Mercado Pago";
-      return res.status(500).json({ error: errMsg });
-    }
-  });
-
-  // POST webhook receiver for Mercado Pago instant notifications
-  app.post("/api/payments/mercado-pago/webhook", async (req, res) => {
-    try {
-      // Mercado Pago Webhooks usually send either topic/id as query params or action/data inside body
-      const paymentId = req.query.id || req.body.data?.id;
-      const topic = req.query.topic || req.body.type;
-
-      if ((topic === "payment" || topic === "payment.updated") && paymentId) {
-        console.log(`[MP Webhook] Received payment update notification for: ${paymentId}`);
-        const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
-        
-        if (accessToken) {
-          const mpResponse = await axios.get(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-            headers: {
-              "Authorization": `Bearer ${accessToken}`
-            }
-          });
-
-          if (mpResponse.data.status === "approved") {
-            const paymentRef = doc(db, "payments", String(paymentId));
-            const paymentSnap = await getDoc(paymentRef);
-
-            if (paymentSnap.exists()) {
-              const paymentData = paymentSnap.data();
-              if (paymentData.status !== "approved" && paymentData.status !== "completed") {
-                await updateDoc(paymentRef, {
-                  status: "approved",
-                  updatedAt: serverTimestamp()
-                });
-                await processApprovedPayment({ id: String(paymentId), ...paymentData, status: "approved" });
-              }
-            } else {
-              // Even if not found in db, try to record and run using external_reference from MP response
-              console.warn(`[MP Webhook] Received webhook for unrecorded payment ${paymentId}. Creating record from MP data...`);
-              
-              const mpExtRef = mpResponse.data.external_reference;
-              const payload = {
-                id: String(paymentId),
-                appointmentId: (mpExtRef && mpExtRef.includes("wallet-topup")) ? mpExtRef : (mpExtRef || null),
-                userId: (mpExtRef && mpExtRef.includes("wallet-topup")) ? "guest" : (mpExtRef || "guest"),
-                amount: mpResponse.data.transaction_amount,
-                status: "approved",
-                email: mpResponse.data.payer?.email || "",
-                name: mpResponse.data.payer?.first_name || "",
-                isMock: false,
-                createdAt: serverTimestamp()
-              };
-              
-              // Refine userId if it was a wallet topup string
-              if (payload.appointmentId?.startsWith("wallet-topup-")) {
-                 const withoutPrefix = payload.appointmentId.substring("wallet-topup-".length);
-                 const lastDash = withoutPrefix.lastIndexOf("-");
-                 if (lastDash > 0) {
-                    payload.userId = withoutPrefix.substring(0, lastDash);
-                 }
-              }
-
-              await setDoc(paymentRef, payload);
-              await processApprovedPayment(payload);
-            }
-          }
-        }
-      }
-      res.sendStatus(200);
-    } catch (e: any) {
-      console.error("[MP Webhook Error]:", e.message);
-      res.sendStatus(200); // Always respond 200 to Mercado Pago to acknowledge recept of callback
-    }
-  });
-
-  // Web Push Configuration endpoint
-  app.get("/api/push-config", (req, res) => {
-    res.json({ publicKey: vapid.publicKey });
-  });
-
-  // Web Push Subscription registration endpoint
-  app.post("/api/subscribe", async (req, res) => {
-    const { subscription, userId, userRole } = req.body;
-    if (!subscription || !userId) {
-      return res.status(400).json({ error: "Missing subscription or userId" });
-    }
-    try {
-      const subRef = doc(db, "push_subscriptions", userId);
-      await setDoc(subRef, {
-        userId,
-        userRole: userRole || "client",
-        subscription,
-        createdAt: serverTimestamp()
-      }, { merge: true });
-      res.status(201).json({ success: true });
-    } catch (err: any) {
-      console.error("[Push Service] Error saving subscription:", err.message);
-      res.status(500).json({ error: "Failed to save subscription" });
-    }
-  });
 
   // API Route for appointment cancellation with atomic refund
   app.post("/api/appointments/cancel", async (req, res) => {
     const { appointmentId, userId, reason } = req.body;
-    if (!appointmentId || !userId) {
-      return res.status(400).json({ error: "Missing appointmentId or userId" });
-    }
+    if (!appointmentId || !userId) return res.status(400).json({ error: "Missing data" });
+    console.log(`[API] Cancelling appointment: ${appointmentId} by user: ${userId}`);
 
     try {
-      const appointmentRef = doc(db, "appointments", appointmentId);
-      
       let refundedAmount = 0;
-      let appData: any = null;
+      let cancelledBy: "client" | "professional" = "client";
 
-      await runTransaction(db, async (t) => {
+      await adminDb.runTransaction(async (t) => {
+        const appointmentRef = adminDb.collection("appointments").doc(appointmentId);
         const appSnap = await t.get(appointmentRef);
-        if (!appSnap.exists()) {
-          throw new Error("Appointment not found");
-        }
         
-        appData = appSnap.data();
-        if (appData.status === "cancelled") {
-          throw new Error("Appointment already cancelled");
-        }
+        if (!appSnap.exists) throw new Error("Agendamento não encontrado");
+        const appData = appSnap.data() || {};
+        if (appData.status === "cancelled") throw new Error("Agendamento já está cancelado");
 
-        // Verify ownership (simplified, in production use auth context)
+        // Determine who is cancelling
         if (appData.clientId !== userId) {
-           console.warn(`[Cancellation] Ownership mismatch: app.clientId(${appData.clientId}) != req.userId(${userId})`);
-           // For now we proceed if it's the right ID, but in real app you'd check auth
+          cancelledBy = "professional";
+        } else {
+          cancelledBy = "client";
         }
 
-        const updates: any = {
-           status: "cancelled",
-           cancelledBy: "client",
-           cancellationReason: reason || "Motivo não informado",
-           updatedAt: serverTimestamp()
+        const updates: any = { 
+          status: "cancelled", 
+          cancelledBy, 
+          updatedAt: AdminTimestamp.now(),
+          cancellationReason: reason || ""
         };
 
-        // Refund logic
-        if (appData.paymentStatus === "paid" && appData.totalPrice > 0 && userId !== "guest") {
-           const userRef = doc(db, "users", userId);
-           const userSnap = await t.get(userRef);
-           if (userSnap.exists()) {
-              t.update(userRef, {
-                 walletBalance: increment(appData.totalPrice),
-                 updatedAt: serverTimestamp()
-              });
-              refundedAmount = appData.totalPrice;
-              updates.refundedToWallet = true;
-           }
+        if (appData.paymentStatus === "paid" && appData.totalPrice > 0 && appData.clientId && appData.clientId !== "guest") {
+          const priceToRefund = Number(appData.totalPrice) || 0;
+          const userRef = adminDb.collection("users").doc(appData.clientId);
+          const userSnap = await t.get(userRef);
+          const currentBalance = Number(userSnap.data()?.walletBalance) || 0;
+          
+          t.update(userRef, { 
+            walletBalance: currentBalance + priceToRefund, 
+            updatedAt: AdminTimestamp.now() 
+          });
+          
+          updates.refundedToWallet = true;
+          refundedAmount = priceToRefund;
         }
 
         t.update(appointmentRef, updates);
       });
 
-      // Notifications
-      if (appData) {
-        try {
-          const dateVal = appData.date instanceof Timestamp ? appData.date.toDate() : new Date(appData.date);
-          const formattedDate = dateVal.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
-          const displayReason = reason || "Não informado";
-          
-          // Staff notification (to the barber/staff)
-          await addDoc(collection(db, "staff_notifications"), {
-            type: "cancellation",
-            message: `Agendamento Cancelado: ${appData.clientName} cancelou ${appData.serviceName} marcado para ${formattedDate}. Motivo: ${displayReason}`,
-            timestamp: serverTimestamp(),
-            read: false,
-            clientId: userId,
-            appointmentId: appointmentId
-          });
-
-          // Client notification (to the client)
-          await addDoc(collection(db, "notifications"), {
-            clientId: appData.clientId || userId || "",
-            clientEmail: appData.clientEmail || "",
-            type: "cancellation",
-            message: `Seu agendamento para ${appData.serviceName} no dia ${formattedDate} foi cancelado. Motivo: ${displayReason}`,
-            timestamp: serverTimestamp(),
-            read: false,
-            appointmentId: appointmentId
-          });
-        } catch (notifierErr) {
-          console.error("Error creating notifications:", notifierErr);
-        }
-      }
-
-      res.json({ success: true, refundedAmount });
+      res.json({ success: true, refundedAmount, cancelledBy });
     } catch (e: any) {
-      console.error("[Cancellation Error]:", e.message);
-      res.status(500).json({ error: e.message || "Failed to cancel appointment" });
+      console.error("[API Error] Cancel failed:", e.message);
+      res.status(500).json({ error: e.message });
     }
   });
 
-  // Vite middleware for development
+  // API Route for permanent appointment deletion (Manager only)
+  app.post("/api/appointments/delete", async (req, res) => {
+    console.log("[API] Received request to delete appointment");
+    const { appointmentId, userId } = req.body;
+    if (!appointmentId || !userId) {
+        console.log("[API] Missing data:", { appointmentId, userId });
+        return res.status(400).json({ error: "Missing data" });
+    }
+    console.log(`[API] Deleting appointment: ${appointmentId} by user: ${userId}`);
+
+    try {
+      // Security check: only managers or barbers can purge records
+      console.log(`[API] Checking permissions for user: ${userId}`);
+      const userSnap = await adminDb.collection("users").doc(userId).get();
+      const userData = userSnap.data();
+      
+      if (!userData || (userData.role !== 'manager' && userData.role !== 'barber')) {
+        console.log("[API] Permission denied for user:", userId);
+        return res.status(403).json({ error: "Permissão negada. Apenas profissionais podem excluir registros." });
+      }
+
+      console.log("[API] Deleting appointment document: ", appointmentId);
+      const appRef = adminDb.collection("appointments").doc(appointmentId);
+      const appSnap = await appRef.get();
+      if (!appSnap.exists) {
+        console.log("[API] Document not found: ", appointmentId);
+        return res.status(404).json({ error: "Agendamento não encontrado" });
+      }
+      await appRef.delete();
+      console.log("[API] Deletion successful for: ", appointmentId);
+      res.json({ success: true });
+    } catch (e: any) {
+      console.error("[API Error] Delete failed (details):", e);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Mercado Pago Payment Creation API
+  app.post("/api/payments/mercado-pago/create-payment", async (req, res) => {
+    const { transaction_amount, appointmentId, userId } = req.body;
+    try {
+      const mpRes = await axios.post("https://api.mercadopago.com/v1/payments", {
+        transaction_amount,
+        payment_method_id: "pix",
+        payer: { email: "test@test.com" }
+      }, {
+        headers: { Authorization: `Bearer ${process.env.MERCADO_PAGO_ACCESS_TOKEN}` }
+      });
+      const paymentData = {
+        appointmentId,
+        userId,
+        status: mpRes.data.status,
+        amount: transaction_amount,
+        createdAt: serverTimestamp()
+      };
+      await setDoc(doc(db, "payments", String(mpRes.data.id)), paymentData);
+      res.json({ id: mpRes.data.id, qr_code_base64: mpRes.data.point_of_interaction.transaction_data.qr_code_base64 });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Vite and Static handling
   if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
+    const vite = await createViteServer({ server: { middlewareMode: true }, appType: "spa" });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), "dist");
+    const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
-    app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
-    });
+    app.get('*', (req, res) => res.sendFile(path.join(distPath, 'index.html')));
   }
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
-    
-    // Mercado Pago Access Token verification log
-    const mpToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
-    if (mpToken) {
-      // Safely show presence with length and a tiny redacted hint to avoid exposing private credentials
-      const maskedToken = mpToken.length > 10 ? `${mpToken.substring(0, 6)}...${mpToken.substring(mpToken.length - 4)}` : 'configurado';
-      console.log(`[Mercado Pago] MERCADO_PAGO_ACCESS_TOKEN carregado com sucesso! (Token: ${maskedToken}, Comprimento: ${mpToken.length})`);
-    } else {
-      console.warn(`[Mercado Pago] ALERTA: MERCADO_PAGO_ACCESS_TOKEN não está definido. Verifique suas variáveis de ambiente para produção/pagamentos reais.`);
-    }
   });
 }
 

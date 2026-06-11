@@ -1,116 +1,17 @@
-import webpush from "web-push";
-import fs from "fs";
-import path from "path";
-import { 
-  collection, 
-  onSnapshot, 
-  query, 
-  getDocs, 
-  where, 
-  deleteDoc, 
-  doc, 
-  getDoc,
-  Timestamp,
-  addDoc,
-  updateDoc
-} from "firebase/firestore";
-import { db } from "../lib/firebase";
+import { adminMessaging, adminDb, db } from "./firebaseAdmin";
+import type { Message } from "firebase-admin/messaging";
+import firebaseConfig from "../../firebase-applet-config.json";
+import { Timestamp } from "firebase-admin/firestore";
+import { collection, onSnapshot } from "firebase/firestore";
 
-// File-based backup for stable VAPID Keys in local environments
-const VAPID_FILE = path.join(process.cwd(), "vapid-keys.json");
-
-interface VapidKeys {
-  publicKey: string;
-  privateKey: string;
+// Service logic
+export async function initVapid() {
+  // We keep this function so it doesn't break server.ts which imports it.
+  // With FCM, VAPID is handled by Firebase config. We can just return a dummy object or read from VITE_VAPID_PUBLIC_KEY.
+  return { publicKey: process.env.VITE_VAPID_PUBLIC_KEY || "" };
 }
 
-// Ensure VAPID keys are initialized and set up
-let loadedVapidKeys: VapidKeys | null = null;
-
-export async function initVapid(): Promise<VapidKeys> {
-  if (loadedVapidKeys) return loadedVapidKeys;
-
-  let publicKey = process.env.VAPID_PUBLIC_KEY;
-  let privateKey = process.env.VAPID_PRIVATE_KEY;
-
-  if (publicKey && privateKey) {
-    console.log("[Push Service] Using VAPID keys from environment variables.");
-    webpush.setVapidDetails(
-      "mailto:suporte@barbearia.com",
-      publicKey,
-      privateKey
-    );
-    loadedVapidKeys = { publicKey, privateKey };
-    return loadedVapidKeys;
-  }
-
-  // 1. Try to load persistent keys from Firestore
-  try {
-    const docRef = doc(db, "system_config", "vapid_keys");
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      const data = docSnap.data();
-      if (data.publicKey && data.privateKey) {
-        console.log("[Push Service] Using saved stable VAPID keys from Firestore /system_config/vapid_keys.");
-        webpush.setVapidDetails(
-          "mailto:suporte@barbearia.com",
-          data.publicKey,
-          data.privateKey
-        );
-        loadedVapidKeys = { publicKey: data.publicKey, privateKey: data.privateKey };
-        return loadedVapidKeys;
-      }
-    }
-  } catch (error: any) {
-    console.error("[Push Service] Firestore VAPID retrieval failed or skipped:", error.message);
-  }
-
-  // 2. Check if we have saved keys in local file backup
-  if (fs.existsSync(VAPID_FILE)) {
-    try {
-      const keys = JSON.parse(fs.readFileSync(VAPID_FILE, "utf-8")) as VapidKeys;
-      if (keys.publicKey && keys.privateKey) {
-        console.log("[Push Service] Using saved VAPID keys from vapid-keys.json.");
-        webpush.setVapidDetails(
-          "mailto:suporte@barbearia.com",
-          keys.publicKey,
-          keys.privateKey
-        );
-        loadedVapidKeys = keys;
-        return keys;
-      }
-    } catch (e: any) {
-      console.error("[Push Service] Error reading vapid-keys.json:", e.message);
-    }
-  }
-
-  // 3. Generate new keys, save to file and Firestore
-  console.log("[Push Service] Generating new stable VAPID key pair...");
-  const newKeys = webpush.generateVAPIDKeys();
-  try {
-    fs.writeFileSync(VAPID_FILE, JSON.stringify(newKeys, null, 2), "utf-8");
-  } catch (e: any) {
-    console.error("[Push Service] Failed to write vapid-keys.json:", e.message);
-  }
-
-  try {
-    const { setDoc } = await import("firebase/firestore");
-    await setDoc(doc(db, "system_config", "vapid_keys"), newKeys);
-    console.log("[Push Service] New stable VAPID keys saved inside persistent Firestore.");
-  } catch (e: any) {
-    console.error("[Push Service] Failed to write VAPID keys to Firestore:", e.message);
-  }
-
-  webpush.setVapidDetails(
-    "mailto:suporte@barbearia.com",
-    newKeys.publicKey,
-    newKeys.privateKey
-  );
-  loadedVapidKeys = newKeys;
-  return newKeys;
-}
-
-// Function to send a push notification to a specific user (and delete if expired)
+// Function to send a push notification to a specific user using FCM
 export async function sendPushNotification(
   userId: string,
   payload: { title: string; body: string; url?: string }
@@ -118,45 +19,53 @@ export async function sendPushNotification(
   try {
     const cleanUserId = userId.replace(/[\s\-\(\)\+]/g, "");
     
-    // Query both potential formats to ensure seamless compatibility (raw and sanitized)
-    const q1 = query(
-      collection(db, "push_subscriptions"),
-      where("userId", "==", cleanUserId)
-    );
-    const q2 = query(
-      collection(db, "push_subscriptions"),
-      where("userId", "==", userId)
-    );
+    // Query FCM tokens collection
+    const snap1 = await adminDb.collection("fcm_tokens").where("userId", "==", cleanUserId).get();
+    const snap2 = await adminDb.collection("fcm_tokens").where("userId", "==", userId).get();
     
-    const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
-    
-    // Combine unique document matches
     const docMap = new Map();
     snap1.docs.forEach((d) => docMap.set(d.id, d));
     snap2.docs.forEach((d) => docMap.set(d.id, d));
     const uniqueDocs = Array.from(docMap.values());
     
     if (uniqueDocs.length === 0) {
-      console.log(`[Push Service] No active push subscriptions found for user: ${cleanUserId} or ${userId}`);
+      console.log(`[Push Service] No FCM tokens found for user: ${cleanUserId} or ${userId}`);
       return;
     }
 
-    console.log(`[Push Service] Sending notification to ${uniqueDocs.length} device(s) for user: ${userId}`);
-    const promises = uniqueDocs.map(async (docSnap) => {
+    console.log(`[Push Service] Sending FCM notification to ${uniqueDocs.length} device(s) for user: ${userId}`);
+    const promises = uniqueDocs.map(async (docSnap: any) => {
       const data = docSnap.data();
-      const subscription = data.subscription;
+      const token = data.token;
+
+      if (!token) return;
+
+      const message: Message = {
+        token: token,
+        notification: {
+          title: payload.title,
+          body: payload.body,
+        },
+        data: {
+          url: payload.url || "/",
+        },
+        webpush: {
+          fcmOptions: {
+            link: payload.url || "/",
+          }
+        }
+      };
 
       try {
-        await webpush.sendNotification(subscription, JSON.stringify(payload));
+        await adminMessaging.send(message);
       } catch (err: any) {
-        console.error(`[Push Service] Error sending to subscription:`, err.message);
-        // If subscription is expired or revoked (410, 404), delete it
-        if (err.statusCode === 410 || err.statusCode === 404) {
-          console.log(`[Push Service] Subscription is dead. Cleaning up subscription: ${docSnap.id}`);
+        console.error(`[Push Service] Error sending FCM message to token:`, err.message);
+        if (err.code === 'messaging/registration-token-not-registered' || err.code === 'messaging/invalid-registration-token') {
+          console.log(`[Push Service] Cleaning up expired token: ${docSnap.id}`);
           try {
-            await deleteDoc(doc(db, "push_subscriptions", docSnap.id));
+            await adminDb.collection("fcm_tokens").doc(docSnap.id).delete();
           } catch (deleteErr: any) {
-            console.error(`[Push Service] Error deleting stale subscription:`, deleteErr.message);
+             console.error(`[Push Service] Error deleting stale token:`, deleteErr.message);
           }
         }
       }
@@ -168,13 +77,12 @@ export async function sendPushNotification(
   }
 }
 
-// Send notification to all collaborators (managers / barbers)
+// Send notification to all collaborators (managers / barbers) using FCM
 export async function sendNotificationToCollaborators(
   payload: { title: string; body: string; url?: string }
 ) {
   try {
-    const q = query(collection(db, "push_subscriptions"));
-    const snapshot = await getDocs(q);
+    const snapshot = await adminDb.collection("fcm_tokens").get();
     const targetRoles = ["manager", "barber"];
 
     const collaboratorsToNotify = snapshot.docs.filter((docSnap) => {
@@ -182,14 +90,33 @@ export async function sendNotificationToCollaborators(
       return targetRoles.includes(data.userRole || "");
     });
 
-    console.log(`[Push Service] Notifying ${collaboratorsToNotify.length} collaborator devices`);
+    console.log(`[Push Service] Notifying ${collaboratorsToNotify.length} collaborator devices via FCM`);
     const promises = collaboratorsToNotify.map(async (docSnap) => {
       const data = docSnap.data();
+      const token = data.token;
+      if (!token) return;
+
+      const message: Message = {
+        token: token,
+        notification: {
+          title: payload.title,
+          body: payload.body,
+        },
+        data: {
+          url: payload.url || "/",
+        },
+        webpush: {
+          fcmOptions: {
+            link: payload.url || "/",
+          }
+        }
+      };
+
       try {
-        await webpush.sendNotification(data.subscription, JSON.stringify(payload));
+        await adminMessaging.send(message);
       } catch (err: any) {
-        if (err.statusCode === 410 || err.statusCode === 404) {
-          await deleteDoc(doc(db, "push_subscriptions", docSnap.id));
+        if (err.code === 'messaging/registration-token-not-registered' || err.code === 'messaging/invalid-registration-token') {
+          await adminDb.collection("fcm_tokens").doc(docSnap.id).delete();
         }
       }
     });
@@ -210,60 +137,44 @@ async function checkAndNotifyReferralFirstAppointmentConfirmed(
   if (!clientId || clientId === "guest") return;
   
   try {
-    const clientDocRef = doc(db, "users", clientId);
-    const clientSnap = await getDoc(clientDocRef);
-    if (!clientSnap.exists()) return;
+    const clientRef = adminDb.collection("users").doc(clientId);
+    const clientSnap = await clientRef.get();
+    if (!clientSnap.exists) return;
     
-    const userData = clientSnap.data();
+    const userData = clientSnap.data() || {};
     if (!userData.referredBy || userData.referralConfirmationNotificationTriggered) {
       return;
     }
     
-    // To be absolutely sure it's their FIRST confirmed/completed appointment,
-    // verify there are no other confirmed/completed appointments for this client.
-    const appointmentsQuery = query(
-      collection(db, "appointments"),
-      where("clientId", "==", clientId)
-    );
-    const appointmentsSnap = await getDocs(appointmentsQuery);
+    const appointmentsSnap = await adminDb.collection("appointments").where("clientId", "==", clientId).get();
+
     const otherConfirmedOrCompleted = appointmentsSnap.docs.filter((d) => {
       const dData = d.data();
       return d.id !== docId && (dData.status === "confirmed" || dData.status === "completed" || dData.status === "done");
     });
     
     if (otherConfirmedOrCompleted.length > 0) {
-      // Not first confirmed/completed appointment! Mark triggered to avoid re-checking
-      await updateDoc(clientDocRef, {
+      await clientRef.update({
         referralConfirmationNotificationTriggered: true
       });
       return;
     }
     
-    // It's their first confirmed appointment!
-    // Set flag in user doc to prevent duplicate triggers
-    await updateDoc(clientDocRef, {
+    await clientRef.update({
       referralConfirmationNotificationTriggered: true
     });
     
-    // Find the referrer who has the referralCode matching userData.referredBy
-    const referrersQuery = query(
-      collection(db, "users"),
-      where("referralCode", "==", userData.referredBy)
-    );
-    const referrersSnap = await getDocs(referrersQuery);
+    const referrersSnap = await adminDb.collection("users").where("referralCode", "==", userData.referredBy).limit(1).get();
     
-    // 1. Notify the new client (the invitee)
-    // Send standard DB in-app notification
-    await addDoc(collection(db, "notifications"), {
+    await adminDb.collection("notifications").add({
       clientId: clientId,
       clientEmail: userData.email || "",
       message: `Seu primeiro agendamento foi confirmado! Você já garantiu R$ 5,00 de saldo inicial pela indicação para usar no pagamento. 🎉`,
-      timestamp: new Date(),
+      timestamp: Timestamp.now(),
       read: false,
       type: "referral_confirmed"
     });
     
-    // Send push notification
     const cleanClientPhone = clientId.replace(/[\s\-\(\)\+]/g, "");
     await sendPushNotification(cleanClientPhone, {
       title: "Primeiro Agendamento Confirmado! ✂️",
@@ -271,162 +182,144 @@ async function checkAndNotifyReferralFirstAppointmentConfirmed(
       url: "/"
     });
     
-    // 2. Notify the referrer (if they exist)
     if (!referrersSnap.empty) {
       const referrerDoc = referrersSnap.docs[0];
       const referrerId = referrerDoc.id;
       const referrerData = referrerDoc.data();
-      const referrerName = referrerData.name || "Colega";
       
       const shortClientName = clientName.trim().split(" ")[0];
       
-      // Send standard DB in-app notification
-      await addDoc(collection(db, "notifications"), {
+      await adminDb.collection("notifications").add({
         clientId: referrerId,
         clientEmail: referrerData.email || "",
         message: `Seu amigo ${shortClientName} confirmou o primeiro corte! Quando o corte for concluído, você receberá R$ 5,00 de bônus em sua carteira. 🎁`,
-        timestamp: new Date(),
+        timestamp: Timestamp.now(),
         read: false,
         type: "referral_confirmed"
       });
       
-      // Send push notification to referrer
       const cleanReferrerPhone = referrerId.replace(/[\s\-\(\)\+]/g, "");
       await sendPushNotification(cleanReferrerPhone, {
         title: "Seu amigo confirmou o corte! 🎁",
         body: `Seu amigo ${shortClientName} confirmou o primeiro agendamento! Quando o corte for concluído, você receberá R$ 5,00 de bônus em sua carteira.`,
         url: "/referrals"
       });
-      
-      console.log(`[Referral Confirm Notification] Successfully sent to referrer (${referrerId}) and referee (${clientId})`);
-    } else {
-      console.log(`[Referral Confirm Notification] Referee (${clientId}) notified. Referrer code (${userData.referredBy}) not found in database.`);
     }
   } catch (err: any) {
     console.error("[Referral Confirm Notification] Error executing check & notify:", err.message);
   }
 }
 
-// Central snapshot listener on "appointments" collection to auto-trigger notifications
+// Central snapshot listener on "appointments" collection
 export function startAppointmentsListener() {
-  console.log("[Push Service] Initializing appointments snapshot service...");
+  console.log("[Push Service] Initializing with firebase admin SDK snapshot service...");
   
   let isInitial = true;
-  const initialDocs = new Set<string>();
 
-  // Fetch initial documents first to set the baseline
-  const appointmentsRef = collection(db, "appointments");
-
-  const unsubscribe = onSnapshot(appointmentsRef, (snapshot) => {
-    if (isInitial) {
-      snapshot.docs.forEach((docSnap) => {
-        initialDocs.add(docSnap.id);
-      });
-      isInitial = false;
-      console.log(`[Push Service] Baselined ${initialDocs.size} existing appointments. Real-time notifications active.`);
-      return;
-    }
-
-    snapshot.docChanges().forEach(async (change) => {
-      const docId = change.doc.id;
-      const data = change.doc.data();
-
-      // Check format of date to display
-      let formattedDateStr = "";
-      if (data.date) {
-        try {
-          const dateVal = data.date instanceof Timestamp 
-            ? data.date.toDate() 
-            : new Date(data.date);
-          formattedDateStr = dateVal.toLocaleString("pt-BR", {
-            day: "2-digit",
-            month: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit"
-          });
-        } catch (e) {
-          formattedDateStr = String(data.date);
-        }
+  const setupListener = () => {
+    return onSnapshot(collection(db, "appointments"), (snapshot) => {
+      if (isInitial) {
+        isInitial = false;
+        console.log(`[Push Service] Baselined existing appointments. Real-time notifications active.`);
+        return;
       }
 
-      const clientName = data.clientName || "Cliente";
-      const serviceName = data.serviceName || "Serviço";
-      const barberName = data.barberName || "Profissional";
-      const clientId = data.clientId || "guest";
-      const clientPhone = data.clientPhone || "";
+      snapshot.docChanges().forEach(async (change) => {
+        const docId = change.doc.id;
+        const data = change.doc.data();
 
-      if (change.type === "added") {
-        // If it was already in the baseline, ignore it
-        if (initialDocs.has(docId)) {
-          return;
+        // Check format of date to display
+        let formattedDateStr = "";
+        if (data.date) {
+          try {
+            const dateVal = data.date instanceof Timestamp 
+              ? data.date.toDate() 
+              : (data.date && data.date._seconds ? new Date(data.date._seconds * 1000) : new Date(data.date));
+            formattedDateStr = dateVal.toLocaleString("pt-BR", {
+              day: "2-digit",
+              month: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit"
+            });
+          } catch (e) {
+            formattedDateStr = String(data.date);
+          }
         }
 
-        console.log(`[Push Service] New appointment created: ${docId}`);
-        // 1. Notify Collaborators
-        await sendNotificationToCollaborators({
-          title: "Novo Agendamento! 📅",
-          body: `${clientName} agendou ${serviceName} com ${barberName} em ${formattedDateStr}`,
-          url: "/agenda"
-        });
+        const clientName = data.clientName || "Cliente";
+        const serviceName = data.serviceName || "Serviço";
+        const barberName = data.barberName || "Profissional";
+        const clientId = data.clientId || "guest";
+        const clientPhone = data.clientPhone || "";
 
-        // 2. Notify client (if they registered push, as guest or user)
-        const rawTarget = clientId && clientId !== "guest" ? clientId : clientPhone;
-        const clientTarget = rawTarget ? rawTarget.replace(/[\s\-\(\)\+]/g, "") : "";
-        if (clientTarget) {
-          await sendPushNotification(clientTarget, {
-            title: "Agendamento Solicitado! 🎉",
-            body: `Seu agendamento de ${serviceName} para ${formattedDateStr} foi recebido. Aguarde a confirmação!`,
-            url: "/"
+        if (change.type === "added") {
+          console.log(`[Push Service] New appointment created: ${docId}`);
+          await sendNotificationToCollaborators({
+            title: "Novo Agendamento! 📅",
+            body: `${clientName} agendou ${serviceName} com ${barberName} em ${formattedDateStr}`,
+            url: "/agenda"
           });
-        }
 
-        if (data.status === "confirmed") {
-          await checkAndNotifyReferralFirstAppointmentConfirmed(clientId, clientName, serviceName, formattedDateStr, docId);
-        }
-      }
-
-      if (change.type === "modified") {
-        console.log(`[Push Service] Appointment updated: ${docId}`);
-        // Look up the transition of status
-        const status = data.status;
-        const rawTarget = clientId && clientId !== "guest" ? clientId : clientPhone;
-        const clientTarget = rawTarget ? rawTarget.replace(/[\s\-\(\)\+]/g, "") : "";
-
-        const urlPath = "/";
-
-        if (status === "confirmed" && clientTarget) {
-          await sendPushNotification(clientTarget, {
-            title: "Agendamento Confirmado! ✅",
-            body: `Excelente! Seu agendamento de ${serviceName} com ${barberName} foi confirmado para ${formattedDateStr}.`,
-            url: urlPath
-          });
-          await checkAndNotifyReferralFirstAppointmentConfirmed(clientId, clientName, serviceName, formattedDateStr, docId);
-        } else if (status === "cancelled") {
+          const rawTarget = clientId && clientId !== "guest" ? clientId : clientPhone;
+          const clientTarget = rawTarget ? rawTarget.replace(/[\s\-\(\)\+]/g, "") : "";
           if (clientTarget) {
             await sendPushNotification(clientTarget, {
-              title: "Agendamento Cancelado ❌",
-              body: `Seu agendamento de ${serviceName} para ${formattedDateStr} foi cancelado.`,
+              title: "Agendamento Solicitado! 🎉",
+              body: `Seu agendamento de ${serviceName} para ${formattedDateStr} foi recebido. Aguarde a confirmação!`,
+              url: "/"
+            });
+          }
+
+          if (data.status === "confirmed") {
+            await checkAndNotifyReferralFirstAppointmentConfirmed(clientId, clientName, serviceName, formattedDateStr, docId);
+          }
+        }
+
+        if (change.type === "modified") {
+          console.log(`[Push Service] Appointment updated: ${docId}`);
+          const status = data.status;
+          const rawTarget = clientId && clientId !== "guest" ? clientId : clientPhone;
+          const clientTarget = rawTarget ? rawTarget.replace(/[\s\-\(\)\+]/g, "") : "";
+
+          const urlPath = "/";
+
+          if (status === "confirmed" && clientTarget) {
+            await sendPushNotification(clientTarget, {
+              title: "Agendamento Confirmado! ✅",
+              body: `Excelente! Seu agendamento de ${serviceName} com ${barberName} foi confirmado para ${formattedDateStr}.`,
+              url: urlPath
+            });
+            await checkAndNotifyReferralFirstAppointmentConfirmed(clientId, clientName, serviceName, formattedDateStr, docId);
+          } else if (status === "cancelled") {
+            if (clientTarget) {
+              await sendPushNotification(clientTarget, {
+                title: "Agendamento Cancelado ❌",
+                body: `Seu agendamento de ${serviceName} para ${formattedDateStr} foi cancelado.`,
+                url: urlPath
+              });
+            }
+            await sendNotificationToCollaborators({
+              title: "Agendamento Cancelado ⚠️",
+              body: `${clientName} cancelou o agendamento de ${serviceName} marcado para ${formattedDateStr}`,
+              url: "/agenda"
+            });
+          } else if (status === "completed" && clientTarget) {
+            await sendPushNotification(clientTarget, {
+              title: "Atendimento Concluído! ⭐",
+              body: `Obrigado pela preferência! Avalie seu atendimento e ajude o profissional ${barberName}.`,
               url: urlPath
             });
           }
-          // Also notify professional/collaborator
-          await sendNotificationToCollaborators({
-            title: "Agendamento Cancelado ⚠️",
-            body: `${clientName} cancelou o agendamento de ${serviceName} marcado para ${formattedDateStr}`,
-            url: "/agenda"
-          });
-        } else if (status === "completed" && clientTarget) {
-          await sendPushNotification(clientTarget, {
-            title: "Atendimento Concluído! ⭐",
-            body: `Obrigado pela preferência! Avalie seu atendimento e ajude o profissional ${barberName}.`,
-            url: urlPath
-          });
         }
-      }
+      });
+    }, (err: any) => {
+      console.error("[Push Service] Snapshot error on appointments:", err.message);
+      console.log("[Push Service] Attempting to restart listener in 5 seconds...");
+      setTimeout(() => {
+        setupListener();
+      }, 5000);
     });
-  }, (err) => {
-    console.error("[Push Service] Snapshot error on appointments:", err.message);
-  });
+  };
 
-  return unsubscribe;
+  return setupListener();
 }

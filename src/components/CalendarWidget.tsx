@@ -156,7 +156,7 @@ export function CalendarWidget({
   currentDate: Date, 
   onDateChange: (date: Date) => void,
   role: string,
-  updateStatus: (app: any, status: string) => void,
+  updateStatus: (app: any, status: string, extraData?: any) => void,
   onNewBooking?: () => void,
   onSelectAppointment?: (app: any) => void
 }) {

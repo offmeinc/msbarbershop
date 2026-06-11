@@ -62,8 +62,9 @@ import {
   getDoc,
   getDocs
 } from "firebase/firestore";
-import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
+import { db, handleFirestoreError, OperationType, safeStringify } from "../../lib/firebase";
 import { triggerLightHaptic } from "../../lib/haptics";
+import { getBackendUrl } from "../../lib/pushRegister";
 import { addToOfflineQueue, getOfflineQueue, syncOfflineQueue, OfflineAction } from "../../lib/offlineQueue";
 import { AnalyticsScreen } from "./AnalyticsScreen";
 import { CalendarWidget, AppointmentModal } from "../CalendarWidget";
@@ -279,6 +280,38 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
       return;
     }
 
+    if (newStatus === 'cancelled') {
+      try {
+        const res = await fetch(getBackendUrl("/api/appointments/cancel"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: safeStringify({
+            appointmentId: app.id,
+            userId: user?.uid || user?.id,
+            reason: extraData.cancellationReason || ""
+          })
+        });
+
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.error || "Erro ao cancelar via API");
+        }
+
+        const data = await res.json();
+        if (data.refundedAmount > 0) {
+          setStatusMsg(`Cancelado! R$ ${data.refundedAmount.toFixed(2)} devolvidos ao cliente.`);
+        } else {
+          setStatusMsg('Agendamento cancelado com sucesso!');
+        }
+        setTimeout(() => setStatusMsg(null), 3000);
+        return;
+      } catch (apiErr: any) {
+        console.error("[Manager Cancel API Error]:", apiErr);
+        alert(`Erro ao cancelar: ${apiErr.message}`);
+        return;
+      }
+    }
+
     const description = `Atualizar status de ${app.clientName} (${app.serviceName}) para "${newStatus === 'completed' ? 'Finalizado' : newStatus === 'cancelled' ? 'Cancelado' : newStatus}"`;
 
     if (typeof navigator !== "undefined" && !navigator.onLine) {
@@ -361,89 +394,80 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
       
       await updateDoc(doc(firestore, "appointments", app.id), updatePayload);
 
-      // Process offline/manual referral bonus when appointment completed
-      if (newStatus === 'completed' && app.clientId && app.clientId !== "guest") {
+      // Async/non-blocking notifications to avoid UI freeze or catch-all failures
+      (async () => {
         try {
-          const clientDocRef = doc(firestore, "users", app.clientId);
-          const clientSnap = await getDoc(clientDocRef);
-          if (clientSnap.exists()) {
-            const userData = clientSnap.data();
-            if (userData.referredBy && !userData.referralRewardTriggered) {
-              const rQuery = query(collection(firestore, "users"), where("referralCode", "==", userData.referredBy));
-              const rSnap = await getDocs(rQuery);
-              if (!rSnap.empty) {
-                const referrerDoc = rSnap.docs[0];
-                const rRef = doc(firestore, "users", rSnap.docs[0].id);
-                const currentBal = Number(referrerDoc.data().walletBalance || 0);
+          // Process offline/manual referral bonus when appointment completed
+          if (newStatus === 'completed' && app.clientId && app.clientId !== "guest") {
+              const clientDocRef = doc(firestore, "users", app.clientId);
+              const clientSnap = await getDoc(clientDocRef);
+              if (clientSnap.exists()) {
+                const userData = clientSnap.data();
+                if (userData.referredBy && !userData.referralRewardTriggered) {
+                  const rQuery = query(collection(firestore, "users"), where("referralCode", "==", userData.referredBy));
+                  const rSnap = await getDocs(rQuery);
+                  if (!rSnap.empty) {
+                    const referrerDoc = rSnap.docs[0];
+                    const rRef = doc(firestore, "users", rSnap.docs[0].id);
+                    const currentBal = Number(referrerDoc.data().walletBalance || 0);
 
-                await updateDoc(rRef, {
-                  walletBalance: currentBal + 5,
-                  updatedAt: serverTimestamp()
-                });
+                    await updateDoc(rRef, {
+                      walletBalance: currentBal + 5,
+                      updatedAt: serverTimestamp()
+                    });
 
-                await updateDoc(clientDocRef, {
-                  referralRewardTriggered: true,
-                  updatedAt: serverTimestamp()
-                });
+                    await updateDoc(clientDocRef, {
+                      referralRewardTriggered: true,
+                      updatedAt: serverTimestamp()
+                    });
 
-                await addDoc(collection(firestore, "notifications"), {
-                  clientId: referrerDoc.id,
-                  type: "bonus",
-                  message: `Bônus de Indicação! Você ganhou R$ 5,00 de crédito em sua carteira pois seu amigo ${app.clientName || "indicado"} concluiu o primeiro corte! 💇‍♂️`,
-                  timestamp: serverTimestamp(),
-                  read: false
-                });
-
-                console.log(`[Referral] Manually completed: Referrer ${referrerDoc.id} rewarded R$ 5.00 for client ${app.clientId}`);
+                    await addDoc(collection(firestore, "notifications"), {
+                      clientId: referrerDoc.id,
+                      type: "bonus",
+                      message: `Bônus de Indicação! Você ganhou R$ 5,00 de crédito em sua carteira pois seu amigo ${app.clientName || "indicado"} concluiu o primeiro corte! 💇‍♂️`,
+                      timestamp: serverTimestamp(),
+                      read: false
+                    });
+                  }
+                }
               }
-            }
           }
-        } catch (refErr) {
-          console.error("Error processing manual referral bonus:", refErr);
+          
+          let clientMsg = `Seu agendamento para ${app.serviceName} foi atualizado para: ${newStatus}`;
+          let staffType = 'update';
+          let staffMsg = `Atualização: ${app.clientName} teve o status alterado para ${newStatus} (${app.serviceName})`;
+
+          if (newStatus === 'completed') {
+            clientMsg = `Seu agendamento de ${app.serviceName} foi concluído e o pagamento de R$ ${app.totalPrice?.toFixed(2) || '0,00'} foi registrado. Obrigado!`;
+            staffType = 'payment';
+            staffMsg = `Pagamento: ${app.clientName} pagou o serviço ${app.serviceName}`;
+          }
+
+          await addDoc(collection(firestore, "notifications"), {
+            clientId: app.clientId || "",
+            clientEmail: app.clientEmail || "",
+            type: 'status_update',
+            message: clientMsg,
+            timestamp: serverTimestamp(),
+            read: false,
+            appointmentId: app.id
+          });
+
+          await addDoc(collection(firestore, "staff_notifications"), {
+            type: staffType,
+            message: staffMsg,
+            timestamp: serverTimestamp(),
+            read: false,
+            clientId: app.clientId || "",
+            appointmentId: app.id,
+            barberId: app.barberId || ""
+          });
+        } catch (notifierErr) {
+          console.warn("[handleStatusUpdate] Non-critical notification failure:", notifierErr);
         }
-      }
-      
-      let clientMsg = `Seu agendamento para ${app.serviceName} foi atualizado para: ${newStatus}`;
-      let staffType = 'update';
-      let staffMsg = `Atualização: ${app.clientName} teve o status alterado para ${newStatus} (${app.serviceName})`;
+      })();
 
       if (newStatus === 'completed') {
-        clientMsg = `Seu agendamento de ${app.serviceName} foi concluído e o pagamento de R$ ${app.totalPrice?.toFixed(2) || '0,00'} foi registrado. Obrigado!`;
-        staffType = 'payment';
-        staffMsg = `Pagamento: ${app.clientName} pagou o serviço ${app.serviceName}`;
-      } else if (newStatus === 'cancelled') {
-        const reasonStr = extraData.cancellationReason || "Não informado";
-        clientMsg = `Seu agendamento de ${app.serviceName} foi cancelado pela barbearia. Motivo: ${reasonStr}`;
-        staffType = 'cancellation';
-        staffMsg = `Cancelamento: ${app.clientName} teve o atendimento (${app.serviceName}) cancelado pela barbearia. Motivo: ${reasonStr}`;
-      }
-
-      await addDoc(collection(firestore, "notifications"), {
-        clientId: app.clientId || "",
-        clientEmail: app.clientEmail || "",
-        loginCode: app.loginCode || "",
-        type: newStatus === 'cancelled' ? 'cancellation' : 'status_update',
-        message: clientMsg,
-        timestamp: serverTimestamp(),
-        read: false,
-        appointmentId: app.id
-      });
-
-      // Staff notification
-      await addDoc(collection(firestore, "staff_notifications"), {
-        type: staffType,
-        message: staffMsg,
-        timestamp: serverTimestamp(),
-        read: false,
-        clientId: app.clientId || "",
-        appointmentId: app.id,
-        barberId: app.barberId || ""
-      });
-
-      if (newStatus === 'cancelled') {
-        setStatusMsg('Agendamento cancelado com sucesso!');
-        setTimeout(() => setStatusMsg(null), 3000);
-      } else if (newStatus === 'completed') {
         setStatusMsg('Pagamento registrado com sucesso!');
         setSelectedAppointment(null);
         setTimeout(() => setStatusMsg(null), 3000);
@@ -454,31 +478,48 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
   };
 
   const handleDelete = async (app: any) => {
-    const firestore = db || getFirestore();
+    console.log(`[Dashboard] Attempting deletion for appointment ID:`, app?.id);
+    if (!app || !app.id) {
+      console.error("[Dashboard] handleDelete: Invalid appointment object", app);
+      alert("Erro interno: Agendamento inválido.");
+      return;
+    }
+
     const description = `Excluir agendamento de ${app.clientName}`;
 
     if (typeof navigator !== "undefined" && !navigator.onLine) {
+      console.log(`[Dashboard] Offline mode: queuing deletion for:`, app.id);
       addToOfflineQueue('delete_appointment', { appointmentId: app.id }, description);
-      try {
-        const { deleteDoc, doc } = await import("firebase/firestore");
-        await deleteDoc(doc(firestore, "appointments", app.id));
-      } catch (err) {
-        console.warn("Postponed deleting from firestore server - local cache deleted:", err);
-      }
-      setSelectedAppointment(null);
-      setStatusMsg('Agendamento excluído offline (sincronização pendente)!');
+      setStatusMsg('Exclusão agendada offline (sincronização pendente)!');
       setTimeout(() => setStatusMsg(null), 3000);
       return;
     }
 
     try {
-      const { deleteDoc, doc } = await import("firebase/firestore");
-      await deleteDoc(doc(firestore, "appointments", app.id));
+      console.log(`[Dashboard] Executing fetch to server for deletion of ID:`, app.id);
+      const res = await fetch(getBackendUrl("/api/appointments/delete"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: safeStringify({
+          appointmentId: app.id,
+          userId: user?.uid || user?.id
+        })
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error(`[Dashboard] API error response for ${app.id}:`, errorText);
+        throw new Error(errorText || "Erro ao excluir via API");
+      }
+
+      console.log(`[Dashboard] Deletion successful for ID:`, app.id);
       setSelectedAppointment(null);
-      setStatusMsg('Agendamento excluído com sucesso!');
+      setStatusMsg('Agendamento excluído permanentemente!');
       setTimeout(() => setStatusMsg(null), 3000);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, "appointments");
+    } catch (apiErr: any) {
+      console.error(`[Manager Delete API Error for ${app.id}]:`, apiErr);
+      const errorMessage = apiErr.message || "Erro desconhecido ao excluir";
+      alert(`Erro ao excluir agendamento: ${errorMessage}`);
     }
   };
 

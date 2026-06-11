@@ -1,19 +1,6 @@
 import { doc, setDoc } from "firebase/firestore";
-import { db } from "./firebase";
-
-// Helper to convert base64 VAPID key to Uint8Array
-export function urlBase64ToUint8Array(base64String: string): Uint8Array {
-  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/\-/g, "+").replace(/_/g, "/");
-
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
-}
+import { db, messaging } from "./firebase";
+import { getToken } from "firebase/messaging";
 
 // Resolve backend paths
 export function getBackendUrl(path: string): string {
@@ -76,28 +63,37 @@ export async function setupPushSubscription(userId: string, userRole: string): P
     const permission = await Notification.requestPermission();
     if (permission !== "granted") return false;
 
-    const registration = await navigator.serviceWorker.register("/sw-push.js", { scope: "/" });
+    // Register our SW with FCM
+    const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js", { scope: "/" });
 
-    const applicationServerKey = urlBase64ToUint8Array(envVapidKey);
-    const subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey
+    const msg = await messaging();
+    if (!msg) {
+       console.error("Firebase messaging not supported in this environment");
+       return false;
+    }
+
+    const currentToken = await getToken(msg, {
+      vapidKey: envVapidKey,
+      serviceWorkerRegistration: registration,
     });
 
-    const subJson = subscription.toJSON();
-    const endpointHash = btoa(subJson.endpoint || "").replace(/[^a-zA-Z0-9]/g, "").substring(0, 50);
-
-    await setDoc(doc(db, "push_subscriptions", endpointHash || userId), {
-      userId,
-      userRole,
-      endpoint: subJson.endpoint,
-      subscription: subJson,
-      createdAt: new Date().toISOString()
-    });
-
-    return true;
+    if (currentToken) {
+      // Save FCM Token to Firestore
+      await setDoc(doc(db, "fcm_tokens", currentToken), {
+        userId,
+        userRole,
+        token: currentToken,
+        createdAt: new Date().toISOString()
+      });
+      console.log("FCM Token saved successfully.");
+      return true;
+    } else {
+      console.warn("No registration token available. Request permission to generate one.");
+      return false;
+    }
   } catch (error: any) {
-    console.warn("[Push Register] Failed.", error);
+    console.warn("[Push Register - FCM] Failed.", error);
     return false;
   }
 }
+

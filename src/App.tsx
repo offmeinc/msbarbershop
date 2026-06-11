@@ -169,8 +169,10 @@ import {
   db, 
   handleFirestoreError, 
   OperationType,
-  safeStringify
+  safeStringify,
+  messaging
 } from "./lib/firebase";
+import { onMessage } from "firebase/messaging";
 import { uploadImage } from "./lib/uploadService";
 import { getBackendUrl } from "./lib/pushRegister";
 import { setupNativePush } from "./lib/nativePush";
@@ -272,6 +274,22 @@ export default function App() {
       setupNativePush(user.uid, userRole).catch(console.error);
     }
   }, [user, loggedInClient, userRole]);
+
+  useEffect(() => {
+    // 3. Web FCM Push (Foreground Listener)
+    const setupForegroundMessaging = async () => {
+      const msg = await messaging();
+      if (!msg) return;
+
+      onMessage(msg, (payload) => {
+        console.log("Foreground message received:", payload);
+        const title = payload.notification?.title || payload.data?.title || "Nova Notificação";
+        const body = payload.notification?.body || payload.data?.body || "";
+        toast.success(`${title}: ${body}`);
+      });
+    };
+    setupForegroundMessaging();
+  }, []);
   
   useEffect(() => {
     if (isDarkMode) {

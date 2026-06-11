@@ -56,7 +56,7 @@ import {
   Info
 } from "lucide-react";
 import { db, handleFirestoreError, OperationType, safeStringify } from "../../lib/firebase";
-import { getBackendUrl } from "../../lib/pushRegister";
+import { setupPushSubscription, getNotificationPermissionState, queryNotificationSupport, getBackendUrl } from "../../lib/pushRegister";
 import { QRCodeCanvas } from "qrcode.react";
 import { MoreOptionsScreen } from "../common/MoreOptionsScreen";
 import { BookingScreen } from "./BookingScreen";
@@ -95,6 +95,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const [referralCode, setReferralCode] = useState(user?.referralCode || "");
+  const [pushPermission, setPushPermission] = useState<NotificationPermission>(getNotificationPermissionState());
 
   const [liveUser, setLiveUser] = useState<any>(user);
   const [selectedLookbookStyle, setSelectedLookbookStyle] = useState<{ title: string, imageUrl: string } | null>(null);
@@ -352,20 +353,26 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
   }, [user?.uid, liveUser?.referralCode, referralCode, stats.completedCount]);
 
   const handleCancelAppointment = async (app: any, reason?: string) => {
+    const finalUserId = user?.uid || user?.id;
+    if (!finalUserId) {
+      toast.error("Erro de autenticação. Tente fazer login novamente.");
+      return;
+    }
+
     try {
       const res = await fetch(getBackendUrl("/api/appointments/cancel"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: safeStringify({
           appointmentId: app.id,
-          userId: user?.uid || user?.id,
+          userId: finalUserId,
           reason: reason || ""
         })
       });
 
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "Erro ao cancelar agendamento");
+        const errorData = await res.json();
+        throw new Error(errorData.error || `Erro HTTP ${res.status}`);
       }
 
       const data = await res.json();
@@ -375,6 +382,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
         toast.success("Agendamento cancelado com sucesso.");
       }
     } catch (error: any) {
+      console.error("[Client Cancel Error]:", error);
       toast.error(error.message || "Erro ao solicitar cancelamento.");
     }
   };
@@ -576,6 +584,37 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
             </div>
 
             <div className="px-6 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              
+              {/* Push permission request banner */}
+              {pushPermission !== "granted" && queryNotificationSupport() && (
+                <div className="bg-gradient-to-r from-amber-500/10 to-transparent border border-amber-500/20 p-5 rounded-[2.5rem] flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0">
+                      <Bell className="w-5 h-5 text-amber-500 animate-pulse" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black uppercase text-amber-500 tracking-wider">Notificações</h4>
+                      <p className="text-[10px] text-neutral-400 font-medium">Receba alertas no celular</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      const cleanUid = user?.uid || user?.id || "anonymous";
+                      const success = await setupPushSubscription(cleanUid, "client");
+                      if (success) {
+                        setPushPermission("granted");
+                        toast.success("Notificações ativadas com sucesso!");
+                      } else {
+                        toast.error("Permissão negada. Ative nas configurações do seu navegador.");
+                      }
+                    }}
+                    className="shrink-0 bg-amber-500 text-black px-4 py-2.5 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all"
+                  >
+                    Ativar
+                  </button>
+                </div>
+              )}
+
               <div className="w-full space-y-4">
                 <button
                   onClick={() => setCurrentView('booking')}
