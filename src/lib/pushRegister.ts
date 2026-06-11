@@ -1,4 +1,4 @@
-import { collection, addDoc, getDocs, query, where, doc, updateDoc, setDoc } from "firebase/firestore";
+import { doc, setDoc } from "firebase/firestore";
 import { db } from "./firebase";
 
 // Helper to convert base64 VAPID key to Uint8Array
@@ -62,69 +62,42 @@ export function getNotificationPermissionState(): NotificationPermission {
 // Register Push Service Worker and subscribe to Web Push
 export async function setupPushSubscription(userId: string, userRole: string): Promise<boolean> {
   if (!queryNotificationSupport()) {
-    console.warn("Notifications or PushManager not supported in this browser.");
+    console.warn("Notifications or PushManager not supported.");
+    return false;
+  }
+
+  const envVapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+  if (!envVapidKey) {
+    console.error("VAPID_PUBLIC_KEY is not defined in the environment. Push registration aborted.");
     return false;
   }
 
   try {
-    // 1. Request browser Notification access
     const permission = await Notification.requestPermission();
-    if (permission !== "granted") {
-      console.warn("Notification permission was denied.");
-      return false;
-    }
+    if (permission !== "granted") return false;
 
-    // 2. Register standard companion Service Worker
-    console.log("[Push Register] Registering sw-push.js...");
-    const registration = await navigator.serviceWorker.register("/sw-push.js", {
-      scope: "/"
-    });
-    console.log("[Push Register] Service Worker registered. Scope:", registration.scope);
+    const registration = await navigator.serviceWorker.register("/sw-push.js", { scope: "/" });
 
-    // 3. Fetch VAPID public key from Server
-    console.log("[Push Register] Fetching VAPID from server...");
-    const res = await fetch(getBackendUrl("/api/push-config"));
-    if (!res.ok) {
-      throw new Error(`Failed to fetch VAPID config: ${res.statusText}`);
-    }
-    const { publicKey } = await res.json();
-    if (!publicKey) {
-      throw new Error("No VAPID Public Key found in server response.");
-    }
-
-    // 4. Register or retrieve push subscription
-    console.log("[Push Register] Subscribing via pushManager...");
-    const applicationServerKey = urlBase64ToUint8Array(publicKey);
+    const applicationServerKey = urlBase64ToUint8Array(envVapidKey);
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey
     });
 
-    console.log("[Push Register] Subscribed successfully. Endpoint:", subscription.endpoint);
-
-    // 5. Save/Sync this subscription payload in Firestore
     const subJson = subscription.toJSON();
-    if (!subJson.endpoint || !subJson.keys) {
-      throw new Error("Invalid subscription object retrieved.");
-    }
+    const endpointHash = btoa(subJson.endpoint || "").replace(/[^a-zA-Z0-9]/g, "").substring(0, 50);
 
-    const endpointHash = btoa(subJson.endpoint).replace(/[^a-zA-Z0-9]/g, "").substring(0, 50);
-
-    const subscriptionData = {
+    await setDoc(doc(db, "push_subscriptions", endpointHash || userId), {
       userId,
       userRole,
       endpoint: subJson.endpoint,
       subscription: subJson,
       createdAt: new Date().toISOString()
-    };
-
-    // Store in firestore collection using endpoint hash as document ID
-    await setDoc(doc(db, "push_subscriptions", endpointHash), subscriptionData);
-    console.log("[Push Register] Subscription saved to Firestore under ID:", endpointHash);
+    });
 
     return true;
   } catch (error: any) {
-    console.warn("[Push Register] Setup Push subscription skipped/failed.", error.message || error);
+    console.warn("[Push Register] Failed.", error);
     return false;
   }
 }

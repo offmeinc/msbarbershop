@@ -22,7 +22,6 @@ import {
   Info,
   ListFilter
 } from "lucide-react";
-import { setupPushSubscription, getNotificationPermissionState } from "../lib/pushRegister";
 import { db } from "../lib/firebase";
 import { toast } from "./ui/Toast";
 
@@ -39,15 +38,8 @@ type FilterType = "all" | "unread" | "bookings" | "financial";
 export const NotificationsScreen = ({ notifications, appointments, onBack, onClear, user }: NotificationsScreenProps) => {
   const [activeTab, setActiveTab] = useState<'recent' | 'history'>('recent');
   const [filterType, setFilterType] = useState<FilterType>("all");
-  const [pushState, setPushState] = useState<NotificationPermission | "unsupported">("default");
   const [markingIds, setMarkingIds] = useState<string[]>([]);
   const [deletingIds, setDeletingIds] = useState<string[]>([]);
-
-  useEffect(() => {
-    if (pushState === "default") {
-      setPushState(getNotificationPermissionState());
-    }
-  }, [pushState]);
 
   const history = useMemo(() => {
     return appointments
@@ -197,50 +189,6 @@ export const NotificationsScreen = ({ notifications, appointments, onBack, onCle
           Ciclo de Atendimento
         </button>
       </div>
-
-      {/* Web Push Invitation System Promo */}
-      {pushState !== "granted" && pushState !== "unsupported" && activeTab === 'recent' && (
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="mb-6 p-4 rounded-[2rem] bg-gradient-to-r from-amber-500/10 to-amber-600/[0.02] border border-amber-500/20 text-left relative overflow-hidden"
-        >
-          <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/5 rounded-full blur-xl pointer-events-none" />
-          <div className="flex gap-4 items-start">
-            <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-amber-500 shrink-0 text-black shadow-lg shadow-amber-500/20">
-              <BellRing className="w-5 h-5 animate-bounce" />
-            </div>
-            <div className="flex-1 space-y-1">
-              <span className="text-[8px] text-amber-500 uppercase font-black tracking-widest block flex items-center gap-1.5 leading-none">
-                <Sparkles className="w-3 h-3 text-amber-400" /> ALERTAS DIRETOS ATIVADOS
-              </span>
-              <h3 className="text-xs font-black text-white uppercase tracking-tight">Ative Alertas Push no Dispositivo</h3>
-              <p className="text-[10px] text-neutral-400 font-semibold leading-relaxed">
-                Receba lembretes automáticos de horários de corte e créditos em carteira instantaneamente.
-              </p>
-              
-              <div className="pt-2">
-                <button 
-                  onClick={async () => {
-                     const cleanId = user?.uid || user?.id || "anonymous";
-                     const success = await setupPushSubscription(cleanId, "client");
-                     if (success) {
-                       setPushState("granted");
-                       toast.success("Notificações em tempo real ativadas!");
-                     } else {
-                       toast.error("Não foi possível habilitar. Verifique se as permissões estão bloqueadas no navegador.");
-                     }
-                  }}
-                  className="bg-amber-500 hover:bg-amber-400 text-black text-[8px] font-black uppercase tracking-wider px-3 py-1.5 rounded-lg active:scale-95 transition-all shadow cursor-pointer"
-                  disabled={pushState === "denied"}
-                >
-                  {pushState === "denied" ? "Bloqueado Compartilhamento" : "Habilitar Alertas Push"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-      )}
 
       {/* Filter list options sub-banner - ONLY for modern updates */}
       {activeTab === 'recent' && notifications.length > 0 && (

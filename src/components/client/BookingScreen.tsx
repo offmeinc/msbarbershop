@@ -47,9 +47,9 @@ import {
   Mic,
   MicOff,
 } from "lucide-react";
-import { setupPushSubscription, getNotificationPermissionState, queryNotificationSupport, getBackendUrl } from "../../lib/pushRegister";
 import { db, handleFirestoreError, OperationType, safeStringify } from "../../lib/firebase";
 import { signInWithGoogleCalendar, addEventToCalendar, getCalendarAccessToken } from "../../lib/calendar";
+import { setupPushSubscription, getNotificationPermissionState, queryNotificationSupport, getBackendUrl } from "../../lib/pushRegister";
 import { toast } from "../ui/Toast";
 import { triggerSuccessHaptic, triggerLightHaptic } from "../../lib/haptics";
 
@@ -600,7 +600,8 @@ function ConfirmationModal({
             </div>
           </div>
         ) : null}
-
+        <div className="space-y-3">
+          <p className="text-[9px] text-neutral-600 font-bold uppercase tracking-widest leading-relaxed">
         {/* Web Push Notification subscription if permission not granted */}
         {permission !== "granted" && queryNotificationSupport() && (
           <div className="bg-amber-500/10 border border-amber-500/20 p-5 rounded-[2.5rem] space-y-3 text-left">
@@ -634,8 +635,6 @@ function ConfirmationModal({
           </div>
         )}
 
-        <div className="space-y-3">
-          <p className="text-[9px] text-neutral-600 font-bold uppercase tracking-widest leading-relaxed">
             Enviamos um resumo no seu WhatsApp e e-mail.
           </p>
 

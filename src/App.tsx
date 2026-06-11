@@ -172,7 +172,7 @@ import {
   safeStringify
 } from "./lib/firebase";
 import { uploadImage } from "./lib/uploadService";
-import { getBackendUrl, urlBase64ToUint8Array } from "./lib/pushRegister";
+import { getBackendUrl } from "./lib/pushRegister";
 import { setupNativePush } from "./lib/nativePush";
 import { 
   onAuthStateChanged,
@@ -267,77 +267,11 @@ export default function App() {
   }, []);
   
   useEffect(() => {
-    // 1. Web Push (PWA)
-    if ('serviceWorker' in navigator && 'PushManager' in window) {
-      navigator.serviceWorker.register('/sw-push.js')
-        .then(async (reg) => {
-          console.log('[App] SW registered with scope:', reg.scope);
-          reg.update().catch(() => {});
-          if (Notification.permission === 'granted') {
-             subscribeUser(reg);
-          } else if (Notification.permission !== 'denied') {
-             const permission = await Notification.requestPermission();
-             if (permission === 'granted') {
-               subscribeUser(reg);
-             }
-          }
-        })
-        .catch(err => {
-            if (err.message?.includes("Failed to fetch") || String(err).includes("Failed to fetch")) {
-               console.warn("[App] SW registration fetch aborted");
-            } else {
-               console.error('[App] SW registration failed', err)
-            }
-        });
-    }
-
     // 2. Native Push (Capacitor iOS/Android)
     if (user) {
       setupNativePush(user.uid, userRole).catch(console.error);
     }
   }, [user, loggedInClient, userRole]);
-
-  const subscribeUser = async (reg: ServiceWorkerRegistration) => {
-    try {
-      const resp = await fetch(getBackendUrl('/api/push-config'));
-      const { publicKey } = await resp.json();
-      
-      let sub = await reg.pushManager.getSubscription();
-      try {
-        sub = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(publicKey)
-        });
-      } catch (subErr: any) {
-        // If subscription fails, it might be due to a changed VAPID key. Unsubscribe and try again.
-        if (sub) {
-          await sub.unsubscribe();
-          sub = await reg.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(publicKey)
-          });
-        } else {
-          throw subErr;
-        }
-      }
-
-      const userId = user?.uid || loggedInClient?.id;
-      if (userId && sub) {
-        await fetch(getBackendUrl('/api/subscribe'), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: safeStringify({ 
-             subscription: sub.toJSON(), 
-             userId: userId,
-             userRole: userRole 
-          })
-        });
-        console.log('[App] Subscribed to push notifications');
-      }
-    } catch (err: any) {
-      console.warn('[App] Push subscribe skipped/failed:', err.message || err);
-    }
-  };
   
   useEffect(() => {
     if (isDarkMode) {

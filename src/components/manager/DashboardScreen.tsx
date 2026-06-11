@@ -69,7 +69,6 @@ import { AnalyticsScreen } from "./AnalyticsScreen";
 import { CalendarWidget, AppointmentModal } from "../CalendarWidget";
 import { ServicesManagement, CollaboratorsManager, WorkingHoursManager } from "./ManagementScreens";
 import { ReviewModal } from "../common/ReviewModal";
-import { setupPushSubscription, getNotificationPermissionState, queryNotificationSupport } from "../../lib/pushRegister";
 
 export function EarningsDashboard({ appointments, services }: { appointments: any[], services: any[] }) {
   const chartData = useMemo(() => {
@@ -116,6 +115,8 @@ export function EarningsDashboard({ appointments, services }: { appointments: an
     </div>
   );
 }
+
+import { setupPushSubscription, getNotificationPermissionState, queryNotificationSupport } from "../../lib/pushRegister";
 
 export function DashboardScreen({ user, role, services, dashboardView, onBack, onNewBooking, onEditBooking }: { user: any, role: string, services: any[], dashboardView?: "agenda" | "list" | "calendar" | "services" | "hours" | "collaborators" | "earnings", onBack: () => void, onNewBooking?: () => void, onEditBooking?: (app: any) => void }) {
   const [pushPermission, setPushPermission] = useState<NotificationPermission>(getNotificationPermissionState());
@@ -1392,8 +1393,6 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
           </span>
         </button>
       )}
-
-      {/* ⚠️ LOCKS MODAL (Gerenciamento de Bloqueios) */}
       <AnimatePresence>
         {isLockModalOpen && (
           <motion.div 

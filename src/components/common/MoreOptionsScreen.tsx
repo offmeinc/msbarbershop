@@ -18,7 +18,6 @@ import {
   Package,
   Gift
 } from "lucide-react";
-import { setupPushSubscription, getNotificationPermissionState, queryNotificationSupport, getBackendUrl } from "../../lib/pushRegister";
 import { BlockScreen } from "../manager/BlockScreen";
 import { HelpScreen, ShareScreen, RecurrenceScreen } from "../manager/OtherScreens";
 import { ReconScreen } from "../manager/UtilityScreens";
@@ -162,29 +161,6 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
         },
       ]
     }] : []),
-    {
-      title: "Aplicativo",
-      items: [
-        { 
-          id: 'install', 
-          label: 'Instalar App (PWA)', 
-          desc: 'Adicionar ícone à tela inicial do celular',
-          icon: <Smartphone className="w-5 h-5 text-orange-400" />, 
-          onClick: () => {
-            if ('serviceWorker' in navigator && window.matchMedia('(display-mode: standalone)').matches) {
-              toast.info("O aplicativo já está instalado no seu dispositivo!");
-            } else {
-              const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-              if (isIOS) {
-                toast.info("No iOS: Toque no botão de compartilhar do Safari e selecione 'Adicionar à Tela de Início' para instalar. 📲");
-              } else {
-                toast.info("No Android/Chrome: Toque no menu de três pontinhos superior e depois em 'Instalar aplicativo' para instalar o atalho na Home. 📲");
-              }
-            }
-          }
-        },
-      ]
-    },
     {
       title: "Preferências e Avaliações",
       items: [

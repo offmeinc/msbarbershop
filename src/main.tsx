@@ -3,7 +3,18 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 
+// Force unregister buggy service workers during development
+if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+  navigator.serviceWorker.getRegistrations().then(function(registrations) {
+    for(let registration of registrations) {
+      registration.unregister();
+      console.log('Unregistered old Service Worker');
+    }
+  });
+}
+
 // Automatically register service worker on load to qualify for PWA installation
+/*
 if (typeof window !== "undefined" && "serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker
@@ -21,6 +32,7 @@ if (typeof window !== "undefined" && "serviceWorker" in navigator) {
       });
   });
 }
+*/
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
