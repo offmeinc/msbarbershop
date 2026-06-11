@@ -307,6 +307,24 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
           </div>
         ))}
 
+        {/* Temorary FCM Diagnostic Button */}
+        <div className="pt-4">
+          <button 
+            type="button"
+            onClick={async () => {
+               const currentPermission = Notification.permission;
+               console.log("Current Notification Permission before request:", currentPermission);
+               const result = await Notification.requestPermission();
+               console.log("Notification Request Result:", result);
+               alert(`Permissão atualizada para: ${result}`);
+            }}
+            className="w-full bg-indigo-500/10 hover:bg-indigo-500 hover:text-black border border-indigo-500/20 p-5 rounded-[2rem] flex items-center justify-center gap-3 active:scale-95 transition-all text-indigo-400 font-bold cursor-pointer"
+          >
+            <Bell className="w-5 h-5 shrink-0" />
+            <span className="text-[10px] font-black uppercase tracking-widest italic">Diagnóstico Push (Solicitar Permissão)</span>
+          </button>
+        </div>
+
         {/* Exit Account button */}
         <div className="pt-4">
           <button 
