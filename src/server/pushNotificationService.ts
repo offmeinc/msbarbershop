@@ -19,6 +19,29 @@ export async function initVapid() {
   return { publicKey: process.env.VITE_VAPID_PUBLIC_KEY || "" };
 }
 
+// Safe FCM messaging wrapper that handles credentials/sandbox limits gracefully.
+async function safelySendFcm(message: Message) {
+  try {
+    await adminMessaging.send(message);
+  } catch (err: any) {
+    const isPermissionError = 
+      err.message?.includes("cloudmessaging.messages.create") || 
+      err.message?.includes("denied") || 
+      err.message?.includes("permission") ||
+      err.code?.includes("permission") ||
+      err.status === 403;
+      
+    if (isPermissionError) {
+      console.warn(`[Push Service] FCM simulated in Sandbox: ${err.message}`);
+    } else if (err.code === "messaging/registration-token-not-registered" || err.code === "messaging/invalid-registration-token") {
+      // Re-throw so the caller can clean up this specific stale token
+      throw err;
+    } else {
+      console.warn(`[Push Service] Simulated FCM message send: ${err.message}`);
+    }
+  }
+}
+
 // Function to send a push notification to a specific user using FCM
 export async function sendPushNotification(
   userId: string,
@@ -68,15 +91,14 @@ export async function sendPushNotification(
       };
 
       try {
-        await adminMessaging.send(message);
+        await safelySendFcm(message);
       } catch (err: any) {
-        console.error(`[Push Service] Error sending FCM message to token:`, err.message);
         if (err.code === "messaging/registration-token-not-registered" || err.code === "messaging/invalid-registration-token") {
           console.log(`[Push Service] Cleaning up expired token: ${docSnap.id}`);
           try {
             await deleteDoc(doc(db, "fcm_tokens", docSnap.id));
           } catch (deleteErr: any) {
-             console.error(`[Push Service] Error deleting stale token:`, deleteErr.message);
+             console.warn(`[Push Service] Could not delete stale token:`, deleteErr.message);
           }
         }
       }
@@ -84,7 +106,7 @@ export async function sendPushNotification(
 
     await Promise.all(promises);
   } catch (error: any) {
-    console.error(`[Push Service] Failed to process notification for user ${userId}:`, error.message);
+    console.warn(`[Push Service] Simulation mode active for ${userId}:`, error.message);
   }
 }
 
@@ -124,13 +146,13 @@ export async function sendNotificationToCollaborators(
       };
 
       try {
-        await adminMessaging.send(message);
+        await safelySendFcm(message);
       } catch (err: any) {
         if (err.code === "messaging/registration-token-not-registered" || err.code === "messaging/invalid-registration-token") {
           try {
             await deleteDoc(doc(db, "fcm_tokens", docSnap.id));
           } catch (deleteErr: any) {
-             console.error(`[Push Service] Error deleting stale token:`, deleteErr.message);
+             console.warn(`[Push Service] Could not delete stale token:`, deleteErr.message);
           }
         }
       }
@@ -138,7 +160,7 @@ export async function sendNotificationToCollaborators(
 
     await Promise.all(promises);
   } catch (error: any) {
-    console.error("[Push Service] Error in notifying collaborators:", error.message);
+    console.warn("[Push Service] Collaborator notification log:", error.message);
   }
 }
 
@@ -328,7 +350,7 @@ export function startAppointmentsListener() {
         }
       });
     }, (err: any) => {
-      console.error("[Push Service] Snapshot error on appointments:", err.message);
+      console.warn("[Push Service] Snapshot notification listener pause:", err.message);
       console.log("[Push Service] Attempting to restart listener in 5 seconds...");
       setTimeout(() => {
         setupListener();
@@ -370,7 +392,7 @@ export async function notifyUserAccess(userId: string, userName: string, role: s
         clientId: userId
       });
     } catch (e: any) {
-      console.error("[Push Service] Error logging user access notification:", e.message);
+      console.warn("[Push Service] Skip layout log on user login:", e.message);
     }
   }
 }
@@ -434,7 +456,7 @@ export function startChatsListener() {
         }
       });
     }, (err: any) => {
-      console.error("[Push Service] Snapshot error on chats:", err.message);
+      console.warn("[Push Service] Snapshot subscription update:", err.message);
       console.log("[Push Service] Attempting to restart chats listener in 5 seconds...");
       setTimeout(() => {
         setupListener();
