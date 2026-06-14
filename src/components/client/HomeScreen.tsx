@@ -11,7 +11,24 @@ const triggerBookingPreload = () => {
   }
 };
 
-export const HomeScreen = memo(function HomeScreen({ services, onStartBooking }: { services: any[], onStartBooking: () => void, key?: string }) {
+export const HomeScreen = memo(function HomeScreen({ 
+  services, 
+  onStartBooking,
+  user,
+  userRole,
+  isFanMode = false,
+  setIsFanMode,
+  isScrolled = false
+}: { 
+  services: any[];
+  onStartBooking: () => void;
+  user?: any;
+  userRole?: string;
+  isFanMode?: boolean;
+  setIsFanMode?: (val: boolean) => void;
+  isScrolled?: boolean;
+  key?: string;
+}) {
   const [locationSelectorOpen, setLocationSelectorOpen] = useState(false);
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
   const [portfolio, setPortfolio] = useState<any[]>([]);

@@ -55,3 +55,21 @@ body {
   border-radius: 1.75rem;
 }
 
+/* World Cup 2026 Theme Overrides when Fan Mode is enabled */
+.fan-mode-active body {
+  background: radial-gradient(circle at center top, #0c2b17, #06110b) !important;
+  color: #ffffff !important;
+  transition: all 0.5s ease-in-out;
+}
+
+.fan-mode-active .animate-gradient-text {
+  background-image: linear-gradient(to right, #ffffff, #10b981, #facc15, #ffffff) !important;
+}
+
+.fan-mode-active .liquid-glass {
+  background: rgba(16, 185, 129, 0.06) !important;
+  border-color: rgba(34, 197, 94, 0.2) !important;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6), 0 0 15px rgba(34, 197, 94, 0.05) !important;
+}
+
+

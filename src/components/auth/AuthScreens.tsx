@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { motion } from "motion/react";
-import { Loader2, Key, Mail, Lock, User, Phone, Sparkles, LogIn, ChevronLeft } from "lucide-react";
+import { Loader2, Key, Mail, Lock, User, Phone, Scissors, LogIn, ChevronLeft } from "lucide-react";
 import { BARBERSHOP_NAME } from "../../constants";
 
 export function ClientPortalScreen({ onLogin, onBack }: { onLogin: (phone: string) => void, onBack: () => void }) {
@@ -29,7 +29,7 @@ export function ClientPortalScreen({ onLogin, onBack }: { onLogin: (phone: strin
         <div className="space-y-2">
           <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest ml-2">Qual seu WhatsApp?</label>
           <div className="relative group">
-            <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-600 group-focus-within:text-amber-500 transition-colors" />
+            <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-amber-500 group-focus-within:text-amber-400 transition-all z-10" />
             <input 
               type="tel"
               value={phone}
@@ -89,7 +89,7 @@ export function CollaboratorLoginScreen({ onLogin, setCurrentScreen, setRequeste
             transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
             className="text-amber-500"
           >
-            <Sparkles className="w-10 h-10 ring-amber-500/20" />
+            <Scissors className="w-10 h-10 ring-amber-500/20" />
           </motion.div>
         </div>
         <h2 className="text-3xl font-black italic uppercase tracking-tighter text-white mb-2">{isSignUp ? 'Criar Conta' : 'Portal Profissional'}</h2>
@@ -101,7 +101,7 @@ export function CollaboratorLoginScreen({ onLogin, setCurrentScreen, setRequeste
           <div className="space-y-2">
             <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest ml-4">Nome Completo</label>
             <div className="relative group">
-              <User className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-600 group-focus-within:text-amber-500 transition-colors" />
+              <User className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-amber-500 group-focus-within:text-amber-400 transition-all z-10" />
               <input 
                 type="text"
                 value={name}
@@ -117,7 +117,7 @@ export function CollaboratorLoginScreen({ onLogin, setCurrentScreen, setRequeste
         <div className="space-y-2">
           <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest ml-4">E-mail ou WhatsApp</label>
           <div className="relative group">
-            <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-600 group-focus-within:text-amber-500 transition-colors" />
+            <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-amber-500 group-focus-within:text-amber-400 transition-all z-10" />
             <input 
               type="text"
               value={phone}
@@ -132,7 +132,7 @@ export function CollaboratorLoginScreen({ onLogin, setCurrentScreen, setRequeste
         <div className="space-y-2">
           <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest ml-4">Senha de Acesso</label>
           <div className="relative group">
-            <Lock className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-600 group-focus-within:text-amber-500 transition-colors" />
+            <Lock className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-amber-500 group-focus-within:text-amber-400 transition-all z-10" />
             <input 
               type="password"
               value={password}

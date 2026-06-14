@@ -1344,27 +1344,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                                                     Confirmar
                                                   </button>
                                                 )}
-                                                {app.status === 'confirmed' && (
-                                                  <>
-                                                    <button 
-                                                      onClick={() => handleStatusUpdate(app, 'completed', { payerName: app.clientName })} 
-                                                      className="bg-green-500 hover:bg-green-600 text-black text-[11px] font-black uppercase tracking-widest py-2.5 rounded-xl flex-1 transition-all active:scale-95 duration-200 cursor-pointer flex items-center justify-center gap-1 shadow-lg shadow-green-500/10"
-                                                      title="Marcar como comparecido e atualizar ganhos automaticamente"
-                                                    >
-                                                      Compareceu ✅
-                                                    </button>
-                                                    <button 
-                                                      onClick={() => {
-                                                        const payer = prompt("Quem pagou?", app.clientName);
-                                                        handleStatusUpdate(app, 'completed', { payerName: payer || app.clientName });
-                                                      }} 
-                                                      className="bg-amber-500 hover:bg-amber-600 text-black text-[11px] font-black uppercase tracking-widest py-2.5 rounded-xl flex-1 transition-all active:scale-95 duration-200 cursor-pointer flex items-center justify-center gap-1 shadow-lg shadow-amber-500/10"
-                                                    >
-                                                      Pagar 💳
-                                                    </button>
-                                                  </>
-                                                )}
-                                                {app.status !== 'cancelled' && app.status !== 'completed' && (
+                                                {app.status !== 'cancelled' && app.status !== 'completed' && app.status !== 'pending' && app.status && (
                                                   <button 
                                                     onClick={() => handleStatusUpdate(app, 'cancelled')} 
                                                     className="bg-red-500/10 hover:bg-red-500 hover:text-white text-red-500 text-[11px] font-black uppercase tracking-widest py-2.5 rounded-xl flex-1 border border-red-500/20 transition-all active:scale-95 duration-200 cursor-pointer"

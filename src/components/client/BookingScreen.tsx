@@ -1703,86 +1703,10 @@ export function BookingScreen({
                 exit={{ x: -20, opacity: 0 }}
                 className="space-y-6"
               >
-                {/* Voice & IA Booking Box */}
-                <div className="bg-gradient-to-r from-neutral-900 via-amber-500/10 to-neutral-900 border border-amber-500/20 rounded-3xl p-5 relative overflow-hidden shadow-xl">
-                  <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-2xl pointer-events-none" />
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="flex h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
-                        <span className="text-[9px] text-amber-500 font-sans uppercase font-black tracking-widest block font-extrabold">AGENDAMENTO POR VOZ / SINTETIZADOR DE IA</span>
-                      </div>
-                      <h3 className="text-sm font-black text-white uppercase italic tracking-tight">Faça seu pedido em linguagem natural!</h3>
-                      <p className="text-[10px] text-neutral-400 leading-relaxed font-semibold">
-                        Grave ou digite o que você quer agendar (ex: <span className="text-amber-500 font-bold">"Quero corte de cabelo social para amanhã às 15h com o Marcos"</span>).
-                      </p>
-                    </div>
-                    <div className="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 shrink-0">
-                      <Sparkles className="w-5 h-5 animate-pulse" />
-                    </div>
-                  </div>
-
-                  <div className="mt-4 space-y-3">
-                    <div className="flex gap-2">
-                      <div className="relative flex-1">
-                        <input
-                          type="text"
-                          value={voiceInput}
-                          onChange={(e) => setVoiceInput(e.target.value)}
-                          placeholder="Microfone desligado. Digite ou clique no microfone para falar..."
-                          className="w-full liquid-glass  focus:border-amber-500/40 rounded-2xl pl-4 pr-12 py-3.5 text-xs text-white placeholder-neutral-700 outline-none transition-all font-medium"
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              handleVoiceBookingSubmit();
-                            }
-                          }}
-                        />
-                        <button
-                          type="button"
-                          onClick={startSpeechRecognition}
-                          className={`absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-xl flex items-center justify-center transition-all ${
-                            isListening
-                              ? "bg-red-500 text-white animate-pulse"
-                              : "bg-neutral-900 border border-white/5 hover:bg-neutral-800 text-amber-500"
-                          }`}
-                          title="Falar agendamento"
-                        >
-                          {isListening ? <MicOff className="w-4 h-4 animate-bounce" /> : <Mic className="w-4 h-4" />}
-                        </button>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => handleVoiceBookingSubmit()}
-                        disabled={processingVoice || !voiceInput.trim()}
-                        className="bg-amber-500 hover:bg-amber-400 text-black px-5 rounded-2xl text-[10px] font-black uppercase italic tracking-widest transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-                      >
-                        {processingVoice ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          "PROCESSAR"
-                        )}
-                      </button>
-                    </div>
-
-                    {voiceExplanation && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 5 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="liquid-glass -amber-500/10 p-3.5 rounded-2xl text-[10.5px] text-neutral-300 font-semibold leading-relaxed"
-                      >
-                        <div className="flex items-center gap-1.5 mb-1 text-amber-400 font-extrabold uppercase text-[9px] tracking-widest">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-amber-500 fill-black" /> ENTENDIDO:
-                        </div>
-                        {voiceExplanation}
-                      </motion.div>
-                    )}
-                  </div>
-                </div>
                 {/* Search & Category Filter Section */}
                 <div className="space-y-4">
                   <div className="relative">
-                    <Search className="absolute left-4.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-neutral-500" />
+                    <Search className="absolute left-4.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-amber-500 z-10" />
                     <input
                       type="text"
                       placeholder="Pesquisar serviço (ex: Degradê, Barba, Combo...)"
@@ -2186,7 +2110,7 @@ export function BookingScreen({
                           </span>
                         </div>
                         <div className="relative">
-                          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600" />
+                          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-500 z-10" />
                           <input
                             type="text"
                             placeholder={

@@ -60,6 +60,7 @@ import {
   LayoutDashboard
 } from "lucide-react";
 import React, { useState, useEffect, useRef, useMemo, ChangeEvent, FormEvent, lazy, Suspense, useCallback } from "react";
+import confetti from "canvas-confetti";
 
 // --- Custom Hook for Path-based Routing ---
 function usePathNavigation<T extends string>(defaultScreen: T) {
@@ -155,6 +156,7 @@ if (typeof window !== "undefined") {
 
 import { HomeScreen } from "./components/client/HomeScreen";
 import { BottomNav } from "./components/common/BottomNav";
+import { WorldCupDecor } from "./components/common/WorldCupDecor";
 
 // Dummy components
 const DarkScreen = ({ onBack }: { onBack: () => void }) => <div className="p-4">Dark Screen <button onClick={onBack}>Voltar</button></div>;
@@ -232,10 +234,19 @@ export default function App() {
   const { currentScreen, setCurrentScreen } = usePathNavigation<Screen>("home");
   const { scrollY } = useScroll();
   const [hidden, setHidden] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isFanMode, setIsFanMode] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("copa2026_fan_mode") === "true";
+    }
+    return false;
+  });
+
   const validScreens = ["home", "booking", "agenda", "clients", "client-details", "more", "login", "collaborators", "services", "client-login", "client-dashboard", "earnings", "promotions", "portfolio", "professional-chat", "barber-management", "checkout"];
   const displayScreen = validScreens.includes(currentScreen as string) ? currentScreen : "home";
 
   useMotionValueEvent(scrollY, "change", (latest) => {
+    setIsScrolled(latest > 100);
     const previous = scrollY.getPrevious() ?? 0;
     const diff = latest - previous;
     
@@ -248,6 +259,20 @@ export default function App() {
       if (Math.abs(diff) > 10 || latest < 50) setHidden(false);
     }
   });
+
+  // Sync Fan Mode theme override globally
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    if (isFanMode) {
+      document.documentElement.classList.add("fan-mode-active");
+      localStorage.setItem("copa2026_fan_mode", "true");
+    } else {
+      document.documentElement.classList.remove("fan-mode-active");
+      localStorage.setItem("copa2026_fan_mode", "false");
+    }
+  }, [isFanMode]);
+
   const [dashboardView, setDashboardView] = useState<"list" | "calendar" | "services" | "hours" | "collaborators">("list");
   const [requestedRole, setRequestedRole] = useState<string>("client");
   const [loading, setLoading] = useState(true);
@@ -634,6 +659,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-black text-white font-sans selection:bg-amber-500/30 pb-24 md:pb-0">
+      <WorldCupDecor isFanMode={isFanMode} />
       <motion.nav 
         variants={{
           visible: { y: 0, opacity: 1 },
@@ -892,7 +918,15 @@ export default function App() {
                       setCurrentScreen(screen);
                     }} 
                   /> 
-                : <HomeScreen services={services} onStartBooking={() => setCurrentScreen("booking")} />
+                : <HomeScreen 
+                    services={services} 
+                    onStartBooking={() => setCurrentScreen("booking")} 
+                    user={user} 
+                    userRole={userRole} 
+                    isFanMode={isFanMode}
+                    setIsFanMode={setIsFanMode}
+                    isScrolled={isScrolled}
+                  />
               )}
               {displayScreen === "login" && <CollaboratorLoginScreen onLogin={handleLogin} setCurrentScreen={setCurrentScreen} setRequestedRole={setRequestedRole} />}
               {displayScreen === "client-login" && <ClientPortalScreen onLogin={handleClientLogin} onBack={() => setCurrentScreen("home")} />}
@@ -1213,6 +1247,61 @@ export default function App() {
         )}
       </AnimatePresence>
       <Toaster />
+      
+      {/* Floating 2026 World Cup Ball Switch */}
+      <motion.button
+        key="wc-floater"
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        whileHover={{ scale: 1.15, rotate: 360, transition: { duration: 0.6 } }}
+        whileTap={{ scale: 0.9 }}
+        onClick={() => {
+          const nextFanMode = !isFanMode;
+          setIsFanMode(nextFanMode);
+          if (nextFanMode) {
+            if (typeof navigator !== "undefined" && navigator.vibrate) {
+              navigator.vibrate([50, 30, 50]);
+            }
+            // Trigger glorious green & yellow confetti bursts from corners
+            confetti({
+              particleCount: 100,
+              angle: 60,
+              spread: 60,
+              origin: { x: 0, y: 1 },
+              colors: ["#22c55e", "#eab308", "#10b981", "#facc15", "#ffffff"]
+            });
+            confetti({
+              particleCount: 100,
+              angle: 120,
+              spread: 60,
+              origin: { x: 1, y: 1 },
+              colors: ["#eab308", "#22c55e", "#facc15", "#10b981", "#ffffff"]
+            });
+          }
+        }}
+        className={`fixed z-50 w-14 h-14 rounded-full flex items-center justify-center shadow-[0_0_25px_rgba(34,197,94,0.4)] cursor-pointer select-none transition-all duration-300 ${
+          isFanMode 
+            ? "bg-gradient-to-tr from-green-600 via-yellow-400 to-emerald-500 border-2 border-yellow-200 shadow-yellow-400/20" 
+            : "bg-neutral-800 border-2 border-neutral-700 text-white"
+        } bottom-24 right-5 md:bottom-8 md:right-8`}
+        title="Alternar Tema Copa do Mundo 2026"
+      >
+        <div className="relative w-full h-full flex items-center justify-center">
+          <div className={`absolute inset-0 rounded-full animate-ping opacity-25 ${
+            isFanMode ? "bg-yellow-400" : "bg-green-500"
+          }`} style={{ animationDuration: '2s' }} />
+          
+          <span className="text-3xl filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)] select-none">
+            ⚽
+          </span>
+          
+          <span className={`absolute -top-1 -right-1 text-[8px] font-black tracking-tighter px-1.5 py-0.5 rounded-full border border-black/20 ${
+            isFanMode ? "bg-green-600 text-white" : "bg-yellow-400 text-black"
+          }`}>
+            '26
+          </span>
+        </div>
+      </motion.button>
     </div>
   );
 }
