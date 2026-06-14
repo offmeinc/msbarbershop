@@ -226,6 +226,36 @@ import {
 type Screen = "home" | "booking" | "agenda" | "clients" | "client-details" | "more" | "login" | "collaborators" | "services" | "client-login" | "client-dashboard" | "earnings" | "promotions" | "portfolio" | "professional-chat" | "barber-management";
 
 
+function triggerLocalNotification(title: string, body: string, urlPath: string = "/") {
+  if (typeof window !== "undefined" && "Notification" in window) {
+    if (Notification.permission === "granted") {
+      try {
+        if ("serviceWorker" in navigator) {
+          navigator.serviceWorker.ready.then((registration) => {
+            registration.showNotification(title, {
+              body: body,
+              icon: "/pwa-192x192.png",
+              badge: "/pwa-192x192.png",
+              data: { url: urlPath },
+              tag: "chat-or-staff-notification-" + Date.now()
+            });
+          }).catch(() => {
+            new Notification(title, { body: body, icon: "/pwa-192x192.png" });
+          });
+        } else {
+          new Notification(title, { body: body, icon: "/pwa-192x192.png" });
+        }
+      } catch (err) {
+        console.warn("[Local Notification] show failed", err);
+        try {
+          new Notification(title, { body: body });
+        } catch (e) {}
+      }
+    }
+  }
+}
+
+
 export default function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -313,6 +343,11 @@ export default function App() {
   const hasNotifiedAccess = useRef<string | null>(null);
   const [clientUnreadChats, setClientUnreadChats] = useState(0);
   const [clientUnreadNotifications, setClientUnreadNotifications] = useState(0);
+  const [staffUnreadChats, setStaffUnreadChats] = useState(0);
+
+  const lastProcessedClientMsgTimeRef = useRef<number>(0);
+  const lastProcessedStaffChatsRef = useRef<Record<string, number>>({});
+  const lastProcessedStaffNotificationTimeRef = useRef<number>(0);
 
   // 1. Initial Prompt for Notifications on Launch (for PWAs and Standard Browsers)
   useEffect(() => {
@@ -383,9 +418,33 @@ export default function App() {
 
     const chatRef = doc(firestore, "chats", clientUid);
     const unsubscribeChat = onSnapshot(chatRef, (snapshot) => {
+      // Establish baseline if not set
+      const isInitialRun = lastProcessedClientMsgTimeRef.current === 0;
+
       if (snapshot.exists()) {
         const data = snapshot.data();
-        setClientUnreadChats(data.unreadByClient ? 1 : 0);
+        const unread = !!data.unreadByClient;
+        setClientUnreadChats(unread ? 1 : 0);
+
+        const msgTime = data.lastMessageTime && typeof data.lastMessageTime.toDate === "function"
+          ? data.lastMessageTime.toDate().getTime()
+          : (data.lastMessageTime && data.lastMessageTime._seconds ? data.lastMessageTime._seconds * 1000 : new Date(data.lastMessageTime || 0).getTime());
+
+        // Notify if it's a new message since baseline and recent enough
+        if (unread && msgTime > lastProcessedClientMsgTimeRef.current) {
+          if (!isInitialRun && Date.now() - msgTime < 60000) {
+            const bodyText = data.lastMessage || "Nova mensagem recebida! 💬";
+            console.log("[Notification System] Client Chat Trigger:", bodyText);
+            toast.success(`MS Barbearia: ${bodyText}`);
+            triggerLocalNotification("Nova mensagem - MS Barbearia 💬", bodyText, "/");
+          }
+          lastProcessedClientMsgTimeRef.current = msgTime;
+        } else if (!unread || msgTime > 0) {
+           // Keep track of time even if not alerting
+           if (msgTime > lastProcessedClientMsgTimeRef.current) {
+             lastProcessedClientMsgTimeRef.current = msgTime;
+           }
+        }
       } else {
         setClientUnreadChats(0);
       }
@@ -505,33 +564,117 @@ export default function App() {
   }, [userRole]);
 
   useEffect(() => {
-    if (!['manager', 'barber'].includes(userRole)) return;
+    if (!['manager', 'barber'].includes(userRole)) {
+      setStaffNotifications([]);
+      setStaffUnreadChats(0);
+      return;
+    }
     
     // Ensure db is available
     const firestore = db || getFirestore();
     if (!firestore) return;
 
-    const q = query(
+    const qNotifications = query(
       collection(firestore, "staff_notifications"),
       orderBy("timestamp", "desc"),
       limit(20)
     );
     
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const unsubscribeNotifications = onSnapshot(qNotifications, (snapshot) => {
+      // First snapshot or empty snapshot establishes baseline
+      const isInitialRun = lastProcessedStaffNotificationTimeRef.current === 0;
+      let highestTime = lastProcessedStaffNotificationTimeRef.current;
+      
+      const data = snapshot.docs.map(docSnap => {
+        const nData = docSnap.data();
+        const timestamp = nData.timestamp && typeof nData.timestamp.toDate === "function"
+          ? nData.timestamp.toDate().getTime()
+          : (nData.timestamp && nData.timestamp._seconds ? nData.timestamp._seconds * 1000 : new Date(nData.timestamp || 0).getTime());
+          
+        if (timestamp > highestTime) {
+          highestTime = timestamp;
+        }
+
+        // Notify if it's a new notification (not from baseline snapshot) and recent enough
+        if (!isInitialRun && timestamp > lastProcessedStaffNotificationTimeRef.current) {
+          if (Date.now() - timestamp < 60000) { // 60 seconds window for fresh notifications
+            const title = nData.title || "Alerta do Sistema 💈";
+            const message = nData.message || "Nova atualização recebida.";
+            console.log("[Notification System] Staff Notification Trigger:", title);
+            toast.success(`${title}: ${message}`);
+            triggerLocalNotification(title, message, "/agenda");
+          }
+        }
+        
+        return { id: docSnap.id, ...nData };
+      });
+      
       setStaffNotifications(data);
+      if (highestTime > 0) {
+        lastProcessedStaffNotificationTimeRef.current = highestTime;
+      }
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, "staff_notifications");
     });
+
+    const qChats = query(
+      collection(firestore, "chats"),
+      where("unreadByStaff", "==", true)
+    );
+
+    const unsubscribeChats = onSnapshot(qChats, (snapshot) => {
+      const isInitialRun = Object.keys(lastProcessedStaffChatsRef.current).length === 0 && staffUnreadChats === 0;
+      setStaffUnreadChats(snapshot.size);
+
+      snapshot.docChanges().forEach((change) => {
+        const docData = change.doc.data();
+        const chatId = change.doc.id;
+        const msgTime = docData.lastMessageTime && typeof docData.lastMessageTime.toDate === "function"
+          ? docData.lastMessageTime.toDate().getTime()
+          : (docData.lastMessageTime && docData.lastMessageTime._seconds ? docData.lastMessageTime._seconds * 1000 : new Date(docData.lastMessageTime || 0).getTime());
+
+        const prevTime = lastProcessedStaffChatsRef.current[chatId] || 0;
+        
+        // Notify if time increased and not in the initial baseline set
+        if (msgTime > prevTime) {
+          if (!isInitialRun && Date.now() - msgTime < 60000) {
+            const clientName = docData.clientName || "Cliente";
+            const bodyText = docData.lastMessage || "Nova mensagem recebida! 💬";
+            console.log("[Notification System] Staff Chat Trigger:", clientName);
+            toast.success(`${clientName}: ${bodyText}`);
+            triggerLocalNotification(`${clientName} enviou uma mensagem 💬`, bodyText, "/professional-chat");
+          }
+          lastProcessedStaffChatsRef.current[chatId] = msgTime;
+        }
+      });
+
+      // Update baseline for any document in the snapshot
+      snapshot.docs.forEach((docSnap) => {
+        const docData = docSnap.data();
+        const chatId = docSnap.id;
+        const msgTime = docData.lastMessageTime && typeof docData.lastMessageTime.toDate === "function"
+          ? docData.lastMessageTime.toDate().getTime()
+          : (docData.lastMessageTime && docData.lastMessageTime._seconds ? docData.lastMessageTime._seconds * 1000 : new Date(docData.lastMessageTime || 0).getTime());
+        
+        if (msgTime > (lastProcessedStaffChatsRef.current[chatId] || 0)) {
+           lastProcessedStaffChatsRef.current[chatId] = msgTime;
+        }
+      });
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, "chats");
+    });
     
-    return () => unsubscribe();
+    return () => {
+      unsubscribeNotifications();
+      unsubscribeChats();
+    };
   }, [userRole]);
 
   // Dynamic Home Screen Badge syncing for iOS PWA and compatible browsers
   useEffect(() => {
     if (typeof window !== "undefined" && "setAppBadge" in navigator) {
       if (["manager", "barber"].includes(userRole)) {
-        const unreadCount = staffNotifications.filter((n) => !n.read).length;
+        const unreadCount = staffNotifications.filter((n) => !n.read).length + staffUnreadChats;
         if (unreadCount > 0) {
           (navigator as any).setAppBadge(unreadCount).catch((err: any) => console.log("[Badge] Error setting:", err));
         } else {
@@ -539,7 +682,7 @@ export default function App() {
         }
       }
     }
-  }, [staffNotifications, userRole]);
+  }, [staffNotifications, staffUnreadChats, userRole]);
 
   useEffect(() => {
     if (!user || userRole === 'client') return;
