@@ -1050,7 +1050,7 @@ export default function App() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsMenuOpen(false)}
-              className="liquid-glass fixed inset-0 z-40 backdrop-blur-md"
+              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-md"
             />
 
             {/* Sidebar Drawer */}
@@ -1059,7 +1059,7 @@ export default function App() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 220 }}
-              className="liquid-glass fixed top-0 right-0 h-full w-[85%] max-w-[340px] z-50 backdrop-blur-2xl -l flex flex-col justify-between shadow-2xl p-6"
+              className="liquid-glass fixed top-0 right-0 h-full w-[85%] max-w-[340px] z-50 backdrop-blur-2xl !rounded-none !rounded-l-[2rem] !border-r-0 !border-y-0 !border-l flex flex-col justify-between shadow-2xl pt-[calc(1.5rem+env(safe-area-inset-top))] px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))]"
             >
               {/* Drawer Header */}
               <div className="flex items-center justify-between border-b border-white/5 pb-5">
