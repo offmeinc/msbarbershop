@@ -87,10 +87,24 @@ export function safeStringify(obj: any): string {
       return undefined; // Drop circular references
     }
     
-    // Check for some common non-serializable objects in Firebase (like Functions, or complex class instances)
-    // If it has a custom constructor that's not a plain object, let's just return a generic name or undefined
-    if (value.constructor && value.constructor.name !== 'Object' && value.constructor.name !== 'Array' && value.constructor.name !== 'Timestamp') {
-        return `[${value.constructor.name}]`;
+    // If it's a Timestamp, keep it under standard format
+    if (value.constructor && value.constructor.name === 'Timestamp') {
+      return { seconds: value.seconds, nanoseconds: value.nanoseconds };
+    }
+    
+    // Prevent traversing complex class instances
+    let isPlain = false;
+    const isArray = Array.isArray(value);
+    try {
+      const proto = Object.getPrototypeOf(value);
+      isPlain = proto === Object.prototype || proto === null || isArray;
+    } catch (e) {
+      // Ignored
+    }
+    
+    if (!isPlain) {
+      const constName = value.constructor && value.constructor.name ? value.constructor.name : 'UnknownClass';
+      return `[${constName}]`;
     }
     
     cache.add(value);

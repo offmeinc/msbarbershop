@@ -1,11 +1,17 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { ChevronRight, Sparkles, MapPin, Instagram, Phone, Clock, Scissors, Image as ImageIcon, Star } from "lucide-react";
 import { BARBERSHOP_NAME, BARBERSHOP_ADDRESS, BARBERSHOP_PHONE, BARBERSHOP_INSTAGRAM, GOOGLE_REVIEW_URL } from "../../constants";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
 import { collection, query, orderBy, limit, onSnapshot } from "firebase/firestore";
 
-export function HomeScreen({ services, onStartBooking }: { services: any[], onStartBooking: () => void, key?: string }) {
+const triggerBookingPreload = () => {
+  if (typeof window !== "undefined" && (window as any).__pwaPreloaders?.booking) {
+    (window as any).__pwaPreloaders.booking();
+  }
+};
+
+export const HomeScreen = memo(function HomeScreen({ services, onStartBooking }: { services: any[], onStartBooking: () => void, key?: string }) {
   const [locationSelectorOpen, setLocationSelectorOpen] = useState(false);
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
   const [portfolio, setPortfolio] = useState<any[]>([]);
@@ -44,6 +50,8 @@ export function HomeScreen({ services, onStartBooking }: { services: any[], onSt
           <div className="p-[2.5px] bg-gradient-to-r from-[#FACC15] via-[#EAB308] to-[#FACC15] rounded-[2rem] relative z-10 transition-all duration-300 shadow-[0_0_15px_rgba(250,204,21,0.25)] group-hover:shadow-[0_0_30px_rgba(250,204,21,0.6)]">
             <motion.button 
               onClick={onStartBooking}
+              onMouseEnter={triggerBookingPreload}
+              onTouchStart={triggerBookingPreload}
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
               initial={{ scale: 1 }}
@@ -128,7 +136,14 @@ export function HomeScreen({ services, onStartBooking }: { services: any[], onSt
       <div id="servicos" className="px-6 mb-12 scroll-mt-24">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xs font-black uppercase tracking-[0.2em] text-neutral-500">Nossos Serviços</h2>
-          <button onClick={onStartBooking} className="text-[10px] font-bold text-amber-500 uppercase tracking-widest hover:underline">Ver Tabela</button>
+          <button 
+            onClick={onStartBooking} 
+            onMouseEnter={triggerBookingPreload}
+            onTouchStart={triggerBookingPreload}
+            className="text-[10px] font-bold text-amber-500 uppercase tracking-widest hover:underline"
+          >
+            Ver Tabela
+          </button>
         </div>
         <div className="flex md:grid gap-4 overflow-x-auto md:overflow-x-visible pb-4 scrollbar-hide no-scrollbar -mx-6 px-6 md:mx-0 md:px-0 md:grid-cols-4">
            {(() => {
@@ -176,6 +191,8 @@ export function HomeScreen({ services, onStartBooking }: { services: any[], onSt
                        setSelectedServiceId(service.id || idx.toString());
                      }
                    }}
+                   onMouseEnter={triggerBookingPreload}
+                   onTouchStart={triggerBookingPreload}
                    className={`${
                      isSelected ? 'w-64 md:w-full border-amber-500 bg-neutral-900 shadow-amber-500/10' : 'w-40 sm:w-48 md:w-full border-white/5 bg-neutral-900/50'
                    } flex-shrink-0 md:flex-shrink min-h-[14rem] rounded-[2.5rem] border backdrop-blur-xl p-5 sm:p-6 flex flex-col justify-between group cursor-pointer transition-all duration-500 shadow-2xl relative overflow-hidden`}
@@ -221,6 +238,8 @@ export function HomeScreen({ services, onStartBooking }: { services: any[], onSt
                                     e.stopPropagation();
                                     onStartBooking();
                                   }}
+                                  onMouseEnter={triggerBookingPreload}
+                                  onTouchStart={triggerBookingPreload}
                                   className="w-full bg-white text-black py-3 rounded-2xl text-[10px] font-black uppercase italic tracking-wider hover:bg-amber-500 transition-colors"
                                 >
                                   Selecionar Serviço
@@ -381,4 +400,4 @@ export function HomeScreen({ services, onStartBooking }: { services: any[], onSt
       </div>
     </div>
   );
-}
+});

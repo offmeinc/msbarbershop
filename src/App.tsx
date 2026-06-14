@@ -59,7 +59,7 @@ import {
   Download,
   LayoutDashboard
 } from "lucide-react";
-import { useState, useEffect, useRef, useMemo, ChangeEvent, FormEvent, lazy, Suspense, useCallback } from "react";
+import React, { useState, useEffect, useRef, useMemo, ChangeEvent, FormEvent, lazy, Suspense, useCallback } from "react";
 
 // --- Custom Hook for Path-based Routing ---
 function usePathNavigation<T extends string>(defaultScreen: T) {
@@ -96,28 +96,62 @@ import { BrandLogo } from "./components/common/BrandLogo";
 import { Toaster, toast } from "./components/ui/Toast";
 import { NotificationModal } from "./components/common/NotificationModal";
 
-// Lazy-loaded components for better initial loading performance
-const NotificationsScreen = lazy(() => import("./components/NotificationsScreen").then(m => ({ default: m.NotificationsScreen })));
-const EarningsScreen = lazy(() => import("./components/manager/EarningsScreen").then(m => ({ default: m.EarningsScreen })));
-const BlockScreen = lazy(() => import("./components/manager/BlockScreen").then(m => ({ default: m.BlockScreen })));
-const PromotionsManager = lazy(() => import("./components/manager/PromotionsManager").then(m => ({ default: m.PromotionsManager })));
-const HelpScreen = lazy(() => import("./components/manager/OtherScreens").then(m => ({ default: m.HelpScreen })));
-const ShareScreen = lazy(() => import("./components/manager/OtherScreens").then(m => ({ default: m.ShareScreen })));
-const RecurrenceScreen = lazy(() => import("./components/manager/OtherScreens").then(m => ({ default: m.RecurrenceScreen })));
-const ReconScreen = lazy(() => import("./components/manager/UtilityScreens").then(m => ({ default: m.ReconScreen })));
-const ProfessionalHome = lazy(() => import("./components/professional/ProfessionalHome").then(m => ({ default: m.ProfessionalHome })));
-const ClientDashboardScreen = lazy(() => import("./components/client/ClientDashboardScreen").then(m => ({ default: m.ClientDashboardScreen })));
-const ProfileEditScreen = lazy(() => import("./components/common/ProfileEditScreen").then(m => ({ default: m.ProfileEditScreen })));
-const BookingScreen = lazy(() => import("./components/client/BookingScreen").then(m => ({ default: m.BookingScreen })));
-const ClientsScreen = lazy(() => import("./components/manager/ClientsScreen").then(m => ({ default: m.ClientsScreen })));
-const ClientDetailsScreen = lazy(() => import("./components/manager/ClientDetailsScreen").then(m => ({ default: m.ClientDetailsScreen })));
-const MoreOptionsScreen = lazy(() => import("./components/common/MoreOptionsScreen").then(m => ({ default: m.MoreOptionsScreen })));
-const ClientPortalScreen = lazy(() => import("./components/auth/AuthScreens").then(m => ({ default: m.ClientPortalScreen })));
-const CollaboratorLoginScreen = lazy(() => import("./components/auth/AuthScreens").then(m => ({ default: m.CollaboratorLoginScreen })));
-const PortfolioManager = lazy(() => import("./components/professional/PortfolioManager").then(m => ({ default: m.PortfolioManager })));
-const DashboardScreen = lazy(() => import("./components/manager/DashboardScreen").then(m => ({ default: m.DashboardScreen })));
-const ProfessionalClientChatsScreen = lazy(() => import("./components/ChatScreens").then(m => ({ default: m.ProfessionalClientChatsScreen })));
-const BarbershopManagement = lazy(() => import("./components/manager/BarbershopManagement").then(m => ({ default: m.BarbershopManagement })));
+// Helper logic for preloading lazy-loaded components
+function makePreloadableLazy<T extends React.ComponentType<any>>(
+  importFn: () => Promise<{ default: T }>
+) {
+  let cache: Promise<{ default: T }> | null = null;
+  const load = () => {
+    if (!cache) {
+      cache = importFn();
+    }
+    return cache;
+  };
+  const LazyComponent = lazy(load);
+  (LazyComponent as any).preload = load;
+  return LazyComponent as unknown as React.LazyExoticComponent<T> & { preload: () => Promise<{ default: T }> };
+}
+
+// Lazy-loaded components for better initial loading performance with on-demand preloading support
+const NotificationsScreen = makePreloadableLazy(() => import("./components/NotificationsScreen").then(m => ({ default: m.NotificationsScreen })));
+const EarningsScreen = makePreloadableLazy(() => import("./components/manager/EarningsScreen").then(m => ({ default: m.EarningsScreen })));
+const BlockScreen = makePreloadableLazy(() => import("./components/manager/BlockScreen").then(m => ({ default: m.BlockScreen })));
+const PromotionsManager = makePreloadableLazy(() => import("./components/manager/PromotionsManager").then(m => ({ default: m.PromotionsManager })));
+const HelpScreen = makePreloadableLazy(() => import("./components/manager/OtherScreens").then(m => ({ default: m.HelpScreen })));
+const ShareScreen = makePreloadableLazy(() => import("./components/manager/OtherScreens").then(m => ({ default: m.ShareScreen })));
+const RecurrenceScreen = makePreloadableLazy(() => import("./components/manager/OtherScreens").then(m => ({ default: m.RecurrenceScreen })));
+const ReconScreen = makePreloadableLazy(() => import("./components/manager/UtilityScreens").then(m => ({ default: m.ReconScreen })));
+const ProfessionalHome = makePreloadableLazy(() => import("./components/professional/ProfessionalHome").then(m => ({ default: m.ProfessionalHome })));
+const ClientDashboardScreen = makePreloadableLazy(() => import("./components/client/ClientDashboardScreen").then(m => ({ default: m.ClientDashboardScreen })));
+const ProfileEditScreen = makePreloadableLazy(() => import("./components/common/ProfileEditScreen").then(m => ({ default: m.ProfileEditScreen })));
+const BookingScreen = makePreloadableLazy(() => import("./components/client/BookingScreen").then(m => ({ default: m.BookingScreen })));
+const ClientsScreen = makePreloadableLazy(() => import("./components/manager/ClientsScreen").then(m => ({ default: m.ClientsScreen })));
+const ClientDetailsScreen = makePreloadableLazy(() => import("./components/manager/ClientDetailsScreen").then(m => ({ default: m.ClientDetailsScreen })));
+const MoreOptionsScreen = makePreloadableLazy(() => import("./components/common/MoreOptionsScreen").then(m => ({ default: m.MoreOptionsScreen })));
+const ClientPortalScreen = makePreloadableLazy(() => import("./components/auth/AuthScreens").then(m => ({ default: m.ClientPortalScreen })));
+const CollaboratorLoginScreen = makePreloadableLazy(() => import("./components/auth/AuthScreens").then(m => ({ default: m.CollaboratorLoginScreen })));
+const PortfolioManager = makePreloadableLazy(() => import("./components/professional/PortfolioManager").then(m => ({ default: m.PortfolioManager })));
+const DashboardScreen = makePreloadableLazy(() => import("./components/manager/DashboardScreen").then(m => ({ default: m.DashboardScreen })));
+const ProfessionalClientChatsScreen = makePreloadableLazy(() => import("./components/ChatScreens").then(m => ({ default: m.ProfessionalClientChatsScreen })));
+const BarbershopManagement = makePreloadableLazy(() => import("./components/manager/BarbershopManagement").then(m => ({ default: m.BarbershopManagement })));
+
+if (typeof window !== "undefined") {
+  (window as any).__pwaPreloaders = {
+    home: () => Promise.resolve(),
+    booking: () => BookingScreen.preload(),
+    agenda: () => DashboardScreen.preload(),
+    clients: () => ClientsScreen.preload(),
+    "client-details": () => ClientDetailsScreen.preload(),
+    more: () => MoreOptionsScreen.preload(),
+    "client-login": () => ClientPortalScreen.preload(),
+    "client-dashboard": () => ClientDashboardScreen.preload(),
+    earnings: () => EarningsScreen.preload(),
+    promotions: () => PromotionsManager.preload(),
+    portfolio: () => PortfolioManager.preload(),
+    "professional-chat": () => ProfessionalClientChatsScreen.preload(),
+    "barber-management": () => BarbershopManagement.preload(),
+  };
+}
 
 import { HomeScreen } from "./components/client/HomeScreen";
 import { BottomNav } from "./components/common/BottomNav";
@@ -298,6 +332,30 @@ export default function App() {
         document.documentElement.classList.remove('dark');
     }
   }, [isDarkMode]);
+
+  // Proactive background preloading of major screens when the app goes idle
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      try {
+        // Always pre-warm the primary page for clients
+        BookingScreen.preload().catch(() => {});
+        
+        if (userRole === "client") {
+          ClientDashboardScreen.preload().catch(() => {});
+        } else if (["manager", "barber"].includes(userRole)) {
+          DashboardScreen.preload().catch(() => {});
+          ClientsScreen.preload().catch(() => {});
+          ProfessionalHome.preload().catch(() => {});
+        }
+        
+        // Minor pre-warm options screen
+        MoreOptionsScreen.preload().catch(() => {});
+      } catch (e) {
+        console.warn("[Background Preloader] Failed to pre-warm modules:", e);
+      }
+    }, 1500); // 1.5 seconds delay so we don't interfere with the critical rendering path
+    return () => clearTimeout(timer);
+  }, [userRole]);
 
   useEffect(() => {
     if (!['manager', 'barber'].includes(userRole)) return;

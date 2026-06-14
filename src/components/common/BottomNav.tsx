@@ -1,7 +1,8 @@
+import { memo } from "react";
 import { Home, CalendarDays, Users, Scissors, GripHorizontal, Sliders } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
-export function BottomNav({ userRole, currentScreen, setCurrentScreen, user, unreadCount, isVisible = true }: { userRole: string, currentScreen: string, setCurrentScreen: (s: any) => void, user: any, unreadCount: number, isVisible?: boolean }) {
+export const BottomNav = memo(function BottomNav({ userRole, currentScreen, setCurrentScreen, user, unreadCount, isVisible = true }: { userRole: string, currentScreen: string, setCurrentScreen: (s: any) => void, user: any, unreadCount: number, isVisible?: boolean }) {
   if (!user) return null;
 
   const items = [];
@@ -55,6 +56,16 @@ export function BottomNav({ userRole, currentScreen, setCurrentScreen, user, unr
           <motion.button 
             key={item.id} 
             layout
+            onMouseEnter={() => {
+              if (typeof window !== "undefined" && (window as any).__pwaPreloaders?.[item.screen]) {
+                (window as any).__pwaPreloaders[item.screen]();
+              }
+            }}
+            onTouchStart={() => {
+              if (typeof window !== "undefined" && (window as any).__pwaPreloaders?.[item.screen]) {
+                (window as any).__pwaPreloaders[item.screen]();
+              }
+            }}
             onClick={() => setCurrentScreen(currentScreen === item.screen ? "home" : item.screen as any)} 
             className={`flex items-center justify-center gap-2 py-3.5 px-5 rounded-full transition-all duration-300 relative group ${isActive ? "bg-amber-500 text-black shadow-lg shadow-amber-500/20" : "text-neutral-500 hover:text-white"}`}
           >
@@ -78,4 +89,4 @@ export function BottomNav({ userRole, currentScreen, setCurrentScreen, user, unr
       })}
     </motion.div>
   );
-}
+});

@@ -49,9 +49,24 @@ function deepSanitize(obj: any, visited = new Set<any>()): any {
     return undefined;
   }
   
+  // Prevent traversing complex class instances (e.g., Firestore reference/SDK objects like 'Y2' or 'Ka')
+  // We only want to traverse plain objects and arrays.
+  let isPlain = false;
+  const isArray = Array.isArray(obj);
+  try {
+    const proto = Object.getPrototypeOf(obj);
+    isPlain = proto === Object.prototype || proto === null || isArray;
+  } catch (e) {
+    // If getting prototype fails, assume it's complex and unsafe to traverse
+  }
+  
+  if (!isPlain) {
+    return undefined;
+  }
+  
   visited.add(obj);
   
-  if (Array.isArray(obj)) {
+  if (isArray) {
     const res = obj.map(item => deepSanitize(item, visited)).filter(val => val !== undefined);
     visited.delete(obj);
     return res;
