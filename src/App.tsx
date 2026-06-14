@@ -4,6 +4,7 @@
  */
 
 import { BARBERSHOP_ADDRESS, BARBERSHOP_NAME } from "./constants";
+import { Analytics } from '@vercel/analytics/react';
 import { motion, AnimatePresence, useScroll, useMotionValueEvent } from "motion/react";
 import { 
   Scissors,
@@ -1213,6 +1214,7 @@ export default function App() {
         )}
       </AnimatePresence>
       <Toaster />
+      <Analytics />
     </div>
   );
 }
