@@ -96,6 +96,7 @@ function usePathNavigation<T extends string>(defaultScreen: T) {
 import { BrandLogo } from "./components/common/BrandLogo";
 import { Toaster, toast } from "./components/ui/Toast";
 import { NotificationModal } from "./components/common/NotificationModal";
+import { useFanMode } from "./lib/useFanMode";
 
 // Helper logic for preloading lazy-loaded components
 function makePreloadableLazy<T extends React.ComponentType<any>>(
@@ -235,12 +236,7 @@ export default function App() {
   const { scrollY } = useScroll();
   const [hidden, setHidden] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [isFanMode, setIsFanMode] = useState<boolean>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("copa2026_fan_mode") === "true";
-    }
-    return false;
-  });
+  const [isFanMode, setIsFanMode] = useFanMode();
 
   const validScreens = ["home", "booking", "agenda", "clients", "client-details", "more", "login", "collaborators", "services", "client-login", "client-dashboard", "earnings", "promotions", "portfolio", "professional-chat", "barber-management", "checkout"];
   const displayScreen = validScreens.includes(currentScreen as string) ? currentScreen : "home";
@@ -259,19 +255,6 @@ export default function App() {
       if (Math.abs(diff) > 10 || latest < 50) setHidden(false);
     }
   });
-
-  // Sync Fan Mode theme override globally
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    if (isFanMode) {
-      document.documentElement.classList.add("fan-mode-active");
-      localStorage.setItem("copa2026_fan_mode", "true");
-    } else {
-      document.documentElement.classList.remove("fan-mode-active");
-      localStorage.setItem("copa2026_fan_mode", "false");
-    }
-  }, [isFanMode]);
 
   const [dashboardView, setDashboardView] = useState<"list" | "calendar" | "services" | "hours" | "collaborators">("list");
   const [requestedRole, setRequestedRole] = useState<string>("client");
