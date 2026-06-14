@@ -1,25 +1,21 @@
 import { adminMessaging, db } from "./firebaseAdmin";
 import type { Message } from "firebase-admin/messaging";
-import firebaseConfig from "../../firebase-applet-config.json";
 import { 
   collection, 
-  onSnapshot, 
-  getDocs, 
-  getDoc, 
-  updateDoc, 
-  addDoc, 
-  doc, 
   query, 
   where, 
-  limit, 
+  getDocs, 
+  getDoc, 
+  addDoc, 
+  updateDoc, 
+  doc, 
   deleteDoc, 
-  Timestamp 
+  onSnapshot, 
+  Timestamp, 
+  limit 
 } from "firebase/firestore";
 
-// Service logic
 export async function initVapid() {
-  // We keep this function so it doesn't break server.ts which imports it.
-  // With FCM, VAPID is handled by Firebase config. We can just return a dummy object or read from VITE_VAPID_PUBLIC_KEY.
   return { publicKey: process.env.VITE_VAPID_PUBLIC_KEY || "" };
 }
 
@@ -31,12 +27,12 @@ export async function sendPushNotification(
   try {
     const cleanUserId = userId.replace(/[\s\-\(\)\+]/g, "");
     
-    // Query FCM tokens collection
+    // Query FCM tokens collection using Client SDK
     const tokensRef = collection(db, "fcm_tokens");
     const q1 = query(tokensRef, where("userId", "==", cleanUserId));
     const q2 = query(tokensRef, where("userId", "==", userId));
-    const snap1 = await getDocs(q1);
-    const snap2 = await getDocs(q2);
+    
+    const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
     
     const docMap = new Map();
     snap1.docs.forEach((d) => docMap.set(d.id, d));
@@ -75,7 +71,7 @@ export async function sendPushNotification(
         await adminMessaging.send(message);
       } catch (err: any) {
         console.error(`[Push Service] Error sending FCM message to token:`, err.message);
-        if (err.code === 'messaging/registration-token-not-registered' || err.code === 'messaging/invalid-registration-token') {
+        if (err.code === "messaging/registration-token-not-registered" || err.code === "messaging/invalid-registration-token") {
           console.log(`[Push Service] Cleaning up expired token: ${docSnap.id}`);
           try {
             await deleteDoc(doc(db, "fcm_tokens", docSnap.id));
@@ -130,8 +126,12 @@ export async function sendNotificationToCollaborators(
       try {
         await adminMessaging.send(message);
       } catch (err: any) {
-        if (err.code === 'messaging/registration-token-not-registered' || err.code === 'messaging/invalid-registration-token') {
-          await deleteDoc(doc(db, "fcm_tokens", docSnap.id));
+        if (err.code === "messaging/registration-token-not-registered" || err.code === "messaging/invalid-registration-token") {
+          try {
+            await deleteDoc(doc(db, "fcm_tokens", docSnap.id));
+          } catch (deleteErr: any) {
+             console.error(`[Push Service] Error deleting stale token:`, deleteErr.message);
+          }
         }
       }
     });
@@ -161,8 +161,7 @@ async function checkAndNotifyReferralFirstAppointmentConfirmed(
       return;
     }
     
-    const qApp = query(collection(db, "appointments"), where("clientId", "==", clientId));
-    const appointmentsSnap = await getDocs(qApp);
+    const appointmentsSnap = await getDocs(query(collection(db, "appointments"), where("clientId", "==", clientId)));
 
     const otherConfirmedOrCompleted = appointmentsSnap.docs.filter((d) => {
       const dData = d.data();
@@ -180,8 +179,7 @@ async function checkAndNotifyReferralFirstAppointmentConfirmed(
       referralConfirmationNotificationTriggered: true
     });
     
-    const qRef = query(collection(db, "users"), where("referralCode", "==", userData.referredBy), limit(1));
-    const referrersSnap = await getDocs(qRef);
+    const referrersSnap = await getDocs(query(collection(db, "users"), where("referralCode", "==", userData.referredBy), limit(1)));
     
     await addDoc(collection(db, "notifications"), {
       clientId: clientId,
@@ -229,7 +227,7 @@ async function checkAndNotifyReferralFirstAppointmentConfirmed(
 
 // Central snapshot listener on "appointments" collection
 export function startAppointmentsListener() {
-  console.log("[Push Service] Initializing with firebase admin SDK snapshot service...");
+  console.log("[Push Service] Initializing with firebase Client SDK snapshot service for appointments...");
   
   let isInitial = true;
 
@@ -249,8 +247,8 @@ export function startAppointmentsListener() {
         let formattedDateStr = "";
         if (data.date) {
           try {
-            const dateVal = data.date instanceof Timestamp 
-              ? data.date.toDate() 
+            const dateVal = data.date && typeof data.date.toDate === "function"
+              ? data.date.toDate()
               : (data.date && data.date._seconds ? new Date(data.date._seconds * 1000) : new Date(data.date));
             formattedDateStr = dateVal.toLocaleString("pt-BR", {
               day: "2-digit",
@@ -332,6 +330,112 @@ export function startAppointmentsListener() {
     }, (err: any) => {
       console.error("[Push Service] Snapshot error on appointments:", err.message);
       console.log("[Push Service] Attempting to restart listener in 5 seconds...");
+      setTimeout(() => {
+        setupListener();
+      }, 5000);
+    });
+  };
+
+  return setupListener();
+}
+
+// Memory map to rate limit user access alerts to once every 10 minutes per client
+const userAccessLogs = new Map<string, number>();
+
+export async function notifyUserAccess(userId: string, userName: string, role: string) {
+  if (!userId || role !== "client") return;
+  
+  const now = Date.now();
+  const lastNotify = userAccessLogs.get(userId) || 0;
+  
+  if (now - lastNotify > 10 * 60 * 1000) {
+    userAccessLogs.set(userId, now);
+    console.log(`[Push Service] Client ${userName || userId} accessed the app. Notifying professionals...`);
+    
+    // 1. Send native/web push notification to all collaborators
+    await sendNotificationToCollaborators({
+      title: "Cliente Online! 📱",
+      body: `${userName || "Um cliente"} acabou de entrar no app.`,
+      url: "/professional-chat"
+    });
+    
+    // 2. Insert alert into staff_notifications for live professional feed
+    try {
+      await addDoc(collection(db, "staff_notifications"), {
+        title: "Cliente Online 📱",
+        message: `O cliente ${userName || "Sem nome"} acessou o aplicativo.`,
+        timestamp: Timestamp.now(),
+        read: false,
+        type: "client_access",
+        clientId: userId
+      });
+    } catch (e: any) {
+      console.error("[Push Service] Error logging user access notification:", e.message);
+    }
+  }
+}
+
+// Snapshot listener for real-time chat messages
+export function startChatsListener() {
+  console.log("[Push Service] Initializing with firebase Client SDK snapshot service for chats...");
+  let isInitial = true;
+
+  const setupListener = () => {
+    return onSnapshot(collection(db, "chats"), (snapshot) => {
+      if (isInitial) {
+        isInitial = false;
+        console.log("[Push Service] Baselined existing chats. Real-time chat notifications active.");
+        return;
+      }
+
+      snapshot.docChanges().forEach(async (change) => {
+        if (change.type === "added" || change.type === "modified") {
+          const clientUid = change.doc.id;
+          const data = change.doc.data();
+          const lastMessage = data.lastMessage || "";
+          const clientName = data.clientName || "Cliente";
+
+          // Calculate message recency to prevent duplicate notifications during offline resyncs
+          let isRecent = false;
+          if (data.lastMessageTime) {
+            try {
+              const msgTime = data.lastMessageTime && typeof data.lastMessageTime.toDate === "function"
+                ? data.lastMessageTime.toDate().getTime()
+                : (data.lastMessageTime && data.lastMessageTime._seconds ? data.lastMessageTime._seconds * 1000 : new Date(data.lastMessageTime).getTime());
+              const diff = Date.now() - msgTime;
+              if (Math.abs(diff) < 30000) { // within 30 seconds
+                isRecent = true;
+              }
+            } catch (e) {
+              isRecent = true;
+            }
+          } else {
+            isRecent = true;
+          }
+
+          if (isRecent) {
+            if (data.unreadByStaff === true) {
+              await sendNotificationToCollaborators({
+                title: `${clientName} enviou uma mensagem 💬`,
+                body: lastMessage,
+                url: "/professional-chat"
+              });
+            }
+
+            if (data.unreadByClient === true) {
+              const cleanTarget = clientUid.replace(/[\s\-\(\)\+]/g, "");
+              await sendPushNotification(cleanTarget, {
+                title: "Nova mensagem da MS Barbearia 💬",
+                body: lastMessage,
+                url: "/"
+              });
+            }
+          }
+        }
+      });
+    }, (err: any) => {
+      console.error("[Push Service] Snapshot error on chats:", err.message);
+      console.log("[Push Service] Attempting to restart chats listener in 5 seconds...");
       setTimeout(() => {
         setupListener();
       }, 5000);

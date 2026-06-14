@@ -1,5 +1,5 @@
 import { db } from "./firebaseAdmin";
-import { collection, getDocs, query, where, updateDoc, doc, Timestamp } from "firebase/firestore";
+import { collection, getDocs, query, where, updateDoc, doc } from "firebase/firestore";
 import { sendPushNotification } from "./pushNotificationService";
 
 export function getExactAppointmentDate(data: any): Date {

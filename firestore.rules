@@ -92,8 +92,11 @@ service cloud.firestore {
     }
 
     // Client Support Chats
-    match /chats/{userId}/{document=**} {
+    match /chats/{userId} {
       allow read, write: if true;
+      match /{document=**} {
+        allow read, write: if true;
+      }
     }
 
     // FCM Tokens

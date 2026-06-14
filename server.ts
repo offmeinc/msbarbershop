@@ -8,7 +8,7 @@ import cors from "cors";
 import axios from "axios";
 import FormData from "form-data";
 import { GoogleGenAI, Type } from "@google/genai";
-import { initVapid, startAppointmentsListener, sendPushNotification, sendNotificationToCollaborators } from "./src/server/pushNotificationService";
+import { initVapid, startAppointmentsListener, startChatsListener, notifyUserAccess, sendPushNotification, sendNotificationToCollaborators } from "./src/server/pushNotificationService";
 import { startAppointmentAutoUpdater } from "./src/server/appointmentAutoUpdater";
 import { adminMessaging, db } from "./src/server/firebaseAdmin";
 import { doc, getDoc, updateDoc, setDoc, runTransaction, serverTimestamp, increment, deleteDoc } from "firebase/firestore";
@@ -63,6 +63,7 @@ async function startServer() {
   // Initialize Push notifications
   const vapid = await initVapid();
   startAppointmentsListener();
+  startChatsListener();
   startAppointmentAutoUpdater();
   
   const upload = multer({ storage: multer.memoryStorage() });
@@ -85,6 +86,18 @@ async function startServer() {
     } catch (error) {
         console.error("[Chat API Error]:", error);
         res.status(500).json({ error: "Failed to process chat" });
+    }
+  });
+
+  // Client User Access Webhook
+  app.post("/api/user-access", async (req, res) => {
+    const { userId, userName, role } = req.body;
+    try {
+      await notifyUserAccess(userId, userName, role);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("[User Access API Error]:", error.message);
+      res.status(500).json({ error: "Failed to record access log" });
     }
   });
 

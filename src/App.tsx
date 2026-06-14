@@ -211,7 +211,7 @@ import {
 } from "./lib/firebase";
 import { onMessage } from "firebase/messaging";
 import { uploadImage } from "./lib/uploadService";
-import { getBackendUrl } from "./lib/pushRegister";
+import { getBackendUrl, setupPushSubscription } from "./lib/pushRegister";
 import { setupNativePush } from "./lib/nativePush";
 import { 
   onAuthStateChanged,
@@ -310,15 +310,122 @@ export default function App() {
     };
   }, []);
   
+  const hasNotifiedAccess = useRef<string | null>(null);
+  const [clientUnreadChats, setClientUnreadChats] = useState(0);
+  const [clientUnreadNotifications, setClientUnreadNotifications] = useState(0);
+
+  // 1. Initial Prompt for Notifications on Launch (for PWAs and Standard Browsers)
   useEffect(() => {
-    // 2. Native Push (Capacitor iOS/Android)
+    if (typeof window !== "undefined" && "Notification" in window) {
+      if (Notification.permission === "default") {
+        Notification.requestPermission().then((perm) => {
+          console.log("[Push] Initial permission request result:", perm);
+        }).catch(console.error);
+      }
+    }
+  }, []);
+
+  // 2. Synchronized push subscriptions (Web FCM + native Capacitor) and professional access alert
+  useEffect(() => {
+    let id = "";
+    let name = "";
+    let role = "client";
+
     if (user) {
-      setupNativePush(user.uid, userRole).catch(console.error);
+      id = user.uid;
+      name = user.displayName || user.email || "Usuário";
+      role = userRole;
+    } else if (loggedInClient) {
+      id = loggedInClient.id;
+      name = loggedInClient.name || "Cliente";
+      role = "client";
+    }
+
+    if (id) {
+      // Setup Web VAPID/FCM or Native Apple/Android push depending on runtime context
+      const cleanUid = id.replace(/[\s\-\(\)\+]/g, "");
+      setupNativePush(id, role).catch(console.error);
+      setupPushSubscription(cleanUid, role).catch(console.error);
+
+      // Report client access to the workspace so barbers get live browser + push notification alerts
+      if (role === "client" && hasNotifiedAccess.current !== id) {
+        hasNotifiedAccess.current = id;
+        fetch("/api/user-access", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId: id, userName: name, role })
+        }).then((res) => {
+          if (!res.ok) console.warn("[Access Notification] Send failed");
+        }).catch((err) => {
+          console.error("[Access Notification] Endpoint failed:", err);
+        });
+      }
     }
   }, [user, loggedInClient, userRole]);
 
+  // 3. Listen to live client-side notifications/chats to update icon badges in real-time
   useEffect(() => {
-    // 3. Web FCM Push (Foreground Listener)
+    let clientUid = "";
+    if (user && userRole === "client") {
+      clientUid = user.uid;
+    } else if (loggedInClient) {
+      clientUid = loggedInClient.id;
+    }
+
+    if (!clientUid) {
+      setClientUnreadChats(0);
+      setClientUnreadNotifications(0);
+      return;
+    }
+
+    const firestore = db || getFirestore();
+    if (!firestore) return;
+
+    const chatRef = doc(firestore, "chats", clientUid);
+    const unsubscribeChat = onSnapshot(chatRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        setClientUnreadChats(data.unreadByClient ? 1 : 0);
+      } else {
+        setClientUnreadChats(0);
+      }
+    }, () => {
+      setClientUnreadChats(0);
+    });
+
+    const q = query(
+      collection(firestore, "notifications"),
+      where("clientId", "==", clientUid),
+      where("read", "==", false)
+    );
+    const unsubscribeNotifications = onSnapshot(q, (snapshot) => {
+      setClientUnreadNotifications(snapshot.size);
+    }, () => {
+      setClientUnreadNotifications(0);
+    });
+
+    return () => {
+      unsubscribeChat();
+      unsubscribeNotifications();
+    };
+  }, [user, loggedInClient, userRole]);
+
+  // Sync launcher app badge for client users
+  useEffect(() => {
+    if (typeof window !== "undefined" && "setAppBadge" in navigator) {
+      if (userRole === "client" || (!user && loggedInClient)) {
+        const totalUnread = clientUnreadChats + clientUnreadNotifications;
+        if (totalUnread > 0) {
+          (navigator as any).setAppBadge(totalUnread).catch((err: any) => console.log("[Badge Client] Error setting:", err));
+        } else {
+          (navigator as any).clearAppBadge().catch((err: any) => console.log("[Badge Client] Error clearing:", err));
+        }
+      }
+    }
+  }, [clientUnreadChats, clientUnreadNotifications, userRole, user, loggedInClient]);
+
+  // 4. Web FCM Foreground Message Handler
+  useEffect(() => {
     const setupForegroundMessaging = async () => {
       const msg = await messaging();
       if (!msg) return;
