@@ -1,3 +1,44 @@
+self.addEventListener("push", (event) => {
+  let title = "MS Barbearia";
+  let body = "Nova notificação";
+  let url = "/";
+
+  try {
+    if (event.data) {
+      const data = event.data.json();
+      title = data.notification?.title || data.data?.title || title;
+      body = data.notification?.body || data.data?.body || body;
+      url = data.data?.url || data.fcmOptions?.link || url;
+    }
+  } catch (err) {
+    console.error("SW push parsing error:", err);
+  }
+
+  const options = {
+    body,
+    icon: "/icon.png",
+    data: { url }
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(title, options)
+      .then(() => {
+        if (navigator.setAppBadge) {
+          navigator.setAppBadge(1).catch(() => {});
+        }
+      })
+  );
+
+  // Stop FCM from handling it and causing duplicates
+  event.stopImmediatePropagation();
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url || "/";
+  event.waitUntil(clients.openWindow(url));
+});
+
 importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js");
 
@@ -13,32 +54,3 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
-messaging.onBackgroundMessage(function(payload) {
-  console.log('[firebase-messaging-sw.js] Received background message ', payload);
-  
-  // Set badge to signal icon on Home Screen (iOS 17+)
-  if (navigator.setAppBadge) {
-    navigator.setAppBadge(1).catch(function(e) { console.error('App badge failed:', e); });
-  }
-
-  // FCM will automatically show a notification if the payload has a 'notification' object.
-  // We can customize it here if it's a 'data' only message.
-  if (payload.data && !payload.notification) {
-    const notificationTitle = payload.data.title || 'MS Barbearia';
-    const notificationOptions = {
-        body: payload.data.body,
-        icon: '/icon.png',
-        data: { url: payload.data.url }
-    };
-    self.registration.showNotification(notificationTitle, notificationOptions);
-  }
-});
-
-self.addEventListener("notificationclick", function (event) {
-  event.notification.close();
-  if (event.notification.data && event.notification.data.url) {
-    event.waitUntil(clients.openWindow(event.notification.data.url));
-  } else {
-    event.waitUntil(clients.openWindow('/'));
-  }
-});
