@@ -322,6 +322,20 @@ export default function App() {
     return () => unsubscribe();
   }, [userRole]);
 
+  // Dynamic Home Screen Badge syncing for iOS PWA and compatible browsers
+  useEffect(() => {
+    if (typeof window !== "undefined" && "setAppBadge" in navigator) {
+      if (["manager", "barber"].includes(userRole)) {
+        const unreadCount = staffNotifications.filter((n) => !n.read).length;
+        if (unreadCount > 0) {
+          (navigator as any).setAppBadge(unreadCount).catch((err: any) => console.log("[Badge] Error setting:", err));
+        } else {
+          (navigator as any).clearAppBadge().catch((err: any) => console.log("[Badge] Error clearing:", err));
+        }
+      }
+    }
+  }, [staffNotifications, userRole]);
+
   useEffect(() => {
     if (!user || userRole === 'client') return;
     

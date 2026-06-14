@@ -494,6 +494,20 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
     };
   }, [user]);
 
+  // Dynamic badge synchronization for clients on iOS/compatible devices
+  useEffect(() => {
+    if (typeof window !== "undefined" && "setAppBadge" in navigator) {
+      const unreadNotifs = notifications.filter((n) => !n.read).length;
+      const unreadChatCount = unreadChat ? 1 : 0;
+      const totalUnread = unreadNotifs + unreadChatCount;
+      if (totalUnread > 0) {
+        (navigator as any).setAppBadge(totalUnread).catch((err: any) => console.log("[Badge Client] Error setting:", err));
+      } else {
+        (navigator as any).clearAppBadge().catch((err: any) => console.log("[Badge Client] Error clearing:", err));
+      }
+    }
+  }, [notifications, unreadChat]);
+
   // Reminder logic
   useEffect(() => {
     if (stats.upcoming) {

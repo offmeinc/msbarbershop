@@ -15,6 +15,12 @@ const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage(function(payload) {
   console.log('[firebase-messaging-sw.js] Received background message ', payload);
+  
+  // Set badge to signal icon on Home Screen (iOS 17+)
+  if (navigator.setAppBadge) {
+    navigator.setAppBadge(1).catch(function(e) { console.error('App badge failed:', e); });
+  }
+
   // FCM will automatically show a notification if the payload has a 'notification' object.
   // We can customize it here if it's a 'data' only message.
   if (payload.data && !payload.notification) {
