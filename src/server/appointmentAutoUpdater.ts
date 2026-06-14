@@ -3,7 +3,9 @@ import { collection, getDocs, query, where, updateDoc, doc, Timestamp } from "fi
 import { sendPushNotification } from "./pushNotificationService";
 
 export function getExactAppointmentDate(data: any): Date {
-  const baseDate = data.date instanceof Timestamp ? data.date.toDate() : (data.date && data.date._seconds ? new Date(data.date._seconds * 1000) : new Date(data.date));
+  const baseDate = data.date && typeof data.date.toDate === "function"
+    ? data.date.toDate()
+    : (data.date && data.date._seconds ? new Date(data.date._seconds * 1000) : new Date(data.date));
   if (data.time && typeof data.time === "string") {
     const parts = data.time.split(":");
     if (parts.length >= 2) {

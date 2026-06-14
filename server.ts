@@ -10,8 +10,7 @@ import FormData from "form-data";
 import { GoogleGenAI, Type } from "@google/genai";
 import { initVapid, startAppointmentsListener, sendPushNotification, sendNotificationToCollaborators } from "./src/server/pushNotificationService";
 import { startAppointmentAutoUpdater } from "./src/server/appointmentAutoUpdater";
-import { adminMessaging, db, adminDb } from "./src/server/firebaseAdmin";
-import { Timestamp as AdminTimestamp } from "firebase-admin/firestore";
+import { adminMessaging, db } from "./src/server/firebaseAdmin";
 import { doc, getDoc, updateDoc, setDoc, runTransaction, serverTimestamp, increment, deleteDoc } from "firebase/firestore";
 
 const _filename = typeof __filename !== 'undefined' ? __filename : fileURLToPath(import.meta.url);
@@ -184,7 +183,7 @@ Gere um relatório de desempenho em português (pt-BR).`;
   });
 
   async function processApprovedPayment(paymentDoc: any) {
-    const { appointmentId, amount, userId, email, id: paymentId } = paymentDoc;
+    const { appointmentId, amount, userId, id: paymentId } = paymentDoc;
     if (appointmentId && appointmentId.startsWith("wallet-topup-")) {
       const parsedUserId = userId || appointmentId.split("-")[2];
       if (parsedUserId) {

@@ -24,6 +24,54 @@ export interface OfflineAction {
   description: string;
 }
 
+// Helper to deep sanitize objects from circular references and non-serializable elements before storing
+function deepSanitize(obj: any, visited = new Set<any>()): any {
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
+  
+  if (visited.has(obj)) {
+    return undefined; // Drop circular references safely
+  }
+  
+  // Handle Dates
+  if (obj instanceof Date) {
+    return obj.toISOString();
+  }
+  
+  // Handle Firestore Timestamps
+  if (obj.constructor && (obj.constructor.name === 'Timestamp' || (obj.seconds !== undefined && obj.nanoseconds !== undefined))) {
+    return { seconds: obj.seconds, nanoseconds: obj.nanoseconds };
+  }
+  
+  // Exclude DOM elements and React components if any got leaked
+  if (obj instanceof Node || (obj.$$typeof && typeof obj.$$typeof === 'symbol')) {
+    return undefined;
+  }
+  
+  visited.add(obj);
+  
+  if (Array.isArray(obj)) {
+    const res = obj.map(item => deepSanitize(item, visited)).filter(val => val !== undefined);
+    visited.delete(obj);
+    return res;
+  }
+  
+  const sanitizedObj: any = {};
+  for (const key of Object.keys(obj)) {
+    try {
+      const sanitizedVal = deepSanitize(obj[key], visited);
+      if (sanitizedVal !== undefined) {
+        sanitizedObj[key] = sanitizedVal;
+      }
+    } catch (e) {
+      // Ignore keys that cannot be structuralized
+    }
+  }
+  visited.delete(obj);
+  return sanitizedObj;
+}
+
 const STORAGE_KEY = "ms_barber_offline_actions_queue";
 
 // Helper to get queue
@@ -36,9 +84,10 @@ export function getOfflineQueue(): OfflineAction[] {
 // Helper to save queue
 export function saveOfflineQueue(queue: OfflineAction[]) {
   if (typeof window === "undefined") return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(queue));
+  const sanitized = deepSanitize(queue);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(sanitized));
   // Dispatch a custom event so UI components can subscribe & update immediately
-  window.dispatchEvent(new CustomEvent("ms-offline-queue-changed", { detail: queue }));
+  window.dispatchEvent(new CustomEvent("ms-offline-queue-changed", { detail: sanitized }));
 }
 
 // Register a pending action offline
