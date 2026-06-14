@@ -1,9 +1,9 @@
-import { adminDb } from "./firebaseAdmin";
-import { Timestamp as AdminTimestamp } from "firebase-admin/firestore";
+import { db } from "./firebaseAdmin";
+import { collection, getDocs, query, where, updateDoc, doc, Timestamp } from "firebase/firestore";
 import { sendPushNotification } from "./pushNotificationService";
 
 export function getExactAppointmentDate(data: any): Date {
-  const baseDate = data.date instanceof AdminTimestamp ? data.date.toDate() : (data.date && data.date._seconds ? new Date(data.date._seconds * 1000) : new Date(data.date));
+  const baseDate = data.date instanceof Timestamp ? data.date.toDate() : (data.date && data.date._seconds ? new Date(data.date._seconds * 1000) : new Date(data.date));
   if (data.time && typeof data.time === "string") {
     const parts = data.time.split(":");
     if (parts.length >= 2) {
@@ -16,10 +16,10 @@ export function getExactAppointmentDate(data: any): Date {
 }
 
 export async function performHistoricalAppointmentUpdate() {
-  console.log("[AutoUpdater] Performing historical appointment update using Admin SDK...");
+  console.log("[AutoUpdater] Performing historical appointment update using Client SDK...");
   try {
     const now = new Date();
-    const snapshot = await adminDb.collection("appointments").get();
+    const snapshot = await getDocs(collection(db, "appointments"));
     
     let count = 0;
     const updates = snapshot.docs.map(async (d) => {
@@ -31,7 +31,7 @@ export async function performHistoricalAppointmentUpdate() {
         
         if (appointmentDate < now) {
           count++;
-          await d.ref.update({
+          await updateDoc(doc(db, "appointments", d.id), {
             status: "completed",
             paymentStatus: "paid"
           });
@@ -56,7 +56,8 @@ export function startAppointmentAutoUpdater() {
       const now = new Date();
       const twoHoursFromNow = new Date(now.getTime() + 2 * 60 * 60 * 1000);
       
-      const snapshot = await adminDb.collection("appointments").where("status", "==", "confirmed").get();
+      const q = query(collection(db, "appointments"), where("status", "==", "confirmed"));
+      const snapshot = await getDocs(q);
       
       const updates = snapshot.docs.map(async (d) => {
         const data = d.data();
@@ -64,7 +65,7 @@ export function startAppointmentAutoUpdater() {
         
         if (appointmentDate < now) {
           console.log(`[AutoUpdater] Auto-completing appointment: ${d.id}`);
-          await d.ref.update({
+          await updateDoc(doc(db, "appointments", d.id), {
             status: "completed",
             paymentStatus: "paid"
           });
@@ -83,7 +84,7 @@ export function startAppointmentAutoUpdater() {
               });
           }
           
-          await d.ref.update({
+          await updateDoc(doc(db, "appointments", d.id), {
               twoHourReminderSent: true
           });
         }

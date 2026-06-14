@@ -228,11 +228,11 @@ Gere um relatório de desempenho em português (pt-BR).`;
       let refundedAmount = 0;
       let cancelledBy: "client" | "professional" = "client";
 
-      await adminDb.runTransaction(async (t) => {
-        const appointmentRef = adminDb.collection("appointments").doc(appointmentId);
+      await runTransaction(db, async (t) => {
+        const appointmentRef = doc(db, "appointments", appointmentId);
         const appSnap = await t.get(appointmentRef);
         
-        if (!appSnap.exists) throw new Error("Agendamento não encontrado");
+        if (!appSnap.exists()) throw new Error("Agendamento não encontrado");
         const appData = appSnap.data() || {};
         if (appData.status === "cancelled") throw new Error("Agendamento já está cancelado");
 
@@ -246,19 +246,19 @@ Gere um relatório de desempenho em português (pt-BR).`;
         const updates: any = { 
           status: "cancelled", 
           cancelledBy, 
-          updatedAt: AdminTimestamp.now(),
+          updatedAt: serverTimestamp(),
           cancellationReason: reason || ""
         };
 
         if (appData.paymentStatus === "paid" && appData.totalPrice > 0 && appData.clientId && appData.clientId !== "guest") {
           const priceToRefund = Number(appData.totalPrice) || 0;
-          const userRef = adminDb.collection("users").doc(appData.clientId);
+          const userRef = doc(db, "users", appData.clientId);
           const userSnap = await t.get(userRef);
           const currentBalance = Number(userSnap.data()?.walletBalance) || 0;
           
           t.update(userRef, { 
             walletBalance: currentBalance + priceToRefund, 
-            updatedAt: AdminTimestamp.now() 
+            updatedAt: serverTimestamp() 
           });
           
           updates.refundedToWallet = true;
@@ -288,7 +288,8 @@ Gere um relatório de desempenho em português (pt-BR).`;
     try {
       // Security check: only managers or barbers can purge records
       console.log(`[API] Checking permissions for user: ${userId}`);
-      const userSnap = await adminDb.collection("users").doc(userId).get();
+      const userRef = doc(db, "users", userId);
+      const userSnap = await getDoc(userRef);
       const userData = userSnap.data();
       
       if (!userData || (userData.role !== 'manager' && userData.role !== 'barber')) {
@@ -297,13 +298,13 @@ Gere um relatório de desempenho em português (pt-BR).`;
       }
 
       console.log("[API] Deleting appointment document: ", appointmentId);
-      const appRef = adminDb.collection("appointments").doc(appointmentId);
-      const appSnap = await appRef.get();
-      if (!appSnap.exists) {
+      const appRef = doc(db, "appointments", appointmentId);
+      const appSnap = await getDoc(appRef);
+      if (!appSnap.exists()) {
         console.log("[API] Document not found: ", appointmentId);
         return res.status(404).json({ error: "Agendamento não encontrado" });
       }
-      await appRef.delete();
+      await deleteDoc(appRef);
       console.log("[API] Deletion successful for: ", appointmentId);
       res.json({ success: true });
     } catch (e: any) {

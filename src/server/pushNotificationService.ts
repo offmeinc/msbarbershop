@@ -1,8 +1,20 @@
-import { adminMessaging, adminDb, db } from "./firebaseAdmin";
+import { adminMessaging, db } from "./firebaseAdmin";
 import type { Message } from "firebase-admin/messaging";
 import firebaseConfig from "../../firebase-applet-config.json";
-import { Timestamp } from "firebase-admin/firestore";
-import { collection, onSnapshot } from "firebase/firestore";
+import { 
+  collection, 
+  onSnapshot, 
+  getDocs, 
+  getDoc, 
+  updateDoc, 
+  addDoc, 
+  doc, 
+  query, 
+  where, 
+  limit, 
+  deleteDoc, 
+  Timestamp 
+} from "firebase/firestore";
 
 // Service logic
 export async function initVapid() {
@@ -20,8 +32,11 @@ export async function sendPushNotification(
     const cleanUserId = userId.replace(/[\s\-\(\)\+]/g, "");
     
     // Query FCM tokens collection
-    const snap1 = await adminDb.collection("fcm_tokens").where("userId", "==", cleanUserId).get();
-    const snap2 = await adminDb.collection("fcm_tokens").where("userId", "==", userId).get();
+    const tokensRef = collection(db, "fcm_tokens");
+    const q1 = query(tokensRef, where("userId", "==", cleanUserId));
+    const q2 = query(tokensRef, where("userId", "==", userId));
+    const snap1 = await getDocs(q1);
+    const snap2 = await getDocs(q2);
     
     const docMap = new Map();
     snap1.docs.forEach((d) => docMap.set(d.id, d));
@@ -63,7 +78,7 @@ export async function sendPushNotification(
         if (err.code === 'messaging/registration-token-not-registered' || err.code === 'messaging/invalid-registration-token') {
           console.log(`[Push Service] Cleaning up expired token: ${docSnap.id}`);
           try {
-            await adminDb.collection("fcm_tokens").doc(docSnap.id).delete();
+            await deleteDoc(doc(db, "fcm_tokens", docSnap.id));
           } catch (deleteErr: any) {
              console.error(`[Push Service] Error deleting stale token:`, deleteErr.message);
           }
@@ -82,7 +97,7 @@ export async function sendNotificationToCollaborators(
   payload: { title: string; body: string; url?: string }
 ) {
   try {
-    const snapshot = await adminDb.collection("fcm_tokens").get();
+    const snapshot = await getDocs(collection(db, "fcm_tokens"));
     const targetRoles = ["manager", "barber"];
 
     const collaboratorsToNotify = snapshot.docs.filter((docSnap) => {
@@ -116,7 +131,7 @@ export async function sendNotificationToCollaborators(
         await adminMessaging.send(message);
       } catch (err: any) {
         if (err.code === 'messaging/registration-token-not-registered' || err.code === 'messaging/invalid-registration-token') {
-          await adminDb.collection("fcm_tokens").doc(docSnap.id).delete();
+          await deleteDoc(doc(db, "fcm_tokens", docSnap.id));
         }
       }
     });
@@ -137,16 +152,17 @@ async function checkAndNotifyReferralFirstAppointmentConfirmed(
   if (!clientId || clientId === "guest") return;
   
   try {
-    const clientRef = adminDb.collection("users").doc(clientId);
-    const clientSnap = await clientRef.get();
-    if (!clientSnap.exists) return;
+    const clientRef = doc(db, "users", clientId);
+    const clientSnap = await getDoc(clientRef);
+    if (!clientSnap.exists()) return;
     
     const userData = clientSnap.data() || {};
     if (!userData.referredBy || userData.referralConfirmationNotificationTriggered) {
       return;
     }
     
-    const appointmentsSnap = await adminDb.collection("appointments").where("clientId", "==", clientId).get();
+    const qApp = query(collection(db, "appointments"), where("clientId", "==", clientId));
+    const appointmentsSnap = await getDocs(qApp);
 
     const otherConfirmedOrCompleted = appointmentsSnap.docs.filter((d) => {
       const dData = d.data();
@@ -154,19 +170,20 @@ async function checkAndNotifyReferralFirstAppointmentConfirmed(
     });
     
     if (otherConfirmedOrCompleted.length > 0) {
-      await clientRef.update({
+      await updateDoc(clientRef, {
         referralConfirmationNotificationTriggered: true
       });
       return;
     }
     
-    await clientRef.update({
+    await updateDoc(clientRef, {
       referralConfirmationNotificationTriggered: true
     });
     
-    const referrersSnap = await adminDb.collection("users").where("referralCode", "==", userData.referredBy).limit(1).get();
+    const qRef = query(collection(db, "users"), where("referralCode", "==", userData.referredBy), limit(1));
+    const referrersSnap = await getDocs(qRef);
     
-    await adminDb.collection("notifications").add({
+    await addDoc(collection(db, "notifications"), {
       clientId: clientId,
       clientEmail: userData.email || "",
       message: `Seu primeiro agendamento foi confirmado! Você já garantiu R$ 5,00 de saldo inicial pela indicação para usar no pagamento. 🎉`,
@@ -189,7 +206,7 @@ async function checkAndNotifyReferralFirstAppointmentConfirmed(
       
       const shortClientName = clientName.trim().split(" ")[0];
       
-      await adminDb.collection("notifications").add({
+      await addDoc(collection(db, "notifications"), {
         clientId: referrerId,
         clientEmail: referrerData.email || "",
         message: `Seu amigo ${shortClientName} confirmou o primeiro corte! Quando o corte for concluído, você receberá R$ 5,00 de bônus em sua carteira. 🎁`,
