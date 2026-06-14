@@ -345,6 +345,83 @@ export default function App() {
   const [clientUnreadNotifications, setClientUnreadNotifications] = useState(0);
   const [staffUnreadChats, setStaffUnreadChats] = useState(0);
 
+  const forceSyncNotifications = useCallback(async () => {
+    try {
+      const firestore = db || getFirestore();
+      if (!firestore) return;
+
+      console.log("[Notification Sync Manager] Synchronizing unread counts...");
+
+      let cUid = "";
+      if (user && userRole === "client") cUid = user.uid;
+      else if (loggedInClient) cUid = loggedInClient.id;
+
+      if (cUid) {
+        // Refresh client-side unread states
+        const chatSnap = await getDoc(doc(firestore, "chats", cUid));
+        if (chatSnap.exists()) {
+          const data = chatSnap.data();
+          setClientUnreadChats(data?.unreadByClient ? 1 : 0);
+        }
+        
+        const qN = query(
+          collection(firestore, "notifications"), 
+          where("clientId", "==", cUid), 
+          where("read", "==", false)
+        );
+        const nSnap = await getDocs(qN);
+        setClientUnreadNotifications(nSnap.size);
+      }
+
+      if (["manager", "barber"].includes(userRole)) {
+        // Refresh staff-side unread states
+        const qC = query(
+          collection(firestore, "chats"), 
+          where("unreadByStaff", "==", true)
+        );
+        const cSnap = await getDocs(qC);
+        setStaffUnreadChats(cSnap.size);
+
+        const qSN = query(
+          collection(firestore, "staff_notifications"), 
+          orderBy("timestamp", "desc"), 
+          limit(20)
+        );
+        const snSnap = await getDocs(qSN);
+        const snData = snSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        setStaffNotifications(snData);
+      }
+      
+      console.log("[Notification Sync Manager] Synchronization complete.");
+    } catch (e) {
+      console.warn("[Notification Sync Manager] Forced sync failed:", e);
+    }
+  }, [user, userRole, loggedInClient]);
+
+  // Global Notification Sync Manager: Re-sync on page focus or visibility change
+  useEffect(() => {
+    const handleSync = () => {
+      forceSyncNotifications();
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("focus", handleSync);
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") handleSync();
+      });
+      // Initial sync on mount
+      handleSync();
+    }
+
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("focus", handleSync);
+        document.removeEventListener("visibilitychange", handleSync);
+      }
+    };
+  }, [forceSyncNotifications]);
+
+
   const lastProcessedClientMsgTimeRef = useRef<number>(0);
   const lastProcessedStaffChatsRef = useRef<Record<string, number>>({});
   const lastProcessedStaffNotificationTimeRef = useRef<number>(0);
@@ -469,19 +546,33 @@ export default function App() {
     };
   }, [user, loggedInClient, userRole]);
 
-  // Sync launcher app badge for client users
+  // 4. Global App Badge Manager
+  // Responsable for aggregating all unread items and updating the PWA/Navigator badge
   useEffect(() => {
-    if (typeof window !== "undefined" && "setAppBadge" in navigator) {
-      if (userRole === "client" || (!user && loggedInClient)) {
-        const totalUnread = clientUnreadChats + clientUnreadNotifications;
-        if (totalUnread > 0) {
-          (navigator as any).setAppBadge(totalUnread).catch((err: any) => console.log("[Badge Client] Error setting:", err));
-        } else {
-          (navigator as any).clearAppBadge().catch((err: any) => console.log("[Badge Client] Error clearing:", err));
-        }
-      }
+    if (typeof window === "undefined" || !("setAppBadge" in navigator)) return;
+
+    let totalCount = 0;
+    if (userRole === "client" || (!user && loggedInClient)) {
+      totalCount = clientUnreadChats + clientUnreadNotifications;
+    } else if (["manager", "barber"].includes(userRole)) {
+      const unreadStaffNotifications = staffNotifications.filter(n => !n.read).length;
+      totalCount = staffUnreadChats + unreadStaffNotifications;
     }
-  }, [clientUnreadChats, clientUnreadNotifications, userRole, user, loggedInClient]);
+
+    try {
+      if (totalCount > 0) {
+        (navigator as any).setAppBadge(totalCount).catch((err: any) => 
+          console.warn("[Badge Manager] Set failed:", err)
+        );
+      } else {
+        (navigator as any).clearAppBadge().catch((err: any) => 
+          console.warn("[Badge Manager] Clear failed:", err)
+        );
+      }
+    } catch (e) {
+      console.warn("[Badge Manager] Internal error:", e);
+    }
+  }, [clientUnreadChats, clientUnreadNotifications, staffUnreadChats, staffNotifications, userRole, user, loggedInClient]);
 
   // 4. Web FCM Foreground Message Handler
   useEffect(() => {
@@ -670,19 +761,6 @@ export default function App() {
     };
   }, [userRole]);
 
-  // Dynamic Home Screen Badge syncing for iOS PWA and compatible browsers
-  useEffect(() => {
-    if (typeof window !== "undefined" && "setAppBadge" in navigator) {
-      if (["manager", "barber"].includes(userRole)) {
-        const unreadCount = staffNotifications.filter((n) => !n.read).length + staffUnreadChats;
-        if (unreadCount > 0) {
-          (navigator as any).setAppBadge(unreadCount).catch((err: any) => console.log("[Badge] Error setting:", err));
-        } else {
-          (navigator as any).clearAppBadge().catch((err: any) => console.log("[Badge] Error clearing:", err));
-        }
-      }
-    }
-  }, [staffNotifications, staffUnreadChats, userRole]);
 
   useEffect(() => {
     if (!user || userRole === 'client') return;
