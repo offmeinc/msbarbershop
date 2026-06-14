@@ -28,14 +28,10 @@
 
 body {
   @apply transition-colors duration-300;
-  background: radial-gradient(circle at center top, #f3f4f6, #e5e7eb);
-  color: #000000;
-  margin: 0;
-  font-family: var(--font-sans);
 }
 
 .dark body {
-  background: radial-gradient(circle at center top, #1a1a1a, #000000);
+  background: #000000;
   color: #FFFFFF;
 }
 
@@ -56,6 +52,10 @@ body {
 }
 
 /* World Cup 2026 Theme Overrides when Fan Mode is enabled */
+html.fan-mode-active {
+  background-color: #06110b;
+}
+
 .fan-mode-active body {
   background: radial-gradient(circle at center top, #0c2b17, #06110b) !important;
   color: #ffffff !important;

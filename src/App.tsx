@@ -341,6 +341,38 @@ export default function App() {
     }
   }, [isDarkMode]);
 
+  // Synchronize browser status bar theme meta tags dynamically for mobile/PWA environments
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    let themeColor = "#000000"; // Deep black default to match the app's native layout color
+    if (isFanMode) {
+      themeColor = "#06110b"; // Forest green base for active Copa/Fan Mode
+    }
+
+    // 1. Update theme-color meta tag
+    let metaTheme = document.querySelector('meta[name="theme-color"]');
+    if (!metaTheme) {
+      metaTheme = document.createElement('meta');
+      metaTheme.setAttribute('name', 'theme-color');
+      document.head.appendChild(metaTheme);
+    }
+    metaTheme.setAttribute('content', themeColor);
+
+    // 2. Optimize Safari / PWA statusbar style
+    let metaAppleStyle = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+    if (!metaAppleStyle) {
+      metaAppleStyle = document.createElement('meta');
+      metaAppleStyle.setAttribute('name', 'apple-mobile-web-app-status-bar-style');
+      document.head.appendChild(metaAppleStyle);
+    }
+    metaAppleStyle.setAttribute('content', 'black-translucent');
+
+    // 3. Keep root backgrounds identical to prevent iOS viewport elastic overflow flashes
+    document.documentElement.style.backgroundColor = themeColor;
+    document.body.style.backgroundColor = themeColor;
+  }, [isDarkMode, isFanMode]);
+
   // Proactive background preloading of major screens when the app goes idle
   useEffect(() => {
     const timer = setTimeout(() => {
