@@ -28,29 +28,24 @@ self.addEventListener("push", (event) => {
         }
       })
   );
-
-  // Stop FCM from handling it and causing duplicates
-  event.stopImmediatePropagation();
 });
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const url = event.notification.data?.url || "/";
-  event.waitUntil(clients.openWindow(url));
+  event.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((windowClients) => {
+      // Check if there is already a window/tab open with the target URL
+      for (let i = 0; i < windowClients.length; i++) {
+        const client = windowClients[i];
+        if (client.url === url && "focus" in client) {
+          return client.focus();
+        }
+      }
+      // If none, open a new window
+      if (clients.openWindow) {
+        return clients.openWindow(url);
+      }
+    })
+  );
 });
-
-importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js");
-importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js");
-
-const firebaseConfig = {
-  projectId: "gen-lang-client-0419449301",
-  appId: "1:122028701634:web:30bbacb9f7755d969ec85b",
-  apiKey: "AIzaSyD4ZPKEi3EQbsI9uesSIxNzEd8BzWwBst8",
-  authDomain: "gen-lang-client-0419449301.firebaseapp.com",
-  storageBucket: "gen-lang-client-0419449301.firebasestorage.app",
-  messagingSenderId: "122028701634",
-};
-
-firebase.initializeApp(firebaseConfig);
-const messaging = firebase.messaging();
-

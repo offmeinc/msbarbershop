@@ -65,6 +65,9 @@ export async function setupPushSubscription(userId: string, userRole: string): P
 
     // Register our SW with FCM
     const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js", { scope: "/" });
+    try {
+      await registration.update();
+    } catch (e) { /* ignore */ }
 
     const msg = await messaging();
     if (!msg) {
