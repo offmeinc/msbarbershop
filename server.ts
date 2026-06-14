@@ -232,21 +232,31 @@ Gere um relatório de desempenho em português (pt-BR).`;
 
   // API Route for appointment cancellation with atomic refund
   app.post("/api/appointments/cancel", async (req, res) => {
+    console.log("[API] /api/appointments/cancel called with body:", JSON.stringify(req.body));
     const { appointmentId, userId, reason } = req.body;
-    if (!appointmentId || !userId) return res.status(400).json({ error: "Missing data" });
-    console.log(`[API] Cancelling appointment: ${appointmentId} by user: ${userId}`);
+    if (!appointmentId || !userId) {
+      console.warn("[API] Cancel missing data:", { appointmentId, userId });
+      return res.status(400).json({ error: "Missing data" });
+    }
 
     try {
       let refundedAmount = 0;
       let cancelledBy: "client" | "professional" = "client";
 
+      console.log(`[API] Starting transaction for appointment: ${appointmentId}`);
       await runTransaction(db, async (t) => {
         const appointmentRef = doc(db, "appointments", appointmentId);
         const appSnap = await t.get(appointmentRef);
         
-        if (!appSnap.exists()) throw new Error("Agendamento não encontrado");
+        if (!appSnap.exists()) {
+           console.warn(`[API] Appointment ${appointmentId} not found`);
+           throw new Error("Agendamento não encontrado");
+        }
         const appData = appSnap.data() || {};
-        if (appData.status === "cancelled") throw new Error("Agendamento já está cancelado");
+        if (appData.status === "cancelled") {
+           console.warn(`[API] Appointment ${appointmentId} already cancelled`);
+           throw new Error("Agendamento já está cancelado");
+        }
 
         // Determine who is cancelling
         if (appData.clientId !== userId) {
@@ -264,26 +274,32 @@ Gere um relatório de desempenho em português (pt-BR).`;
 
         if (appData.paymentStatus === "paid" && appData.totalPrice > 0 && appData.clientId && appData.clientId !== "guest") {
           const priceToRefund = Number(appData.totalPrice) || 0;
+          console.log(`[API] Refunding R$ ${priceToRefund} to user: ${appData.clientId}`);
           const userRef = doc(db, "users", appData.clientId);
           const userSnap = await t.get(userRef);
-          const currentBalance = Number(userSnap.data()?.walletBalance) || 0;
           
-          t.update(userRef, { 
-            walletBalance: currentBalance + priceToRefund, 
-            updatedAt: serverTimestamp() 
-          });
-          
-          updates.refundedToWallet = true;
-          refundedAmount = priceToRefund;
+          if (userSnap.exists()) {
+            const currentBalance = Number(userSnap.data()?.walletBalance) || 0;
+            t.update(userRef, { 
+              walletBalance: currentBalance + priceToRefund, 
+              updatedAt: serverTimestamp() 
+            });
+            updates.refundedToWallet = true;
+            refundedAmount = priceToRefund;
+          } else {
+            console.warn(`[API] User ${appData.clientId} not found for refund`);
+          }
         }
 
+        console.log(`[API] Updating appointment ${appointmentId} status to cancelled`);
         t.update(appointmentRef, updates);
       });
 
+      console.log(`[API] Cancel success for ${appointmentId}. Refunded: ${refundedAmount}`);
       res.json({ success: true, refundedAmount, cancelledBy });
     } catch (e: any) {
-      console.error("[API Error] Cancel failed:", e.message);
-      res.status(500).json({ error: e.message });
+      console.error("[API Error] Cancel failed with exception:", e);
+      res.status(500).json({ error: e.message || "Internal transaction error" });
     }
   });
 

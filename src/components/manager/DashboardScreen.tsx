@@ -62,7 +62,7 @@ import {
   getDoc,
   getDocs
 } from "firebase/firestore";
-import { db, handleFirestoreError, OperationType, safeStringify } from "../../lib/firebase";
+import { db, handleFirestoreError, OperationType, safeStringify, cancelAppointmentAtomically } from "../../lib/firebase";
 import { triggerLightHaptic } from "../../lib/haptics";
 import { getBackendUrl } from "../../lib/pushRegister";
 import { addToOfflineQueue, getOfflineQueue, syncOfflineQueue, OfflineAction } from "../../lib/offlineQueue";
@@ -282,23 +282,30 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
 
     if (newStatus === 'cancelled') {
       try {
-        const res = await fetch(getBackendUrl("/api/appointments/cancel"), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: safeStringify({
-            appointmentId: app.id,
-            userId: user?.uid || user?.id,
-            reason: extraData.cancellationReason || ""
-          })
-        });
+        let data;
+        try {
+          data = await cancelAppointmentAtomically(app.id, user?.uid || user?.id || "", extraData.cancellationReason || "");
+        } catch (atomicErr: any) {
+          console.warn("Local atomic cancel failed, falling back to API:", atomicErr);
+          const res = await fetch(getBackendUrl("/api/appointments/cancel"), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: safeStringify({
+              appointmentId: app.id,
+              userId: user?.uid || user?.id,
+              reason: extraData.cancellationReason || ""
+            })
+          });
 
-        if (!res.ok) {
-          const errorData = await res.json();
-          throw new Error(errorData.error || "Erro ao cancelar via API");
+          if (!res.ok) {
+            const errorData = await res.json().catch(() => ({}));
+            throw new Error(errorData.error || "Erro ao cancelar via API");
+          }
+
+          data = await res.json();
         }
 
-        const data = await res.json();
-        if (data.refundedAmount > 0) {
+        if (data && data.refundedAmount > 0) {
           setStatusMsg(`Cancelado! R$ ${data.refundedAmount.toFixed(2)} devolvidos ao cliente.`);
         } else {
           setStatusMsg('Agendamento cancelado com sucesso!');
@@ -694,7 +701,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
   }, [appointments, currentDate, selectedBarberId]);
 
   return (
-    <div className="min-h-screen bg-black px-6 pt-6 relative pb-28">
+    <div className="min-h-[100dvh] bg-black px-6 pt-6 relative pb-28">
       {statusMsg && (
         <div className="fixed top-6 left-4 right-4 bg-emerald-500 text-white p-4 rounded-3xl font-black text-xs uppercase tracking-widest text-center z-50 shadow-2xl">
           {statusMsg}

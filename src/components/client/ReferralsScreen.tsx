@@ -337,7 +337,7 @@ export function ReferralsScreen({ user, onBack, stats, appointments }: Referrals
   const isLocked = stats.completedCount === 0;
 
   return (
-    <div className="min-h-screen bg-black text-white px-6 pb-24 pt-6">
+    <div className="min-h-[100dvh] bg-black text-white px-6 pb-24 pt-6">
       {/* Header Area */}
       <div className="max-w-md mx-auto flex items-center justify-between mb-8">
         <button 

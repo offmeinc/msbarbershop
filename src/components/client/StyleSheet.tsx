@@ -62,7 +62,7 @@ export function StyleSheet({ user, onBack }: StyleSheetProps) {
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="min-h-screen bg-black text-white p-6 pt-12 pb-32"
+      className="min-h-[100dvh] bg-black text-white p-6 pt-12 pb-32"
     >
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-3">

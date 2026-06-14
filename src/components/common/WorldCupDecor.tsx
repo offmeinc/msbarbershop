@@ -11,8 +11,8 @@ export const WorldCupDecor = memo(function WorldCupDecor({
       {isFanMode && (
         <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
           {/* Subtle stadium laser beam glow sweeps */}
-          <div className="absolute top-0 left-1/4 w-[1px] h-screen bg-green-500/10 shadow-[0_0_80px_35px_rgba(34,197,94,0.15)] rotate-12 origin-top animate-pulse" />
-          <div className="absolute top-0 right-1/4 w-[1px] h-screen bg-yellow-400/10 shadow-[0_0_80px_35px_rgba(234,179,8,0.15)] -rotate-12 origin-top animate-pulse" />
+          <div className="absolute top-0 left-1/4 w-[1px] h-[100dvh] bg-green-500/10 shadow-[0_0_80px_35px_rgba(34,197,94,0.15)] rotate-12 origin-top animate-pulse" />
+          <div className="absolute top-0 right-1/4 w-[1px] h-[100dvh] bg-yellow-400/10 shadow-[0_0_80px_35px_rgba(234,179,8,0.15)] -rotate-12 origin-top animate-pulse" />
           
           {/* Subtle soccer confetti falls at top corners */}
           <div className="absolute top-10 left-5 text-xl opacity-30 animate-bounce">⚽</div>

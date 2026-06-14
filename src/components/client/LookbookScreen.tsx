@@ -78,7 +78,7 @@ export function LookbookScreen({ onBack, onBook }: LookbookScreenProps) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 15 }}
       transition={{ duration: 0.3 }}
-      className="min-h-screen bg-black text-white p-6 pt-12 pb-32 text-left"
+      className="min-h-[100dvh] bg-black text-white p-6 pt-12 pb-32 text-left"
     >
       {/* Premium Elegant Header */}
       <div className="flex items-center justify-between mb-8">

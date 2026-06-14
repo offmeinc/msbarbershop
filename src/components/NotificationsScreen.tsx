@@ -116,7 +116,7 @@ export const NotificationsScreen = ({ notifications, appointments, onBack, onCle
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 15 }}
-      className="max-w-md mx-auto py-8 px-5 min-h-screen pb-32"
+      className="max-w-md mx-auto py-8 px-5 min-h-[100dvh] pb-32"
     >
       {/* Header Bar */}
       <div className="flex items-center justify-between mb-6">

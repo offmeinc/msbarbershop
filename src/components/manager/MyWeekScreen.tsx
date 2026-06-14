@@ -337,7 +337,7 @@ export function MyWeekScreen({ user, appointments, onBack }: MyWeekScreenProps) 
       initial={{ opacity: 0, scale: 0.98 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.98 }}
-      className="max-w-md mx-auto min-h-screen bg-white text-left font-sans flex flex-col"
+      className="max-w-md mx-auto min-h-[100dvh] bg-white text-left font-sans flex flex-col"
     >
       {/* Header section like Google Calendar / Reference */}
       <div className="px-4 pt-6 pb-2 border-b border-gray-100 flex items-center justify-between bg-white sticky top-0 z-10">

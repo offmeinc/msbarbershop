@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, setPersistence, browserLocalPersistence } from 'firebase/auth';
-import { getFirestore, doc, getDocFromServer, initializeFirestore, enableMultiTabIndexedDbPersistence, enableIndexedDbPersistence } from 'firebase/firestore';
+import { getFirestore, doc, getDocFromServer, initializeFirestore, enableMultiTabIndexedDbPersistence, enableIndexedDbPersistence, runTransaction, serverTimestamp } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { getMessaging, isSupported } from 'firebase/messaging';
 import firebaseConfig from '../../firebase-applet-config.json';
@@ -143,4 +143,57 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   }
   console.error('Firestore Error: ', errorJson);
   throw new Error(errorJson);
+}
+
+// Perform appointment cancellation and wallet refund atomically on the client
+export async function cancelAppointmentAtomically(appointmentId: string, userId: string, reason: string = ""): Promise<{ success: boolean, refundedAmount: number, cancelledBy: string }> {
+  let refundedAmount = 0;
+  let cancelledBy = "client";
+
+  await runTransaction(db, async (t) => {
+    const appointmentRef = doc(db, "appointments", appointmentId);
+    const appSnap = await t.get(appointmentRef);
+    
+    if (!appSnap.exists()) {
+       throw new Error("Agendamento não encontrado");
+    }
+    const appData = appSnap.data() || {};
+    if (appData.status === "cancelled") {
+       throw new Error("Agendamento já está cancelado");
+    }
+
+    // Determine who is cancelling
+    if (appData.clientId !== userId) {
+      cancelledBy = "professional";
+    } else {
+      cancelledBy = "client";
+    }
+
+    const updates: any = { 
+      status: "cancelled", 
+      cancelledBy, 
+      updatedAt: serverTimestamp(),
+      cancellationReason: reason
+    };
+
+    if (appData.paymentStatus === "paid" && appData.totalPrice > 0 && appData.clientId && appData.clientId !== "guest") {
+      const priceToRefund = Number(appData.totalPrice) || 0;
+      const userRef = doc(db, "users", appData.clientId);
+      const userSnap = await t.get(userRef);
+      
+      if (userSnap.exists()) {
+        const currentBalance = Number(userSnap.data()?.walletBalance) || 0;
+        t.update(userRef, { 
+          walletBalance: currentBalance + priceToRefund, 
+          updatedAt: serverTimestamp() 
+        });
+        updates.refundedToWallet = true;
+        refundedAmount = priceToRefund;
+      }
+    }
+
+    t.update(appointmentRef, updates);
+  });
+
+  return { success: true, refundedAmount, cancelledBy };
 }

@@ -227,7 +227,7 @@ export function InventoryScreen({ onBack }: { onBack: () => void }) {
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 15 }}
-      className="max-w-md mx-auto py-8 px-5 min-h-screen pb-32 text-left"
+      className="max-w-md mx-auto py-8 px-5 min-h-[100dvh] pb-32 text-left"
     >
       {/* Header bar */}
       <div className="flex items-center justify-between mb-6">

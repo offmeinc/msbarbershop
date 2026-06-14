@@ -55,7 +55,7 @@ import {
   RotateCcw,
   Info
 } from "lucide-react";
-import { db, handleFirestoreError, OperationType, safeStringify } from "../../lib/firebase";
+import { db, handleFirestoreError, OperationType, safeStringify, cancelAppointmentAtomically } from "../../lib/firebase";
 import { setupPushSubscription, getNotificationPermissionState, queryNotificationSupport, getBackendUrl } from "../../lib/pushRegister";
 import { QRCodeCanvas } from "qrcode.react";
 import { MoreOptionsScreen } from "../common/MoreOptionsScreen";
@@ -360,23 +360,30 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
     }
 
     try {
-      const res = await fetch(getBackendUrl("/api/appointments/cancel"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: safeStringify({
-          appointmentId: app.id,
-          userId: finalUserId,
-          reason: reason || ""
-        })
-      });
+      let data;
+      try {
+        data = await cancelAppointmentAtomically(app.id, finalUserId, reason || "");
+      } catch (atomicErr: any) {
+        // Fallback to fetch API if the local client transaction fails (e.g. offline rules)
+        console.warn("Local atomic cancel failed, falling back to API:", atomicErr);
+        const res = await fetch(getBackendUrl("/api/appointments/cancel"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: safeStringify({
+            appointmentId: app.id,
+            userId: finalUserId,
+            reason: reason || ""
+          })
+        });
 
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || `Erro HTTP ${res.status}`);
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+          throw new Error(errorData.error || `Erro HTTP ${res.status}`);
+        }
+        data = await res.json();
       }
 
-      const data = await res.json();
-      if (data.refundedAmount > 0) {
+      if (data && data.refundedAmount > 0) {
         toast.success(`Cancelado! R$ ${data.refundedAmount.toFixed(2)} foram devolvidos à sua carteira.`);
       } else {
         toast.success("Agendamento cancelado com sucesso.");
@@ -463,7 +470,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
         if (prev.length > 0 && merged.length > prev.length) {
           const latest = merged[0];
           if (!latest.read) {
-            toast.success(latest.message);
+            setTimeout(() => toast.success(latest.message), 0);
           }
         }
         return merged;
@@ -521,7 +528,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
 
       // Notify if it's in 1 hour
       if (diffMins > 0 && diffMins <= 60 && !stats.upcoming.reminderSent) {
-        toast.info(`Lembrete: Seu corte ${stats.upcoming.serviceName} é daqui a pouco (${stats.upcoming.time})!`);
+        setTimeout(() => toast.info(`Lembrete: Seu corte ${stats.upcoming.serviceName} é daqui a pouco (${stats.upcoming.time})!`), 0);
         // We could mark it as sent in firestore to avoid repeats, but client-side session is enough for now
       }
     }
@@ -543,7 +550,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-[100dvh] bg-black flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
       </div>
     );
@@ -553,7 +560,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
   const currentClientPhoto = liveUser?.photoURL || liveUser?.photoUrl || user?.photoURL || user?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentClientName)}&background=1a1a1a&color=fff`;
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen bg-black text-white pb-32">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-[100dvh] bg-black text-white pb-32">
       <AnimatePresence mode="wait">
         {currentView === 'home' && (
           <motion.div 

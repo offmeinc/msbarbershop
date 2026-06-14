@@ -151,7 +151,7 @@ export function PortfolioManager({ onBack }: { onBack: () => void }) {
   };
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen bg-black text-white p-6 pb-32 max-w-xl md:max-w-4xl lg:max-w-5xl mx-auto">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-[100dvh] bg-black text-white p-6 pb-32 max-w-xl md:max-w-4xl lg:max-w-5xl mx-auto">
       <header className="flex items-center gap-4 mb-10">
         <button onClick={onBack} className="liquid-glass p-3 rounded-2xl text-neutral-500 hover:text-white transition-all">
           <ArrowLeft className="w-5 h-5" />

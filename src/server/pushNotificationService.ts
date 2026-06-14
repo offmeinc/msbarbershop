@@ -312,12 +312,29 @@ export function startAppointmentsListener() {
 
         if (change.type === "added") {
           console.log(`[Push Service] New appointment created: ${docId}`);
+          
+          // 1. Notify Collaborators (Push + In-App)
           await sendNotificationToCollaborators({
             title: "Novo Agendamento! 📅",
             body: `${clientName} agendou ${serviceName} com ${barberName} em ${formattedDateStr}`,
             url: "/agenda"
           });
+          
+          try {
+            await addDoc(collection(db, "staff_notifications"), {
+              title: "Novo Agendamento 📅",
+              message: `${clientName} agendou ${serviceName} para ${formattedDateStr}`,
+              timestamp: Timestamp.now(),
+              read: false,
+              type: "booking",
+              clientId: clientId,
+              appointmentId: docId
+            });
+          } catch (e) {
+            console.warn("[Push Service] Error creating staff notification doc:", e);
+          }
 
+          // 2. Notify Client (Push + In-App)
           const rawTarget = clientId && clientId !== "guest" ? clientId : clientPhone;
           const clientTarget = rawTarget ? rawTarget.replace(/[\s\-\(\)\+]/g, "") : "";
           if (clientTarget) {
@@ -326,6 +343,23 @@ export function startAppointmentsListener() {
               body: `Seu agendamento de ${serviceName} para ${formattedDateStr} foi recebido. Aguarde a confirmação!`,
               url: "/"
             });
+
+            if (clientId && clientId !== "guest") {
+              try {
+                await addDoc(collection(db, "notifications"), {
+                  clientId: clientId,
+                  clientEmail: data.clientEmail || "",
+                  title: "Agendamento Solicitado 🎉",
+                  message: `Seu agendamento de ${serviceName} para ${formattedDateStr} foi recebido.`,
+                  timestamp: Timestamp.now(),
+                  read: false,
+                  type: "booking",
+                  appointmentId: docId
+                });
+              } catch (e) {
+                console.warn("[Push Service] Error creating client notification doc:", e);
+              }
+            }
           }
 
           if (data.status === "confirmed") {
@@ -347,6 +381,24 @@ export function startAppointmentsListener() {
               body: `Excelente! Seu agendamento de ${serviceName} com ${barberName} foi confirmado para ${formattedDateStr}.`,
               url: urlPath
             });
+
+            if (clientId && clientId !== "guest") {
+              try {
+                await addDoc(collection(db, "notifications"), {
+                  clientId: clientId,
+                  clientEmail: data.clientEmail || "",
+                  title: "Agendamento Confirmado ✅",
+                  message: `Seu agendamento de ${serviceName} em ${formattedDateStr} foi confirmado!`,
+                  timestamp: Timestamp.now(),
+                  read: false,
+                  type: "status_update",
+                  appointmentId: docId
+                });
+              } catch (e) {
+                console.warn("[Push Service] Error creating confirmation notification doc:", e);
+              }
+            }
+
             await checkAndNotifyReferralFirstAppointmentConfirmed(clientId, clientName, serviceName, formattedDateStr, docId);
           } else if (status === "cancelled") {
             if (clientTarget) {
@@ -355,18 +407,66 @@ export function startAppointmentsListener() {
                 body: `Seu agendamento de ${serviceName} para ${formattedDateStr} foi cancelado.`,
                 url: urlPath
               });
+
+              if (clientId && clientId !== "guest") {
+                 try {
+                   await addDoc(collection(db, "notifications"), {
+                     clientId: clientId,
+                     clientEmail: data.clientEmail || "",
+                     title: "Agendamento Cancelado ❌",
+                     message: `Seu agendamento de ${serviceName} para ${formattedDateStr} foi cancelado.`,
+                     timestamp: Timestamp.now(),
+                     read: false,
+                     type: "cancellation",
+                     appointmentId: docId
+                   });
+                 } catch (e) {
+                   console.warn("[Push Service] Error creating cancellation notification doc:", e);
+                 }
+              }
             }
             await sendNotificationToCollaborators({
               title: "Agendamento Cancelado ⚠️",
               body: `${clientName} cancelou o agendamento de ${serviceName} marcado para ${formattedDateStr}`,
               url: "/agenda"
             });
+
+            try {
+              await addDoc(collection(db, "staff_notifications"), {
+                title: "Agendamento Cancelado ⚠️",
+                message: `${clientName} cancelou o agendamento de ${serviceName} para ${formattedDateStr}`,
+                timestamp: Timestamp.now(),
+                read: false,
+                type: "cancellation",
+                clientId: clientId,
+                appointmentId: docId
+              });
+            } catch (e) {
+               console.warn("[Push Service] Error creating staff cancellation notification doc:", e);
+            }
           } else if (status === "completed" && clientTarget) {
             await sendPushNotification(clientTarget, {
               title: "Atendimento Concluído! ⭐",
               body: `Obrigado pela preferência! Avalie seu atendimento e ajude o profissional ${barberName}.`,
               url: urlPath
             });
+
+            if (clientId && clientId !== "guest") {
+              try {
+                await addDoc(collection(db, "notifications"), {
+                  clientId: clientId,
+                  clientEmail: data.clientEmail || "",
+                  title: "Atendimento Concluído ⭐",
+                  message: `Obrigado pela preferência! Avalie seu atendimento com ${barberName}.`,
+                  timestamp: Timestamp.now(),
+                  read: false,
+                  type: "review_request",
+                  appointmentId: docId
+                });
+              } catch (e) {
+                 console.warn("[Push Service] Error creating completed notification doc:", e);
+              }
+            }
           }
         }
       });
@@ -463,6 +563,19 @@ export function startChatsListener() {
                 body: lastMessage,
                 url: "/professional-chat"
               });
+
+              try {
+                await addDoc(collection(db, "staff_notifications"), {
+                  title: `${clientName} enviou uma mensagem 💬`,
+                  message: lastMessage,
+                  timestamp: Timestamp.now(),
+                  read: false,
+                  type: "chat_message",
+                  clientId: clientUid
+                });
+              } catch (e) {
+                console.warn("[Push Service] Error creating staff chat notification doc:", e);
+              }
             }
 
             if (data.unreadByClient === true) {
@@ -472,6 +585,20 @@ export function startChatsListener() {
                 body: lastMessage,
                 url: "/"
               });
+
+              try {
+                await addDoc(collection(db, "notifications"), {
+                  clientId: clientUid,
+                  clientEmail: data.clientEmail || "",
+                  title: "Nova mensagem 💬",
+                  message: lastMessage,
+                  timestamp: Timestamp.now(),
+                  read: false,
+                  type: "chat_message"
+                });
+              } catch (e) {
+                console.warn("[Push Service] Error creating client chat notification doc:", e);
+              }
             }
           }
         }

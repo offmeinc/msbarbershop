@@ -163,7 +163,7 @@ export const EarningsScreen = ({ onBack }: EarningsScreenProps) => {
   if (loading) return <div className="p-12 text-center text-white font-black italic uppercase animate-pulse">Analizando dados...</div>;
 
   return (
-    <div className="min-h-screen bg-black text-white pb-32">
+    <div className="min-h-[100dvh] bg-black text-white pb-32">
       <div className="max-w-xl mx-auto px-6 py-12">
         <header className="flex flex-col mb-10">
             <button onClick={onBack} className="flex items-center gap-2 text-neutral-500 hover:text-white transition-colors mb-4 group w-fit">

@@ -172,7 +172,7 @@ export function MyCutsScreen({ user, appointments, onBack, onBookAgain, onResche
     <motion.div 
       initial={{ opacity: 0 }} 
       animate={{ opacity: 1 }} 
-      className="min-h-screen bg-black text-white p-4 sm:p-8 pt-10 pb-36"
+      className="min-h-[100dvh] bg-black text-white p-4 sm:p-8 pt-10 pb-36"
     >
       {/* Premium Top Bar Dashboard Header */}
       <div className="max-w-6xl mx-auto space-y-6">

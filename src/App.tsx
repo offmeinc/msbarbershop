@@ -512,7 +512,7 @@ export default function App() {
           if (!isInitialRun && Date.now() - msgTime < 60000) {
             const bodyText = data.lastMessage || "Nova mensagem recebida! 💬";
             console.log("[Notification System] Client Chat Trigger:", bodyText);
-            toast.success(`MS Barbearia: ${bodyText}`);
+            setTimeout(() => toast.success(`MS Barbearia: ${bodyText}`), 0);
             triggerLocalNotification("Nova mensagem - MS Barbearia 💬", bodyText, "/");
           }
           lastProcessedClientMsgTimeRef.current = msgTime;
@@ -692,7 +692,7 @@ export default function App() {
             const title = nData.title || "Alerta do Sistema 💈";
             const message = nData.message || "Nova atualização recebida.";
             console.log("[Notification System] Staff Notification Trigger:", title);
-            toast.success(`${title}: ${message}`);
+            setTimeout(() => toast.success(`${title}: ${message}`), 0);
             triggerLocalNotification(title, message, "/agenda");
           }
         }
@@ -732,7 +732,7 @@ export default function App() {
             const clientName = docData.clientName || "Cliente";
             const bodyText = docData.lastMessage || "Nova mensagem recebida! 💬";
             console.log("[Notification System] Staff Chat Trigger:", clientName);
-            toast.success(`${clientName}: ${bodyText}`);
+            setTimeout(() => toast.success(`${clientName}: ${bodyText}`), 0);
             triggerLocalNotification(`${clientName} enviou uma mensagem 💬`, bodyText, "/professional-chat");
           }
           lastProcessedStaffChatsRef.current[chatId] = msgTime;
@@ -980,7 +980,7 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="h-screen bg-black flex items-center justify-center">
+      <div className="h-[100dvh] bg-black flex items-center justify-center">
         <motion.div 
           animate={{ rotate: 360 }}
           transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
@@ -1001,7 +1001,7 @@ export default function App() {
   );
 
   return (
-    <div className="min-h-screen bg-black text-white font-sans selection:bg-amber-500/30 pb-24 md:pb-0">
+    <div className="min-h-[100dvh] bg-black text-white font-sans selection:bg-amber-500/30 pb-24 md:pb-0 overflow-x-hidden w-full relative">
       <WorldCupDecor isFanMode={isFanMode} />
       <motion.nav 
         variants={{
@@ -1594,6 +1594,8 @@ export default function App() {
       {/* Floating 2026 World Cup Ball Switch */}
       <motion.button
         key="wc-floater"
+        drag
+        dragMomentum={false}
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         whileHover={{ scale: 1.15, rotate: 360, transition: { duration: 0.6 } }}

@@ -200,7 +200,7 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 15 }}
-      className="max-w-md md:max-w-4xl lg:max-w-5xl mx-auto py-8 px-5 min-h-screen pb-32 text-left"
+      className="max-w-md md:max-w-4xl lg:max-w-5xl mx-auto py-8 px-5 min-h-[100dvh] pb-32 text-left"
     >
       {/* Navigation and Top title */}
       <div className="flex items-center justify-between mb-6">
