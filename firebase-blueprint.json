@@ -15,7 +15,8 @@
         "photoUrl": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" },
         "referralCode": { "type": "string" },
-        "referredBy": { "type": "string" }
+        "referredBy": { "type": "string" },
+        "monthlyGoal": { "type": "number" }
       },
       "required": ["uid", "name", "email", "role"]
     },

@@ -25,7 +25,8 @@ import {
   LayoutGrid,
   Heart,
   StickyNote,
-  Star
+  Star,
+  Target
 } from "lucide-react";
 import { db } from "../../lib/firebase";
 import { toast } from "../ui/Toast";
@@ -38,6 +39,7 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
     bio: "",
     password: "",
     pixKey: "",
+    monthlyGoal: 0,
     portfolio: [] as string[],
     specialties: [] as string[]
   });
@@ -90,6 +92,7 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
           bio: data.bio || "",
           password: data.password || "",
           pixKey: data.pixKey || "",
+          monthlyGoal: data.monthlyGoal || 0,
           portfolio: data.portfolio || [],
           specialties: data.specialties || []
         });
@@ -125,6 +128,7 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
         bio: profileData.bio,
         password: profileData.password,
         pixKey: profileData.pixKey,
+        monthlyGoal: profileData.monthlyGoal,
         portfolio: profileData.portfolio,
         specialties: profileData.specialties,
         updatedAt: Timestamp.now()
@@ -326,23 +330,42 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
 
             {/* Pix Key - Only for Professionals/Managers */}
             {!isClient && (
-              <div className="space-y-1.5">
-                <label className="text-[9px] text-emerald-400 uppercase font-black tracking-widest block flex items-center gap-1">
-                  <QrCode className="w-3.5 h-3.5" /> Chave Pix de Recebimento
-                </label>
-                <div className="relative">
-                  <input 
-                    type="text" 
-                    value={profileData.pixKey} 
-                    onChange={(e) => setProfileData(prev => ({ ...prev, pixKey: e.target.value }))}
-                    className="liquid-glass w-full  -emerald-500/20 focus:-emerald-500 rounded-2xl p-4 text-xs font-bold text-emerald-300 transition-all outline-none placeholder:text-neutral-600"
-                    placeholder="E-mail, CPF, celular ou aleatória"
-                  />
+              <>
+                <div className="space-y-1.5">
+                  <label className="text-[9px] text-emerald-400 uppercase font-black tracking-widest block flex items-center gap-1">
+                    <QrCode className="w-3.5 h-3.5" /> Chave Pix de Recebimento
+                  </label>
+                  <div className="relative">
+                    <input 
+                      type="text" 
+                      value={profileData.pixKey} 
+                      onChange={(e) => setProfileData(prev => ({ ...prev, pixKey: e.target.value }))}
+                      className="liquid-glass w-full  -emerald-500/20 focus:-emerald-500 rounded-2xl p-4 text-xs font-bold text-emerald-300 transition-all outline-none placeholder:text-neutral-600"
+                      placeholder="E-mail, CPF, celular ou aleatória"
+                    />
+                  </div>
+                  <span className="text-[8px] text-neutral-600 block uppercase font-bold tracking-tight">
+                    Esta chave facilitará seus recebimentos diretos. Clientes verão o QR Code correspondente no fluxo.
+                  </span>
                 </div>
-                <span className="text-[8px] text-neutral-600 block uppercase font-bold tracking-tight">
-                  Esta chave facilitará seus recebimentos diretos. Clientes verão o QR Code correspondente no fluxo.
-                </span>
-              </div>
+                <div className="space-y-1.5 pt-4">
+                  <label className="text-[9px] text-amber-500 uppercase font-black tracking-widest block flex items-center gap-1">
+                    <Target className="w-3.5 h-3.5" /> Meta Mensal de Faturamento (R$)
+                  </label>
+                  <div className="relative">
+                    <input 
+                      type="number" 
+                      value={profileData.monthlyGoal === 0 ? "" : profileData.monthlyGoal} 
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setProfileData(prev => ({ ...prev, monthlyGoal: val === "" ? 0 : parseFloat(val) }));
+                      }}
+                      className="liquid-glass w-full focus:border-amber-500 rounded-2xl p-4 text-xs font-bold text-white transition-all outline-none placeholder:text-neutral-600"
+                      placeholder="Sua meta mensal de faturamento"
+                    />
+                  </div>
+                </div>
+              </>
             )}
           </div>
         </div>

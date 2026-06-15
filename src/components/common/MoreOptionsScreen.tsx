@@ -37,7 +37,7 @@ const DarkScreen = ({ onBack }: { onBack: () => void }) => <div className="p-4">
 
 export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotifications, appointments, onClearNotifications, onToggleTheme, isDarkMode, onReferrals }: { user: any, role: string, onLogout: () => void, onBack: () => void, key?: any, staffNotifications: any[], appointments: any[], onClearNotifications: () => void, onToggleTheme: () => void, isDarkMode: boolean, onReferrals?: () => void }) {
   const [activeSubScreen, setActiveSubScreen] = useState<
-    'main' | 'profile' | 'dashboard' | 'notif' | 'block' | 'share' | 'earnings' | 'week' | 'recon' | 'recurrence' | 'promotions' | 'inventory'
+    'main' | 'profile' | 'notif' | 'block' | 'share' | 'earnings' | 'week' | 'recon' | 'recurrence' | 'promotions' | 'inventory'
   >('main');
 
   const unreadCount = staffNotifications.filter(n => !n.read).length;
@@ -81,13 +81,7 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
           icon: <Gift className="w-5 h-5 text-amber-500" />, 
           onClick: onReferrals 
         }] : []),
-        ...(role === 'client' ? [] : [{ 
-          id: 'dashboard', 
-          label: 'Ver como Cliente', 
-          desc: 'Simular agendamento para testar fluxo',
-          icon: <MonitorSmartphone className="w-5 h-5 text-indigo-400" />, 
-          onClick: () => setActiveSubScreen('dashboard') 
-        }]),
+        ...(role === 'client' ? [] : []),
         { 
           id: 'notif', 
           label: 'Notificações', 
@@ -161,25 +155,6 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
         },
       ]
     }] : []),
-    {
-      title: "Preferências e Avaliações",
-      items: [
-        { 
-          id: 'theme', 
-          label: isDarkMode ? 'Ativar Tema Claro' : 'Ativar Tema Escuro', 
-          desc: 'Mudar contraste visual da plataforma',
-          icon: <Moon className="w-5 h-5 text-yellow-400" />, 
-          onClick: onToggleTheme 
-        },
-        { 
-          id: 'google-review', 
-          label: 'Avaliar no Google', 
-          desc: 'Deixe seu depoimento e avaliação 5 estrelas',
-          icon: <Star className="w-5 h-5 text-amber-500 fill-amber-500/10" />, 
-          onClick: () => window.open(GOOGLE_REVIEW_URL, "_blank") 
-        },
-      ]
-    }
   ];
 
   if (activeSubScreen === 'block') return <BlockScreen onBack={() => setActiveSubScreen('main')} />;
@@ -188,7 +163,6 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
   if (activeSubScreen === 'recurrence') return <RecurrenceScreen onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'promotions') return <PromotionsManager onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'inventory') return <InventoryScreen onBack={() => setActiveSubScreen('main')} />;
-  if (activeSubScreen === 'dashboard') return <ClientDashboardScreen user={user} onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'profile') return <ProfileEditScreen user={user} onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'notif') return <NotificationsScreen notifications={staffNotifications} appointments={appointments} onClear={onClearNotifications} onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'earnings') return <EarningsScreen onBack={() => setActiveSubScreen('main')} />;
@@ -321,7 +295,7 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
             className="w-full bg-indigo-500/10 hover:bg-indigo-500 hover:text-black border border-indigo-500/20 p-5 rounded-[2rem] flex items-center justify-center gap-3 active:scale-95 transition-all text-indigo-400 font-bold cursor-pointer"
           >
             <Bell className="w-5 h-5 shrink-0" />
-            <span className="text-[10px] font-black uppercase tracking-widest italic">Diagnóstico Push (Solicitar Permissão)</span>
+            <span className="text-[10px] font-black uppercase tracking-widest italic">ATIVAR NOTIFICACOES NO DISPOSITIVO</span>
           </button>
         </div>
 

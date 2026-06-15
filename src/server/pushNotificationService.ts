@@ -486,6 +486,10 @@ export function startAppointmentsListener() {
 const userAccessLogs = new Map<string, number>();
 
 export async function notifyUserAccess(userId: string, userName: string, role: string) {
+  // Disabled per user request
+  return;
+  
+  /*
   if (!userId || role !== "client") return;
   
   const now = Date.now();
@@ -516,6 +520,7 @@ export async function notifyUserAccess(userId: string, userName: string, role: s
       console.warn("[Push Service] Skip layout log on user login:", e.message);
     }
   }
+  */
 }
 
 // Snapshot listener for real-time chat messages

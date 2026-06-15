@@ -943,6 +943,7 @@ export function BookingScreen({
   const [couponCode, setCouponCode] = useState(
     editAppointment?.couponCode || "",
   );
+  const [promotions, setPromotions] = useState<any[]>([]);
   const [appliedDiscount, setAppliedDiscount] = useState(0);
   const [validatingCoupon, setValidatingCoupon] = useState(false);
   const [couponError, setCouponError] = useState<string | null>(null);
@@ -1125,6 +1126,21 @@ export function BookingScreen({
       handleApplyCoupon(editAppointment.couponCode);
     }
   }, [editAppointment]);
+
+  useEffect(() => {
+    const q = query(collection(db, "promotions"), where("active", "==", true));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const todayStr = format(new Date(), 'yyyy-MM-dd');
+      const promos: any[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setPromotions(promos
+        .filter((p: any) => !p.validFrom || p.validFrom <= todayStr)
+        .filter((p: any) => !p.validUntil || p.validUntil >= todayStr)
+      );
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, "promotions");
+    });
+    return unsubscribe;
+  }, []);
   const [customDuration, setCustomDuration] = useState<number>(
     editAppointment?.serviceDuration || 0,
   );
@@ -2292,7 +2308,7 @@ export function BookingScreen({
                   </div>
                 )}
                 {/* Visual Coupon Code Selector Input */}
-                <div className=" liquid-glass p-6 rounded-[2rem]  space-y-3 text-left">
+                <div className=" liquid-glass p-6 rounded-[2rem]  space-y-4 text-left">
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-black uppercase text-neutral-500 tracking-wider">
                       Possui Cupom de Desconto?
@@ -2325,6 +2341,27 @@ export function BookingScreen({
                       )}
                     </button>
                   </div>
+                  {/* Available Coupons */}
+                  {promotions && promotions.length > 0 && (
+                    <div className="pt-2">
+                      <p className="text-[9px] font-bold text-neutral-500 uppercase tracking-widest mb-2">Cupons Ativos:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {promotions.map(promo => (
+                          <button
+                            key={promo.id}
+                            type="button"
+                            onClick={() => {
+                              setCouponCode(promo.code);
+                              handleApplyCoupon(promo.code);
+                            }}
+                            className="bg-white/5 border border-white/10 hover:border-amber-500/50 rounded-xl px-3 py-1.5 text-[9px] font-black text-amber-500 uppercase tracking-widest transition-all"
+                          >
+                            {promo.code} ({promo.discountPercentage}%)
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   {couponError && (
                     <p className="text-[10.5px] font-black text-rose-500 uppercase tracking-wide px-1">
                       ⚠️ {couponError}
