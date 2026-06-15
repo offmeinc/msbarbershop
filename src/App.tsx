@@ -271,9 +271,9 @@ export default function App() {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      console.log("Fading out button...");
+      console.log("Hiding ball button...");
       setIsButtonFaded(true);
-    }, 3000);
+    }, 5000);
     return () => clearTimeout(timer);
   }, []);
 
@@ -1601,63 +1601,66 @@ export default function App() {
       <Toaster />
       
       {/* Floating 2026 World Cup Ball Switch */}
-      <motion.button
-        key="wc-floater"
-        drag
-        dragMomentum={false}
-        initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        whileHover={{ scale: 1.15, rotate: 360, transition: { duration: 0.6 } }}
-        whileTap={{ scale: 0.9 }}
-        onClick={() => {
-          const nextFanMode = !isFanMode;
-          setIsFanMode(nextFanMode);
-          if (nextFanMode) {
-            if (typeof navigator !== "undefined" && navigator.vibrate) {
-              navigator.vibrate([50, 30, 50]);
-            }
-            // Trigger glorious green & yellow confetti bursts from corners
-            confetti({
-              particleCount: 100,
-              angle: 60,
-              spread: 60,
-              origin: { x: 0, y: 1 },
-              colors: ["#22c55e", "#eab308", "#10b981", "#facc15", "#ffffff"]
-            });
-            confetti({
-              particleCount: 100,
-              angle: 120,
-              spread: 60,
-              origin: { x: 1, y: 1 },
-              colors: ["#eab308", "#22c55e", "#facc15", "#10b981", "#ffffff"]
-            });
-          }
-        }}
-        className={`fixed z-50 w-14 h-14 rounded-full flex items-center justify-center shadow-[0_0_25px_rgba(34,197,94,0.4)] cursor-pointer select-none transition-all duration-300 ${
-          isFanMode 
-            ? "bg-gradient-to-tr from-green-600 via-yellow-400 to-emerald-500 border-2 border-yellow-200 shadow-yellow-400/20" 
-            : "bg-neutral-800 border-2 border-neutral-700 text-white"
-        } ${isButtonFaded ? 'opacity-50 hover:opacity-100' : 'opacity-100'} bottom-32 right-5 md:bottom-8 md:right-8`}
-        title="Alternar Tema Copa do Mundo 2026"
-      >
-        <div className="relative w-full h-full flex items-center justify-center">
-          {!isButtonFaded && (
-            <div className={`absolute inset-0 rounded-full animate-ping opacity-25 ${
-              isFanMode ? "bg-yellow-400" : "bg-green-500"
-            }`} style={{ animationDuration: '2s' }} />
-          )}
-          
-          <span className="text-3xl filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)] select-none">
-            ⚽
-          </span>
-          
-          <span className={`absolute -top-1 -right-1 text-[8px] font-black tracking-tighter px-1.5 py-0.5 rounded-full border border-black/20 ${
-            isFanMode ? "bg-green-600 text-white" : "bg-yellow-400 text-black"
-          }`}>
-            '26
-          </span>
-        </div>
-      </motion.button>
+      <AnimatePresence>
+        {!isButtonFaded && (
+          <motion.button
+            key="wc-floater"
+            drag
+            dragMomentum={false}
+            initial={{ scale: 0, opacity: 0, y: 50 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0, opacity: 0, y: 20 }}
+            whileHover={{ scale: 1.15, rotate: 360, transition: { duration: 0.6 } }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => {
+              const nextFanMode = !isFanMode;
+              setIsFanMode(nextFanMode);
+              if (nextFanMode) {
+                if (typeof navigator !== "undefined" && navigator.vibrate) {
+                  navigator.vibrate([50, 30, 50]);
+                }
+                // Trigger glorious green & yellow confetti bursts from corners
+                confetti({
+                  particleCount: 100,
+                  angle: 60,
+                  spread: 60,
+                  origin: { x: 0, y: 1 },
+                  colors: ["#22c55e", "#eab308", "#10b981", "#facc15", "#ffffff"]
+                });
+                confetti({
+                  particleCount: 100,
+                  angle: 120,
+                  spread: 60,
+                  origin: { x: 1, y: 1 },
+                  colors: ["#eab308", "#22c55e", "#facc15", "#10b981", "#ffffff"]
+                });
+              }
+            }}
+            className={`fixed z-50 w-14 h-14 rounded-full flex items-center justify-center shadow-[0_0_25px_rgba(34,197,94,0.4)] cursor-pointer select-none transition-all duration-300 ${
+              isFanMode 
+                ? "bg-gradient-to-tr from-green-600 via-yellow-400 to-emerald-500 border-2 border-yellow-200 shadow-yellow-400/20" 
+                : "bg-neutral-800 border-2 border-neutral-700 text-white"
+            } bottom-32 right-5 md:bottom-8 md:right-8`}
+            title="Alternar Tema Copa do Mundo 2026"
+          >
+            <div className="relative w-full h-full flex items-center justify-center">
+              <div className={`absolute inset-0 rounded-full animate-ping opacity-25 ${
+                isFanMode ? "bg-yellow-400" : "bg-green-500"
+              }`} style={{ animationDuration: '2s' }} />
+              
+              <span className="text-3xl filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)] select-none">
+                ⚽
+              </span>
+              
+              <span className={`absolute -top-1 -right-1 text-[8px] font-black tracking-tighter px-1.5 py-0.5 rounded-full border border-black/20 ${
+                isFanMode ? "bg-green-600 text-white" : "bg-yellow-400 text-black"
+              }`}>
+                '26
+              </span>
+            </div>
+          </motion.button>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

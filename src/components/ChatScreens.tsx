@@ -303,22 +303,29 @@ export function ChatScreen({ user, onBack }: { user: any, onBack: () => void }) 
                   {isMe && (
                     <button 
                       onClick={() => setDeletingId(deletingId === m.id ? null : m.id)}
-                      className="absolute top-1 right-1 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="absolute top-1 right-1 p-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/20 rounded-full"
                     >
-                      <MoreVertical className="w-3 h-3 text-white/50" />
+                      <MoreVertical className="w-3 h-3 text-white" />
                     </button>
                   )}
                   
                   {deletingId === m.id && (
-                    <div className="absolute -top-10 right-0 bg-neutral-900 border border-white/10 rounded-lg p-1 z-10 shadow-2xl animate-in fade-in zoom-in slide-in-from-bottom-2">
+                    <div className="absolute -top-12 right-0 bg-neutral-900 border border-white/10 rounded-xl p-1 z-20 shadow-2xl animate-in fade-in zoom-in slide-in-from-bottom-2 min-w-[120px]">
                       <button 
                         onClick={() => deleteMessage(m.id)}
-                        className="flex items-center gap-2 px-3 py-1.5 text-[10px] font-black uppercase text-red-500 hover:bg-red-500/10 rounded-md transition-colors"
+                        className="w-full flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
                       >
-                        <Trash2 className="w-3 h-3" /> Deletar
+                        <Trash2 className="w-3.5 h-3.5" /> Apagar
+                      </button>
+                      <button 
+                        onClick={() => setDeletingId(null)}
+                        className="w-full flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase text-neutral-400 hover:bg-white/5 rounded-lg transition-colors border-t border-white/5 mt-1"
+                      >
+                        Cancelar
                       </button>
                     </div>
                   )}
+
 
                   {m.imageUrl && (
                     <div className="mb-2 rounded-lg overflow-hidden border border-black/10">
@@ -416,12 +423,14 @@ export function ProfessionalClientChatsScreen({ user, onBack, initialClientId, i
   const [activeClientName, setActiveClientName] = useState(initialClientName || "");
   const [isSelectingClient, setIsSelectingClient] = useState(false);
   const [allClients, setAllClients] = useState<any[]>([]);
+  const [deletingChatId, setDeletingChatId] = useState<string | null>(null);
   
   // Detail state
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -562,6 +571,25 @@ export function ProfessionalClientChatsScreen({ user, onBack, initialClientId, i
     setNewMessage("");
   };
 
+  const deleteChat = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, "chats", id));
+      setDeletingChatId(null);
+    } catch (err) {
+      console.error("Delete chat error:", err);
+    }
+  };
+
+  const deleteMessage = async (msgId: string) => {
+    if (!activeClientId) return;
+    try {
+      await deleteDoc(doc(db, "chats", activeClientId, "messages", msgId));
+      setDeletingMessageId(null);
+    } catch (err) {
+      console.error("Delete message error:", err);
+    }
+  };
+
   const filteredChats = useMemo(() => chats.filter(c => 
     (c.clientName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
     (c.clientPhone || "").toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -630,13 +658,13 @@ export function ProfessionalClientChatsScreen({ user, onBack, initialClientId, i
                   </div>
                 ) : (
                   filteredChats.map((c) => (
-                    <button
+                    <div
                       key={c.id}
                       onClick={() => {
                         setActiveClientId(c.id);
                         setActiveClientName(c.clientName || "Cliente");
                       }}
-                      className={`w-full bg-neutral-900/50 border border-white/5 hover:border-amber-500/25 p-4 rounded-[1.8rem] text-left transition-all flex items-center justify-between group relative ${
+                      className={`w-full bg-neutral-900/50 border border-white/5 hover:border-amber-500/25 p-4 rounded-[1.8rem] text-left transition-all flex items-center justify-between group relative cursor-pointer ${
                         c.unreadByStaff ? "border-amber-500/20 bg-neutral-900" : ""
                       }`}
                     >
@@ -668,21 +696,51 @@ export function ProfessionalClientChatsScreen({ user, onBack, initialClientId, i
                         </div>
                       </div>
 
-                      <div className="text-right flex flex-col items-end gap-1.5">
-                        <span className="text-[8px] font-bold text-neutral-500 uppercase flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          {c.lastMessageTime instanceof Timestamp 
-                            ? format(c.lastMessageTime.toDate(), "dd 'de' MMM, HH:mm", { locale: ptBR }) 
-                            : ""
-                          }
-                        </span>
+                      <div className="text-right flex flex-col items-end gap-1.5 shrink-0 ml-4">
+                        <div className="flex items-center gap-2">
+                           <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeletingChatId(deletingChatId === c.id ? null : c.id);
+                            }}
+                            className={`p-1.5 rounded-lg transition-all ${deletingChatId === c.id ? "bg-red-500 text-white" : "text-neutral-600 hover:text-red-500 bg-white/5"}`}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                          
+                          {deletingChatId === c.id && (
+                            <div className="absolute top-1/2 -translate-y-1/2 right-12 z-20 bg-neutral-900 border border-white/10 rounded-xl p-2 shadow-2xl flex flex-col gap-1 min-w-[140px] animate-in fade-in slide-in-from-right-2">
+                               <p className="text-[9px] font-black text-white/50 uppercase text-center py-1">Excluir Tudo?</p>
+                               <button 
+                                onClick={(e) => { e.stopPropagation(); deleteChat(c.id); }}
+                                className="w-full py-2 bg-red-600 text-white text-[9px] font-black uppercase rounded-lg hover:bg-red-500 transition-colors"
+                               >
+                                Confirmar
+                               </button>
+                               <button 
+                                onClick={(e) => { e.stopPropagation(); setDeletingChatId(null); }}
+                                className="w-full py-2 bg-neutral-800 text-neutral-400 text-[9px] font-black uppercase rounded-lg hover:bg-neutral-700 transition-colors"
+                               >
+                                Cancelar
+                               </button>
+                            </div>
+                          )}
+
+                          <span className="text-[8px] font-bold text-neutral-500 uppercase flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {c.lastMessageTime instanceof Timestamp 
+                              ? format(c.lastMessageTime.toDate(), "dd 'de' MMM, HH:mm", { locale: ptBR }) 
+                              : ""
+                            }
+                          </span>
+                        </div>
                         {c.unreadByStaff && (
                           <span className="bg-amber-500 text-black text-[8px] font-black uppercase px-2 py-0.5 rounded-full tracking-wider leading-none shrink-0">
                             PENDENTE
                           </span>
                         )}
                       </div>
-                    </button>
+                    </div>
                   ))
                 )}
               </div>
@@ -784,17 +842,28 @@ export function ProfessionalClientChatsScreen({ user, onBack, initialClientId, i
                       }`}
                     >
                       {/* Deletion Option */}
-                      {!isClientMsg && (
-                        <button 
-                          onClick={async () => {
-                            if (window.confirm("Deseja apagar esta mensagem?")) {
-                              await deleteDoc(doc(db, "chats", activeClientId!, "messages", m.id));
-                            }
-                          }}
-                          className="absolute top-1 right-1 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <Trash2 className="w-3 h-3 text-white/50" />
-                        </button>
+                      <button 
+                        onClick={() => setDeletingMessageId(deletingMessageId === m.id ? null : m.id)}
+                        className="absolute top-1 right-1 p-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/20 rounded-full"
+                      >
+                        <MoreVertical className="w-3 h-3 text-white" />
+                      </button>
+                      
+                      {deletingMessageId === m.id && (
+                        <div className="absolute -top-12 right-0 bg-neutral-900 border border-white/10 rounded-xl p-1 z-20 shadow-2xl animate-in fade-in zoom-in slide-in-from-bottom-2 min-w-[120px]">
+                           <button 
+                            onClick={() => deleteMessage(m.id)}
+                            className="w-full flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" /> Apagar
+                          </button>
+                          <button 
+                            onClick={() => setDeletingMessageId(null)}
+                            className="w-full flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase text-neutral-400 hover:bg-white/5 rounded-lg transition-colors border-t border-white/5 mt-1"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
                       )}
 
                       {m.imageUrl && (
