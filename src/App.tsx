@@ -295,7 +295,7 @@ export default function App() {
     }
   });
 
-  const [dashboardView, setDashboardView] = useState<"list" | "calendar" | "services" | "hours" | "collaborators">("list");
+  const [dashboardView, setDashboardView] = useState<"list" | "agenda" | "services" | "hours" | "collaborators">("agenda");
   const [requestedRole, setRequestedRole] = useState<string>("client");
   const [loading, setLoading] = useState(true);
   const [services, setServices] = useState<any[]>([]);
@@ -1055,10 +1055,10 @@ export default function App() {
               <div className="flex items-center gap-6">
                 <button 
                   onClick={() => {
-                    setDashboardView("calendar");
+                    setDashboardView("agenda");
                     setCurrentScreen("agenda");
                   }}
-                  className={`hover:text-amber-500 transition-colors flex items-center gap-2 uppercase text-[10px] font-black tracking-widest leading-none ${displayScreen === "agenda" && dashboardView === "calendar" ? "text-amber-500" : "text-neutral-400"}`}
+                  className={`hover:text-amber-500 transition-colors flex items-center gap-2 uppercase text-[10px] font-black tracking-widest leading-none ${displayScreen === "agenda" && dashboardView === "agenda" ? "text-amber-500" : "text-neutral-400"}`}
                 >
                   Agenda
                 </button>
@@ -1265,7 +1265,7 @@ export default function App() {
                     role={userRole} 
                     setCurrentScreen={(screen) => {
                       if (screen === "agenda") {
-                        setDashboardView("list");
+                        setDashboardView("agenda");
                       }
                       setCurrentScreen(screen);
                     }} 
@@ -1440,8 +1440,8 @@ export default function App() {
                         menuItems.push({
                           label: "Agenda",
                           icon: <Calendar className="w-4 h-4" />,
-                          onClick: () => { setDashboardView("calendar"); setCurrentScreen("agenda"); setIsMenuOpen(false); },
-                          isActive: currentScreen === "agenda" && dashboardView === "calendar"
+                          onClick: () => { setDashboardView("agenda"); setCurrentScreen("agenda"); setIsMenuOpen(false); },
+                          isActive: currentScreen === "agenda" && dashboardView === "agenda"
                         });
                         menuItems.push({
                           label: "Atendimentos",
@@ -1465,8 +1465,8 @@ export default function App() {
                         menuItems.push({
                           label: "Minha Agenda",
                           icon: <Calendar className="w-4 h-4" />,
-                          onClick: () => { setDashboardView("calendar"); setCurrentScreen("agenda"); setIsMenuOpen(false); },
-                          isActive: currentScreen === "agenda" && dashboardView === "calendar"
+                          onClick: () => { setDashboardView("agenda"); setCurrentScreen("agenda"); setIsMenuOpen(false); },
+                          isActive: currentScreen === "agenda" && dashboardView === "agenda"
                         });
                         menuItems.push({
                           label: "Atendimentos",
@@ -1641,9 +1641,11 @@ export default function App() {
         title="Alternar Tema Copa do Mundo 2026"
       >
         <div className="relative w-full h-full flex items-center justify-center">
-          <div className={`absolute inset-0 rounded-full animate-ping opacity-25 ${
-            isFanMode ? "bg-yellow-400" : "bg-green-500"
-          }`} style={{ animationDuration: '2s' }} />
+          {!isButtonFaded && (
+            <div className={`absolute inset-0 rounded-full animate-ping opacity-25 ${
+              isFanMode ? "bg-yellow-400" : "bg-green-500"
+            }`} style={{ animationDuration: '2s' }} />
+          )}
           
           <span className="text-3xl filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)] select-none">
             ⚽
