@@ -1014,7 +1014,7 @@ export default function App() {
           ease: [0.33, 1, 0.68, 1], // Custom cubic-bezier for a smoother feel
           opacity: { duration: 0.25 }
         }}
-        className="liquid-glass fixed top-0 w-full z-50 -b backdrop-blur-xl pt-[env(safe-area-inset-top)]"
+        className="liquid-glass !rounded-none !rounded-b-[2rem] fixed top-0 w-full z-50 border-b border-white/5 backdrop-blur-xl pt-[max(env(safe-area-inset-top),1rem)] lg:pt-[max(env(safe-area-inset-top),0rem)]"
       >
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <div 
@@ -1238,7 +1238,7 @@ export default function App() {
         </div>
       </motion.nav>
 
-      <main className="pt-[calc(5rem+env(safe-area-inset-top))] max-w-7xl mx-auto px-4 md:px-6 pb-12">
+      <main className="pt-[calc(max(env(safe-area-inset-top),1rem)+6rem)] lg:pt-[calc(max(env(safe-area-inset-top),0rem)+6rem)] max-w-7xl mx-auto px-4 md:px-6 pb-12">
         <Suspense fallback={<LoadingFallback />}>
           <AnimatePresence mode="wait">
             <motion.div

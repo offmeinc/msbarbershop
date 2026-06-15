@@ -569,7 +569,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
           >
-            <div className="liquid-glass pt-12 px-6 pb-6 sticky top-0 backdrop-blur-2xl z-20 -b -white/[0.02]">
+            <div className="liquid-glass p-6 backdrop-blur-2xl z-20 border border-white/5 mb-6">
               <div className="flex items-center justify-between w-full">
                   <div className="flex items-center gap-4">
                      <div className="w-14 h-14 rounded-full liquid-glass overflow-hidden shadow-xl shrink-0  relative group">
