@@ -48,7 +48,7 @@ export function Toaster() {
   }, []);
 
   return (
-    <div className="fixed top-[calc(5rem+env(safe-area-inset-top))] right-0 md:right-4 z-[99999] flex flex-col gap-2 pointer-events-none w-full md:max-w-sm px-4 md:px-0 left-1/2 -translate-x-1/2 md:left-auto md:translate-x-0">
+    <div className="fixed top-[calc(6rem+env(safe-area-inset-top))] right-0 md:right-4 z-[99999] flex flex-col gap-2 pointer-events-none w-full md:max-w-sm px-4 md:px-0 left-1/2 -translate-x-1/2 md:left-auto md:translate-x-0">
       <AnimatePresence>
         {toasts.map((t) => (
           <motion.div

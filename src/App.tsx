@@ -267,6 +267,15 @@ export default function App() {
   const [hidden, setHidden] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isFanMode, setIsFanMode] = useFanMode();
+  const [isButtonFaded, setIsButtonFaded] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      console.log("Fading out button...");
+      setIsButtonFaded(true);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, []);
 
   const validScreens = ["home", "booking", "agenda", "clients", "client-details", "more", "login", "collaborators", "services", "client-login", "client-dashboard", "earnings", "promotions", "portfolio", "professional-chat", "barber-management", "checkout"];
   const displayScreen = validScreens.includes(currentScreen as string) ? currentScreen : "home";
@@ -1628,7 +1637,7 @@ export default function App() {
           isFanMode 
             ? "bg-gradient-to-tr from-green-600 via-yellow-400 to-emerald-500 border-2 border-yellow-200 shadow-yellow-400/20" 
             : "bg-neutral-800 border-2 border-neutral-700 text-white"
-        } bottom-24 right-5 md:bottom-8 md:right-8`}
+        } ${isButtonFaded ? 'opacity-50 hover:opacity-100' : 'opacity-100'} bottom-32 right-5 md:bottom-8 md:right-8`}
         title="Alternar Tema Copa do Mundo 2026"
       >
         <div className="relative w-full h-full flex items-center justify-center">
