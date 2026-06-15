@@ -1,48 +1,55 @@
-self.addEventListener("push", (event) => {
-  let title = "MS Barbearia";
-  let body = "Nova notificação";
-  let url = "/";
+importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js");
+importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js");
 
-  try {
-    if (event.data) {
-      const data = event.data.json();
-      title = data.notification?.title || data.data?.title || title;
-      body = data.notification?.body || data.data?.body || body;
-      url = data.data?.url || data.fcmOptions?.link || url;
-    }
-  } catch (err) {
-    console.error("SW push parsing error:", err);
+const firebaseConfig = {
+  projectId: "gen-lang-client-0419449301",
+  appId: "1:122028701634:web:30bbacb9f7755d969ec85b",
+  apiKey: "AIzaSyD4ZPKEi3EQbsI9uesSIxNzEd8BzWwBst8",
+  authDomain: "gen-lang-client-0419449301.firebaseapp.com",
+  storageBucket: "gen-lang-client-0419449301.firebasestorage.app",
+  messagingSenderId: "122028701634",
+};
+
+firebase.initializeApp(firebaseConfig);
+const messaging = firebase.messaging();
+
+messaging.onBackgroundMessage((payload) => {
+  console.log('[firebase-messaging-sw.js] Received background message ', payload);
+  if (navigator.setAppBadge) {
+    navigator.setAppBadge(1).catch(() => {});
   }
-
-  const options = {
-    body,
-    icon: "/icon.png",
-    data: { url }
-  };
-
-  event.waitUntil(
-    self.registration.showNotification(title, options)
-      .then(() => {
-        if (navigator.setAppBadge) {
-          navigator.setAppBadge(1).catch(() => {});
-        }
-      })
-  );
+  
+  if (payload.data && !payload.notification) {
+    let title = payload.data.title || "MS BARBER SHOP";
+    let body = payload.data.body || "Nova notificação";
+    let url = payload.data.url || "/";
+    let icon = payload.data.icon || "/icon.png";
+    
+    self.registration.showNotification(title, {
+      body,
+      icon,
+      data: { url }
+    });
+  }
 });
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const url = event.notification.data?.url || "/";
+  
+  let url = event.notification.data?.url || "/";
+  // Attempt to extract FCM fcmOptions link if present in native FCM push wrapper
+  if (event.notification.data?.FCM_MSG?.fcmOptions?.link) {
+    url = event.notification.data.FCM_MSG.fcmOptions.link;
+  }
+  
   event.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then((windowClients) => {
-      // Check if there is already a window/tab open with the target URL
       for (let i = 0; i < windowClients.length; i++) {
         const client = windowClients[i];
-        if (client.url === url && "focus" in client) {
+        if (client.url.includes(url) && "focus" in client) {
           return client.focus();
         }
       }
-      // If none, open a new window
       if (clients.openWindow) {
         return clients.openWindow(url);
       }
