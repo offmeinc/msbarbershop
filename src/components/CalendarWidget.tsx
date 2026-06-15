@@ -850,6 +850,19 @@ export function CalendarWidget({
 
         {/* GLORIOUS RIGHT MAIN CALENDAR SHEET */}
         <div className="flex-1 min-w-0 liquid-glass/30 rounded-[2.5rem]  p-4 sm:p-6 shadow-2xl relative">
+          {/* Mobile Nova Reserva Button */}
+          {(role === 'manager' || role === 'barber') && onNewBooking && (
+            <button
+               onClick={onNewBooking}
+               className="lg:hidden w-full flex items-center justify-center gap-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:scale-95 text-black py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all shadow-xl shadow-amber-500/10 mb-6 cursor-pointer"
+               style={{ cursor: "pointer" }}
+               id="mobile-new-booking-btn"
+            >
+               <Plus className="w-4 h-4 text-black font-black" />
+               Novo Agendamento
+            </button>
+          )}
+
           {/* Main Top Header Controls */}
           <div className="flex flex-col sm:flex-row items-center justify-between mb-6 px-1 gap-4 select-none">
              {/* Mode display title */}
