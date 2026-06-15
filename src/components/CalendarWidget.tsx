@@ -710,19 +710,6 @@ export function CalendarWidget({
 
     return (
       <div className=" liquid-glass/20  rounded-[2.5rem] overflow-hidden shadow-2xl relative">
-        {/* Day header info indicator */}
-        <div className="flex items-center justify-between p-5 border-b border-white/5 bg-black/15 select-none text-left">
-          <div className="flex items-center gap-3">
-             <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center border border-amber-500/20">
-                <Compass className="w-5 h-5" />
-             </div>
-             <div>
-                <h3 className="text-base font-black text-white leading-none capitalize">{format(currentDate, "EEEE, d 'de' MMMM", { locale: ptBR })}</h3>
-                <p className="text-[9px] text-neutral-500 font-extrabold uppercase tracking-widest mt-1">{dayApps.length} Agendamentos Encontrados</p>
-             </div>
-          </div>
-        </div>
-
         {/* Scrollable Day Timeline Canvas */}
         <div ref={scrollContainerRef} className="overflow-y-auto max-h-[600px] no-scrollbar">
           <div className="relative" style={{ height: `${hours.length * ROW_HEIGHT}px` }}>
@@ -816,7 +803,7 @@ export function CalendarWidget({
     <div className="w-full pb-10">
       <div className="flex flex-col lg:flex-row gap-8 w-full">
         {/* RESPONSIVE DESKTOP + TABLET LEFT SIDEBAR COLUMN */}
-        <div className="lg:w-72 w-full flex-shrink-0 space-y-6 flex flex-col">
+        <div className="lg:w-72 w-full flex-shrink-0 space-y-6 flex flex-col hidden lg:flex">
           {/* Nova Reserva Button (Desktop Top-Priority Action) */}
           {(role === 'manager' || role === 'barber') && onNewBooking && (
             <button
@@ -866,37 +853,36 @@ export function CalendarWidget({
           {/* Main Top Header Controls */}
           <div className="flex flex-col sm:flex-row items-center justify-between mb-6 px-1 gap-4 select-none">
              {/* Mode display title */}
-             <div className="flex items-center gap-3 w-full sm:w-auto text-left">
-                <div className="flex items-center liquid-glass p-1 rounded-xl  shadow-inner">
+             <div className="flex items-center gap-4 w-full sm:w-auto text-left">
+                <div className="flex items-center liquid-glass p-0.5 rounded-2xl shadow-inner border border-white/5">
                    <button 
                      onClick={() => navigate(-1)} 
-                     className="liquid-glass p-1.5  rounded-lg text-neutral-500 hover:text-white transition active:scale-90"
+                     className="p-2.5 rounded-xl text-neutral-500 hover:text-amber-500 hover:bg-white/5 transition active:scale-90"
                    >
-                     <ChevronLeft className="w-4 h-4" />
+                     <ChevronLeft className="w-5 h-5" />
                    </button>
                    <button 
                      onClick={() => onDateChange(new Date())} 
-                     className="liquid-glass px-3.5 py-1 text-[9px] font-black uppercase tracking-widest text-neutral-300 hover:text-white  rounded-lg transition"
+                     className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-neutral-300 hover:text-white rounded-xl transition hover:bg-white/5"
                    >
                      Hoje
                    </button>
                    <button 
                      onClick={() => navigate(1)} 
-                     className="liquid-glass p-1.5  rounded-lg text-neutral-500 hover:text-white transition active:scale-90"
+                     className="p-2.5 rounded-xl text-neutral-500 hover:text-amber-500 hover:bg-white/5 transition active:scale-90"
                    >
-                     <ChevronRight className="w-4 h-4" />
+                     <ChevronRight className="w-5 h-5" />
                    </button>
                 </div>
                 <div>
-                   <h3 className="text-base sm:text-lg font-black text-white leading-none capitalize">
+                   <h3 className="text-lg sm:text-xl font-black text-white leading-none capitalize">
                      {format(currentDate, mode === 'month' ? "MMMM 'de' yyyy" : mode === 'week' ? "MMMM 'de' yyyy" : "dd 'de' MMMM", { locale: ptBR })}
                    </h3>
-                   <p className="text-[8px] text-amber-500 uppercase font-black tracking-[0.2em] mt-1">Status Ativo de Navegação</p>
                 </div>
              </div>
 
              {/* Mode Toggler (Day, Week, Month) Segmented selector */}
-             <div className="flex liquid-glass p-1.5 rounded-2xl  shadow-inner self-end sm:self-auto overflow-x-auto max-w-full">
+             <div className="flex liquid-glass p-1 rounded-2xl shadow-inner border border-white/5 self-end sm:self-auto overflow-x-auto max-w-full no-scrollbar">
                {[
                  { id: 'day', label: 'Dia' },
                  { id: 'week', label: 'Semana' },
@@ -905,7 +891,7 @@ export function CalendarWidget({
                  <button
                    key={m.id}
                    onClick={() => onModeChange && onModeChange(m.id as any)}
-                   className={`px-5 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all relative whitespace-nowrap z-10 ${
+                   className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all relative whitespace-nowrap z-10 ${
                      mode === m.id ? "text-black font-black" : "text-neutral-500 hover:text-white"
                    }`}
                  >

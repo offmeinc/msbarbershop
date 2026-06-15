@@ -862,14 +862,20 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
         </div>
       )}
 
+      {/* Professionais selector */}
       {role === 'manager' && (currentView === 'list' || currentView === 'agenda') && (
-          <div className="flex gap-4 overflow-x-auto no-scrollbar mb-8 pb-2">
+        <div className="max-w-xl mx-auto mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-1 h-4 bg-amber-500 rounded-full" />
+             <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-500">Profissionais</h2>
+          </div>
+          <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
               <button 
                 onClick={() => setSelectedBarberId("all")}
                 className="flex flex-col items-center gap-2 min-w-[64px]"
               >
-                  <div className={`w-14 h-14 rounded-full border-2 flex items-center justify-center transition-all ${selectedBarberId === 'all' ? 'border-amber-500' : 'border-white/10 bg-white/5 opacity-50'}`}>
-                      <Users className="w-6 h-6 text-amber-500" />
+                  <div className={`w-14 h-14 rounded-full border-2 flex items-center justify-center transition-all ${selectedBarberId === 'all' ? 'border-amber-500 bg-amber-500/10 shadow-lg shadow-amber-500/10' : 'border-white/10 bg-white/5 opacity-50'}`}>
+                      <Users className={`w-6 h-6 ${selectedBarberId === 'all' ? 'text-amber-500' : 'text-neutral-500'}`} />
                   </div>
                   <span className={`text-[10px] font-black uppercase tracking-widest ${selectedBarberId === 'all' ? 'text-white' : 'text-neutral-600'}`}>Todos</span>
               </button>
@@ -881,7 +887,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                       onClick={() => setSelectedBarberId(barber.id)}
                       className="flex flex-col items-center gap-2 min-w-[64px]"
                     >
-                        <div className={`w-14 h-14 rounded-full border-2 overflow-hidden transition-all relative ${selectedBarberId === barber.id ? 'border-amber-500' : 'border-white/10 opacity-50'}`}>
+                        <div className={`w-14 h-14 rounded-full border-2 overflow-hidden transition-all relative ${selectedBarberId === barber.id ? 'border-amber-500 shadow-lg shadow-amber-500/10' : 'border-white/10 opacity-50'}`}>
                             <img src={barber.photoURL || `https://ui-avatars.com/api/?name=${barber.name}`} alt={barber.name} className="w-full h-full object-cover" />
                             {barberAppsCount > 0 && (
                               <div className="absolute -top-0.5 -right-0.5 bg-amber-500 text-black text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-black">
@@ -894,6 +900,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                   );
               })}
           </div>
+        </div>
       )}
 
       {currentView === 'list' && (
