@@ -75,52 +75,40 @@ export interface FirestoreErrorInfo {
 }
 
 export function safeStringify(obj: any): string {
-  const cache = new Set();
-  return JSON.stringify(obj, (key, value) => {
-    // Basic types that are safe
-    if (typeof value !== 'object' || value === null) {
+  try {
+    const cache = new WeakSet();
+    return JSON.stringify(obj, (key, value) => {
+      if (typeof value === 'object' && value !== null) {
+        if (cache.has(value)) {
+          return '[Circular]';
+        }
+        cache.add(value);
+        
+        // Prevent traversing extremely heavy or internal class instances
+        if (value.constructor && value.constructor.name) {
+          const name = value.constructor.name;
+          // Block specific Firestore/Firebase internal types that cause issues
+          if (name === 'Y2' || name === 'Ka' || name.startsWith('Firestore') || name === 'FirebaseAppImpl') {
+            return `[${name}]`;
+          }
+        }
+      }
       return value;
-    }
-    
-    // Check if we already visited this object
-    if (cache.has(value)) {
-      return undefined; // Drop circular references
-    }
-    
-    // If it's a Timestamp, keep it under standard format
-    if (value.constructor && value.constructor.name === 'Timestamp') {
-      return { seconds: value.seconds, nanoseconds: value.nanoseconds };
-    }
-    
-    // Prevent traversing complex class instances
-    let isPlain = false;
-    const isArray = Array.isArray(value);
-    try {
-      const proto = Object.getPrototypeOf(value);
-      isPlain = proto === Object.prototype || proto === null || isArray;
-    } catch (e) {
-      // Ignored
-    }
-    
-    if (!isPlain) {
-      const constName = value.constructor && value.constructor.name ? value.constructor.name : 'UnknownClass';
-      return `[${constName}]`;
-    }
-    
-    cache.add(value);
-    return value;
-  }, 2);
+    }, 2);
+  } catch (e) {
+    return String(obj);
+  }
 }
 
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
     authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
-      emailVerified: auth.currentUser?.emailVerified,
-      isAnonymous: auth.currentUser?.isAnonymous,
-      tenantId: auth.currentUser?.tenantId,
+      userId: auth.currentUser?.uid || null,
+      email: auth.currentUser?.email || null,
+      emailVerified: auth.currentUser?.emailVerified || null,
+      isAnonymous: auth.currentUser?.isAnonymous || null,
+      tenantId: auth.currentUser?.tenantId || null,
       providerInfo: auth.currentUser?.providerData?.map(provider => ({
         providerId: provider.providerId,
         email: provider.email,
@@ -133,16 +121,17 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   try {
     errorJson = safeStringify(errInfo);
   } catch (e) {
-    console.warn("safeStringify failed, falling back to basic info", e);
+    // Ultimate fallback if even safeStringify fails
     errorJson = JSON.stringify({
-      error: errInfo.error,
-      operationType: errInfo.operationType,
-      path: errInfo.path,
-      message: "Could not stringify full error info even with safeStringify"
+      error: String(errInfo.error),
+      operationType: String(errInfo.operationType),
+      path: String(errInfo.path),
+      message: "Safety stringify failed"
     });
   }
-  console.error('Firestore Error: ', errorJson);
-  throw new Error(errorJson);
+  console.error('[Firestore Error Details]', errorJson);
+  // Re-throw only the basic message to avoid propagating circular errors
+  throw new Error(errInfo.error);
 }
 
 // Perform appointment cancellation and wallet refund atomically on the client

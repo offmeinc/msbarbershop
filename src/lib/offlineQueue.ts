@@ -25,7 +25,7 @@ export interface OfflineAction {
 }
 
 // Helper to deep sanitize objects from circular references and non-serializable elements before storing
-function deepSanitize(obj: any, visited = new Set<any>()): any {
+function deepSanitize(obj: any, visited = new WeakSet<any>()): any {
   if (obj === null || typeof obj !== 'object') {
     return obj;
   }
@@ -45,7 +45,7 @@ function deepSanitize(obj: any, visited = new Set<any>()): any {
   }
   
   // Exclude DOM elements and React components if any got leaked
-  if (obj instanceof Node || (obj.$$typeof && typeof obj.$$typeof === 'symbol')) {
+  if (typeof window !== "undefined" && (obj instanceof Node || (obj.$$typeof && typeof obj.$$typeof === 'symbol'))) {
     return undefined;
   }
   
@@ -56,6 +56,14 @@ function deepSanitize(obj: any, visited = new Set<any>()): any {
   try {
     const proto = Object.getPrototypeOf(obj);
     isPlain = proto === Object.prototype || proto === null || isArray;
+    
+    // Explicitly check for suspicious internal minified names from stack trace
+    if (obj.constructor && obj.constructor.name) {
+      const name = obj.constructor.name;
+      if (name === 'Y2' || name === 'Ka' || name.startsWith('Firestore') || name === 'FirebaseAppImpl') {
+        isPlain = false;
+      }
+    }
   } catch (e) {
     // If getting prototype fails, assume it's complex and unsafe to traverse
   }
@@ -68,7 +76,6 @@ function deepSanitize(obj: any, visited = new Set<any>()): any {
   
   if (isArray) {
     const res = obj.map(item => deepSanitize(item, visited)).filter(val => val !== undefined);
-    visited.delete(obj);
     return res;
   }
   
@@ -83,7 +90,6 @@ function deepSanitize(obj: any, visited = new Set<any>()): any {
       // Ignore keys that cannot be structuralized
     }
   }
-  visited.delete(obj);
   return sanitizedObj;
 }
 

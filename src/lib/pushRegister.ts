@@ -95,7 +95,8 @@ export async function setupPushSubscription(userId: string, userRole: string): P
       return false;
     }
   } catch (error: any) {
-    console.warn("[Push Register - FCM] Failed.", error);
+    const msg = error instanceof Error ? error.message : String(error);
+    console.warn("[Push Register - FCM] Failed.", msg);
     return false;
   }
 }

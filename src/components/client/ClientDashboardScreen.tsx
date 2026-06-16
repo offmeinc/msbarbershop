@@ -173,8 +173,9 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
         throw new Error(data.error || "Falha desconhecida");
       }
     } catch (err: any) {
-      console.error(err);
-      setRechargeError("Não foi possível conectar ao Mercado Pago. Verifique sua conexão e tente novamente.");
+      console.error("[Pix Recharge Error]:", err);
+      // Use the actual error message from the API if available
+      setRechargeError(err.message || "Não foi possível conectar ao Mercado Pago. Verifique sua conexão e tente novamente.");
     } finally {
       setRechargeLoading(false);
     }
