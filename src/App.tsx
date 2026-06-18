@@ -1263,6 +1263,7 @@ export default function App() {
                 ? <ProfessionalHome 
                     user={user} 
                     role={userRole} 
+                    services={services}
                     setCurrentScreen={(screen) => {
                       if (screen === "agenda") {
                         setDashboardView("agenda");

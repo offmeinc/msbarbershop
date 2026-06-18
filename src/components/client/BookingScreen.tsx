@@ -601,40 +601,40 @@ function ConfirmationModal({
           </div>
         ) : null}
         <div className="space-y-3">
-          <p className="text-[9px] text-neutral-600 font-bold uppercase tracking-widest leading-relaxed">
-        {/* Web Push Notification subscription if permission not granted */}
-        {permission !== "granted" && queryNotificationSupport() && (
-          <div className="bg-amber-500/10 border border-amber-500/20 p-5 rounded-[2.5rem] space-y-3 text-left">
-            <div className="flex items-start gap-2.5">
-              <Bell className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
-              <div>
-                <h4 className="text-xs font-black text-white uppercase tracking-wider">
-                  Notificar no Celular? 🔔
-                </h4>
-                <p className="text-neutral-400 text-[10px] font-bold mt-1 leading-normal uppercase">
-                  Ative as notificações para receber atualizações do status do seu agendamento em tempo real neste celular!
-                </p>
+          {/* Web Push Notification subscription if permission not granted */}
+          {permission !== "granted" && queryNotificationSupport() && (
+            <div className="bg-amber-500/10 border border-amber-500/20 p-5 rounded-[2.5rem] space-y-3 text-left">
+              <div className="flex items-start gap-2.5">
+                <Bell className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
+                <div>
+                  <h4 className="text-xs font-black text-white uppercase tracking-wider">
+                    Notificar no Celular? 🔔
+                  </h4>
+                  <p className="text-neutral-400 text-[10px] font-bold mt-1 leading-normal uppercase">
+                    Ative as notificações para receber atualizações do status do seu agendamento em tempo real neste celular!
+                  </p>
+                </div>
               </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  const cleanId = userId || "anonymous";
+                  const success = await setupPushSubscription(cleanId, userRole || "client");
+                  if (success) {
+                    setPermission("granted");
+                    toast.success("Tudo pronto! Você receberá atualizações do seu agendamento no seu celular.");
+                  } else {
+                    toast.error("Não foi possível habilitar notificações. Por favor, libere a permissão no seu navegador.");
+                  }
+                }}
+                className="w-full bg-amber-500 text-black py-3 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest hover:bg-amber-400 active:scale-95 transition-all text-center block"
+              >
+                ATIVAR NOTIFICAÇÕES
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={async () => {
-                const cleanId = userId || "anonymous";
-                const success = await setupPushSubscription(cleanId, userRole || "client");
-                if (success) {
-                  setPermission("granted");
-                  toast.success("Tudo pronto! Você receberá atualizações do seu agendamento no seu celular.");
-                } else {
-                  toast.error("Não foi possível habilitar notificações. Por favor, libere a permissão no seu navegador.");
-                }
-              }}
-              className="w-full bg-amber-500 text-black py-3 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest hover:bg-amber-400 active:scale-95 transition-all text-center block"
-            >
-              ATIVAR NOTIFICAÇÕES
-            </button>
-          </div>
-        )}
+          )}
 
+          <p className="text-[9px] text-neutral-600 font-bold uppercase tracking-widest leading-relaxed">
             Enviamos um resumo no seu WhatsApp e e-mail.
           </p>
 

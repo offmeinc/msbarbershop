@@ -27,7 +27,12 @@ import {
   Image as ImageIcon,
   MessageSquare,
   Sliders,
-  LayoutDashboard
+  LayoutDashboard,
+  AlertTriangle,
+  ChevronLeft,
+  CalendarDays,
+  Check,
+  Users
 } from "lucide-react";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
 
@@ -35,13 +40,125 @@ interface ProfessionalHomeProps {
   user: any;
   role: string;
   setCurrentScreen: (screen: string) => void;
+  services?: any[];
 }
 
-export function ProfessionalHome({ user, role, setCurrentScreen }: ProfessionalHomeProps) {
+export function ProfessionalHome({ user, role, setCurrentScreen, services = [] }: ProfessionalHomeProps) {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [schedulingClient, setSchedulingClient] = useState<any | null>(null);
   const [unreadChats, setUnreadChats] = useState(0);
+
+  const [gridDate, setGridDate] = useState<Date>(new Date());
+  const [gridBarberId, setGridBarberId] = useState<string>("all");
+
+  const barbersInApps = useMemo(() => {
+    const list: { id: string; name: string }[] = [];
+    const seen = new Set<string>();
+    appointments.forEach(app => {
+      if (app.barberId && app.barberName && !seen.has(app.barberId)) {
+        seen.add(app.barberId);
+        list.push({ id: app.barberId, name: app.barberName });
+      }
+    });
+    return list;
+  }, [appointments]);
+
+  const gridConflicts = useMemo(() => {
+    // 1. Get active appointments for the gridDate
+    const activeApps = appointments.filter(app => {
+      const d = app.date instanceof Timestamp 
+        ? app.date.toDate() 
+        : (typeof app.date === 'string' ? parseISO(app.date) : app.date);
+      return isSameDay(d, gridDate) && app.status !== 'cancelled';
+    });
+
+    // 2. Parse appointments with duration
+    const parsedApps = activeApps.map(app => {
+      const appDate = app.date instanceof Timestamp 
+        ? app.date.toDate() 
+        : (typeof app.date === 'string' ? parseISO(app.date) : app.date);
+      const serviceInfo = services?.find(s => s.id === app.serviceId || s.name === app.serviceName);
+      const appDuration = app.serviceDuration || serviceInfo?.duration || 30;
+      const appEnd = new Date(appDate.getTime() + appDuration * 60000);
+      return {
+        ...app,
+        parsedDate: appDate,
+        parsedEndDate: appEnd,
+        duration: appDuration,
+      };
+    });
+
+    // 3. Detect overlaps per professional/barber
+    return parsedApps.map(app => {
+      const overlapping = parsedApps.filter(other => {
+        if (other.id === app.id) return false;
+        // MUST be the same barber to be a conflict
+        if (app.barberId !== other.barberId) return false;
+        return app.parsedDate < other.parsedEndDate && app.parsedEndDate > other.parsedDate;
+      });
+
+      return {
+        ...app,
+        hasConflict: overlapping.length > 0,
+        conflictingApps: overlapping
+      };
+    });
+  }, [appointments, gridDate, services]);
+
+  const activeConflictedCount = useMemo(() => {
+    // Filter out duplicates. Each appointment can record itself as conflicting.
+    // If two apps conflict, counting both is fine (shows count of conflicted slots or bookings).
+    return gridConflicts.filter(app => {
+      if (gridBarberId !== "all" && app.barberId !== gridBarberId) return false;
+      return app.hasConflict;
+    }).length;
+  }, [gridConflicts, gridBarberId]);
+
+  const gridSlots = useMemo(() => {
+    const slots = [];
+    const startHour = 8;
+    const endHour = 20;
+
+    for (let h = startHour; h <= endHour; h++) {
+      for (const m of [0, 30]) {
+        if (h === endHour && m === 30) break; // limit to 20:00
+        const timeStr = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+        
+        // For this slot, check which parsed appointments intersect this time slot
+        const slotStart = new Date(gridDate);
+        slotStart.setHours(h, m, 0, 0);
+        const slotEnd = new Date(slotStart.getTime() + 30 * 60000);
+
+        // Find intersecting apps
+        const intersecting = gridConflicts.filter(app => {
+          // If a specific barber is selected, filter by that barber
+          if (gridBarberId !== "all" && app.barberId !== gridBarberId) return false;
+          return slotStart < app.parsedEndDate && slotEnd > app.parsedDate;
+        });
+
+        // Group intersecting apps by barberId to see if any barber has > 1 app in this slot
+        const barberMap: Record<string, typeof intersecting> = {};
+        intersecting.forEach(app => {
+          if (!barberMap[app.barberId]) {
+            barberMap[app.barberId] = [];
+          }
+          barberMap[app.barberId].push(app);
+        });
+
+        const hasConflictInSlot = Object.values(barberMap).some(list => list.length > 1);
+
+        slots.push({
+          time: timeStr,
+          appointments: intersecting,
+          hasConflict: hasConflictInSlot,
+          slotStart,
+          slotEnd
+        });
+      }
+    }
+    return slots;
+  }, [gridConflicts, gridDate, gridBarberId]);
 
   useEffect(() => {
     const firestore = db || getFirestore();
@@ -378,6 +495,207 @@ export function ProfessionalHome({ user, role, setCurrentScreen }: ProfessionalH
             </button>
           )}
 
+        </div>
+      </div>
+
+      {/* 4. Real-time Schedule Conflict Grid */}
+      <div className="p-6 liquid-glass/40 rounded-[2.5rem] shadow-inner space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="text-left">
+            <h3 className="text-[14px] sm:text-lg font-black text-white uppercase italic tracking-tight leading-none text-left">
+              Grade de Ajuste & Conflitos
+            </h3>
+            <span className="text-[8px] sm:text-[9px] text-neutral-500 font-extrabold uppercase tracking-widest mt-1.5 block">
+              Monitor de Colisões e Sobreposições em Tempo Real
+            </span>
+          </div>
+          
+          {/* Day Navigation Controls */}
+          <div className="flex items-center gap-1.5 bg-black/30 p-1.5 rounded-2xl border border-white/5 self-start sm:self-auto">
+            <button
+              onClick={() => {
+                const prev = new Date(gridDate);
+                prev.setDate(prev.getDate() - 1);
+                setGridDate(prev);
+              }}
+              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white transition-all active:scale-90"
+              title="Dia Anterior"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <div className="px-3 py-1 flex flex-col items-center min-w-[100px]">
+              <span className="text-[9.5px] font-black text-amber-500 uppercase tracking-wider">
+                {isSameDay(gridDate, new Date()) ? "Hoje" : format(gridDate, "eeee", { locale: ptBR })}
+              </span>
+              <span className="text-[10px] text-neutral-300 font-bold whitespace-nowrap">
+                {format(gridDate, "dd 'de' MMM", { locale: ptBR })}
+              </span>
+            </div>
+            <button
+              onClick={() => {
+                const next = new Date(gridDate);
+                next.setDate(next.getDate() + 1);
+                setGridDate(next);
+              }}
+              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white transition-all active:scale-90"
+              title="Próximo Dia"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+            {!isSameDay(gridDate, new Date()) && (
+              <button
+                onClick={() => setGridDate(new Date())}
+                className="px-2.5 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500 text-amber-500 hover:text-black text-[8px] font-black uppercase tracking-wider transition-all"
+              >
+                Hoje
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Manager Barber Selector Tab Row */}
+        {role === 'manager' && barbersInApps.length > 0 && (
+          <div className="space-y-2 text-left">
+            <label className="text-[8.5px] text-neutral-500 font-extrabold uppercase tracking-widest pl-1 block">
+              Filtrar por Profissional:
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                onClick={() => setGridBarberId("all")}
+                className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all duration-300 ${gridBarberId === "all" ? "bg-amber-500 text-black shadow-lg shadow-amber-500/20" : "bg-neutral-900/40 text-neutral-400 hover:text-white border border-white/5"}`}
+              >
+                Todos ({barbersInApps.length})
+              </button>
+              {barbersInApps.map(b => (
+                <button
+                  key={b.id}
+                  onClick={() => setGridBarberId(b.id)}
+                  className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all duration-300 ${gridBarberId === b.id ? "bg-amber-500 text-black shadow-lg shadow-amber-500/20" : "bg-neutral-900/40 text-neutral-400 hover:text-white border border-white/5"}`}
+                >
+                  {b.name.split(" ")[0]}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Health Status Indicator Banner */}
+        {activeConflictedCount > 0 ? (
+          <div className="flex items-center gap-3.5 bg-rose-500/10 border border-rose-500/20 p-4 rounded-2xl animate-pulse text-left">
+            <div className="w-9 h-9 rounded-xl bg-rose-500/20 flex items-center justify-center text-rose-400 shrink-0">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <div className="space-y-0.5">
+              <h4 className="text-xs font-black text-rose-400 uppercase tracking-wider">
+                Conflito de Horário Encontrado!
+              </h4>
+              <p className="text-[10px] text-neutral-400 font-medium">
+                Há <span className="text-rose-400 font-bold">{activeConflictedCount}</span> agendamentos com horários sobrepostos nesta data. Verifique os blocos piscantes em vermelho na grade para corrigir.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3.5 bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-2xl text-left">
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+              <Check className="w-5 h-5 font-black" />
+            </div>
+            <div className="space-y-0.5">
+              <h4 className="text-xs font-black text-emerald-400 uppercase tracking-wider">
+                Agenda 100% Organizada
+              </h4>
+              <p className="text-[10px] text-neutral-400 font-medium font-sans">
+                Tudo sob controle! Nenhum conflito ou colisão de horário detectado para {gridBarberId === "all" ? "os profissionais" : "este profissional"} na data selecionada.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Time Grid Block Visualizer */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 gap-2.5">
+          {gridSlots.map((slot) => {
+            const hasApps = slot.appointments.length > 0;
+            const hasOverlaps = slot.hasConflict;
+
+            let cardStyles = "border-neutral-800 bg-neutral-900/10 text-neutral-500";
+            if (hasOverlaps) {
+              cardStyles = "border-rose-500/40 bg-rose-950/20 text-rose-300 animate-pulse shadow-xs shadow-rose-500/5";
+            } else if (hasApps) {
+              cardStyles = "border-emerald-500/30 bg-emerald-950/10 text-emerald-400 shadow-xs shadow-emerald-500/5";
+            }
+
+            return (
+              <div
+                key={slot.time}
+                className={`p-3 rounded-2xl border text-center transition-all flex flex-col justify-between hover:scale-[1.02] duration-200 min-h-[90px] relative overflow-hidden group ${cardStyles}`}
+              >
+                {/* Visual Glow background on hover */}
+                <div className="absolute inset-0 bg-white/[0.01] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+
+                {/* Clock / Time label */}
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className={`text-[11px] font-black uppercase tracking-wider ${hasOverlaps ? "text-rose-400" : hasApps ? "text-emerald-400" : "text-neutral-500"}`}>
+                    {slot.time}
+                  </span>
+                  
+                  {hasOverlaps ? (
+                    <AlertTriangle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                  ) : hasApps ? (
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  ) : (
+                    <div className="w-1 h-1 rounded-full bg-neutral-700" />
+                  )}
+                </div>
+
+                {/* Content Area */}
+                <div className="text-left w-full h-full flex flex-col justify-end space-y-1 mt-auto">
+                  {hasOverlaps ? (
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-black text-rose-400 uppercase tracking-wide uppercase italic leading-none block">
+                        Colisão!
+                      </span>
+                      <p className="text-[9px] text-neutral-200 font-extrabold truncate leading-tight uppercase tracking-tight">
+                        {slot.appointments.map(app => app.clientName.split(" ")[0]).join(" + ")}
+                      </p>
+                      <span className="text-[7.5px] text-rose-400 font-medium block leading-none">
+                        Mesmo profissional
+                      </span>
+                    </div>
+                  ) : hasApps ? (
+                    <div className="space-y-0.5">
+                      <span className="text-[10.5px] font-black text-white truncate block uppercase leading-tight italic">
+                        {slot.appointments[0].clientName.split(" ")[0]}
+                      </span>
+                      <p className="text-[8px] text-emerald-500 font-black tracking-wide truncate uppercase leading-none">
+                        {slot.appointments[0].serviceName || "Agendado"}
+                      </p>
+                      
+                      {gridBarberId === "all" && (
+                        <p className="text-[7px] text-neutral-500 font-semibold truncate uppercase leading-tight">
+                          • {slot.appointments[0].barberName?.split(" ")[0]}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="pt-2 text-left">
+                      <span className="text-[8.5px] font-black uppercase tracking-wider text-neutral-600 block">
+                        Livre
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Invisible/hover overlay tooltip block for exact durations */}
+                {(hasApps || hasOverlaps) && (
+                  <div className="absolute inset-x-0 bottom-0 py-1 px-1 bg-black/90 text-white text-[7.5px] border-t border-white/5 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-full group-hover:translate-y-0 flex items-center justify-center gap-1">
+                    <Clock className="w-2.5 h-2.5 text-neutral-400 shrink-0" />
+                    <span className="text-slate-200 font-semibold truncate">
+                      {slot.appointments.map(app => `${app.clientName.split(" ")[0]} (${app.duration} min)`).join(" / ")}
+                    </span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 
