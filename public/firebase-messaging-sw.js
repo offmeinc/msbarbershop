@@ -27,22 +27,41 @@ messaging.onBackgroundMessage((payload) => {
     navigator.setAppBadge(1).catch(() => {});
   }
   
-  // High-reliability check: handle cases where title and body are contained in notification OR data
-  const title = payload.notification?.title || payload.data?.title;
-  const body = payload.notification?.body || payload.data?.body;
-  const url = payload.data?.url || "/";
-  const icon = payload.notification?.icon || payload.data?.icon || "/icon.png";
+  const title = payload.notification?.title || payload.data?.title || "MS BARBER SHOP";
+  const body = payload.notification?.body || payload.data?.body || "Nova mensagem";
+  const url = payload.data?.url || payload.fcmOptions?.link || "/";
+  const icon = payload.notification?.icon || payload.data?.icon || "https://i.ibb.co/LXjzGkFs/cd17f19f-71a4-453e-b9d7-f129a7ecfb2f.jpg";
   
-  // If we have notification contents and the browser did not automatically show it, 
-  // or it was a safe background silent data payload, trigger it manually
-  if (title || body) {
-    self.registration.showNotification(title || "MS BARBER SHOP", {
-      body: body || "Nova notificação",
-      icon,
-      data: { url },
-      tag: payload.data?.tag || "fcm-bg-msg",
-      requireInteraction: true
-    });
+  return self.registration.showNotification(title, {
+    body: body,
+    icon: icon,
+    badge: icon,
+    data: { url },
+    tag: payload.data?.tag || "fcm-bg-msg" + Date.now(),
+    requireInteraction: true,
+    vibrate: [200, 100, 200]
+  });
+});
+
+// Fallback for native push events not caught by FCM SDK
+self.addEventListener("push", (event) => {
+  console.log("[SW] Push Event received", event);
+  if (event.data) {
+    try {
+      const data = event.data.json();
+      // Only handle if it doesn't look like a standard FCM notification payload that FCM handles itself
+      if (!data.notification && data.data) {
+        const title = data.data.title || "MS BARBER SHOP";
+        const options = {
+          body: data.data.body || "Nova notificação",
+          icon: data.data.icon || "/favicon.ico",
+          data: { url: data.data.url || "/" }
+        };
+        event.waitUntil(self.registration.showNotification(title, options));
+      }
+    } catch (e) {
+      console.error("Error parsing push data", e);
+    }
   }
 });
 

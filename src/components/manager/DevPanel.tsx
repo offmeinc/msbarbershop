@@ -20,7 +20,7 @@ import {
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { toast } from 'react-hot-toast';
 
-type Tab = 'logs' | 'database' | 'simulate' | 'diagnostics' | 'health' | 'settings';
+type Tab = 'logs' | 'database' | 'simulate' | 'diagnostics' | 'pwa' | 'health' | 'settings';
 
 export function DevPanel() {
   const [activeTab, setActiveTab ] = useState<Tab>('logs');
@@ -35,12 +35,37 @@ export function DevPanel() {
   const [logFilter, setLogFilter] = useState<'all' | 'error' | 'warn' | 'info'>('all');
   const [healthStatus, setHealthStatus] = useState<any[]>([]);
   const [systemBanner, setSystemBanner] = useState(() => localStorage.getItem('ais_system_banner') || '');
+  const [swInfo, setSwInfo] = useState<any>(null);
 
   useEffect(() => {
     if (activeTab === 'logs') fetchLogs();
     if (activeTab === 'database') fetchDatabaseStats();
     if (activeTab === 'health') runHealthCheck();
+    if (activeTab === 'pwa') checkPWAStatus();
   }, [activeTab]);
+
+  const checkPWAStatus = async () => {
+    setLoading(true);
+    const info: any = {
+      browser: typeof navigator !== 'undefined' ? navigator.userAgent : 'N/A',
+      isStandalone: window.matchMedia('(display-mode: standalone)').matches,
+      hasServiceWorker: 'serviceWorker' in navigator,
+      hasPushManager: 'PushManager' in window,
+      hasNotification: 'Notification' in window,
+      permission: typeof Notification !== 'undefined' ? Notification.permission : 'N/A',
+    };
+
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      info.registrations = regs.map(r => ({
+        scriptURL: r.active?.scriptURL || r.installing?.scriptURL || r.waiting?.scriptURL,
+        state: r.active ? 'active' : r.installing ? 'installing' : 'waiting',
+        scope: r.scope
+      }));
+    }
+    setSwInfo(info);
+    setLoading(false);
+  };
 
   const updateSystemBanner = () => {
     if (systemBanner) {
@@ -249,7 +274,7 @@ export function DevPanel() {
         </h2>
         
         <div className="flex gap-2 bg-black/40 p-1 rounded-lg border border-white/5 flex-wrap">
-          {(['logs', 'database', 'simulate', 'diagnostics', 'health', 'settings'] as Tab[]).map((t) => (
+          {(['logs', 'database', 'simulate', 'diagnostics', 'pwa', 'health', 'settings'] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setActiveTab(t)}
@@ -257,7 +282,7 @@ export function DevPanel() {
                 activeTab === t ? 'bg-red-500/20 text-red-400' : 'text-neutral-500 hover:text-neutral-300'
               }`}
             >
-              {t === 'simulate' ? 'Simular' : t === 'diagnostics' ? 'Diagnóstico' : t === 'settings' ? 'Config' : t === 'database' ? 'Dados' : t === 'health' ? 'Saúde' : t}
+              {t === 'simulate' ? 'Simular' : t === 'diagnostics' ? 'Diagnóstico' : t === 'settings' ? 'Config' : t === 'database' ? 'Dados' : t === 'health' ? 'Saúde' : t === 'pwa' ? 'PWA' : t}
             </button>
           ))}
         </div>
@@ -351,6 +376,97 @@ export function DevPanel() {
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {activeTab === 'pwa' && (
+        <div className="grid gap-4 animate-in fade-in duration-300">
+           <div className="liquid-glass p-5 rounded-2xl border border-white/5 space-y-6">
+              <div className="flex justify-between items-center">
+                 <h3 className="text-[10px] font-black text-neutral-400 uppercase tracking-widest flex items-center gap-2">
+                   <Zap className="w-3 h-3" /> Estado do PWA & Push
+                 </h3>
+                 <button onClick={checkPWAStatus} className={`p-1.5 bg-white/5 rounded-lg ${loading ? 'animate-spin' : ''}`}>
+                   <RefreshCw className="w-3.5 h-3.5 text-neutral-400" />
+                 </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                 {[
+                   { label: 'Standalone (PWA)', value: swInfo?.isStandalone ? 'Sim' : 'Não', color: swInfo?.isStandalone ? 'text-green-500' : 'text-amber-500' },
+                   { label: 'Modo Browser', value: swInfo?.isStandalone ? 'PWA' : 'Web', color: 'text-blue-500' },
+                   { label: 'Permissão Notif.', value: swInfo?.permission, color: swInfo?.permission === 'granted' ? 'text-green-500' : 'text-red-500' },
+                   { label: 'Push Manager', value: swInfo?.hasPushManager ? 'Sim' : 'Não', color: swInfo?.hasPushManager ? 'text-green-500' : 'text-red-500' },
+                 ].map(item => (
+                   <div key={item.label} className="p-3 bg-white/[0.02] rounded-xl border border-white/5">
+                      <div className="text-[8px] text-neutral-500 font-black uppercase mb-1">{item.label}</div>
+                      <div className={`text-xs font-black ${item.color}`}>{item.value}</div>
+                   </div>
+                 ))}
+              </div>
+
+              <div className="space-y-3">
+                 <label className="text-[9px] font-black text-neutral-500 uppercase">Service Workers Ativos</label>
+                 {swInfo?.registrations?.length === 0 ? (
+                   <div className="text-[10px] text-neutral-600 italic">Nenhum Service Worker registrado.</div>
+                 ) : (
+                   swInfo?.registrations?.map((r: any, i: number) => (
+                     <div key={i} className="p-3 bg-black/30 rounded-xl border border-white/5 flex flex-col gap-1">
+                        <div className="flex justify-between items-center">
+                           <span className="text-[10px] font-bold text-white truncate max-w-[200px]">{r.scriptURL?.split('/').pop()}</span>
+                           <span className="text-[8px] font-black uppercase bg-green-500/10 text-green-500 px-1.5 py-0.5 rounded">{r.state}</span>
+                        </div>
+                        <div className="text-[8px] text-neutral-500 font-mono truncate">{r.scope}</div>
+                     </div>
+                   ))
+                 )}
+              </div>
+
+              <div className="flex gap-2">
+                 <button 
+                   onClick={async () => {
+                     setLoading(true);
+                     try {
+                        const regs = await navigator.serviceWorker.getRegistrations();
+                        for(let reg of regs) await reg.unregister();
+                        toast.success("Todos os SW removidos. Recarregando...");
+                        setTimeout(() => window.location.reload(), 1000);
+                     } catch(e) {
+                        toast.error("Erro ao remover SW");
+                     } finally {
+                        setLoading(false);
+                     }
+                   }}
+                   className="text-[10px] font-black bg-red-500/10 text-red-500 px-4 py-2 rounded-lg hover:bg-red-500/20 transition-colors"
+                 >
+                   Remover todos SW
+                 </button>
+                 <button 
+                   onClick={async () => {
+                      toast.promise(
+                        (async () => {
+                          const regs = await navigator.serviceWorker.getRegistrations();
+                          for(let reg of regs) await reg.update();
+                        })(),
+                        { loading: 'Atualizando...', success: 'SW Atualizados!', error: 'Falha na atualização' }
+                      );
+                   }}
+                   className="text-[10px] font-black bg-blue-500/10 text-blue-500 px-4 py-2 rounded-lg hover:bg-blue-500/20 transition-colors"
+                 >
+                   Forçar Update SW
+                 </button>
+              </div>
+
+              <div className="bg-blue-500/5 border border-blue-500/10 p-4 rounded-xl flex items-start gap-3">
+                 <ShieldCheck className="w-5 h-5 text-blue-500 mt-0.5 shrink-0" />
+                 <div className="space-y-1">
+                    <p className="text-[10px] text-blue-400 font-bold">Dica iOS PWA:</p>
+                    <p className="text-[9px] text-blue-500/70 leading-relaxed font-medium">
+                      Para notificações em segundo plano no iOS, o app DEVE ser adicionado à tela de início (Compartilhar → Adicionar à Tela de Início) e as permissões devem ser aceitas DENTRO do app standalone.
+                    </p>
+                 </div>
+              </div>
+           </div>
         </div>
       )}
 
