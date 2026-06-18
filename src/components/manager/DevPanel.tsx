@@ -15,12 +15,13 @@ import {
   Bug,
   Ghost,
   ShieldCheck,
-  Zap
+  Zap,
+  Sparkles
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { toast } from 'react-hot-toast';
 
-type Tab = 'logs' | 'database' | 'simulate' | 'diagnostics' | 'pwa' | 'health' | 'settings';
+type Tab = 'logs' | 'database' | 'simulate' | 'diagnostics' | 'pwa' | 'health' | 'ui' | 'performance' | 'navigation' | 'settings';
 
 export function DevPanel() {
   const [activeTab, setActiveTab ] = useState<Tab>('logs');
@@ -36,13 +37,46 @@ export function DevPanel() {
   const [healthStatus, setHealthStatus] = useState<any[]>([]);
   const [systemBanner, setSystemBanner] = useState(() => localStorage.getItem('ais_system_banner') || '');
   const [swInfo, setSwInfo] = useState<any>(null);
+  const [primaryColor, setPrimaryColor] = useState(() => localStorage.getItem('ais_custom_color') || '#f59e0b');
+  const [fps, setFps] = useState(60);
 
   useEffect(() => {
     if (activeTab === 'logs') fetchLogs();
     if (activeTab === 'database') fetchDatabaseStats();
     if (activeTab === 'health') runHealthCheck();
     if (activeTab === 'pwa') checkPWAStatus();
+    
+    let frameId: number;
+    if (activeTab === 'performance') {
+      let lastTime = performance.now();
+      let frames = 0;
+      const checkFps = () => {
+        frames++;
+        const now = performance.now();
+        if (now >= lastTime + 1000) {
+          setFps(Math.round((frames * 1000) / (now - lastTime)));
+          frames = 0;
+          lastTime = now;
+        }
+        frameId = requestAnimationFrame(checkFps);
+      };
+      frameId = requestAnimationFrame(checkFps);
+    }
+    return () => cancelAnimationFrame(frameId);
   }, [activeTab]);
+
+  const updatePrimaryColor = (color: string) => {
+    setPrimaryColor(color);
+    localStorage.setItem('ais_custom_color', color);
+    document.documentElement.style.setProperty('--primary-color', color);
+    toast.success("Cor aplicada!");
+  };
+
+  const navigateTo = (screen: string) => {
+    localStorage.setItem('ais_nav_teleport', screen);
+    toast.success(`Teleportando para ${screen}...`);
+    setTimeout(() => window.location.reload(), 500);
+  };
 
   const checkPWAStatus = async () => {
     setLoading(true);
@@ -274,7 +308,7 @@ export function DevPanel() {
         </h2>
         
         <div className="flex gap-2 bg-black/40 p-1 rounded-lg border border-white/5 flex-wrap">
-          {(['logs', 'database', 'simulate', 'diagnostics', 'pwa', 'health', 'settings'] as Tab[]).map((t) => (
+          {(['logs', 'database', 'simulate', 'diagnostics', 'pwa', 'health', 'navigation', 'ui', 'performance', 'settings'] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setActiveTab(t)}
@@ -282,12 +316,127 @@ export function DevPanel() {
                 activeTab === t ? 'bg-red-500/20 text-red-400' : 'text-neutral-500 hover:text-neutral-300'
               }`}
             >
-              {t === 'simulate' ? 'Simular' : t === 'diagnostics' ? 'Diagnóstico' : t === 'settings' ? 'Config' : t === 'database' ? 'Dados' : t === 'health' ? 'Saúde' : t === 'pwa' ? 'PWA' : t}
+              {t === 'simulate' ? 'Simular' : 
+               t === 'diagnostics' ? 'Diagnóstico' : 
+               t === 'settings' ? 'Config' : 
+               t === 'database' ? 'Dados' : 
+               t === 'health' ? 'Saúde' : 
+               t === 'pwa' ? 'PWA' : 
+               t === 'navigation' ? 'Nav' : 
+               t === 'ui' ? 'UI' : 
+               t === 'performance' ? 'Perf' : t}
             </button>
           ))}
         </div>
       </div>
       
+      {activeTab === 'navigation' && (
+        <div className="grid gap-4 animate-in fade-in duration-300">
+           <div className="liquid-glass p-5 rounded-2xl border border-white/5 space-y-6">
+              <h3 className="text-[10px] font-black text-neutral-400 uppercase tracking-widest flex items-center gap-2">
+                 <Ghost className="w-3 h-3" /> Teleportador de Telas
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                 {[
+                   { id: 'home', name: 'Home Client' },
+                   { id: 'agendamento', name: 'Agendamento' },
+                   { id: 'checkin', name: 'Check-in' },
+                   { id: 'barber-dashboard', name: 'Barber Dashboard' },
+                   { id: 'manager-dashboard', name: 'Admin Dashboard' },
+                   { id: 'financial', name: 'Financeiro' },
+                   { id: 'profile', name: 'Pefil' },
+                   { id: 'notifications', name: 'Notificações' },
+                 ].map(screen => (
+                   <button 
+                     key={screen.id}
+                     onClick={() => navigateTo(screen.id)}
+                     className="p-3 bg-white/5 border border-white/5 rounded-xl hover:bg-white/10 transition-all text-left"
+                   >
+                     <div className="text-[10px] font-black text-white">{screen.name}</div>
+                     <div className="text-[8px] text-neutral-500 font-mono mt-1 uppercase tracking-tighter">ID: {screen.id}</div>
+                   </button>
+                 ))}
+              </div>
+           </div>
+        </div>
+      )}
+
+      {activeTab === 'ui' && (
+        <div className="grid gap-4 animate-in fade-in duration-300">
+           <div className="liquid-glass p-5 rounded-2xl border border-white/5 space-y-6">
+              <h3 className="text-[10px] font-black text-neutral-400 uppercase tracking-widest flex items-center gap-2">
+                 <Sparkles className="w-3 h-3" /> Customizador de Interface (Live)
+              </h3>
+              
+              <div className="space-y-4">
+                 <div>
+                    <label className="text-[9px] font-black text-neutral-500 uppercase block mb-2">Cor Primária Global</label>
+                    <div className="flex flex-wrap gap-2">
+                       {['#f59e0b', '#3b82f6', '#ef4444', '#10b981', '#a855f7', '#ec4899', '#ffffff'].map(c => (
+                         <button 
+                           key={c}
+                           onClick={() => updatePrimaryColor(c)}
+                           className={`w-8 h-8 rounded-full border-2 transition-transform active:scale-95 ${
+                             primaryColor === c ? 'border-white scale-110' : 'border-white/10'
+                           }`}
+                           style={{ backgroundColor: c }}
+                         />
+                       ))}
+                       <input 
+                         type="color" 
+                         value={primaryColor} 
+                         onChange={(e) => updatePrimaryColor(e.target.value)}
+                         className="w-8 h-8 rounded-full bg-transparent border-none cursor-pointer"
+                       />
+                    </div>
+                 </div>
+
+                 <div className="p-4 bg-white/5 rounded-xl border border-white/5">
+                    <p className="text-[10px] text-neutral-400 italic">
+                      As cores alteradas serão aplicadas via CSS Variables e persistidas no LocalStorage deste dispositivo.
+                    </p>
+                 </div>
+              </div>
+           </div>
+        </div>
+      )}
+
+      {activeTab === 'performance' && (
+        <div className="grid gap-4 animate-in fade-in duration-300">
+           <div className="liquid-glass p-5 rounded-2xl border border-white/5 space-y-6">
+              <h3 className="text-[10px] font-black text-neutral-400 uppercase tracking-widest flex items-center gap-2">
+                 <Activity className="w-3 h-3" /> Métricas em Tempo Real
+              </h3>
+              
+              <div className="grid grid-cols-2 gap-4">
+                 <div className="p-4 bg-black/40 rounded-2xl border border-white/5 flex flex-col items-center">
+                    <span className={`text-3xl font-black ${fps < 30 ? 'text-red-500' : 'text-green-500'}`}>{fps}</span>
+                    <span className="text-[8px] font-black text-neutral-500 uppercase mt-1">FPS</span>
+                 </div>
+                 <div className="p-4 bg-black/40 rounded-2xl border border-white/5 flex flex-col items-center">
+                    <span className="text-3xl font-black text-blue-500">
+                       {(performance as any).memory ? Math.round((performance as any).memory.usedJSHeapSize / 1048576) : '--'}
+                    </span>
+                    <span className="text-[8px] font-black text-neutral-500 uppercase mt-1">Memory (MB)</span>
+                 </div>
+              </div>
+
+              <div className="space-y-2">
+                 {[
+                   { label: 'Hardware Concurrency', value: navigator.hardwareConcurrency || 'N/A' },
+                   { label: 'Device Pixel Ratio', value: window.devicePixelRatio },
+                   { label: 'Screen Resolution', value: `${window.screen.width}x${window.screen.height}` },
+                   { label: 'Viewport Size', value: `${window.innerWidth}x${window.innerHeight}` },
+                 ].map(item => (
+                   <div key={item.label} className="flex justify-between items-center p-2 bg-white/[0.02] rounded-lg border border-white/5">
+                      <span className="text-[9px] font-black text-neutral-500 uppercase">{item.label}</span>
+                      <span className="text-[10px] font-black text-white">{item.value}</span>
+                   </div>
+                 ))}
+              </div>
+           </div>
+        </div>
+      )}
       {activeTab === 'logs' && (
         <div className="grid gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
           <div className="grid grid-cols-3 gap-2">

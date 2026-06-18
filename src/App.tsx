@@ -295,7 +295,25 @@ export default function App() {
       setUserRole(override);
     }
   }, [userRole]);
+
   const { currentScreen, setCurrentScreen } = usePathNavigation<Screen>("home");
+
+  // Global Teleport Override
+  useEffect(() => {
+    const teleport = localStorage.getItem('ais_nav_teleport');
+    if (teleport) {
+      localStorage.removeItem('ais_nav_teleport');
+      setCurrentScreen(teleport as any);
+    }
+  }, [setCurrentScreen]);
+
+  // Global UI Customization Override
+  useEffect(() => {
+    const customColor = localStorage.getItem('ais_custom_color');
+    if (customColor) {
+      document.documentElement.style.setProperty('--primary-color', customColor);
+    }
+  }, []);
   const { scrollY } = useScroll();
   const [hidden, setHidden] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);

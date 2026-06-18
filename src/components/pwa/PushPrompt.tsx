@@ -46,12 +46,7 @@ export function PushPrompt({ userId, userRole }: PushPromptProps) {
       toast.success("Notificações ativadas com sucesso!");
       setShowPrompt(false);
     } else {
-      const permission = Notification.permission;
-      if (permission === 'denied') {
-        toast.error("Permissão negada. Ative nas configurações do seu iPhone.");
-      } else {
-        toast.error("Não foi possível ativar as notificações.");
-      }
+      toast.error("Não foi possível ativar as notificações.");
     }
   };
 
