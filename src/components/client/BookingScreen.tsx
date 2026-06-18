@@ -930,6 +930,7 @@ export function BookingScreen({
   const [isBooking, setIsBooking] = useState(false);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [suggestedAlternativeTimes, setSuggestedAlternativeTimes] = useState<string[]>([]);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [createdAppointmentId, setCreatedAppointmentId] = useState<string | null>(null);
   const [guestName, setGuestName] = useState(editAppointment?.clientName || initialClient?.name || "");
@@ -1487,8 +1488,26 @@ export function BookingScreen({
       setError(
         "Este horário foi reservado por outra pessoa enquanto você finalizava. Por favor, escolha outro horário.",
       );
+      // Calculate suggested alternative free times
+      const freeSlots = timeSlots.filter((s) => s.available);
+      if (freeSlots.length > 0) {
+        const [selH, selM] = selectedTime.split(":").map(Number);
+        const selVal = selH * 60 + selM;
+        const suggestions = [...freeSlots]
+          .sort((a, b) => {
+            const [aH, aM] = a.time.split(":").map(Number);
+            const [bH, bM] = b.time.split(":").map(Number);
+            const aVal = aH * 60 + aM;
+            const bVal = bH * 60 + bM;
+            return Math.abs(aVal - selVal) - Math.abs(bVal - selVal);
+          })
+          .slice(0, 3)
+          .map((s) => s.time);
+        setSuggestedAlternativeTimes(suggestions);
+      } else {
+        setSuggestedAlternativeTimes([]);
+      }
       setIsBooking(false);
-      setStep(3); // Go back to calendar
       return;
     }
 
@@ -1528,8 +1547,26 @@ export function BookingScreen({
       setError(
         "Este horário foi bloqueado ou reservado recentemente. Por favor, escolha outro horário.",
       );
+      // Calculate suggested alternative free times
+      const freeSlots = timeSlots.filter((s) => s.available);
+      if (freeSlots.length > 0) {
+        const [selH, selM] = selectedTime.split(":").map(Number);
+        const selVal = selH * 60 + selM;
+        const suggestions = [...freeSlots]
+          .sort((a, b) => {
+            const [aH, aM] = a.time.split(":").map(Number);
+            const [bH, bM] = b.time.split(":").map(Number);
+            const aVal = aH * 60 + aM;
+            const bVal = bH * 60 + bM;
+            return Math.abs(aVal - selVal) - Math.abs(bVal - selVal);
+          })
+          .slice(0, 3)
+          .map((s) => s.time);
+        setSuggestedAlternativeTimes(suggestions);
+      } else {
+        setSuggestedAlternativeTimes([]);
+      }
       setIsBooking(false);
-      setStep(3); // Go back to calendar
       return;
     }
 
@@ -2502,7 +2539,32 @@ export function BookingScreen({
                   </div>
                 </div>
                 {error && (
-                  <p className="text-red-500 text-center font-bold">{error}</p>
+                  <div className="space-y-4 my-2">
+                    <p className="text-red-500 text-center font-bold px-4">{error}</p>
+                    {suggestedAlternativeTimes.length > 0 && (
+                      <div className="bg-neutral-900/60 p-4 rounded-2xl border border-amber-500/10 space-y-2">
+                        <p className="text-[10px] text-amber-400 font-bold text-center uppercase tracking-wider">
+                          💡 Sugestão: Selecione um destes horários livres para hoje:
+                        </p>
+                        <div className="flex gap-2 justify-center flex-wrap">
+                          {suggestedAlternativeTimes.map((t) => (
+                            <button
+                              key={t}
+                              type="button"
+                              onClick={() => {
+                                setSelectedTime(t);
+                                setSuggestedAlternativeTimes([]);
+                                setError(null);
+                              }}
+                              className="px-3.5 py-2 bg-amber-500/10 hover:bg-amber-500 text-neutral-300 hover:text-black font-semibold text-xs rounded-xl border border-amber-500/20 active:scale-95 transition-all cursor-pointer"
+                            >
+                              {t}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
                 <button
                   disabled={isBooking}
