@@ -1,3 +1,11 @@
+self.addEventListener("install", (event) => {
+  self.skipWaiting();
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(clients.claim());
+});
+
 importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js");
 
@@ -19,16 +27,21 @@ messaging.onBackgroundMessage((payload) => {
     navigator.setAppBadge(1).catch(() => {});
   }
   
-  if (payload.data && !payload.notification) {
-    let title = payload.data.title || "MS BARBER SHOP";
-    let body = payload.data.body || "Nova notificação";
-    let url = payload.data.url || "/";
-    let icon = payload.data.icon || "/icon.png";
-    
-    self.registration.showNotification(title, {
-      body,
+  // High-reliability check: handle cases where title and body are contained in notification OR data
+  const title = payload.notification?.title || payload.data?.title;
+  const body = payload.notification?.body || payload.data?.body;
+  const url = payload.data?.url || "/";
+  const icon = payload.notification?.icon || payload.data?.icon || "/icon.png";
+  
+  // If we have notification contents and the browser did not automatically show it, 
+  // or it was a safe background silent data payload, trigger it manually
+  if (title || body) {
+    self.registration.showNotification(title || "MS BARBER SHOP", {
+      body: body || "Nova notificação",
       icon,
-      data: { url }
+      data: { url },
+      tag: payload.data?.tag || "fcm-bg-msg",
+      requireInteraction: true
     });
   }
 });
