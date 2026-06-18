@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { db } from "../lib/firebase";
 import { toast } from "./ui/Toast";
+import { EmptyState } from "./common/EmptyState";
 
 interface NotificationsScreenProps {
   notifications: any[];
@@ -352,15 +353,11 @@ export const NotificationsScreen = ({ notifications, appointments, onBack, onCle
             </AnimatePresence>
 
             {filteredNotifications.length === 0 && (
-              <div className="liquid-glass py-20 text-center space-y-4 rounded-[2.5rem] -dashed">
-                <BellOff className="w-12 h-12 text-neutral-800 mx-auto" />
-                <div className="space-y-0.5">
-                  <p className="text-xs text-neutral-500 uppercase font-black tracking-widest">Nenhuma notificação filtrada.</p>
-                  <p className="text-[9px] text-neutral-600 font-bold uppercase tracking-widest leading-normal max-w-xs mx-auto">
-                    Seu feed de novidades e confirmados está completamente livre de pendências.
-                  </p>
-                </div>
-              </div>
+              <EmptyState 
+                icon={BellOff} 
+                title="Tudo limpo por aqui" 
+                description="Seu feed de novidades e avisos está completamente livre de pendências."
+              />
             )}
           </div>
         ) : (
@@ -418,13 +415,11 @@ export const NotificationsScreen = ({ notifications, appointments, onBack, onCle
             })}
 
             {history.length === 0 && (
-              <div className="liquid-glass py-20 text-center space-y-4 rounded-[2.5rem] -dashed">
-                <CalendarX className="w-12 h-12 text-neutral-800 mx-auto" />
-                <div className="space-y-0.5">
-                  <p className="text-xs text-neutral-500 uppercase font-black tracking-widest">Nenhum histórico ativo.</p>
-                  <p className="text-[9px] text-neutral-600 font-bold uppercase tracking-widest">Nenhum atendimento processado no sistema até o momento.</p>
-                </div>
-              </div>
+              <EmptyState 
+                icon={CalendarX} 
+                title="Sem histórico" 
+                description="Nenhum atendimento processado no sistema até o momento."
+              />
             )}
           </div>
         )}

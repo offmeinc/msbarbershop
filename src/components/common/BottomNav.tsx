@@ -1,6 +1,7 @@
 import { memo } from "react";
 import { Home, CalendarDays, Users, Scissors, GripHorizontal, Sliders } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { triggerLightHaptic } from "../../lib/haptics";
 
 export const BottomNav = memo(function BottomNav({ userRole, currentScreen, setCurrentScreen, user, unreadCount, isVisible = true }: { userRole: string, currentScreen: string, setCurrentScreen: (s: any) => void, user: any, unreadCount: number, isVisible?: boolean }) {
   if (!user) return null;
@@ -66,7 +67,10 @@ export const BottomNav = memo(function BottomNav({ userRole, currentScreen, setC
                 (window as any).__pwaPreloaders[item.screen]();
               }
             }}
-            onClick={() => setCurrentScreen(currentScreen === item.screen ? "home" : item.screen as any)} 
+            onClick={() => {
+              triggerLightHaptic();
+              setCurrentScreen(currentScreen === item.screen ? "home" : item.screen as any);
+            }} 
             className={`flex items-center justify-center gap-2 py-3.5 px-5 rounded-full transition-all duration-300 relative group ${isActive ? "bg-amber-500 text-black shadow-lg shadow-amber-500/20" : "text-neutral-500 hover:text-white"}`}
           >
             <div className={`transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>

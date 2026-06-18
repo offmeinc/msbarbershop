@@ -1,9 +1,10 @@
 import { useState, useEffect, memo } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { ChevronRight, Sparkles, MapPin, Instagram, Phone, Clock, Scissors, Image as ImageIcon, Star } from "lucide-react";
+import { ChevronRight, Sparkles, MapPin, Instagram, Phone, Clock, Scissors, Image as ImageIcon, Star, AlertCircle } from "lucide-react";
 import { BARBERSHOP_NAME, BARBERSHOP_ADDRESS, BARBERSHOP_PHONE, BARBERSHOP_INSTAGRAM, GOOGLE_REVIEW_URL } from "../../constants";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
 import { collection, query, orderBy, limit, onSnapshot } from "firebase/firestore";
+import { Skeleton } from "../common/Skeleton";
 
 const triggerBookingPreload = () => {
   if (typeof window !== "undefined" && (window as any).__pwaPreloaders?.booking) {
@@ -32,12 +33,18 @@ export const HomeScreen = memo(function HomeScreen({
   const [locationSelectorOpen, setLocationSelectorOpen] = useState(false);
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
   const [portfolio, setPortfolio] = useState<any[]>([]);
+  const [loadingPortfolio, setLoadingPortfolio] = useState(true);
 
   useEffect(() => {
+    setLoadingPortfolio(true);
     const q = query(collection(db, "portfolio"), orderBy("createdAt", "desc"), limit(8));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setPortfolio(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    }, (err) => handleFirestoreError(err, OperationType.LIST, "portfolio"));
+      setLoadingPortfolio(false);
+    }, (err) => {
+      handleFirestoreError(err, OperationType.LIST, "portfolio");
+      setLoadingPortfolio(false);
+    });
     return () => unsubscribe();
   }, []);
 
@@ -115,18 +122,19 @@ export const HomeScreen = memo(function HomeScreen({
       </div>
 
       {/* Portfolio Gallery */}
-      {portfolio.length > 0 && (
-          <div className="px-6 mb-12">
-              <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xs font-black uppercase tracking-[0.2em] text-neutral-500">Nossos Trabalhos</h2>
-                  <div className="flex gap-1.5 md:hidden">
-                      <div className="w-1 h-1 rounded-full bg-amber-500" />
-                      <div className="liquid-glass w-1 h-1 rounded-full" />
-                      <div className="liquid-glass w-1 h-1 rounded-full" />
-                  </div>
-              </div>
-              <div className="flex md:grid gap-4 overflow-x-auto md:overflow-x-visible pb-4 no-scrollbar -mx-6 px-6 md:mx-0 md:px-0 md:grid-cols-4">
-                  {portfolio.map((item, idx) => (
+      <div className="px-6 mb-12">
+          <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xs font-black uppercase tracking-[0.2em] text-neutral-500">Trabalhos Recentes</h2>
+          </div>
+          <div className="flex md:grid gap-4 overflow-x-auto md:overflow-x-visible pb-4 no-scrollbar -mx-6 px-6 md:mx-0 md:px-0 md:grid-cols-4">
+              {loadingPortfolio ? (
+                  [1, 2, 3, 4].map((i) => (
+                      <div key={i} className="flex-shrink-0 md:flex-shrink w-48 md:w-full aspect-[3/4] rounded-[2.5rem] overflow-hidden border border-white/5">
+                          <Skeleton className="w-full h-full" />
+                      </div>
+                  ))
+              ) : portfolio.length > 0 ? (
+                  portfolio.map((item, idx) => (
                       <motion.div 
                           key={item.id}
                           initial={{ opacity: 0, scale: 0.9 }}
@@ -144,10 +152,15 @@ export const HomeScreen = memo(function HomeScreen({
                               <p className="text-[10px] font-black uppercase text-white tracking-widest leading-tight">{item.caption || "Top Styles"}</p>
                           </div>
                       </motion.div>
-                  ))}
-              </div>
+                  ))
+              ) : (
+                <div className="flex-shrink-0 w-full col-span-full py-12 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[2.5rem] opacity-30">
+                   <ImageIcon className="w-8 h-8 mb-2" />
+                   <p className="text-[10px] font-black uppercase tracking-widest">Nenhuma foto no momento</p>
+                </div>
+              )}
           </div>
-      )}
+      </div>
 
       {/* Services Preview */}
       <div id="servicos" className="px-6 mb-12 scroll-mt-24">

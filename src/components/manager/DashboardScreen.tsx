@@ -77,6 +77,8 @@ import { DevPanel } from "./DevPanel";
 import { CalendarWidget, AppointmentModal } from "../CalendarWidget";
 import { ServicesManagement, CollaboratorsManager, WorkingHoursManager } from "./ManagementScreens";
 import { ReviewModal } from "../common/ReviewModal";
+import { Skeleton } from "../common/Skeleton";
+import { EmptyState } from "../common/EmptyState";
 
 export function EarningsDashboard({ appointments, services }: { appointments: any[], services: any[] }) {
   const chartData = useMemo(() => {
@@ -1536,15 +1538,36 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
 
                       {/* Appointments List rendering */}
                       {loading ? (
-                        <div className="py-20 flex flex-col items-center justify-center gap-3">
-                          <Loader2 className="animate-spin text-amber-500 w-8 h-8" />
-                          <p className="text-neutral-500 text-[10px] uppercase tracking-widest font-black">Buscando Atendimentos...</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {[1, 2, 3, 4].map((i) => (
+                            <div key={i} className="bg-neutral-900 rounded-[2rem] border border-white/5 p-6 h-32 relative overflow-hidden">
+                              <div className="flex justify-between items-start mb-4">
+                                <div className="space-y-2 w-1/2">
+                                  <Skeleton className="h-2 w-3/4" />
+                                  <Skeleton className="h-4 w-full" />
+                                </div>
+                                <Skeleton variant="circular" className="w-16 h-6 rounded-xl" />
+                              </div>
+                              <div className="flex gap-2">
+                                <Skeleton variant="circular" className="w-8 h-8" />
+                                <Skeleton className="h-4 flex-1" />
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       ) : filteredAppointmentsList.length === 0 ? (
-                        <div className="p-16 text-center liquid-glass/40 rounded-3xl ">
-                          <p className="text-neutral-500 font-bold uppercase text-xs tracking-widest mb-1">Nenhum atendimento</p>
-                          <p className="text-[10px] text-neutral-700 uppercase font-black tracking-widest">Nesta categoria para o filtro atual</p>
-                        </div>
+                        <EmptyState 
+                          icon={Calendar} 
+                          title="Tudo limpo por aqui" 
+                          description={filterStatus === 'all' 
+                            ? "Nenhum agendamento encontrado para esta data." 
+                            : `Nenhum agendamento com status "${filterStatus}" nesta data.`
+                          }
+                          action={onNewBooking ? {
+                            label: "Novo Agendamento",
+                            onClick: onNewBooking
+                          } : undefined}
+                        />
                       ) : (
                         <motion.div 
                           layout

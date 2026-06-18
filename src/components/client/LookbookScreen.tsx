@@ -4,6 +4,8 @@ import { X, Heart, Info, Sparkles, Scissors, Image as ImageIcon, Calendar, Check
 import { db, handleFirestoreError, OperationType, safeStringify } from "../../lib/firebase";
 import { collection, query, orderBy, onSnapshot, getFirestore, limit } from "firebase/firestore";
 import { toast } from "../ui/Toast";
+import { Skeleton } from "../common/Skeleton";
+import { EmptyState } from "../common/EmptyState";
 
 interface LookbookScreenProps {
   onBack: () => void;
@@ -122,20 +124,19 @@ export function LookbookScreen({ onBack, onBook }: LookbookScreenProps) {
 
       {/* Main Grid View */}
       {loading && activeTab === "team" ? (
-        <div className="flex justify-center py-24">
-          <div className="flex flex-col items-center gap-3">
-            <span className="w-8 h-8 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin" />
-            <p className="text-[9px] text-neutral-500 uppercase font-black tracking-widest">Carregando Galeria...</p>
-          </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="aspect-[3/4] rounded-[2rem] overflow-hidden border border-white/5">
+              <Skeleton className="w-full h-full" />
+            </div>
+          ))}
         </div>
       ) : currentItems.length === 0 ? (
-        <div className="liquid-glass py-20 text-center -dashed rounded-[2.5rem] flex flex-col items-center justify-center space-y-4">
-          <ImageIcon className="w-10 h-10 text-neutral-800 animate-pulse" />
-          <div className="space-y-1">
-            <h4 className="text-xs font-black uppercase text-neutral-500 tracking-wide">Nenhuma foto no portfólio ainda</h4>
-            <p className="text-[9px] text-neutral-600 max-w-[200px] mx-auto uppercase font-bold">Mais fotos exclusivas serão adicionadas em breve</p>
-          </div>
-        </div>
+        <EmptyState 
+          icon={ImageIcon} 
+          title="Galeria em Construção" 
+          description="Ainda não adicionamos fotos a esta categoria. Volte em breve para se inspirar!"
+        />
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {currentItems.map((item) => {
