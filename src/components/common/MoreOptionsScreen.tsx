@@ -43,7 +43,7 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
   const unreadCount = staffNotifications.filter(n => !n.read).length;
 
   const getRoleLabel = () => {
-    if (role === 'developer') return 'Desenvolvedor / Cloud Admin 🛠️';
+    if (role === 'developer') return 'Desenvolvedor do App 🛠️';
     if (role === 'manager') return 'Gestor';
     if (role === 'barber') return 'Profissional / Barbeiro';
     return 'Cliente VIP';

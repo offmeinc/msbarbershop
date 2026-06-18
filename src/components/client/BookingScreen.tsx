@@ -948,6 +948,8 @@ export function BookingScreen({
   const [appliedDiscount, setAppliedDiscount] = useState(0);
   const [validatingCoupon, setValidatingCoupon] = useState(false);
   const [couponError, setCouponError] = useState<string | null>(null);
+  const [showDevModal, setShowDevModal] = useState(false);
+  const [pendingBarber, setPendingBarber] = useState<string | null>(null);
   const [couponSuccess, setCouponSuccess] = useState<string | null>(null);
 
   const [voiceInput, setVoiceInput] = useState("");
@@ -1983,8 +1985,13 @@ export function BookingScreen({
                           <button
                             onClick={() => {
                               triggerLightHaptic();
-                              setSelectedBarber(b.id);
-                              setStep(3);
+                              if (b.role === 'developer') {
+                                setPendingBarber(b.id);
+                                setShowDevModal(true);
+                              } else {
+                                setSelectedBarber(b.id);
+                                setStep(3);
+                              }
                             }}
                             className={`w-full p-6 py-7 rounded-[2.2rem] border flex items-center justify-between transition-all group text-left ${
                               isSelected 
@@ -2005,7 +2012,7 @@ export function BookingScreen({
                               
                               <div className="text-left space-y-1">
                                 <span className="text-[7.5px] font-black uppercase text-amber-500 tracking-[0.25em] bg-amber-500/10 px-2 py-0.5 rounded leading-none inline-block">
-                                  {b.role === "manager" ? "Barbeiro" : "Especialista"}
+                                  {b.role === 'developer' ? 'DESENVOLVEDOR' : (b.role === "manager" ? "Barbeiro" : "Especialista")}
                                 </span>
                                 <h4 className="font-sans font-black text-white text-base sm:text-lg uppercase italic tracking-tight group-hover:text-amber-400 transition-colors leading-none">
                                   {b.name}
@@ -2696,6 +2703,28 @@ export function BookingScreen({
           </div>
         </motion.div>
       </div>
+      {showDevModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-neutral-900 border border-white/10 p-6 rounded-3xl w-full max-w-sm space-y-4">
+            <div className="text-amber-500 font-black">Atenção</div>
+            <p className="text-white text-sm">Este perfil é de desenvolvedor e está em modo de testes. Agendamentos aqui não são atendimentos profissionais reais.</p>
+            <div className="flex gap-2">
+              <button
+                  onClick={() => {
+                     setShowDevModal(false);
+                     setSelectedBarber(pendingBarber);
+                     setStep(3);
+                  }}
+                  className="flex-1 bg-amber-500 text-black py-2 rounded-xl text-sm font-black uppercase"
+              >Entendi</button>
+              <button
+                  onClick={() => setShowDevModal(false)}
+                  className="flex-1 bg-neutral-800 text-white py-2 rounded-xl text-sm font-black uppercase"
+              >Trocar Profissional</button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
