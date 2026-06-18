@@ -927,9 +927,9 @@ export default function App() {
       console.error("Login failed", error);
       let message = "Erro na autenticação. Tente novamente.";
       if (error.code === 'auth/email-already-in-use') message = "Este número já está cadastrado.";
-      if (error.code === 'auth/wrong-password') message = "Senha incorreta.";
+      if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') message = "E-mail/Telefone ou senha incorretos.";
       if (error.code === 'auth/user-not-found') message = "Usuário não encontrado.";
-      if (error.code === 'auth/invalid-email') message = "Número de telefone inválido.";
+      if (error.code === 'auth/invalid-email') message = "Número de telefone ou e-mail inválido.";
       if (error.code === 'auth/weak-password') message = "A senha deve ter pelo menos 6 caracteres.";
       toast.error(message);
     } finally {

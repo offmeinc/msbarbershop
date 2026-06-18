@@ -205,6 +205,11 @@ export function ShareScreen({ onBack }: { onBack: () => void }) {
     const now = new Date();
     const isToday = isSameDay(selectedDate, now);
 
+    const endHourDate = new Date(selectedDate);
+    const endCloseInt = Math.floor(endHour);
+    const endCloseMin = Math.round((endHour % 1) * 60);
+    endHourDate.setHours(endCloseInt, endCloseMin, 0, 0);
+
     for (let h = startHour; h < Math.ceil(endHour); h++) {
       for (let m = 0; m < 60; m += 30) {
         const slotTimeInHours = h + (m / 60);
@@ -213,17 +218,55 @@ export function ShareScreen({ onBack }: { onBack: () => void }) {
         const time = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
         const slotDate = new Date(selectedDate);
         slotDate.setHours(h, m, 0, 0);
+        const slotEnd = new Date(slotDate.getTime() + 30 * 60000); // base slot represents 30min block
 
         if (isToday && slotDate < now) continue;
 
+        // Verify if slot exceeds closing time
+        if (slotEnd > endHourDate) continue;
+
         const isBusy = appointments.some(app => {
           if (selectedBarberId !== 'all' && app.barberId !== selectedBarberId) return false;
-          return app.time === time && (selectedBarberId === 'all' ? true : app.barberId === selectedBarberId);
+          
+          const appDate = app.date instanceof Timestamp 
+            ? app.date.toDate() 
+            : typeof app.date === 'string' 
+              ? parseISO(app.date) 
+              : app.date;
+          
+          if (!isSameDay(appDate, selectedDate)) return false;
+
+          const serviceInfo = services.find(s => s.id === app.serviceId);
+          const appDuration = app.serviceDuration || serviceInfo?.duration || 30;
+          const appEnd = new Date(appDate.getTime() + appDuration * 60000);
+
+          return slotDate < appEnd && slotEnd > appDate;
         });
 
         const isBlocked = blockedTimes.some(b => {
-          const bDate = b.date instanceof Timestamp ? b.date.toDate() : new Date(b.date);
-          return isSameDay(bDate, selectedDate) && format(bDate, "HH:mm") === time;
+          const bDate = b.date instanceof Timestamp 
+            ? b.date.toDate() 
+            : typeof b.date === 'string'
+              ? parseISO(b.date)
+              : typeof b.date.seconds === 'number'
+                ? new Date(b.date.seconds * 1000)
+                : new Date(b.date);
+          
+          if (b.barberId !== 'all' && selectedBarberId !== 'all' && b.barberId !== selectedBarberId) return false;
+          if (!isSameDay(bDate, selectedDate)) return false;
+
+          if (b.startTime && b.endTime) {
+            const [bStartH, bStartM] = b.startTime.split(":").map(Number);
+            const [bEndH, bEndM] = b.endTime.split(":").map(Number);
+            const blockStart = new Date(selectedDate);
+            blockStart.setHours(bStartH, bStartM, 0, 0);
+            const blockEnd = new Date(selectedDate);
+            blockEnd.setHours(bEndH, bEndM, 0, 0);
+
+            return slotDate < blockEnd && slotEnd > blockStart;
+          } else {
+            return format(bDate, "HH:mm") === time;
+          }
         });
 
         if (!isBusy && !isBlocked) {

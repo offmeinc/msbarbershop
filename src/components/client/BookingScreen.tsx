@@ -1145,6 +1145,19 @@ export function BookingScreen({
     editAppointment?.serviceDuration || 0,
   );
 
+  useEffect(() => {
+    if (selectedService && services.length > 0) {
+      const service = services.find((s) => s.id === selectedService);
+      if (service && (!customDuration || customDuration === 0 || (editAppointment ? false : customDuration !== service.duration))) {
+        if (editAppointment && editAppointment.serviceId === selectedService && editAppointment.serviceDuration) {
+          setCustomDuration(editAppointment.serviceDuration);
+        } else {
+          setCustomDuration(service.duration || 30);
+        }
+      }
+    }
+  }, [selectedService, services, editAppointment]);
+
   const [clients, setClients] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
@@ -1321,6 +1334,11 @@ export function BookingScreen({
 
     if (endHour === 0) return [];
 
+    const endHourDate = new Date(selectedDate);
+    const endCloseInt = Math.floor(endHour);
+    const endCloseMin = Math.round((endHour % 1) * 60);
+    endHourDate.setHours(endCloseInt, endCloseMin, 0, 0);
+
     for (let h = startHour; h < Math.ceil(endHour); h++) {
       for (let m = 0; m < 60; m += 30) {
         const slotTimeInHours = h + m / 60;
@@ -1334,6 +1352,12 @@ export function BookingScreen({
         );
 
         let blockedReason: string | undefined;
+
+        // Verify if procedure exceeds closing time
+        const exceedsClosing = slotEnd > endHourDate;
+        if (exceedsClosing) {
+          blockedReason = "Fechando";
+        }
 
         const isAppBusy = barberAppointments.some((app) => {
             if (editAppointment && app.id === editAppointment.id) return false; // Ignore self when editing
@@ -1376,20 +1400,27 @@ export function BookingScreen({
             }
 
             if (b.startTime && b.endTime) {
-              if (time >= b.startTime && time < b.endTime) {
-                blockedReason = b.reason;
+              const [bStartH, bStartM] = b.startTime.split(":").map(Number);
+              const [bEndH, bEndM] = b.endTime.split(":").map(Number);
+              const blockStart = new Date(selectedDate);
+              blockStart.setHours(bStartH, bStartM, 0, 0);
+              const blockEnd = new Date(selectedDate);
+              blockEnd.setHours(bEndH, bEndM, 0, 0);
+
+              if (slotDate < blockEnd && slotEnd > blockStart) {
+                blockedReason = b.reason || "Bloqueado";
                 return true;
               }
             } else {
               if (format(bDate, "HH:mm") === time) {
-                blockedReason = b.reason;
+                blockedReason = b.reason || "Bloqueado";
                 return true;
               }
             }
             return false;
           });
 
-        const isBusy = isAppBusy || isBlocked;
+        const isBusy = isAppBusy || isBlocked || exceedsClosing;
         const isPast = slotDate < new Date();
         slots.push({ time, available: !isBusy && !isPast, blockedReason, isPast });
       }
@@ -1415,7 +1446,27 @@ export function BookingScreen({
     const duration = customDuration || 30;
     const finalDateEnd = new Date(finalDate.getTime() + duration * 60000);
 
-    // Final Availability Check (Real-time data from snapshot)
+    // Business hours boundary on submission logic
+    const closeDay = selectedDate.getDay();
+    let dayEndHour = 0;
+    if (closeDay >= 1 && closeDay <= 5) {
+      dayEndHour = 20;
+    } else if (closeDay === 6) {
+      dayEndHour = 19.5;
+    }
+    if (dayEndHour > 0) {
+      const endLimitDate = new Date(selectedDate);
+      const closeLimitH = Math.floor(dayEndHour);
+      const closeLimitM = Math.round((dayEndHour % 1) * 60);
+      endLimitDate.setHours(closeLimitH, closeLimitM, 0, 0);
+      if (finalDateEnd > endLimitDate) {
+        setError("Este horário ultrapassa o período de funcionamento da barbearia.");
+        setIsBooking(false);
+        return;
+      }
+    }
+
+    // Final Overlap / Busy Check (Real-time data from snapshot)
     const isStillBusy = barberAppointments.some((app) => {
       if (editAppointment && app.id === editAppointment.id) return false;
       const appDate =
@@ -1435,6 +1486,47 @@ export function BookingScreen({
     if (isStillBusy) {
       setError(
         "Este horário foi reservado por outra pessoa enquanto você finalizava. Por favor, escolha outro horário.",
+      );
+      setIsBooking(false);
+      setStep(3); // Go back to calendar
+      return;
+    }
+
+    // Final Blocked Times Overlap Check
+    const isStillBlocked = blockedTimes.some((b) => {
+      const bDate =
+        b.date instanceof Timestamp
+          ? b.date.toDate()
+          : typeof b.date === "string"
+            ? parseISO(b.date)
+            : typeof b.date.seconds === "number"
+              ? new Date(b.date.seconds * 1000)
+              : new Date(b.date);
+
+      if (b.barberId !== "all" && b.barberId !== selectedBarber) return false;
+      if (format(bDate, "yyyy-MM-dd") !== format(selectedDate, "yyyy-MM-dd")) return false;
+
+      if (b.startTime && b.endTime) {
+        const [sh, sm] = b.startTime.split(":").map(Number);
+        const [eh, em] = b.endTime.split(":").map(Number);
+        const blockStart = new Date(selectedDate);
+        blockStart.setHours(sh, sm, 0, 0);
+        const blockEnd = new Date(selectedDate);
+        blockEnd.setHours(eh, em, 0, 0);
+        return finalDate < blockEnd && finalDateEnd > blockStart;
+      } else {
+        const bHour = bDate.getHours();
+        const bMin = bDate.getMinutes();
+        const blockStart = new Date(selectedDate);
+        blockStart.setHours(bHour, bMin, 0, 0);
+        const blockEnd = new Date(blockStart.getTime() + 30 * 60000);
+        return finalDate < blockEnd && finalDateEnd > blockStart;
+      }
+    });
+
+    if (isStillBlocked) {
+      setError(
+        "Este horário foi bloqueado ou reservado recentemente. Por favor, escolha outro horário.",
       );
       setIsBooking(false);
       setStep(3); // Go back to calendar
