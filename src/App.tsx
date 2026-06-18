@@ -161,6 +161,7 @@ if (typeof window !== "undefined") {
 import { HomeScreen } from "./components/client/HomeScreen";
 import { BottomNav } from "./components/common/BottomNav";
 import { WorldCupDecor } from "./components/common/WorldCupDecor";
+import { PushPrompt } from "./components/pwa/PushPrompt";
 
 // Dummy components
 const DarkScreen = ({ onBack }: { onBack: () => void }) => <div className="p-4">Dark Screen <button onClick={onBack}>Voltar</button></div>;
@@ -1122,6 +1123,7 @@ export default function App() {
         </div>
       )}
       <WorldCupDecor isFanMode={isFanMode} />
+      <PushPrompt userId={user?.uid || loggedInClient?.id} userRole={userRole} />
       <motion.nav 
         variants={{
           visible: { y: 0, opacity: 1 },
