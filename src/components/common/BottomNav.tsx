@@ -8,9 +8,9 @@ export const BottomNav = memo(function BottomNav({ userRole, currentScreen, setC
   const items = [];
   items.push({ id: "home", label: "Início", icon: <Home className="w-5 h-5" />, screen: "home" });
     
-  if (userRole === "manager" || userRole === "barber") {
+  if (userRole === "manager" || userRole === "barber" || userRole === "developer") {
     items.push({ id: "agenda", label: "Agenda", icon: <CalendarDays className="w-5 h-5" />, screen: "agenda" });
-    if (userRole === "manager") {
+    if (userRole === "manager" || userRole === "developer") {
       items.push({ id: "management", label: "Gestão", icon: <Sliders className="w-5 h-5" />, screen: "barber-management" });
     }
     items.push({ id: "clients", label: "Clientes", icon: <Users className="w-5 h-5" />, screen: "clients" });

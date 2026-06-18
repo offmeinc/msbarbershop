@@ -72,6 +72,7 @@ import { triggerLightHaptic } from "../../lib/haptics";
 import { getBackendUrl } from "../../lib/pushRegister";
 import { addToOfflineQueue, getOfflineQueue, syncOfflineQueue, OfflineAction } from "../../lib/offlineQueue";
 import { AnalyticsScreen } from "./AnalyticsScreen";
+import { DevPanel } from "./DevPanel";
 import { CalendarWidget, AppointmentModal } from "../CalendarWidget";
 import { ServicesManagement, CollaboratorsManager, WorkingHoursManager } from "./ManagementScreens";
 import { ReviewModal } from "../common/ReviewModal";
@@ -124,7 +125,7 @@ export function EarningsDashboard({ appointments, services }: { appointments: an
 
 import { setupPushSubscription, getNotificationPermissionState, queryNotificationSupport } from "../../lib/pushRegister";
 
-export function DashboardScreen({ user, role, services, dashboardView, onBack, onNewBooking, onEditBooking }: { user: any, role: string, services: any[], dashboardView?: "agenda" | "list" | "calendar" | "services" | "hours" | "collaborators" | "earnings", onBack: () => void, onNewBooking?: () => void, onEditBooking?: (app: any) => void }) {
+export function DashboardScreen({ user, role, services, dashboardView, onBack, onNewBooking, onEditBooking }: { user: any, role: string, services: any[], dashboardView?: "agenda" | "list" | "calendar" | "services" | "hours" | "collaborators" | "earnings" | "developer", onBack: () => void, onNewBooking?: () => void, onEditBooking?: (app: any) => void }) {
   const [pushPermission, setPushPermission] = useState<NotificationPermission>(getNotificationPermissionState());
   const [appointments, setAppointments] = useState<any[]>([]);
   const [barbers, setBarbers] = useState<any[]>([]);
@@ -139,7 +140,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
     return () => clearInterval(timer);
   }, []);
 
-  const [currentView, setCurrentView] = useState<"agenda" | "list" | "services" | "hours" | "collaborators" | "earnings">(dashboardView || (role === 'client' ? 'list' : 'agenda'));
+  const [currentView, setCurrentView] = useState<"agenda" | "list" | "services" | "hours" | "collaborators" | "earnings" | "developer">(dashboardView || (role === 'client' ? 'list' : 'agenda'));
   const [agendaMode, setAgendaMode] = useState<"day" | "week" | "month">("day");
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "confirmed" | "completed" | "cancelled">("all");
@@ -694,7 +695,9 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
       handleFirestoreError(error, OperationType.LIST, "appointments");
     });
 
-    const qBarbers = query(collection(firestore, "users"), where("role", "in", ["barber", "manager"]));
+    const qBarbers = (role === 'developer')
+      ? query(collection(firestore, "users"), where("uid", "==", user.uid))
+      : query(collection(firestore, "users"), where("role", "in", ["barber", "manager"]));
     const unsubscribeBarbers = onSnapshot(qBarbers, (sn) => {
         setBarbers(sn.docs.map(d => ({ id: d.id, ...d.data() })));
     }, (error) => {
@@ -1299,6 +1302,8 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
           onNewBooking={onNewBooking}
           onSelectAppointment={setSelectedAppointment}
         />
+      ) : currentView === 'developer' ? (
+        <DevPanel />
       ) : (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
               {currentView === 'list' && (

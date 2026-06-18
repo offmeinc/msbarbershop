@@ -130,15 +130,16 @@ export function CollaboratorLoginScreen({ onLogin, setCurrentScreen, setRequeste
         </div>
 
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest ml-4">Senha de Acesso</label>
+          <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest ml-4">Senha de Acesso (Mínimo de 6 caracteres)</label>
           <div className="relative group">
             <Lock className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-amber-500 group-focus-within:text-amber-400 transition-all z-10" />
             <input 
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              minLength={6}
               className="w-full liquid-glass  rounded-[2rem] p-5 pl-14 text-sm text-white focus:border-amber-500 outline-none transition-all"
-              placeholder="••••••••"
+              placeholder="Mínimo 6 caracteres"
               required
             />
           </div>

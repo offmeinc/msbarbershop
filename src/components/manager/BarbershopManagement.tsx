@@ -106,7 +106,7 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
       console.error("Appointments query failed", err);
     });
 
-    const barbersQuery = query(collection(firestore, "users"), where("role", "in", ["barber", "manager"]));
+    const barbersQuery = query(collection(firestore, "users"), where("role", "in", ["barber", "manager", "developer"]));
     const unsubBarbers = onSnapshot(barbersQuery, (snapshot) => {
       const b = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setBarbers(b);

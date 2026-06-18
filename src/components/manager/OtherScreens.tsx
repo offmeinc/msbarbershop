@@ -145,7 +145,7 @@ export function ShareScreen({ onBack }: { onBack: () => void }) {
   }, [selectedThemeId, POSTER_THEMES]);
 
   useEffect(() => {
-    const q = query(collection(db, "users"), where("role", "in", ["barber", "manager"]));
+    const q = query(collection(db, "users"), where("role", "in", ["barber", "manager", "developer"]));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setBarbers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, (err) => handleFirestoreError(err, OperationType.LIST, "users"));

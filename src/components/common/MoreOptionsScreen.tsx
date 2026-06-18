@@ -43,12 +43,14 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
   const unreadCount = staffNotifications.filter(n => !n.read).length;
 
   const getRoleLabel = () => {
+    if (role === 'developer') return 'Desenvolvedor / Cloud Admin 🛠️';
     if (role === 'manager') return 'Gestor';
     if (role === 'barber') return 'Profissional / Barbeiro';
     return 'Cliente VIP';
   };
 
   const getRoleBadgeClass = () => {
+    if (role === 'developer') return 'bg-red-500/25 text-red-400 border border-red-500/40 animate-pulse';
     if (role === 'manager') return 'bg-amber-500/10 text-amber-400 border border-amber-500/20';
     if (role === 'barber') return 'bg-purple-500/10 text-purple-400 border border-purple-500/20';
     return 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
@@ -90,7 +92,7 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
           badge: unreadCount > 0 ? (unreadCount > 99 ? '99+' : unreadCount.toString()) : undefined, 
           onClick: () => setActiveSubScreen('notif') 
         },
-        ...(role === 'barber' || role === 'manager' ? [{ 
+        ...(role === 'barber' || role === 'manager' || role === 'developer' ? [{ 
           id: 'earnings', 
           label: 'Meus Ganhos', 
           desc: 'Relatório financeiro de atendimentos e comissões',
@@ -130,7 +132,7 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
           icon: <RefreshCw className="w-5 h-5 text-teal-400" />, 
           onClick: () => setActiveSubScreen('recurrence') 
         },
-        ...(role === 'manager' ? [
+        ...(role === 'manager' || role === 'developer' ? [
           { 
             id: 'promotions', 
             label: 'Promoções', 

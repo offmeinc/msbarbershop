@@ -38,7 +38,7 @@ export function CollaboratorsManager() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const q = query(collection(db, "users"), where("role", "in", ["barber", "manager"]));
+    const q = query(collection(db, "users"), where("role", "in", ["barber", "manager", "developer"]));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setBarbers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, (error) => {
@@ -49,8 +49,49 @@ export function CollaboratorsManager() {
 
   const handleAddBarber = async (e: FormEvent) => {
     e.preventDefault();
+    if (password.length < 6) {
+      toast.error("A senha precisa ter pelo menos 6 caracteres.");
+      return;
+    }
     setLoading(true);
     try {
+      // Check if a user with this email already exists in Firestore
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("email", "==", email));
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        const existingUserDoc = querySnapshot.docs[0];
+        const existingUserData = existingUserDoc.data();
+
+        if (existingUserData.role === 'barber') {
+          toast.error(`Este profissional (${existingUserData.name}) já está cadastrado como Barbeiro/Colaborador.`);
+          setLoading(false);
+          return;
+        } else if (existingUserData.role === 'manager') {
+          toast.error(`Este usuário (${existingUserData.name}) já está cadastrado como Gerente.`);
+          setLoading(false);
+          return;
+        } else {
+          // If the template is client or inactive_barber, offer to promote them
+          if (window.confirm(`O usuário ${existingUserData.name} já tem um cadastro de ${existingUserData.role === 'client' ? 'Cliente' : 'usuário'} com este e-mail. Deseja promovê-lo a Barbeiro/Colaborador?`)) {
+            await updateDoc(doc(db, "users", existingUserDoc.id), {
+              role: 'barber',
+              name: name || existingUserData.name
+            });
+            toast.success(`${existingUserData.name} foi alterado para Barbeiro/Colaborador com sucesso!`);
+            setName("");
+            setEmail("");
+            setPassword("");
+            setLoading(false);
+            return;
+          } else {
+            setLoading(false);
+            return;
+          }
+        }
+      }
+
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(userCredential.user, { displayName: name });
       await setDoc(doc(db, "users", userCredential.user.uid), {
@@ -64,9 +105,15 @@ export function CollaboratorsManager() {
       setEmail("");
       setPassword("");
       toast.success("Colaborador criado com sucesso!");
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      toast.error("Erro ao criar colaborador.");
+      if (error.code === 'auth/weak-password') {
+        toast.error("Erro: A senha precisa ter pelo menos 6 caracteres.");
+      } else if (error.code === 'auth/email-already-in-use') {
+        toast.error("Erro: Este e-mail já está em uso na base de autenticação.");
+      } else {
+        toast.error("Erro ao criar colaborador.");
+      }
     } finally {
       setLoading(false);
     }
@@ -95,7 +142,7 @@ export function CollaboratorsManager() {
         <div className="space-y-3">
             <input type="text" placeholder="Nome completo" className="w-full bg-black border border-white/10 p-4 rounded-2xl text-white outline-none focus:border-amber-500 transition-all font-bold" value={name} onChange={(e) => setName(e.target.value)} required />
             <input type="email" placeholder="E-mail profissional" className="w-full bg-black border border-white/10 p-4 rounded-2xl text-white outline-none focus:border-amber-500 transition-all font-bold" value={email} onChange={(e) => setEmail(e.target.value)} required />
-            <input type="password" placeholder="Senha de acesso" className="w-full bg-black border border-white/10 p-4 rounded-2xl text-white outline-none focus:border-amber-500 transition-all font-bold" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            <input type="password" placeholder="Senha de acesso (Mínimo de 6 caracteres)" minLength={6} className="w-full bg-black border border-white/10 p-4 rounded-2xl text-white outline-none focus:border-amber-500 transition-all font-bold" value={password} onChange={(e) => setPassword(e.target.value)} required />
         </div>
         <button type="submit" className="w-full bg-amber-500 text-black py-4 rounded-2xl font-black uppercase italic tracking-widest shadow-xl shadow-amber-500/20 active:scale-[0.98] transition-transform" disabled={loading}>
           {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto text-black" /> : "CADASTRAR COLABORADOR"}
@@ -135,7 +182,7 @@ export function WorkingHoursManager() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(collection(db, "users"), where("role", "in", ["barber", "manager"]));
+    const q = query(collection(db, "users"), where("role", "in", ["barber", "manager", "developer"]));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const barbersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setBarbers(barbersData);

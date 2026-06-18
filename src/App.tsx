@@ -57,7 +57,8 @@ import {
   TrendingUp,
   DollarSign,
   Download,
-  LayoutDashboard
+  LayoutDashboard,
+  Terminal
 } from "lucide-react";
 import React, { useState, useEffect, useRef, useMemo, ChangeEvent, FormEvent, lazy, Suspense, useCallback } from "react";
 import confetti from "canvas-confetti";
@@ -402,7 +403,7 @@ export default function App() {
         });
       }
 
-      if (["manager", "barber"].includes(userRole)) {
+      if (["manager", "barber", "developer"].includes(userRole)) {
         // Refresh staff-side unread states
         const qC = query(
           collection(firestore, "chats"), 
@@ -624,7 +625,7 @@ export default function App() {
     let totalCount = 0;
     if (userRole === "client" || (!user && loggedInClient)) {
       totalCount = clientUnreadChats + clientUnreadNotifications;
-    } else if (["manager", "barber"].includes(userRole)) {
+    } else if (["manager", "barber", "developer"].includes(userRole)) {
       const unreadStaffNotifications = staffNotifications.filter(n => !n.read).length;
       totalCount = staffUnreadChats + unreadStaffNotifications;
     }
@@ -709,7 +710,7 @@ export default function App() {
         
         if (userRole === "client") {
           ClientDashboardScreen.preload().catch(() => {});
-        } else if (["manager", "barber"].includes(userRole)) {
+        } else if (["manager", "barber", "developer"].includes(userRole)) {
           DashboardScreen.preload().catch(() => {});
           ClientsScreen.preload().catch(() => {});
           ProfessionalHome.preload().catch(() => {});
@@ -725,7 +726,7 @@ export default function App() {
   }, [userRole]);
 
   useEffect(() => {
-    if (!['manager', 'barber'].includes(userRole)) {
+    if (!['manager', 'barber', 'developer'].includes(userRole)) {
       setStaffNotifications([]);
       setStaffUnreadChats(0);
       return;
@@ -838,7 +839,7 @@ export default function App() {
     const firestore = db || getFirestore();
     if (!firestore) return;
 
-    const q = userRole === 'manager' 
+    const q = (userRole === 'manager') 
       ? query(collection(firestore, "appointments"), orderBy("date", "desc"), limit(100))
       : query(collection(firestore, "appointments"), where("barberId", "==", user.uid), orderBy("date", "desc"), limit(100));
 
@@ -987,7 +988,11 @@ export default function App() {
     } catch (error: any) {
       console.error("Login failed", error);
       let message = "Erro na autenticação. Tente novamente.";
-      if (error.code === 'auth/email-already-in-use') message = "Este número já está cadastrado.";
+      if (error.code === 'auth/email-already-in-use') {
+        message = isEmail 
+          ? "Este endereço de e-mail já está cadastrado. Se você já tem uma conta, tente fazer login ou usar outra credencial." 
+          : "Este número de telefone/WhatsApp já está cadastrado. Caso já possua uma conta, faça login diretamente.";
+      }
       if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') message = "E-mail/Telefone ou senha incorretos.";
       if (error.code === 'auth/user-not-found') message = "Usuário não encontrado.";
       if (error.code === 'auth/invalid-email') message = "Número de telefone ou e-mail inválido.";
@@ -1123,7 +1128,7 @@ export default function App() {
                 >
                   Agenda
                 </button>
-                {(userRole === "manager" || userRole === "barber") && (
+                {(userRole === "manager" || userRole === "barber" || userRole === "developer") && (
                   <button 
                     onClick={() => {
                       setDashboardView("list");
@@ -1134,9 +1139,9 @@ export default function App() {
                     Atendimentos
                   </button>
                 )}
-                {(userRole === "manager" || userRole === "barber") && (
+                {(userRole === "manager" || userRole === "barber" || userRole === "developer") && (
                   <>
-                    {userRole === "manager" && (
+                    {(userRole === "manager" || userRole === "developer") && (
                         <button 
                           onClick={() => setCurrentScreen("collaborators")}
                           className={`hover:text-white transition-colors flex items-center gap-2 ${displayScreen === "collaborators" ? "text-amber-500" : ""}`}
@@ -1155,7 +1160,13 @@ export default function App() {
                 <div className="flex items-center gap-3 pl-6 border-l border-white/10">
                   <div className="text-right">
                     <p className="text-white text-xs font-bold leading-none">{user.displayName}</p>
-                    <p className="text-[10px] text-amber-500 capitalize font-black">{userRole}</p>
+                    {userRole === 'developer' ? (
+                      <span className="inline-flex items-center gap-1 bg-red-500/20 text-red-400 border border-red-500/30 px-1.5 py-0.5 rounded-md text-[8px] font-extrabold uppercase tracking-widest animate-pulse leading-none mt-1">
+                        <Terminal className="w-2 h-2" /> Dev / Admin
+                      </span>
+                    ) : (
+                      <p className="text-[10px] text-amber-500 capitalize font-black">{userRole}</p>
+                    )}
                   </div>
                   <div className="relative">
                     {user.photoURL ? (
@@ -1172,7 +1183,7 @@ export default function App() {
                     )}
                   </div>
 
-                  {['manager', 'barber'].includes(userRole) && (
+                  {['manager', 'barber', 'developer'].includes(userRole) && (
                     <div className="relative">
                       <button 
                         onClick={() => setShowNotifications(!showNotifications)}
@@ -1320,7 +1331,7 @@ export default function App() {
               className="w-full"
             >
               {displayScreen === "home" && (
-                (['manager', 'barber'].includes(userRole)) 
+                (['manager', 'barber', 'developer'].includes(userRole)) 
                 ? <ProfessionalHome 
                     user={user} 
                     role={userRole} 
@@ -1393,7 +1404,7 @@ export default function App() {
         isVisible={!hidden}
       />
 
-      {['manager', 'barber'].includes(userRole) && (
+      {['manager', 'barber', 'developer'].includes(userRole) && (
         <NotificationModal 
             notifications={staffNotifications}
             onClose={() => {}}

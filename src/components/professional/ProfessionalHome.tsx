@@ -174,7 +174,7 @@ export function ProfessionalHome({ user, role, setCurrentScreen, services = [] }
   useEffect(() => {
     if (!user) return;
     const firestore = db || getFirestore();
-    const q = role === 'manager' 
+    const q = (role === 'manager') 
       ? query(collection(firestore, "appointments"), orderBy("date", "asc"))
       : query(collection(firestore, "appointments"), where("barberId", "==", user.uid), orderBy("date", "asc"));
 
@@ -263,9 +263,15 @@ export function ProfessionalHome({ user, role, setCurrentScreen, services = [] }
             <h1 className="text-xl sm:text-2xl font-black text-white uppercase italic tracking-tight leading-none truncate max-w-[180px] sm:max-w-[280px]">
               {user?.displayName || user?.name || "Profissional"}
             </h1>
-            <span className="text-[8.5px] font-extrabold uppercase bg-amber-500/10 text-amber-500 border border-amber-500/20 px-2.5 py-0.5 rounded leading-none inline-block">
-              {role === 'manager' ? 'Gestor / Administrador' : 'Barbeiro Profissional'}
-            </span>
+            {role === 'developer' ? (
+              <span className="text-[8.5px] font-black uppercase bg-red-500/20 text-red-400 border border-red-500/30 px-2.5 py-0.5 rounded leading-none inline-flex items-center gap-1 animate-pulse">
+                🛠️ Desenvolvedor / Admin
+              </span>
+            ) : (
+              <span className="text-[8.5px] font-extrabold uppercase bg-amber-500/10 text-amber-500 border border-amber-500/20 px-2.5 py-0.5 rounded leading-none inline-block">
+                {role === 'manager' ? 'Gestor / Administrador' : 'Barbeiro Profissional'}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -372,7 +378,7 @@ export function ProfessionalHome({ user, role, setCurrentScreen, services = [] }
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3.5">
           
           {/* Main management configuration (Admin / Barbershop Management) - ONLY FOR MANAGER */}
-          {role === 'manager' && (
+          {(role === 'manager' || role === 'developer') && (
             <button 
               onClick={() => setCurrentScreen("barber-management")}
               className="bg-neutral-900/30  liquid-glass/80  hover:border-amber-500/20 p-5 rounded-[1.75rem] flex flex-col justify-between min-h-[145px] sm:min-h-[160px] transition-all group active:scale-95 text-left cursor-pointer relative overflow-hidden"
@@ -475,7 +481,7 @@ export function ProfessionalHome({ user, role, setCurrentScreen, services = [] }
           </button>
 
           {/* Marketing Promotions panel - ONLY FOR MANAGER */}
-          {role === 'manager' && (
+          {(role === 'manager' || role === 'developer') && (
             <button 
               onClick={() => setCurrentScreen("promotions")}
               className="bg-neutral-900/30  liquid-glass/80  hover:border-amber-500/20 p-5 rounded-[1.75rem] flex flex-col justify-between min-h-[145px] sm:min-h-[160px] transition-all group active:scale-95 text-left cursor-pointer relative overflow-hidden"
@@ -554,7 +560,7 @@ export function ProfessionalHome({ user, role, setCurrentScreen, services = [] }
         </div>
 
         {/* Manager Barber Selector Tab Row */}
-        {role === 'manager' && barbersInApps.length > 0 && (
+        {(role === 'manager' || role === 'developer') && barbersInApps.length > 0 && (
           <div className="space-y-2 text-left">
             <label className="text-[8.5px] text-neutral-500 font-extrabold uppercase tracking-widest pl-1 block">
               Filtrar por Profissional:

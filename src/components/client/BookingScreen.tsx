@@ -65,7 +65,7 @@ function RecurrenceUI({
   recurrence: string;
   setRecurrence: (r: any) => void;
 }) {
-  if (userRole !== "barber" && userRole !== "manager") return null;
+  if (userRole !== "barber" && userRole !== "manager" && userRole !== "developer") return null;
   return (
     <div className=" liquid-glass/50  rounded-[2rem] p-6 space-y-4">
       <div className="flex items-center gap-2">
@@ -1166,7 +1166,7 @@ export function BookingScreen({
   const [viewingPortfolio, setViewingPortfolio] = useState<any | null>(null);
 
   useEffect(() => {
-    const isStaff = role === "manager" || role === "barber";
+    const isStaff = role === "manager" || role === "barber" || role === "developer";
     const isGuest = !user;
     if (!isStaff && !isGuest) return;
 
@@ -1249,7 +1249,7 @@ export function BookingScreen({
     const firestore = db || getFirestore();
     const q = query(
       collection(firestore, "users"),
-      where("role", "in", ["barber", "manager"]),
+      where("role", "in", ["barber", "manager", "developer"]),
     );
     const unsubscribe = onSnapshot(
       q,
@@ -1435,7 +1435,7 @@ export function BookingScreen({
       setError("Todos os campos são obrigatórios.");
       return;
     }
-    const isStaffBooking = role === "manager" || role === "barber";
+    const isStaffBooking = role === "manager" || role === "barber" || role === "developer";
 
     if ((!user || isStaffBooking) && (!guestName || !guestPhone)) {
       setError("Nome e WhatsApp são obrigatórios para o cliente.");

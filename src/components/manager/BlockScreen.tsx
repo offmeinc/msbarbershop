@@ -52,7 +52,7 @@ export function BlockScreen({ onBack }: { onBack: () => void }) {
     });
 
     // 2. Fetch list of barbers/managers
-    const qBarbers = query(collection(db, "users"), where("role", "in", ["barber", "manager"]));
+    const qBarbers = query(collection(db, "users"), where("role", "in", ["barber", "manager", "developer"]));
     const unsubscribeBarbers = onSnapshot(qBarbers, (sn) => {
       setBarbers(sn.docs.map(d => ({ id: d.id, ...d.data() })));
     }, (error) => {
