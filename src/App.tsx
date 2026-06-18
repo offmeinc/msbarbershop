@@ -380,6 +380,26 @@ export default function App() {
         );
         const nSnap = await getDocs(qN);
         setClientUnreadNotifications(nSnap.size);
+
+        // Map and check for missed notifications (e.g. idle device wakeups)
+        const clientNotifs = nSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        clientNotifs.forEach((docData: any) => {
+          if (isInitialSyncRef.current) {
+            notifiedIdsRef.current.add(docData.id);
+          } else if (!notifiedIdsRef.current.has(docData.id)) {
+            notifiedIdsRef.current.add(docData.id);
+            
+            // Re-sync alert triggered synchronously!
+            triggerLocalNotification(
+              docData.title || "MS Barbearia ⭐", 
+              docData.message || "Nova atualização disponível."
+            );
+            
+            if (typeof document !== "undefined" && document.visibilityState === "visible") {
+              toast.info(docData.message || "Nova atualização recebida!");
+            }
+          }
+        });
       }
 
       if (["manager", "barber"].includes(userRole)) {
@@ -399,41 +419,82 @@ export default function App() {
         const snSnap = await getDocs(qSN);
         const snData = snSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         setStaffNotifications(snData);
+
+        // Check for missed unread staff notifications (wake up from idle)
+        snData.forEach((docData: any) => {
+          if (docData.read === false) {
+            if (isInitialSyncRef.current) {
+              notifiedIdsRef.current.add(docData.id);
+            } else if (!notifiedIdsRef.current.has(docData.id)) {
+              notifiedIdsRef.current.add(docData.id);
+              
+              const title = docData.title || "Alerta de Agendamento 📅";
+              const message = docData.message || "Você tem uma nova reserva ou cancelamento.";
+              triggerLocalNotification(title, message, "/agenda");
+              
+              if (typeof document !== "undefined" && document.visibilityState === "visible") {
+                toast.success(`${title}: ${message}`);
+              }
+            }
+          }
+        });
       }
       
+      // Initial baseline check successfully completed
+      isInitialSyncRef.current = false;
       console.log("[Notification Sync Manager] Synchronization complete.");
     } catch (e) {
       console.warn("[Notification Sync Manager] Forced sync failed:", e);
     }
   }, [user, userRole, loggedInClient]);
 
-  // Global Notification Sync Manager: Re-sync on page focus or visibility change
+  // Global Notification Sync Manager: Re-sync on page focus or PWA visibility change
   useEffect(() => {
-    const handleSync = () => {
-      forceSyncNotifications();
+    const handleSync = async () => {
+      console.log("[PWA Sync Manager] App focused, visible or waking up from idle. Checking service worker ready...");
+      
+      // Robust service-worker readiness check
+      if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
+        try {
+          const registration = await navigator.serviceWorker.ready;
+          console.log("[PWA Sync Manager] Service worker ready active scope:", registration.scope);
+          
+          // Background trigger to fetch the latest cache list and updates
+          await registration.update();
+          console.log("[PWA Sync Manager] PWA cache was successfully checked/updated.");
+        } catch (swErr) {
+          console.warn("[PWA Sync Manager] Service worker ready/update check skipped or failed:", swErr);
+        }
+      }
+      
+      await forceSyncNotifications();
     };
 
     if (typeof window !== "undefined") {
       window.addEventListener("focus", handleSync);
-      document.addEventListener("visibilitychange", () => {
-        if (document.visibilityState === "visible") handleSync();
-      });
+      const onVisibilityChange = () => {
+        if (document.visibilityState === "visible") {
+          handleSync();
+        }
+      };
+      document.addEventListener("visibilitychange", onVisibilityChange);
+      
       // Initial sync on mount
       handleSync();
-    }
 
-    return () => {
-      if (typeof window !== "undefined") {
+      return () => {
         window.removeEventListener("focus", handleSync);
-        document.removeEventListener("visibilitychange", handleSync);
-      }
-    };
+        document.removeEventListener("visibilitychange", onVisibilityChange);
+      };
+    }
   }, [forceSyncNotifications]);
 
 
   const lastProcessedClientMsgTimeRef = useRef<number>(0);
   const lastProcessedStaffChatsRef = useRef<Record<string, number>>({});
   const lastProcessedStaffNotificationTimeRef = useRef<number>(0);
+  const notifiedIdsRef = useRef<Set<string>>(new Set());
+  const isInitialSyncRef = useRef<boolean>(true);
 
   // 1. Initial Prompt for Notifications on Launch (for PWAs and Standard Browsers)
   useEffect(() => {
