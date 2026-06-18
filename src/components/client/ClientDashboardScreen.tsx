@@ -389,6 +389,9 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
       } else {
         toast.success("Agendamento cancelado com sucesso.");
       }
+
+      // Optimistically update appointment list locally
+      setAppointments(prev => prev.map(item => item.id === app.id ? { ...item, status: 'cancelled' } : item));
     } catch (error: any) {
       console.error("[Client Cancel Error]:", error);
       toast.error(error.message || "Erro ao solicitar cancelamento.");

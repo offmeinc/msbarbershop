@@ -196,6 +196,7 @@ export function CalendarWidget({
   const getAppointmentsForDay = (date: Date) => {
     return appointments.filter(app => {
       if (!app.date) return false;
+      if (app.status === 'cancelled') return false;
       const appDate = app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date);
       return appDate instanceof Date && !isNaN(appDate.getTime()) && isSameDay(appDate, date);
     });

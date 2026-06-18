@@ -305,6 +305,11 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
           data = await res.json();
         }
 
+        // Optimistically update local appointments state to 'cancelled' so it instantly leaves the active calendar view
+        setAppointments(prev => prev.map(item => item.id === app.id ? { ...item, status: 'cancelled', cancellationReason: extraData.cancellationReason || "" } : item));
+        setSelectedAppointment(null);
+        setManagerAppToCancel(null);
+
         if (data && data.refundedAmount > 0) {
           setStatusMsg(`Cancelado! R$ ${data.refundedAmount.toFixed(2)} devolvidos ao cliente.`);
         } else {
@@ -503,30 +508,46 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
     }
 
     try {
-      console.log(`[Dashboard] Executing fetch to server for deletion of ID:`, app.id);
-      const res = await fetch(getBackendUrl("/api/appointments/delete"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: safeStringify({
-          appointmentId: app.id,
-          userId: user?.uid || user?.id
-        })
-      });
-
-      if (!res.ok) {
-        const errorText = await res.text();
-        console.error(`[Dashboard] API error response for ${app.id}:`, errorText);
-        throw new Error(errorText || "Erro ao excluir via API");
-      }
-
-      console.log(`[Dashboard] Deletion successful for ID:`, app.id);
+      console.log(`[Dashboard] Attempting direct Firestore deletion for ID:`, app.id);
+      const firestore = db || getFirestore();
+      await deleteDoc(doc(firestore, "appointments", app.id));
+      
+      console.log(`[Dashboard] Direct Firestore deletion successful for ID:`, app.id);
+      setAppointments(prev => prev.filter(item => item.id !== app.id));
       setSelectedAppointment(null);
-      setStatusMsg('Agendamento excluído permanentemente!');
+      setManagerAppToCancel(null);
+      setStatusMsg('Agendamento excluído com sucesso!');
       setTimeout(() => setStatusMsg(null), 3000);
-    } catch (apiErr: any) {
-      console.error(`[Manager Delete API Error for ${app.id}]:`, apiErr);
-      const errorMessage = apiErr.message || "Erro desconhecido ao excluir";
-      alert(`Erro ao excluir agendamento: ${errorMessage}`);
+    } catch (localErr: any) {
+      console.warn("[Dashboard] Client-side deletion failed, falling back to API deletion:", localErr);
+      try {
+        console.log(`[Dashboard] Executing fetch to server for deletion of ID:`, app.id);
+        const res = await fetch(getBackendUrl("/api/appointments/delete"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: safeStringify({
+            appointmentId: app.id,
+            userId: user?.uid || user?.id
+          })
+        });
+
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error(`[Dashboard] API error response for ${app.id}:`, errorText);
+          throw new Error(errorText || "Erro ao excluir via API");
+        }
+
+        console.log(`[Dashboard] Deletion successful for ID:`, app.id);
+        setAppointments(prev => prev.filter(item => item.id !== app.id));
+        setSelectedAppointment(null);
+        setManagerAppToCancel(null);
+        setStatusMsg('Agendamento excluído permanentemente!');
+        setTimeout(() => setStatusMsg(null), 3000);
+      } catch (apiErr: any) {
+        console.error(`[Manager Delete API Error for ${app.id}]:`, apiErr);
+        const errorMessage = apiErr.message || "Erro desconhecido ao excluir";
+        alert(`Erro ao excluir agendamento: ${errorMessage}`);
+      }
     }
   };
 
@@ -1819,6 +1840,35 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                     "SIM, CANCELAR AGENDAMENTO"
                   )}
                 </button>
+
+                <button 
+                  onClick={async () => {
+                    const confirmDel = window.confirm("Excluir permanentemente este agendamento do banco de dados? Esta ação não pode ser desfeita.");
+                    if (!confirmDel) return;
+                    setIsManagerCancelling(true);
+                    try {
+                      await handleDelete(managerAppToCancel);
+                    } catch (err) {
+                      console.error(err);
+                    } finally {
+                      setIsManagerCancelling(false);
+                      setManagerAppToCancel(null);
+                      setManagerCancelReason("");
+                    }
+                  }}
+                  disabled={isManagerCancelling}
+                  className="w-full bg-red-950/40 hover:bg-red-950/70 text-red-400 border border-red-500/30 py-4 rounded-xl text-[10px] font-black uppercase italic tracking-widest transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 disabled:cursor-not-allowed"
+                >
+                  {isManagerCancelling ? (
+                     <>
+                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                       EXCLUINDO...
+                     </>
+                  ) : (
+                     "OU, EXCLUIR PERMANENTEMENTE 🗑️"
+                  )}
+                </button>
+
                 <button 
                   onClick={() => { setManagerAppToCancel(null); setManagerCancelReason(""); }}
                   disabled={isManagerCancelling}

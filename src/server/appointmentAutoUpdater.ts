@@ -57,6 +57,7 @@ export function startAppointmentAutoUpdater() {
     try {
       const now = new Date();
       const twoHoursFromNow = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+      const oneHourFromNow = new Date(now.getTime() + 1 * 60 * 60 * 1000);
       
       const q = query(collection(db, "appointments"), where("status", "==", "confirmed"));
       const snapshot = await getDocs(q);
@@ -74,6 +75,7 @@ export function startAppointmentAutoUpdater() {
           return;
         }
 
+        // 1. Send the 2-hour reminder
         if (appointmentDate > now && appointmentDate <= twoHoursFromNow && !data.twoHourReminderSent) {
           const rawTarget = data.clientId && data.clientId !== "guest" ? data.clientId : data.clientPhone;
           const clientTarget = rawTarget ? rawTarget.replace(/[\s\-\(\)\+]/g, "") : "";
@@ -88,6 +90,24 @@ export function startAppointmentAutoUpdater() {
           
           await updateDoc(doc(db, "appointments", d.id), {
               twoHourReminderSent: true
+          });
+        }
+
+        // 2. Send the 1-hour reminder
+        if (appointmentDate > now && appointmentDate <= oneHourFromNow && !data.oneHourReminderSent) {
+          const rawTarget = data.clientId && data.clientId !== "guest" ? data.clientId : data.clientPhone;
+          const clientTarget = rawTarget ? rawTarget.replace(/[\s\-\(\)\+]/g, "") : "";
+          
+          if (clientTarget) {
+              await sendPushNotification(clientTarget, {
+                  title: "Está quase na hora! 💈⏳",
+                  body: `Seu agendamento de ${data.serviceName} é em 1 hora (às ${data.time}). Até logo!`,
+                  url: "/"
+              });
+          }
+          
+          await updateDoc(doc(db, "appointments", d.id), {
+              oneHourReminderSent: true
           });
         }
       });
