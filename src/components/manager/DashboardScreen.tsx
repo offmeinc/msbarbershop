@@ -22,7 +22,12 @@ import {
   Sparkles,
   Star,
   Wifi,
-  WifiOff
+  WifiOff,
+  Flame,
+  AlertTriangle,
+  ChevronDown,
+  ChevronUp,
+  Activity
 } from "lucide-react";
 import { 
   BarChart, 
@@ -146,6 +151,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
   const [managerAppToCancel, setManagerAppToCancel] = useState<any | null>(null);
   const [managerCancelReason, setManagerCancelReason] = useState("");
   const [isManagerCancelling, setIsManagerCancelling] = useState(false);
+  const [isPeakRadarExpanded, setIsPeakRadarExpanded] = useState(false);
 
   // Real-time synchronization & feature states for header icons
   const [isLockModalOpen, setIsLockModalOpen] = useState(false);
@@ -721,6 +727,119 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
     });
   }, [appointments, currentDate, selectedBarberId]);
 
+  const peakWorkloadStats = useMemo(() => {
+    if (!appointments) return { peakDayName: "", maxDayCount: 0, peakDayPercent: 0, topTimes: [], todayPeakSlots: [], todayLoadPercent: 0, todayStatus: "normal" as const, todayActiveCount: 0 };
+
+    const activeApps = appointments.filter(app => app.status !== "cancelled");
+
+    const weekdayCounts = Array(7).fill(0);
+    const weekdayNames = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
+    
+    activeApps.forEach(app => {
+      if (!app.date) return;
+      const appDate = app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === "string" ? parseISO(app.date) : app.date);
+      if (appDate instanceof Date && !isNaN(appDate.getTime())) {
+        const dayOfWeek = appDate.getDay();
+        weekdayCounts[dayOfWeek]++;
+      }
+    });
+
+    let maxDayIndex = 5;
+    let maxDayCount = 0;
+    weekdayCounts.forEach((count, idx) => {
+      if (count > maxDayCount) {
+        maxDayCount = count;
+        maxDayIndex = idx;
+      }
+    });
+
+    const totalActiveCount = activeApps.length || 1;
+    const peakDayName = weekdayNames[maxDayIndex];
+    const peakDayPercent = Math.round((maxDayCount / totalActiveCount) * 100);
+
+    const hourCounts: { [key: string]: number } = {};
+    activeApps.forEach(app => {
+      if (app.time) {
+        hourCounts[app.time] = (hourCounts[app.time] || 0) + 1;
+      }
+    });
+
+    const topTimes = Object.entries(hourCounts)
+      .map(([time, count]) => ({ time, count, percent: Math.round((count / totalActiveCount) * 100) }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 3);
+
+    const todayActiveApps = activeApps.filter(app => {
+      if (!app.date) return false;
+      const appDate = app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === "string" ? parseISO(app.date) : app.date);
+      const isCurr = appDate instanceof Date && !isNaN(appDate.getTime()) && isSameDay(appDate, currentDate);
+      const isBarb = selectedBarberId === 'all' || app.barberId === selectedBarberId;
+      return isCurr && isBarb;
+    });
+
+    const totalBarbers = Math.max(barbers.length, 1);
+
+    const todaySlotCounts: { [time: string]: any[] } = {};
+    todayActiveApps.forEach(app => {
+      if (app.time) {
+        if (!todaySlotCounts[app.time]) todaySlotCounts[app.time] = [];
+        todaySlotCounts[app.time].push(app);
+      }
+    });
+
+    const todayPeakSlots = Object.entries(todaySlotCounts)
+      .map(([time, apps]) => {
+        const count = apps.length;
+        const isSingleBarber = selectedBarberId !== 'all';
+        
+        let loadPercent = 0;
+        if (isSingleBarber) {
+          loadPercent = count > 1 ? 200 : 100;
+        } else {
+          loadPercent = Math.round((count / totalBarbers) * 100);
+        }
+
+        let level: "critical" | "warning" | "normal" = "normal";
+        if (loadPercent > 100 || (isSingleBarber && count > 1)) {
+          level = "critical";
+        } else if (loadPercent >= 70) {
+          level = "critical";
+        } else if (loadPercent >= 40) {
+          level = "warning";
+        }
+
+        return {
+          time,
+          count,
+          level,
+          loadPercent,
+          barbersBooked: apps.map(a => a.barberName || "Profissional")
+        };
+      })
+      .sort((a, b) => a.time.localeCompare(b.time));
+
+    const maxDailySlots = totalBarbers * 12;
+    const todayLoadPercent = Math.min(Math.round((todayActiveApps.length / maxDailySlots) * 100), 100);
+    
+    let todayStatus: "high" | "moderate" | "normal" = "normal";
+    if (todayLoadPercent >= 70 || todayPeakSlots.some(s => s.level === 'critical')) {
+      todayStatus = "high";
+    } else if (todayLoadPercent >= 35 || todayPeakSlots.some(s => s.level === 'warning')) {
+      todayStatus = "moderate";
+    }
+
+    return {
+      peakDayName,
+      maxDayCount,
+      peakDayPercent,
+      topTimes,
+      todayPeakSlots,
+      todayLoadPercent,
+      todayStatus,
+      todayActiveCount: todayActiveApps.length
+    };
+  }, [appointments, currentDate, barbers, selectedBarberId]);
+
   return (
     <div className="min-h-[100dvh] bg-black px-6 pt-6 relative pb-28">
       {statusMsg && (
@@ -920,6 +1039,208 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                     </button>
                   );
               })}
+          </div>
+        </div>
+      )}
+
+      {/* 📊 Radar de Horários de Pico & Carga de Trabalho */}
+      {(role === 'manager' || role === 'barber') && (currentView === 'list' || currentView === 'agenda') && (
+        <div className="max-w-xl mx-auto mb-6">
+          <div className="liquid-glass rounded-3xl border border-white/5 overflow-hidden transition-all duration-300 p-4 shadow-2xl relative">
+            {/* Background glowing peak trace */}
+            <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/5 rounded-full blur-2xl pointer-events-none" />
+            
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center relative ${
+                  peakWorkloadStats.todayStatus === 'high' 
+                    ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' 
+                    : peakWorkloadStats.todayStatus === 'moderate'
+                    ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
+                    : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                }`}>
+                  {peakWorkloadStats.todayStatus === 'high' ? (
+                    <>
+                      <Flame className="w-4 h-4 animate-bounce text-rose-500" />
+                      <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+                      </span>
+                    </>
+                  ) : peakWorkloadStats.todayStatus === 'moderate' ? (
+                    <AlertTriangle className="w-4 h-4 animate-pulse text-amber-400" />
+                  ) : (
+                    <Activity className="w-4 h-4 text-emerald-400" />
+                  )}
+                </div>
+                
+                <div className="text-left">
+                  <h4 className="text-[11px] font-black uppercase tracking-wider text-neutral-200 flex items-center gap-1.5 leading-none">
+                    Horários de Pico & Carga de Trabalho
+                  </h4>
+                  <p className="text-[9px] mt-1 font-bold text-neutral-400">
+                    {peakWorkloadStats.todayStatus === 'high' ? (
+                      <span className="text-rose-400">⚠️ ALTA DEMANDA: Horários de pico detectados hoje!</span>
+                    ) : peakWorkloadStats.todayStatus === 'moderate' ? (
+                      <span className="text-amber-400">⚡ FLUXO INTENSO: Carga moderada de agendamentos.</span>
+                    ) : (
+                      <span className="text-emerald-400">✅ FLUXO EQUILIBRADO: Agenda sob controle hoje.</span>
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsPeakRadarExpanded(!isPeakRadarExpanded)}
+                className="p-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 text-neutral-400 hover:text-white transition-all cursor-pointer flex items-center gap-1 text-[9px] font-black uppercase tracking-widest border border-white/5"
+              >
+                {isPeakRadarExpanded ? "Ocultar" : "Detalhes"}
+                {isPeakRadarExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+
+            {/* Expanded Analytics Layout */}
+            <AnimatePresence>
+              {isPeakRadarExpanded && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.25 }}
+                  className="mt-4 pt-4 border-t border-white/5 space-y-4 overflow-hidden"
+                >
+                  {/* Today's workload dashboard */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-1">
+                    {/* Busiest Weekday & Gold Hours Patterns (General stats) */}
+                    <div className="bg-neutral-950/60 p-3 rounded-2xl border border-white/5 space-y-3">
+                      <p className="text-[9px] font-black uppercase tracking-widest text-neutral-400 flex items-center gap-1">
+                        <TrendingUp className="w-3 h-3 text-amber-500" /> Histórico & Tendências
+                      </p>
+                      
+                      <div className="space-y-2 text-xs">
+                        {/* Busiest Day */}
+                        <div className="flex justify-between items-center bg-white/5 p-2 rounded-xl border border-white/5">
+                          <span className="text-neutral-400 leading-none text-[10px]">Dia mais concorrido:</span>
+                          <span className="font-bold text-amber-400 flex items-center gap-1 capitalize text-[10px]">
+                            <Calendar className="w-3.5 h-3.5" /> {peakWorkloadStats.peakDayName}
+                          </span>
+                        </div>
+                        {/* Peak share */}
+                        <p className="text-[10px] text-neutral-500 px-1 leading-normal">
+                          O dia principal concentra <b className="text-white font-bold">{peakWorkloadStats.peakDayPercent}%</b> de todos os agendamentos já registrados.
+                        </p>
+
+                        {/* Peak Gold slots */}
+                        <div className="space-y-1 mt-2">
+                          <span className="text-neutral-400 text-[10px] block font-semibold px-1">Horários de Ouro (Geral):</span>
+                          <div className="flex gap-1.5 flex-wrap">
+                            {peakWorkloadStats.topTimes.map((h, i) => (
+                              <span 
+                                key={h.time} 
+                                className="px-2 py-1 bg-amber-500/10 rounded-lg text-[10.5px] font-bold text-neutral-300 border border-amber-500/10 flex items-center gap-1"
+                              >
+                                <span className={`w-1.5 h-1.5 rounded-full ${i === 0 ? 'bg-rose-500' : 'bg-amber-500'}`} />
+                                {h.time} ({h.percent}%)
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Today's Workload capacity indicator */}
+                    <div className="bg-neutral-950/60 p-3 rounded-2xl border border-white/5 space-y-2.5">
+                      <p className="text-[9px] font-black uppercase tracking-widest text-neutral-400 flex items-center gap-1">
+                        <Activity className="w-3 h-3 text-amber-500" /> Carga Horária de Hoje ({format(currentDate, "dd/MM")})
+                      </p>
+
+                      <div className="space-y-2 text-xs">
+                        {/* Capacity meter */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between items-center text-[10px] text-neutral-400 font-bold">
+                            <span>Agendamentos: {peakWorkloadStats.todayActiveCount}</span>
+                            <span>Capacidade: {peakWorkloadStats.todayLoadPercent}%</span>
+                          </div>
+                          <div className="w-full bg-neutral-900 h-2.5 rounded-full overflow-hidden border border-white/5 relative">
+                            <motion.div 
+                              initial={{ width: 0 }}
+                              animate={{ width: `${peakWorkloadStats.todayLoadPercent}%` }}
+                              className={`h-full transition-all duration-500 ${
+                                peakWorkloadStats.todayLoadPercent >= 70 
+                                  ? 'bg-rose-500' 
+                                  : peakWorkloadStats.todayLoadPercent >= 35 
+                                  ? 'bg-amber-500' 
+                                  : 'bg-emerald-500'
+                              }`} 
+                            />
+                          </div>
+                        </div>
+
+                        {/* Current selected barber text */}
+                        <p className="text-[10px] text-neutral-500 px-1 italic leading-normal">
+                          {selectedBarberId === 'all' 
+                            ? "Análise cobrindo todos os profissionais cadastrados hoje." 
+                            : `Foco individual para o profissional selecionado.`}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Today's peak schedules */}
+                  {peakWorkloadStats.todayPeakSlots.length > 0 && (
+                    <div className="space-y-2 bg-neutral-950/50 p-3 rounded-2xl border border-white/5">
+                      <p className="text-[9px] font-black uppercase tracking-widest text-neutral-400">
+                        🚨 Monitor de Ocupação por Horário (Hoje):
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[160px] overflow-y-auto pr-1 no-scrollbar">
+                        {peakWorkloadStats.todayPeakSlots.map((slot) => {
+                          const isCritical = slot.level === 'critical';
+                          const isWarning = slot.level === 'warning';
+                          
+                          return (
+                            <div 
+                              key={slot.time}
+                              className={`flex items-center justify-between p-2 rounded-xl border text-[11px] leading-none transition-all ${
+                                isCritical 
+                                  ? 'bg-rose-500/10 border-rose-500/30 text-rose-200 shadow-sm' 
+                                  : isWarning 
+                                  ? 'bg-amber-500/10 border-amber-500/30 text-amber-200'
+                                  : 'bg-neutral-900/40 border-white/5 text-neutral-300'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className={`w-2 h-2 rounded-full ${
+                                  isCritical ? 'bg-rose-500 animate-pulse' : isWarning ? 'bg-amber-500' : 'bg-emerald-500'
+                                }`} />
+                                <span className="font-bold text-xs">{slot.time}</span>
+                              </div>
+                              <div className="text-right flex flex-col gap-0.5">
+                                <span className="font-extrabold text-[10px] uppercase">
+                                  {isCritical ? "Congestionado" : isWarning ? "Ativo" : "Tranquilo"}
+                                </span>
+                                <span className="text-[8px] opacity-60 font-medium">
+                                  {slot.count} {slot.count === 1 ? 'reserva' : 'reservas'}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {peakWorkloadStats.todayPeakSlots.length === 0 && (
+                    <div className="bg-emerald-500/5 border border-emerald-500/10 p-3.5 rounded-2xl flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping" />
+                      <p className="text-emerald-400 text-[10px] font-bold">
+                        Nenhum pico de aglomeração ou de horário detectado hoje! Carga de trabalho equilibrada.
+                      </p>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       )}
