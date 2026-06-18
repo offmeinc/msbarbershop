@@ -2011,7 +2011,7 @@ export function BookingScreen({
                               </div>
                               
                               <div className="text-left space-y-1">
-                                <span className="text-[7.5px] font-black uppercase text-amber-500 tracking-[0.25em] bg-amber-500/10 px-2 py-0.5 rounded leading-none inline-block">
+                                <span className={`text-[7.5px] font-black uppercase tracking-[0.25em] px-2 py-0.5 rounded leading-none inline-block ${b.role === 'developer' ? 'text-red-400 bg-red-500/10 border border-red-500/20' : 'text-amber-500 bg-amber-500/10'}`}>
                                   {b.role === 'developer' ? 'DESENVOLVEDOR' : (b.role === "manager" ? "Barbeiro" : "Especialista")}
                                 </span>
                                 <h4 className="font-sans font-black text-white text-base sm:text-lg uppercase italic tracking-tight group-hover:text-amber-400 transition-colors leading-none">

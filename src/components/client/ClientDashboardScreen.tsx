@@ -14,7 +14,8 @@ import {
   onSnapshot, 
   doc, 
   updateDoc, 
-  addDoc, 
+  addDoc,
+  deleteDoc, 
   serverTimestamp, 
   Timestamp,
   getFirestore,
@@ -539,16 +540,17 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
   }, [stats.upcoming]);
 
   const handleClearNotifications = async () => {
+    if (!confirm("Tem certeza que deseja limpar todo o feed de notificações?")) return;
     try {
       const batch: any[] = [];
       notifications.forEach(n => {
-        if (!n.read) {
-          batch.push(updateDoc(doc(db, "notifications", n.id), { read: true }));
-        }
+          batch.push(deleteDoc(doc(db, "notifications", n.id)));
       });
       await Promise.all(batch);
+      toast.success("Feed limpo com sucesso!");
     } catch (e) {
       console.error(e);
+      toast.error("Erro ao limpar feed.");
     }
   };
 

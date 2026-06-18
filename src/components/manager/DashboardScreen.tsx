@@ -125,8 +125,10 @@ export function EarningsDashboard({ appointments, services }: { appointments: an
 }
 
 import { setupPushSubscription, getNotificationPermissionState, queryNotificationSupport } from "../../lib/pushRegister";
+import { useDebugMode } from "../../hooks/useDebugMode";
 
 export function DashboardScreen({ user, role, services, dashboardView, onBack, onNewBooking, onEditBooking }: { user: any, role: string, services: any[], dashboardView?: "agenda" | "list" | "calendar" | "services" | "hours" | "collaborators" | "earnings" | "developer", onBack: () => void, onNewBooking?: () => void, onEditBooking?: (app: any) => void }) {
+  const isDebug = useDebugMode();
   const [pushPermission, setPushPermission] = useState<NotificationPermission>(getNotificationPermissionState());
   const [appointments, setAppointments] = useState<any[]>([]);
   const [barbers, setBarbers] = useState<any[]>([]);
@@ -1663,7 +1665,19 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                                                       </div>
                                                   )}
                                                </div>
-                                               <p className="text-[10px] text-neutral-500 font-bold mt-1 text-left">Profissional: <span className="text-neutral-400 capitalize">{app.barberName}</span></p>
+                                               <p className="text-[10px] text-neutral-500 font-bold mt-1 text-left flex items-center gap-2">
+                                                  Profissional: <span className="text-neutral-400 capitalize">{app.barberName}</span>
+                                                  {barbers.find(b => b.id === app.barberId)?.role === 'developer' && (
+                                                    <span className="text-[7.5px] font-black uppercase tracking-[0.25em] px-2 py-0.5 rounded leading-none inline-block text-red-400 bg-red-500/10 border border-red-500/20">
+                                                      DESENVOLVEDOR
+                                                    </span>
+                                                  )}
+                                                  {isDebug && (
+                                                    <span className="text-[7px] font-mono text-neutral-600 bg-black/30 px-1 py-0.5 rounded border border-white/5 truncate max-w-[80px]">
+                                                      ID: {app.id}
+                                                    </span>
+                                                  )}
+                                               </p>
                                             </div>
                                           </div>
                                           

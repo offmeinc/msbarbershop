@@ -1,6 +1,23 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    function hasRole(role) {
+      return isSignedIn() && getUserData().role == role;
+    }
+    
+    function isStaff() {
+      return isSignedIn() && (getUserData().role == 'manager' || getUserData().role == 'barber' || getUserData().role == 'developer');
+    }
+
     // Default Deny
     match /{document=**} {
       allow read, write: if false;
@@ -14,13 +31,12 @@ service cloud.firestore {
     // Services
     match /services/{serviceId} {
       allow read: if true;
-      allow write: if request.auth != null && 
-                      (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'manager' || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'barber');
+      allow write: if isStaff();
     }
 
     // Appointments
     match /appointments/{appointmentId} {
-      allow read, write: if true; // Keeping open for simplicity with login codes, but usually involves auth checks
+      allow read, write: if true;
     }
 
     // Payments
@@ -31,14 +47,13 @@ service cloud.firestore {
     // Working Hours
     match /workingHours/{workId} {
       allow read: if true;
-      allow write: if request.auth != null && 
-                      (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'manager' || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'barber');
+      allow write: if isStaff();
     }
 
     // Reviews
     match /reviews/{reviewId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isSignedIn();
     }
 
     // Staff Notifications
@@ -48,44 +63,40 @@ service cloud.firestore {
 
     // Internal Chats
     match /internal_chats/{msgId} {
-      allow read, write: if request.auth != null && 
-                      (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'manager' || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'barber');
+      allow read, write: if isStaff();
     }
 
     // Inventory
     match /inventory/{itemId} {
-      allow read, write: if request.auth != null;
+      allow read, write: if isSignedIn();
     }
 
     // Expenses
     match /expenses/{expenseId} {
-      allow read, write: if request.auth != null;
+      allow read, write: if isSignedIn();
     }
 
     // Debts
     match /debts/{debtId} {
-      allow read, write: if request.auth != null;
+      allow read, write: if isSignedIn();
     }
 
     // Settings
     match /settings/{settingId} {
       allow read: if true;
-      allow write: if request.auth != null && 
-                      (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'manager' || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'barber' || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'developer');
+      allow write: if isStaff();
     }
 
     // Promotions
     match /promotions/{promoId} {
       allow read: if true;
-      allow write: if request.auth != null && 
-                      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'manager';
+      allow write: if hasRole('manager') || hasRole('developer');
     }
 
     // Portfolio
     match /portfolio/{itemId} {
       allow read: if true;
-      allow write: if request.auth != null && 
-                      (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'manager' || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'barber');
+      allow write: if isStaff();
     }
 
     // Client Support Chats
@@ -106,15 +117,16 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
-    // Legacy/Migration support (Keep for stability)
+    // Legacy/Migration support
     match /client_profiles/{loginCode} { allow read, write: if true; }
     match /notifications/{docId} { allow read, write: if true; }
     match /blocked_times/{docId} { allow read, write: if true; }
     
     // App Logs
     match /app_logs/{logId} {
-      allow read, write: if request.auth != null && 
-                      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'developer';
+      allow create: if true;
+      allow read: if hasRole('developer');
+      allow update, delete: if hasRole('developer');
     }
   }
 }

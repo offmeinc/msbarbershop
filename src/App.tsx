@@ -18,6 +18,7 @@ import {
   Menu,
   X,
   CreditCard,
+  AlertTriangle,
   LogOut,
   Settings,
   Sparkles,
@@ -277,7 +278,22 @@ export default function App() {
 
   const [clientLoginCode, setClientLoginCode] = useState<string>("");
   const [loggedInClient, setLoggedInClient] = useState<any>(null);
-  const [userRole, setUserRole] = useState<string>("client");
+  const [userRole, setUserRole] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('ais_role_override') || "client";
+    }
+    return "client";
+  });
+
+  const bannerText = typeof window !== 'undefined' ? localStorage.getItem('ais_system_banner') : null;
+
+  // Global Role Override for Developer testing
+  useEffect(() => {
+    const override = localStorage.getItem('ais_role_override');
+    if (override && userRole !== override) {
+      setUserRole(override);
+    }
+  }, [userRole]);
   const { currentScreen, setCurrentScreen } = usePathNavigation<Screen>("home");
   const { scrollY } = useScroll();
   const [hidden, setHidden] = useState(false);
@@ -1092,6 +1108,19 @@ export default function App() {
 
   return (
     <div className="min-h-[100dvh] bg-black text-white font-sans selection:bg-amber-500/30 pb-24 md:pb-0 overflow-x-hidden w-full relative">
+      {bannerText && (
+        <div className="bg-red-600 text-white py-1.5 px-4 overflow-hidden relative z-[9999] border-b border-black/20">
+          <div className="flex whitespace-nowrap animate-marquee">
+             <div className="flex items-center gap-12 min-w-full justify-around pr-12">
+               {[1,2,3,4,5,6].map(i => (
+                 <span key={i} className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                   <AlertTriangle className="w-3 h-3" /> {bannerText} 
+                 </span>
+               ))}
+             </div>
+          </div>
+        </div>
+      )}
       <WorldCupDecor isFanMode={isFanMode} />
       <motion.nav 
         variants={{
@@ -1398,8 +1427,9 @@ export default function App() {
                   staffNotifications={staffNotifications}
                   appointments={appointments}
                   onClearNotifications={async () => {
-                    const unread = staffNotifications.filter(n => !n.read);
-                    await Promise.all(unread.map(n => updateDoc(doc(db, "staff_notifications", n.id), { read: true })));
+                    if (!confirm("Tem certeza que deseja limpar todo o feed de notificações?")) return;
+                    await Promise.all(staffNotifications.map(n => deleteDoc(doc(db, "staff_notifications", n.id))));
+                    toast.success("Feed limpo com sucesso!");
                   }}
                   onToggleTheme={toggleTheme}
                   isDarkMode={isDarkMode}
@@ -1524,7 +1554,7 @@ export default function App() {
 
                     // Conditional items
                     if (user) {
-                      if (userRole === "manager") {
+                      if (userRole === "manager" || userRole === "developer") {
                         menuItems.push({
                           label: "Agenda",
                           icon: <Calendar className="w-4 h-4" />,
@@ -1537,6 +1567,14 @@ export default function App() {
                           onClick: () => { setDashboardView("list"); setCurrentScreen("agenda"); setIsMenuOpen(false); },
                           isActive: currentScreen === "agenda" && dashboardView === "list"
                         });
+                        if (userRole === "developer") {
+                          menuItems.push({
+                            label: "Painel Dev",
+                            icon: <Terminal className="w-4 h-4" />,
+                            onClick: () => { setDashboardView("developer"); setCurrentScreen("agenda"); setIsMenuOpen(false); },
+                            isActive: currentScreen === "agenda" && dashboardView === "developer"
+                          });
+                        }
                         menuItems.push({
                           label: "Time de Profissionais",
                           icon: <User className="w-4 h-4" />,

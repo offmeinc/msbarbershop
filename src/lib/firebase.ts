@@ -130,8 +130,8 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     });
   }
   console.error('[Firestore Error Details]', errorJson);
-  // Re-throw only the basic message to avoid propagating circular errors
-  throw new Error(errInfo.error);
+  // Re-throw the full JSON string so the system can diagnose permission issues
+  throw new Error(errorJson);
 }
 
 // Perform appointment cancellation and wallet refund atomically on the client
