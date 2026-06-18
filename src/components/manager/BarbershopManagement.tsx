@@ -10,7 +10,8 @@ import {
   Timestamp, 
   getFirestore,
   where,
-  orderBy
+  orderBy,
+  documentId
 } from "firebase/firestore";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
 import { 
@@ -98,7 +99,10 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
     const firestore = db || getFirestore();
     setLoading(true);
 
-    const appointmentsQuery = query(collection(firestore, "appointments"));
+    let appointmentsQuery = query(collection(firestore, "appointments"));
+    if (role === 'barber' || role === 'developer') {
+        appointmentsQuery = query(collection(firestore, "appointments"), where("barberId", "==", user.uid));
+    }
     const unsubAppointments = onSnapshot(appointmentsQuery, (snapshot) => {
       const apps = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setAppointments(apps);
@@ -106,7 +110,12 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
       console.error("Appointments query failed", err);
     });
 
-    const barbersQuery = query(collection(firestore, "users"), where("role", "in", ["barber", "manager", "developer"]));
+    let barbersQuery;
+    if (role === 'developer') {
+      barbersQuery = query(collection(firestore, "users"), where(documentId(), "==", user.uid));
+    } else {
+      barbersQuery = query(collection(firestore, "users"), where("role", "in", ["barber", "manager", "developer"]));
+    }
     const unsubBarbers = onSnapshot(barbersQuery, (snapshot) => {
       const b = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setBarbers(b);

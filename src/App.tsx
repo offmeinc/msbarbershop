@@ -98,6 +98,7 @@ import { BrandLogo } from "./components/common/BrandLogo";
 import { Toaster, toast } from "./components/ui/Toast";
 import { NotificationModal } from "./components/common/NotificationModal";
 import { useFanMode } from "./lib/useFanMode";
+import { logToFirestore } from "./lib/logger";
 
 // Helper logic for preloading lazy-loaded components
 function makePreloadableLazy<T extends React.ComponentType<any>>(
@@ -260,6 +261,20 @@ function triggerLocalNotification(title: string, body: string, urlPath: string =
 export default function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [user, setUser] = useState<FirebaseUser | null>(null);
+
+  useEffect(() => {
+    const errorHandler = (event: ErrorEvent) => {
+      logToFirestore('error', event.message, {
+        filename: event.filename,
+        lineno: event.lineno,
+        colno: event.colno,
+        stack: event.error?.stack
+      });
+    };
+    window.addEventListener('error', errorHandler);
+    return () => window.removeEventListener('error', errorHandler);
+  }, []);
+
   const [clientLoginCode, setClientLoginCode] = useState<string>("");
   const [loggedInClient, setLoggedInClient] = useState<any>(null);
   const [userRole, setUserRole] = useState<string>("client");
@@ -1362,7 +1377,7 @@ export default function App() {
               {displayScreen === "services" && <DashboardScreen user={user} role={userRole} services={services} dashboardView="services" onBack={() => setCurrentScreen("home")} onNewBooking={() => setCurrentScreen("booking")} onEditBooking={(app) => { setAppointmentToEdit(app); setCurrentScreen("booking"); }} />}
               {displayScreen === "earnings" && <EarningsScreen onBack={() => setCurrentScreen("home")} />}
               {displayScreen === "promotions" && <PromotionsManager onBack={() => setCurrentScreen("home")} />}
-              {displayScreen === "clients" && <ClientsScreen onBack={() => setCurrentScreen("home")} onScheduleClient={(client) => { setClientToSchedule(client); setCurrentScreen("booking"); }} onClientClick={(client) => { setSelectedClient(client); setCurrentScreen("client-details"); }} />}
+              {displayScreen === "clients" && <ClientsScreen user={user} role={userRole} onBack={() => setCurrentScreen("home")} onScheduleClient={(client) => { setClientToSchedule(client); setCurrentScreen("booking"); }} onClientClick={(client) => { setSelectedClient(client); setCurrentScreen("client-details"); }} />}
               {displayScreen === "client-details" && selectedClient && <ClientDetailsScreen client={selectedClient} onBack={() => { setCurrentScreen("clients"); setSelectedClient(null); }} onScheduleClient={(client) => { setClientToSchedule(client); setCurrentScreen("booking"); }} onMessageClient={(client) => { setSelectedClient(client); setCurrentScreen("professional-chat"); }} />}
               {displayScreen === "portfolio" && <PortfolioManager onBack={() => setCurrentScreen("home")} />}
               {displayScreen === "barber-management" && <BarbershopManagement user={user} role={userRole} onBack={() => setCurrentScreen("home")} />}

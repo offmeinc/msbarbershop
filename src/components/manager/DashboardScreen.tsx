@@ -63,6 +63,7 @@ import {
   addDoc, 
   deleteDoc,
   serverTimestamp,
+  documentId,
   getFirestore,
   getDoc,
   getDocs
@@ -129,7 +130,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
   const [pushPermission, setPushPermission] = useState<NotificationPermission>(getNotificationPermissionState());
   const [appointments, setAppointments] = useState<any[]>([]);
   const [barbers, setBarbers] = useState<any[]>([]);
-  const [selectedBarberId, setSelectedBarberId] = useState<string>("all");
+  const [selectedBarberId, setSelectedBarberId] = useState<string>(role === 'developer' ? user.uid : "all");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -684,6 +685,9 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
       q = query(collection(firestore, "appointments"), orderBy("date", "asc"));
     } else if (role === 'barber') {
       q = query(collection(firestore, "appointments"), where("barberId", "==", user.uid), orderBy("date", "asc"));
+    } else if (role === 'developer') {
+      // Developer isolated view: empty list of appointments from others
+      q = query(collection(firestore, "appointments"), where("barberId", "==", "NOT_EXISTING_ID_FOR_DEVELOPER"));
     } else {
       q = query(collection(firestore, "appointments"), where("clientId", "==", user.uid), orderBy("date", "asc"));
     }
@@ -696,7 +700,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
     });
 
     const qBarbers = (role === 'developer')
-      ? query(collection(firestore, "users"), where("uid", "==", user.uid))
+      ? query(collection(firestore, "users"), documentId() == user.uid ? where(documentId(), "==", user.uid) : where("uid", "==", user.uid))
       : query(collection(firestore, "users"), where("role", "in", ["barber", "manager"]));
     const unsubscribeBarbers = onSnapshot(qBarbers, (sn) => {
         setBarbers(sn.docs.map(d => ({ id: d.id, ...d.data() })));
@@ -892,6 +896,20 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
           </div>
         </div>
       )}
+
+      {/* Badge de visualização */}
+      <div className="flex justify-center mt-2 mb-4">
+        {role === 'developer' && (
+          <div className="text-[10px] bg-blue-500/10 text-blue-400 border border-blue-500/20 px-4 py-1.5 rounded-full font-black uppercase tracking-widest inline-flex items-center gap-2">
+            Modo de Gestão Global: Isolado
+          </div>
+        )}
+        {role === 'barber' && (
+          <div className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-4 py-1.5 rounded-full font-black uppercase tracking-widest inline-flex items-center gap-2">
+            Modo Profissional: Filtrado
+          </div>
+        )}
+      </div>
       
       {/* Modern View Segmented Selector at the header */}
       {(role === 'manager' || role === 'barber') && (currentView === 'agenda' || currentView === 'list') && (

@@ -15,7 +15,7 @@ export function DevPanel() {
   const fetchLogs = async () => {
     setLoading(true);
     try {
-      const q = query(collection(db, "logs"), orderBy("timestamp", "desc"), limit(20));
+      const q = query(collection(db, "app_logs"), orderBy("timestamp", "desc"), limit(20));
       const snap = await getDocs(q);
       setLogs(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     } catch (e) {

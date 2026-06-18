@@ -6,13 +6,18 @@ import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
 import { format, parseISO, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-export function ClientsScreen({ onBack, onScheduleClient, onClientClick }: { onBack: () => void, onScheduleClient?: (client: any) => void, onClientClick?: (client: any) => void, key?: any }) {
+export function ClientsScreen({ onBack, onScheduleClient, onClientClick, user, role }: { onBack: () => void, onScheduleClient?: (client: any) => void, onClientClick?: (client: any) => void, key?: any, user: any, role: string }) {
   const [clients, setClients] = useState<any[]>([]);
   const [appointments, setAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
+    if (role === 'developer') {
+      setClients([]);
+      setLoading(false);
+      return;
+    }
     const q = query(collection(db, "users"), where("role", "==", "client"), limit(50));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setClients(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
@@ -21,17 +26,22 @@ export function ClientsScreen({ onBack, onScheduleClient, onClientClick }: { onB
       handleFirestoreError(error, OperationType.LIST, "users");
     });
     return () => unsubscribe();
-  }, []);
+  }, [role]);
 
   useEffect(() => {
-    const qApps = query(collection(db, "appointments"));
+    let qApps;
+    if (role === 'barber' || role === 'developer') {
+      qApps = query(collection(db, "appointments"), where("barberId", "==", user.uid));
+    } else {
+      qApps = query(collection(db, "appointments"));
+    }
     const unsubscribeApps = onSnapshot(qApps, (snapshot) => {
       setAppointments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, (error) => {
       console.error("Failed to fetch appointments in ClientsScreen:", error);
     });
     return () => unsubscribeApps();
-  }, []);
+  }, [user, role]);
 
   const getAppDate = (app: any) => {
     if (!app.date) return new Date(0);

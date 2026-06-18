@@ -240,6 +240,14 @@ export function ProfessionalHome({ user, role, setCurrentScreen, services = [] }
     <div className="max-w-md md:max-w-4xl lg:max-w-5xl mx-auto py-8 px-4 sm:px-6 space-y-8 animate-in fade-in duration-500 text-left">
       
       {/* 1. Header with glass styling */}
+      <div className="flex justify-center -mb-4">
+        {role === 'barber' && (
+          <div className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-4 py-1.5 rounded-full font-black uppercase tracking-widest inline-flex items-center gap-2">
+            Modo Profissional: Filtrado
+          </div>
+        )}
+      </div>
+      
       <div className="bg-gradient-to-br from-neutral-900 to-neutral-950 p-6 rounded-[2.5rem] border border-white/5 shadow-2xl relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-2xl pointer-events-none" />
         
