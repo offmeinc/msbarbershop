@@ -139,6 +139,7 @@ const PortfolioManager = makePreloadableLazy(() => import("./components/professi
 const DashboardScreen = makePreloadableLazy(() => import("./components/manager/DashboardScreen").then(m => ({ default: m.DashboardScreen })));
 const ProfessionalClientChatsScreen = makePreloadableLazy(() => import("./components/ChatScreens").then(m => ({ default: m.ProfessionalClientChatsScreen })));
 const BarbershopManagement = makePreloadableLazy(() => import("./components/manager/BarbershopManagement").then(m => ({ default: m.BarbershopManagement })));
+const PitchDeck = makePreloadableLazy(() => import("./components/manager/PitchDeck").then(m => ({ default: m.PitchDeck })));
 
 if (typeof window !== "undefined") {
   (window as any).__pwaPreloaders = {
@@ -155,6 +156,7 @@ if (typeof window !== "undefined") {
     portfolio: () => PortfolioManager.preload(),
     "professional-chat": () => ProfessionalClientChatsScreen.preload(),
     "barber-management": () => BarbershopManagement.preload(),
+    pitch: () => PitchDeck.preload(),
   };
 }
 
@@ -229,7 +231,7 @@ import {
 } from "firebase/auth";
 
 
-type Screen = "home" | "booking" | "agenda" | "clients" | "client-details" | "more" | "login" | "collaborators" | "services" | "client-login" | "client-dashboard" | "earnings" | "promotions" | "portfolio" | "professional-chat" | "barber-management";
+type Screen = "home" | "booking" | "agenda" | "clients" | "client-details" | "more" | "login" | "collaborators" | "services" | "client-login" | "client-dashboard" | "earnings" | "promotions" | "portfolio" | "professional-chat" | "barber-management" | "pitch";
 
 
 function triggerLocalNotification(title: string, body: string, urlPath: string = "/") {
@@ -330,7 +332,7 @@ export default function App() {
     return () => clearTimeout(timer);
   }, []);
 
-  const validScreens = ["home", "booking", "agenda", "clients", "client-details", "more", "login", "collaborators", "services", "client-login", "client-dashboard", "earnings", "promotions", "portfolio", "professional-chat", "barber-management", "checkout"];
+  const validScreens = ["home", "booking", "agenda", "clients", "client-details", "more", "login", "collaborators", "services", "client-login", "client-dashboard", "earnings", "promotions", "portfolio", "professional-chat", "barber-management", "checkout", "pitch"];
   const displayScreen = validScreens.includes(currentScreen as string) ? currentScreen : "home";
 
   useMotionValueEvent(scrollY, "change", (latest) => {
@@ -1433,6 +1435,7 @@ export default function App() {
               {displayScreen === "client-details" && selectedClient && <ClientDetailsScreen client={selectedClient} onBack={() => { setCurrentScreen("clients"); setSelectedClient(null); }} onScheduleClient={(client) => { setClientToSchedule(client); setCurrentScreen("booking"); }} onMessageClient={(client) => { setSelectedClient(client); setCurrentScreen("professional-chat"); }} />}
               {displayScreen === "portfolio" && <PortfolioManager onBack={() => setCurrentScreen("home")} />}
               {displayScreen === "barber-management" && <BarbershopManagement user={user} role={userRole} onBack={() => setCurrentScreen("home")} />}
+              {displayScreen === "pitch" && <PitchDeck onBack={() => setCurrentScreen("home")} />}
               {displayScreen === "professional-chat" && (
                 <ProfessionalClientChatsScreen 
                   user={user} 
@@ -1456,6 +1459,7 @@ export default function App() {
                   }}
                   onToggleTheme={toggleTheme}
                   isDarkMode={isDarkMode}
+                  onPitch={() => setCurrentScreen("pitch")}
                 />
               )}
             </motion.div>

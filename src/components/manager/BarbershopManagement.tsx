@@ -67,7 +67,7 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
   const [loading, setLoading] = useState(true);
   
   // New States for requested systems
-  const [monthlyGoal, setMonthlyGoal] = useState<number>(12000);
+  const [monthlyGoal, setMonthlyGoal] = useState<number>(0);
   const [loyaltyMultiplier, setLoyaltyMultiplier] = useState<number>(5);
   const [debts, setDebts] = useState<any[]>([]);
 
@@ -482,7 +482,7 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
   }
 
   // Calculate percentages for target goals
-  const goalPercent = Math.min(100, Math.round((financialStats.grossEarnings / monthlyGoal) * 100));
+  const goalPercent = monthlyGoal > 0 ? Math.min(100, Math.round((financialStats.grossEarnings / monthlyGoal) * 100)) : 0;
 
   return (
     <div className="max-w-xl md:max-w-4xl lg:max-w-6xl mx-auto py-6 px-4 space-y-8 animate-in fade-in duration-500 pb-20">
@@ -889,8 +889,11 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
                   <div className="flex gap-2">
                     <input 
                       type="number"
-                      value={monthlyGoal}
-                      onChange={e => handleGoalChange(Math.max(1, parseFloat(e.target.value) || 0))}
+                      value={monthlyGoal === 0 ? "" : monthlyGoal}
+                      onChange={e => {
+                        const val = e.target.value;
+                        handleGoalChange(val === "" ? 0 : Math.max(0, parseFloat(val) || 0));
+                      }}
                       className="bg-black border border-white/10 p-4 rounded-2xl text-sm font-black text-white w-full outline-none focus:border-amber-500 transition-colors"
                     />
                   </div>

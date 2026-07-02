@@ -16,7 +16,8 @@ import {
   ChevronLeft,
   Star,
   Package,
-  Gift
+  Gift,
+  Presentation
 } from "lucide-react";
 import { BlockScreen } from "../manager/BlockScreen";
 import { HelpScreen, ShareScreen, RecurrenceScreen } from "../manager/OtherScreens";
@@ -35,7 +36,7 @@ import { toast } from "../ui/Toast";
 // Dummy components
 const DarkScreen = ({ onBack }: { onBack: () => void }) => <div className="p-4">Dark Screen <button onClick={onBack}>Voltar</button></div>;
 
-export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotifications, appointments, onClearNotifications, onToggleTheme, isDarkMode, onReferrals }: { user: any, role: string, onLogout: () => void, onBack: () => void, key?: any, staffNotifications: any[], appointments: any[], onClearNotifications: () => void, onToggleTheme: () => void, isDarkMode: boolean, onReferrals?: () => void }) {
+export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotifications, appointments, onClearNotifications, onToggleTheme, isDarkMode, onReferrals, onPitch }: { user: any, role: string, onLogout: () => void, onBack: () => void, key?: any, staffNotifications: any[], appointments: any[], onClearNotifications: () => void, onToggleTheme: () => void, isDarkMode: boolean, onReferrals?: () => void, onPitch?: () => void }) {
   const [activeSubScreen, setActiveSubScreen] = useState<
     'main' | 'profile' | 'notif' | 'block' | 'share' | 'earnings' | 'week' | 'recon' | 'recurrence' | 'promotions' | 'inventory'
   >('main');
@@ -98,6 +99,13 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
           desc: 'Relatório financeiro de atendimentos e comissões',
           icon: <WalletCards className="w-5 h-5 text-emerald-500" />, 
           onClick: () => setActiveSubScreen('earnings') 
+        }] : []),
+        ...(role === 'barber' || role === 'manager' || role === 'developer' ? [{ 
+          id: 'pitch', 
+          label: 'Apresentação SaaS', 
+          desc: 'Pitch comercial completo do app e exportação PDF',
+          icon: <Presentation className="w-5 h-5 text-amber-500" />, 
+          onClick: onPitch 
         }] : []),
       ]
     },

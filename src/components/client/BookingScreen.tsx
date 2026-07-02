@@ -1425,11 +1425,12 @@ export function BookingScreen({
 
         const isBusy = isAppBusy || isBlocked || exceedsClosing;
         const isPast = slotDate < new Date();
-        slots.push({ time, available: !isBusy && !isPast, blockedReason, isPast });
+        const isStaff = role === "barber" || role === "manager" || role === "developer";
+        slots.push({ time, available: !isBusy && (!isPast || isStaff), blockedReason, isPast });
       }
     }
     return slots;
-  }, [selectedDate, barberAppointments, blockedTimes, customDuration]);
+  }, [selectedDate, barberAppointments, blockedTimes, customDuration, role]);
 
   const handleConfirmBooking = async () => {
     triggerSuccessHaptic();
@@ -1574,7 +1575,7 @@ export function BookingScreen({
 
     setError(null);
     setIsBooking(true);
-    if (finalDate < new Date()) {
+    if (finalDate < new Date() && !isStaffBooking) {
       setError("Este horário já passou.");
       setIsBooking(false);
       return;
