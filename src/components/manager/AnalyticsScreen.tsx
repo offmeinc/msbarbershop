@@ -13,7 +13,7 @@ import {
 } from "recharts";
 import { format, parseISO, isSameDay, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { DollarSign, Scissors, Users, Sparkles, TrendingUp } from "lucide-react";
+import { DollarSign, Scissors, Users, Sparkles, TrendingUp, Calendar } from "lucide-react";
 import { Timestamp } from "firebase/firestore";
 import { motion } from "motion/react";
 
@@ -53,6 +53,39 @@ export function AnalyticsScreen({ appointments, services }: { appointments: any[
             counts[app.serviceName] = (counts[app.serviceName] || 0) + 1;
         });
         return Object.entries(counts).map(([name, count]) => ({ name, count }));
+    }, [appointments]);
+
+    const weeklyActivityData = useMemo(() => {
+        const reorderedDays = [
+            { name: "Seg", index: 1 },
+            { name: "Ter", index: 2 },
+            { name: "Qua", index: 3 },
+            { name: "Qui", index: 4 },
+            { name: "Sex", index: 5 },
+            { name: "Sáb", index: 6 },
+            { name: "Dom", index: 0 }
+        ];
+
+        return reorderedDays.map(day => {
+            const dayApps = appointments.filter(app => {
+                if (app.status !== 'completed') return false;
+                const d = app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date);
+                return d instanceof Date && !isNaN(d.getTime()) && d.getDay() === day.index;
+            });
+
+            const atendimentos = dayApps.length;
+            const totalValue = dayApps.reduce((acc, curr) => {
+                const price = parseFloat((curr.totalPrice || curr.price || 0).toString().replace(/[^0-9.-]+/g, ""));
+                return acc + (Number(price) || 0);
+            }, 0);
+            const ticketMedio = atendimentos > 0 ? parseFloat((totalValue / atendimentos).toFixed(2)) : 0;
+
+            return {
+                dayName: day.name,
+                atendimentos,
+                ticketMedio
+            };
+        });
     }, [appointments]);
 
     return (
@@ -111,6 +144,48 @@ export function AnalyticsScreen({ appointments, services }: { appointments: any[
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
+                </div>
+            </div>
+
+            {/* Weekly Flow and Average Ticket Chart */}
+            <div className="liquid-glass rounded-2xl p-6">
+                <h3 className="text-sm font-black text-white mb-4 flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-amber-500" /> Fluxo de Atendimentos & Ticket Médio por Dia da Semana
+                </h3>
+                <p className="text-xs text-neutral-400 mb-6">
+                    Identifique os dias de maior movimento e faturamento da sua barbearia para otimizar suas escalas e promoções.
+                </p>
+                <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={weeklyActivityData}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
+                            <XAxis dataKey="dayName" stroke="#888" fontSize={11} tickLine={false} />
+                            <YAxis 
+                                yAxisId="left" 
+                                stroke="#f59e0b" 
+                                fontSize={10} 
+                                tickLine={false} 
+                                axisLine={false}
+                                label={{ value: 'Qtd. Atendimentos', angle: -90, position: 'insideLeft', offset: 0, fill: '#f59e0b', fontSize: 10, fontWeight: 'bold' }} 
+                            />
+                            <YAxis 
+                                yAxisId="right" 
+                                orientation="right" 
+                                stroke="#8b5cf6" 
+                                fontSize={10} 
+                                tickLine={false} 
+                                axisLine={false}
+                                label={{ value: 'Ticket Médio (R$)', angle: 90, position: 'insideRight', offset: 0, fill: '#8b5cf6', fontSize: 10, fontWeight: 'bold' }} 
+                            />
+                            <Tooltip 
+                                contentStyle={{ backgroundColor: '#0a0a0a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }} 
+                                labelStyle={{ fontWeight: 'bold', color: '#fff', fontSize: '12px' }}
+                            />
+                            <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                            <Bar yAxisId="left" dataKey="atendimentos" fill="#f59e0b" name="Atendimentos" radius={[6, 6, 0, 0]} />
+                            <Bar yAxisId="right" dataKey="ticketMedio" fill="#8b5cf6" name="Ticket Médio (R$)" radius={[6, 6, 0, 0]} />
+                        </BarChart>
+                    </ResponsiveContainer>
                 </div>
             </div>
         </div>

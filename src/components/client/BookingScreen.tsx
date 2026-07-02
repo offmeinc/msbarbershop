@@ -922,6 +922,9 @@ export function BookingScreen({
   const [selectedTime, setSelectedTime] = useState<string | null>(
     editAppointment?.time || null,
   );
+  const [forceEncaixe, setForceEncaixe] = useState(false);
+  const [customTime, setCustomTime] = useState("");
+  const [showCustomTimeForm, setShowCustomTimeForm] = useState(false);
   const [barberAppointments, setBarberAppointments] = useState<any[]>([]);
   const [blockedTimes, setBlockedTimes] = useState<any[]>([]);
   const [recurrence, setRecurrence] = useState<
@@ -1426,11 +1429,48 @@ export function BookingScreen({
         const isBusy = isAppBusy || isBlocked || exceedsClosing;
         const isPast = slotDate < new Date();
         const isStaff = role === "barber" || role === "manager" || role === "developer";
-        slots.push({ time, available: !isBusy && (!isPast || isStaff), blockedReason, isPast });
+        
+        // Overrides available to true if forceEncaixe is enabled for staff members
+        const isAvailable = (!isBusy && (!isPast || isStaff)) || (isStaff && forceEncaixe);
+
+        slots.push({
+          time,
+          available: isAvailable,
+          isBusy,
+          blockedReason,
+          isPast,
+          originalAvailable: !isBusy && (!isPast || isStaff)
+        });
       }
     }
     return slots;
-  }, [selectedDate, barberAppointments, blockedTimes, customDuration, role]);
+  }, [selectedDate, barberAppointments, blockedTimes, customDuration, role, forceEncaixe]);
+
+  const nearestEmptySlots = useMemo(() => {
+    const isStaff = role === "barber" || role === "manager" || role === "developer";
+    if (!isStaff || timeSlots.length === 0) return [];
+
+    const now = new Date();
+    const isToday = isSameDay(selectedDate, now);
+
+    const candidates = timeSlots.filter(slot => {
+      // Must be originally empty/available and not already past
+      if (!slot.originalAvailable) return false;
+      
+      const [h, m] = slot.time.split(":").map(Number);
+      const slotDate = new Date(selectedDate);
+      slotDate.setHours(h, m, 0, 0);
+
+      // If today, filter out past slots so we only recommend upcoming free ones
+      if (isToday) {
+        return slotDate >= now;
+      }
+      return true;
+    });
+
+    // Take the top 3 closest empty slots
+    return candidates.slice(0, 3);
+  }, [timeSlots, selectedDate, role]);
 
   const handleConfirmBooking = async () => {
     triggerSuccessHaptic();
@@ -1463,7 +1503,7 @@ export function BookingScreen({
       const closeLimitH = Math.floor(dayEndHour);
       const closeLimitM = Math.round((dayEndHour % 1) * 60);
       endLimitDate.setHours(closeLimitH, closeLimitM, 0, 0);
-      if (finalDateEnd > endLimitDate) {
+      if (finalDateEnd > endLimitDate && !isStaffBooking) {
         setError("Este horário ultrapassa o período de funcionamento da barbearia.");
         setIsBooking(false);
         return;
@@ -1487,7 +1527,7 @@ export function BookingScreen({
       return finalDate < appEnd && finalDateEnd > appDate;
     });
 
-    if (isStillBusy) {
+    if (isStillBusy && !isStaffBooking) {
       setError(
         "Este horário foi reservado por outra pessoa enquanto você finalizava. Por favor, escolha outro horário.",
       );
@@ -1546,7 +1586,7 @@ export function BookingScreen({
       }
     });
 
-    if (isStillBlocked) {
+    if (isStillBlocked && !isStaffBooking) {
       setError(
         "Este horário foi bloqueado ou reservado recentemente. Por favor, escolha outro horário.",
       );
@@ -2080,22 +2120,102 @@ export function BookingScreen({
                   exit={{ x: -20, opacity: 0 }}
                   className="space-y-8"
                 >
-                  {(role === "manager" || role === "barber") && (
-                    <div className=" liquid-glass/60  p-5 rounded-[2.2rem] flex flex-col gap-2 text-left">
-                      <span className="text-[8.5px] font-black uppercase text-amber-500 tracking-[0.2em] pl-1">
-                        Duração Personalizada do Serviço (Minutos)
-                      </span>
-                      <input
-                        type="number"
-                        step="10"
-                        min="10"
-                        className="w-full liquid-glass  focus:border-amber-500/50 outline-none rounded-2xl p-4 text-white text-xs font-bold transition-all"
-                        value={customDuration}
-                        onChange={(e) => {
-                          setCustomDuration(Number(e.target.value));
-                          setSelectedTime(null);
-                        }}
-                      />
+                  {(role === "manager" || role === "barber" || role === "developer") && (
+                    <div className="space-y-4">
+                      {/* Service Duration Selection */}
+                      <div className="liquid-glass/60 p-5 rounded-[2.2rem] flex flex-col gap-2 text-left">
+                        <span className="text-[8.5px] font-black uppercase text-amber-500 tracking-[0.2em] pl-1">
+                          Duração Personalizada do Serviço (Minutos)
+                        </span>
+                        <input
+                          type="number"
+                          step="10"
+                          min="10"
+                          className="w-full liquid-glass focus:border-amber-500/50 outline-none rounded-2xl p-4 text-white text-xs font-bold transition-all"
+                          value={customDuration}
+                          onChange={(e) => {
+                            setCustomDuration(Number(e.target.value));
+                            setSelectedTime(null);
+                          }}
+                        />
+                      </div>
+
+                      {/* Staff Overbooking Panel */}
+                      <div className="liquid-glass/65 p-6 rounded-[2.2rem] space-y-4 text-left border border-amber-500/20 shadow-lg shadow-black/40">
+                        <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                          <span className="text-[10px] font-black uppercase text-amber-500 tracking-[0.2em]">
+                            Painel de Controle do Barbeiro
+                          </span>
+                          <span className="text-[8px] font-black bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-full uppercase">
+                            ADMIN
+                          </span>
+                        </div>
+
+                        <div className="flex flex-col gap-4">
+                          {/* Force Encaixe Mode Toggle */}
+                          <div className="flex items-center justify-between cursor-pointer group">
+                            <div className="space-y-0.5 pr-2">
+                              <span className="text-xs font-bold text-white group-hover:text-amber-500 transition-colors">
+                                🔧 Permitir Encaixe (Horários Ocupados/Passados)
+                              </span>
+                              <p className="text-[10px] text-neutral-400">
+                                Ative para liberar a seleção de horários já reservados ou passados.
+                              </p>
+                            </div>
+                            <div className="relative">
+                              <button
+                                type="button"
+                                onClick={() => setForceEncaixe(!forceEncaixe)}
+                                className={`w-11 h-6 rounded-full transition-colors relative focus:outline-none ${forceEncaixe ? 'bg-amber-500' : 'bg-neutral-800'}`}
+                              >
+                                <span className={`absolute top-[2px] left-[2px] bg-white rounded-full h-5 w-5 transition-transform ${forceEncaixe ? 'translate-x-5' : 'translate-x-0'}`} />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Custom Slot (Type Custom Time) */}
+                          <div className="border-t border-white/5 pt-4 space-y-2">
+                            <button
+                              type="button"
+                              onClick={() => setShowCustomTimeForm(!showCustomTimeForm)}
+                              className="text-xs font-black text-amber-500 flex items-center gap-1.5 hover:underline uppercase tracking-wider"
+                            >
+                              {showCustomTimeForm ? "✕ Fechar Horário Personalizado" : "➕ Inserir Novo Slot (Horário Customizado)"}
+                            </button>
+
+                            {showCustomTimeForm && (
+                              <div className="space-y-3 pt-1 animate-in slide-in-from-top-1 duration-200">
+                                <p className="text-[10px] text-neutral-400">
+                                  Insira um horário específico para criar um novo slot na agenda (ex: 14:15, 17:45).
+                                </p>
+                                <div className="flex gap-2">
+                                  <input
+                                    type="time"
+                                    className="bg-black border border-white/10 rounded-2xl p-4 text-white text-sm font-bold outline-none focus:border-amber-500 transition-colors grow"
+                                    value={customTime}
+                                    onChange={(e) => setCustomTime(e.target.value)}
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (!customTime) {
+                                        toast.error("Insira um horário válido.");
+                                        return;
+                                      }
+                                      setSelectedTime(customTime);
+                                      toast.success(`Horário customizado definido para ${customTime}!`);
+                                      setStep(4);
+                                    }}
+                                    className="bg-amber-500 hover:bg-amber-600 text-black px-5 py-4 rounded-2xl font-black uppercase text-xs transition-colors"
+                                  >
+                                    Definir e Avançar
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   )}
 
@@ -2144,6 +2264,48 @@ export function BookingScreen({
                     </div>
                   </div>
 
+                  {/* Nearest empty slots highlight helper for staff */}
+                  {nearestEmptySlots.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-amber-500/5 border border-amber-500/15 p-5 rounded-[2rem] space-y-3 text-left shadow-lg shadow-black/20"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" />
+                        <span className="text-[10px] font-black uppercase text-amber-500 tracking-wider">
+                          Slots Vazios Próximos (Sugestão de Preenchimento)
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-neutral-400 font-bold">
+                        Estes são os horários livres mais próximos para evitar buracos na grade da barbearia:
+                      </p>
+                      <div className="flex gap-2 flex-wrap">
+                        {nearestEmptySlots.map((slot) => {
+                          const isSelected = selectedTime === slot.time;
+                          return (
+                            <button
+                              key={slot.time}
+                              type="button"
+                              onClick={() => {
+                                triggerLightHaptic();
+                                setSelectedTime(slot.time);
+                                setStep(4);
+                              }}
+                              className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-all border cursor-pointer ${
+                                isSelected
+                                  ? "bg-amber-500 text-black border-amber-500 shadow-md shadow-amber-500/20"
+                                  : "bg-neutral-900 hover:bg-neutral-800 text-white border-white/5 hover:border-amber-500/40"
+                              }`}
+                            >
+                              <span>✨ {slot.time}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </motion.div>
+                  )}
+
                   {/* Categorized Slots Grid */}
                   {selectedDate.getDay() === 0 ? (
                     <motion.div 
@@ -2175,8 +2337,12 @@ export function BookingScreen({
                               <span className="text-sm">{period.icon}</span> {period.label}
                             </h4>
                             <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-                              {period.list.map(({ time, available, blockedReason, isPast }: any) => {
+                              {period.list.map(({ time, available, blockedReason, isPast, isBusy, originalAvailable }: any) => {
                                 const isSelected = selectedTime === time;
+                                const isStaff = role === "barber" || role === "manager" || role === "developer";
+                                const isEncaixe = isStaff && forceEncaixe && !originalAvailable;
+                                const isRecommended = nearestEmptySlots.some((s: any) => s.time === time);
+
                                 return (
                                   <motion.button
                                     key={time}
@@ -2192,22 +2358,36 @@ export function BookingScreen({
                                       isSelected 
                                         ? "bg-amber-500 border-amber-500 text-black shadow-lg shadow-amber-500/10" 
                                         : available 
-                                          ? "bg-neutral-900 border-white/5 hover:border-white/20 hover:bg-neutral-900/80 text-white cursor-pointer" 
+                                          ? isEncaixe
+                                            ? "bg-red-950/20 border-red-500/40 hover:border-red-500 hover:bg-red-950/40 text-red-400 cursor-pointer"
+                                            : isRecommended
+                                              ? "bg-neutral-900 border-amber-500/40 hover:border-amber-500 hover:bg-neutral-900/80 text-white cursor-pointer shadow-[0_0_12px_rgba(245,158,11,0.06)]"
+                                              : "bg-neutral-900 border-white/5 hover:border-white/20 hover:bg-neutral-900/80 text-white cursor-pointer" 
                                           : "bg-neutral-900/10 border-transparent text-neutral-600 opacity-60 cursor-not-allowed overflow-hidden"
                                     }`}
                                   >
                                     <span className={available ? "text-xs" : ""}>{time}</span>
-                                    {blockedReason && !available && (
+                                    {isRecommended && available && !isSelected && (
+                                      <span className="text-[7px] text-amber-500 font-extrabold uppercase mt-1 tracking-widest flex items-center gap-0.5">
+                                        ✨ Livre
+                                      </span>
+                                    )}
+                                    {isEncaixe && (
+                                      <span className="text-[7px] text-red-400 mt-1 uppercase tracking-widest text-center font-bold">
+                                        Encaixe
+                                      </span>
+                                    )}
+                                    {!isEncaixe && blockedReason && !available && (
                                       <span className="text-[7px] text-red-400 mt-1 uppercase tracking-widest text-center truncate max-w-[80px]">
                                         {blockedReason}
                                       </span>
                                     )}
-                                    {!available && !blockedReason && isPast && (
+                                    {!isEncaixe && !available && !blockedReason && isPast && (
                                       <span className="text-[7px] text-neutral-700 mt-1 uppercase tracking-widest text-center">
                                         Passou
                                       </span>
                                     )}
-                                    {!available && !blockedReason && !isPast && (
+                                    {!isEncaixe && !available && !blockedReason && !isPast && (
                                       <span className="text-[7px] text-neutral-700 mt-1 uppercase tracking-widest text-center">
                                         Ocupado
                                       </span>

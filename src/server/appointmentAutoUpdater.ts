@@ -1,5 +1,5 @@
 import { db } from "./firebaseAdmin";
-import { collection, getDocs, query, where, updateDoc, doc } from "firebase/firestore";
+import { collection, getDocs, query, where, updateDoc, doc, addDoc, Timestamp } from "firebase/firestore";
 import { sendPushNotification } from "./pushNotificationService";
 
 export function getExactAppointmentDate(data: any): Date {
@@ -108,6 +108,47 @@ export function startAppointmentAutoUpdater() {
           
           await updateDoc(doc(db, "appointments", d.id), {
               oneHourReminderSent: true
+          });
+        }
+
+        // 3. Send the 15-minute barber reminder
+        const fifteenMinutesFromNow = new Date(now.getTime() + 15 * 60 * 1000);
+        if (appointmentDate > now && appointmentDate <= fifteenMinutesFromNow && !data.barberFifteenMinReminderSent) {
+          const barberId = data.barberId;
+          const barberName = data.barberName || "Barbeiro";
+          const clientName = data.clientName || "Cliente";
+          const serviceName = data.serviceName || "Serviço";
+          const time = data.time || "";
+
+          if (barberId) {
+            console.log(`[AutoUpdater] Sending 15-min reminder to barber: ${barberId} (${barberName})`);
+            
+            // Send Push Notification directly to the barber
+            await sendPushNotification(barberId, {
+              title: "Atendimento em 15 minutos! 💈⏰",
+              body: `Faltam 15 minutos para o seu atendimento de ${serviceName} com o cliente ${clientName} às ${time}.`,
+              url: "/agenda"
+            });
+
+            // Log inside staff_notifications collection so it appears on the professional feed/wall
+            try {
+              await addDoc(collection(db, "staff_notifications"), {
+                title: "Atendimento Próximo! ⏳",
+                message: `Seu agendamento de ${serviceName} com ${clientName} é em 15 minutos (às ${time}).`,
+                timestamp: Timestamp.now(),
+                read: false,
+                type: "barber_reminder",
+                clientId: data.clientId || "guest",
+                appointmentId: d.id,
+                barberId: barberId
+              });
+            } catch (e) {
+              console.warn("[AutoUpdater] Error creating staff notification for barber 15-min reminder:", e);
+            }
+          }
+
+          await updateDoc(doc(db, "appointments", d.id), {
+            barberFifteenMinReminderSent: true
           });
         }
       });
