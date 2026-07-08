@@ -1,5 +1,15 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer, 
+  Legend
+} from "recharts";
+import { 
   query, 
   collection, 
   orderBy, 
@@ -221,6 +231,39 @@ export function ProfessionalHome({ user, role, setCurrentScreen, services = [] }
     };
   }, [appointments]);
 
+  const weeklyActivityData = useMemo(() => {
+    const reorderedDays = [
+      { name: "Seg", index: 1 },
+      { name: "Ter", index: 2 },
+      { name: "Qua", index: 3 },
+      { name: "Qui", index: 4 },
+      { name: "Sex", index: 5 },
+      { name: "Sáb", index: 6 },
+      { name: "Dom", index: 0 }
+    ];
+
+    return reorderedDays.map(day => {
+      const dayApps = appointments.filter(app => {
+        if (app.status !== 'completed') return false;
+        const d = app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date);
+        return d instanceof Date && !isNaN(d.getTime()) && d.getDay() === day.index;
+      });
+
+      const atendimentos = dayApps.length;
+      const totalValue = dayApps.reduce((acc, curr) => {
+        const price = parseFloat((curr.totalPrice || curr.price || 0).toString().replace(/[^0-9.-]+/g, ""));
+        return acc + (Number(price) || 0);
+      }, 0);
+      const ticketMedio = atendimentos > 0 ? parseFloat((totalValue / atendimentos).toFixed(2)) : 0;
+
+      return {
+        dayName: day.name,
+        atendimentos,
+        ticketMedio
+      };
+    });
+  }, [appointments]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -271,15 +314,9 @@ export function ProfessionalHome({ user, role, setCurrentScreen, services = [] }
             <h1 className="text-xl sm:text-2xl font-black text-white uppercase italic tracking-tight leading-none truncate max-w-[180px] sm:max-w-[280px]">
               {user?.displayName || user?.name || "Profissional"}
             </h1>
-            {role === 'developer' ? (
-              <span className="text-[8.5px] font-black uppercase bg-red-500/20 text-red-400 border border-red-500/30 px-2.5 py-0.5 rounded leading-none inline-flex items-center gap-1 animate-pulse">
-                🛠️ Desenvolvedor / Admin
-              </span>
-            ) : (
-              <span className="text-[8.5px] font-extrabold uppercase bg-amber-500/10 text-amber-500 border border-amber-500/20 px-2.5 py-0.5 rounded leading-none inline-block">
-                {role === 'manager' ? 'Gestor / Administrador' : 'Barbeiro Profissional'}
-              </span>
-            )}
+            <span className="text-[8.5px] font-extrabold uppercase bg-amber-500/10 text-amber-500 border border-amber-500/20 px-2.5 py-0.5 rounded leading-none inline-block">
+              {role === 'manager' ? 'Gestor / Administrador' : 'Barbeiro Profissional'}
+            </span>
           </div>
         </div>
       </div>
@@ -386,7 +423,7 @@ export function ProfessionalHome({ user, role, setCurrentScreen, services = [] }
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3.5">
           
           {/* Main management configuration (Admin / Barbershop Management) - ONLY FOR MANAGER */}
-          {(role === 'manager' || role === 'developer') && (
+          {role === 'manager' && (
             <button 
               onClick={() => setCurrentScreen("barber-management")}
               className="bg-neutral-900/30  liquid-glass/80  hover:border-amber-500/20 p-5 rounded-[1.75rem] flex flex-col justify-between min-h-[145px] sm:min-h-[160px] transition-all group active:scale-95 text-left cursor-pointer relative overflow-hidden"
@@ -489,7 +526,7 @@ export function ProfessionalHome({ user, role, setCurrentScreen, services = [] }
           </button>
 
           {/* Marketing Promotions panel - ONLY FOR MANAGER */}
-          {(role === 'manager' || role === 'developer') && (
+          {role === 'manager' && (
             <button 
               onClick={() => setCurrentScreen("promotions")}
               className="bg-neutral-900/30  liquid-glass/80  hover:border-amber-500/20 p-5 rounded-[1.75rem] flex flex-col justify-between min-h-[145px] sm:min-h-[160px] transition-all group active:scale-95 text-left cursor-pointer relative overflow-hidden"
@@ -568,7 +605,7 @@ export function ProfessionalHome({ user, role, setCurrentScreen, services = [] }
         </div>
 
         {/* Manager Barber Selector Tab Row */}
-        {(role === 'manager' || role === 'developer') && barbersInApps.length > 0 && (
+        {role === 'manager' && barbersInApps.length > 0 && (
           <div className="space-y-2 text-left">
             <label className="text-[8.5px] text-neutral-500 font-extrabold uppercase tracking-widest pl-1 block">
               Filtrar por Profissional:
@@ -713,7 +750,54 @@ export function ProfessionalHome({ user, role, setCurrentScreen, services = [] }
         </div>
       </div>
 
-      {/* 4. Upcoming Schedules Section */}
+      {/* 4. Manager Analytics Chart Section - ONLY FOR MANAGER */}
+      {role === 'manager' && (
+        <div className="p-6 liquid-glass/40 rounded-[2.5rem] shadow-inner space-y-6">
+          <div className="text-left">
+            <h3 className="text-[14px] sm:text-lg font-black text-white uppercase italic tracking-tight leading-none text-left">
+              Fluxo Semanal & Ticket Médio
+            </h3>
+            <span className="text-[8px] sm:text-[9px] text-neutral-500 font-extrabold uppercase tracking-widest mt-1.5 block">
+              Volume de Atendimentos Concluídos e Ticket Médio por Dia da Semana
+            </span>
+          </div>
+
+          <div className="h-[250px] sm:h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={weeklyActivityData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
+                <XAxis dataKey="dayName" stroke="#888" fontSize={10} tickLine={false} />
+                <YAxis 
+                  yAxisId="left" 
+                  stroke="#f59e0b" 
+                  fontSize={9} 
+                  tickLine={false} 
+                  axisLine={false}
+                  label={{ value: 'Atendimentos', angle: -90, position: 'insideLeft', offset: 0, fill: '#f59e0b', fontSize: 9, fontWeight: 'bold' }} 
+                />
+                <YAxis 
+                  yAxisId="right" 
+                  orientation="right" 
+                  stroke="#a855f7" 
+                  fontSize={9} 
+                  tickLine={false} 
+                  axisLine={false}
+                  label={{ value: 'Ticket Médio (R$)', angle: 90, position: 'insideRight', offset: 0, fill: '#a855f7', fontSize: 9, fontWeight: 'bold' }} 
+                />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#0a0a0a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }} 
+                  labelStyle={{ fontWeight: 'bold', color: '#fff', fontSize: '11px' }}
+                />
+                <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
+                <Bar yAxisId="left" dataKey="atendimentos" fill="#f59e0b" name="Atendimentos" radius={[4, 4, 0, 0]} />
+                <Bar yAxisId="right" dataKey="ticketMedio" fill="#a855f7" name="Ticket Médio (R$)" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
+      {/* 5. Upcoming Schedules Section */}
       <div className="p-6 liquid-glass/40 rounded-[2.5rem]  shadow-inner">
         <div className="flex items-center justify-between mb-6 px-1">
           <div className="text-left">

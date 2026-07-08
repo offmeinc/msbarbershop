@@ -17,16 +17,12 @@ export const HomeScreen = memo(function HomeScreen({
   onStartBooking,
   user,
   userRole,
-  isFanMode = false,
-  setIsFanMode,
   isScrolled = false
 }: { 
   services: any[];
   onStartBooking: () => void;
   user?: any;
   userRole?: string;
-  isFanMode?: boolean;
-  setIsFanMode?: (val: boolean) => void;
   isScrolled?: boolean;
   key?: string;
 }) {

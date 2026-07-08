@@ -65,7 +65,7 @@ function RecurrenceUI({
   recurrence: string;
   setRecurrence: (r: any) => void;
 }) {
-  if (userRole !== "barber" && userRole !== "manager" && userRole !== "developer") return null;
+  if (userRole !== "barber" && userRole !== "manager") return null;
   return (
     <div className=" liquid-glass/50  rounded-[2rem] p-6 space-y-4">
       <div className="flex items-center gap-2">
@@ -1171,7 +1171,7 @@ export function BookingScreen({
   const [viewingPortfolio, setViewingPortfolio] = useState<any | null>(null);
 
   useEffect(() => {
-    const isStaff = role === "manager" || role === "barber" || role === "developer";
+    const isStaff = role === "manager" || role === "barber";
     const isGuest = !user;
     if (!isStaff && !isGuest) return;
 
@@ -1254,7 +1254,7 @@ export function BookingScreen({
     const firestore = db || getFirestore();
     const q = query(
       collection(firestore, "users"),
-      where("role", "in", ["barber", "manager", "developer"]),
+      where("role", "in", ["barber", "manager"]),
     );
     const unsubscribe = onSnapshot(
       q,
@@ -1428,7 +1428,7 @@ export function BookingScreen({
 
         const isBusy = isAppBusy || isBlocked || exceedsClosing;
         const isPast = slotDate < new Date();
-        const isStaff = role === "barber" || role === "manager" || role === "developer";
+        const isStaff = role === "barber" || role === "manager";
         
         // Overrides available to true if forceEncaixe is enabled for staff members
         const isAvailable = (!isBusy && (!isPast || isStaff)) || (isStaff && forceEncaixe);
@@ -1447,7 +1447,7 @@ export function BookingScreen({
   }, [selectedDate, barberAppointments, blockedTimes, customDuration, role, forceEncaixe]);
 
   const nearestEmptySlots = useMemo(() => {
-    const isStaff = role === "barber" || role === "manager" || role === "developer";
+    const isStaff = role === "barber" || role === "manager";
     if (!isStaff || timeSlots.length === 0) return [];
 
     const now = new Date();
@@ -1478,7 +1478,7 @@ export function BookingScreen({
       setError("Todos os campos são obrigatórios.");
       return;
     }
-    const isStaffBooking = role === "manager" || role === "barber" || role === "developer";
+    const isStaffBooking = role === "manager" || role === "barber";
 
     if ((!user || isStaffBooking) && (!guestName || !guestPhone)) {
       setError("Nome e WhatsApp são obrigatórios para o cliente.");
@@ -2026,13 +2026,8 @@ export function BookingScreen({
                           <button
                             onClick={() => {
                               triggerLightHaptic();
-                              if (b.role === 'developer') {
-                                setPendingBarber(b.id);
-                                setShowDevModal(true);
-                              } else {
-                                setSelectedBarber(b.id);
-                                setStep(3);
-                              }
+                              setSelectedBarber(b.id);
+                              setStep(3);
                             }}
                             className={`w-full p-6 py-7 rounded-[2.2rem] border flex items-center justify-between transition-all group text-left ${
                               isSelected 
@@ -2047,13 +2042,13 @@ export function BookingScreen({
                                   className="w-16 h-16 sm:w-20 sm:h-20 rounded-[1.75rem] object-cover border-2 border-white/10 group-hover:border-amber-500/30 transition-all"
                                   alt={b.name}
                                   referrerPolicy="no-referrer"
-                                />
+                                  />
                                 <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-black animate-pulse" />
                               </div>
                               
                               <div className="text-left space-y-1">
-                                <span className={`text-[7.5px] font-black uppercase tracking-[0.25em] px-2 py-0.5 rounded leading-none inline-block ${b.role === 'developer' ? 'text-red-400 bg-red-500/10 border border-red-500/20' : 'text-amber-500 bg-amber-500/10'}`}>
-                                  {b.role === 'developer' ? 'DESENVOLVEDOR' : (b.role === "manager" ? "Barbeiro" : "Especialista")}
+                                <span className="text-[7.5px] font-black uppercase tracking-[0.25em] px-2 py-0.5 rounded leading-none inline-block text-amber-500 bg-amber-500/10">
+                                  {b.role === "manager" ? "Barbeiro" : "Especialista"}
                                 </span>
                                 <h4 className="font-sans font-black text-white text-base sm:text-lg uppercase italic tracking-tight group-hover:text-amber-400 transition-colors leading-none">
                                   {b.name}
@@ -2120,7 +2115,7 @@ export function BookingScreen({
                   exit={{ x: -20, opacity: 0 }}
                   className="space-y-8"
                 >
-                  {(role === "manager" || role === "barber" || role === "developer") && (
+                  {(role === "manager" || role === "barber") && (
                     <div className="space-y-4">
                       {/* Service Duration Selection */}
                       <div className="liquid-glass/60 p-5 rounded-[2.2rem] flex flex-col gap-2 text-left">
@@ -2339,7 +2334,7 @@ export function BookingScreen({
                             <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
                               {period.list.map(({ time, available, blockedReason, isPast, isBusy, originalAvailable }: any) => {
                                 const isSelected = selectedTime === time;
-                                const isStaff = role === "barber" || role === "manager" || role === "developer";
+                                const isStaff = role === "barber" || role === "manager";
                                 const isEncaixe = isStaff && forceEncaixe && !originalAvailable;
                                 const isRecommended = nearestEmptySlots.some((s: any) => s.time === time);
 
@@ -2361,7 +2356,7 @@ export function BookingScreen({
                                           ? isEncaixe
                                             ? "bg-red-950/20 border-red-500/40 hover:border-red-500 hover:bg-red-950/40 text-red-400 cursor-pointer"
                                             : isRecommended
-                                              ? "bg-neutral-900 border-amber-500/40 hover:border-amber-500 hover:bg-neutral-900/80 text-white cursor-pointer shadow-[0_0_12px_rgba(245,158,11,0.06)]"
+                                              ? "bg-neutral-900 border-amber-500/40 hover:border-amber-500 hover:bg-neutral-900/80 text-white cursor-pointer shadow-[0_0_15px_rgba(245,158,11,0.15)] ring-1 ring-amber-500/30 animate-[pulse_2.5s_infinite] bg-amber-500/10! border-amber-500!"
                                               : "bg-neutral-900 border-white/5 hover:border-white/20 hover:bg-neutral-900/80 text-white cursor-pointer" 
                                           : "bg-neutral-900/10 border-transparent text-neutral-600 opacity-60 cursor-not-allowed overflow-hidden"
                                     }`}
@@ -2369,7 +2364,7 @@ export function BookingScreen({
                                     <span className={available ? "text-xs" : ""}>{time}</span>
                                     {isRecommended && available && !isSelected && (
                                       <span className="text-[7px] text-amber-500 font-extrabold uppercase mt-1 tracking-widest flex items-center gap-0.5">
-                                        ✨ Livre
+                                        ✨ RECOMENDADO
                                       </span>
                                     )}
                                     {isEncaixe && (

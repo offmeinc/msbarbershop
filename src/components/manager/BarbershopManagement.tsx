@@ -100,7 +100,7 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
     setLoading(true);
 
     let appointmentsQuery = query(collection(firestore, "appointments"));
-    if (role === 'barber' || role === 'developer') {
+    if (role === 'barber') {
         appointmentsQuery = query(collection(firestore, "appointments"), where("barberId", "==", user.uid));
     }
     const unsubAppointments = onSnapshot(appointmentsQuery, (snapshot) => {
@@ -110,12 +110,7 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
       console.error("Appointments query failed", err);
     });
 
-    let barbersQuery;
-    if (role === 'developer') {
-      barbersQuery = query(collection(firestore, "users"), where(documentId(), "==", user.uid));
-    } else {
-      barbersQuery = query(collection(firestore, "users"), where("role", "in", ["barber", "manager", "developer"]));
-    }
+    let barbersQuery = query(collection(firestore, "users"), where("role", "in", ["barber", "manager"]));
     const unsubBarbers = onSnapshot(barbersQuery, (snapshot) => {
       const b = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setBarbers(b);

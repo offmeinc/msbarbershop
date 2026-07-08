@@ -82,16 +82,30 @@ export function safeStringify(obj: any): string {
         if (cache.has(value)) {
           return '[Circular]';
         }
-        cache.add(value);
         
         // Prevent traversing extremely heavy or internal class instances
-        if (value.constructor && value.constructor.name) {
-          const name = value.constructor.name;
-          // Block specific Firestore/Firebase internal types that cause issues
-          if (name === 'Y2' || name === 'Ka' || name.startsWith('Firestore') || name === 'FirebaseAppImpl') {
+        if (value.constructor && value.constructor !== Object && value.constructor !== Array) {
+          const name = value.constructor.name || 'Object';
+          if (name === 'Date') {
+            return value.toISOString();
+          }
+          if (name === 'RegExp') {
+            return value.toString();
+          }
+          if (
+            name === 'Y2' || 
+            name === 'Ka' || 
+            name.startsWith('Firestore') || 
+            name.startsWith('Firebase') || 
+            name.includes('Auth') || 
+            name.includes('Google') ||
+            name.length <= 2
+          ) {
             return `[${name}]`;
           }
         }
+        
+        cache.add(value);
       }
       return value;
     }, 2);

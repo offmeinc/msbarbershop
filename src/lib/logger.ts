@@ -1,5 +1,5 @@
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
-import { db } from './firebase';
+import { db, safeStringify } from './firebase';
 
 export interface AppLog {
   level: 'info' | 'warn' | 'error';
@@ -17,6 +17,7 @@ export async function logToFirestore(level: 'info' | 'warn' | 'error', message: 
       timestamp: serverTimestamp()
     });
   } catch (error) {
-    console.error('Failed to log to Firestore:', error);
+    console.error('Failed to log to Firestore:', error instanceof Error ? error.message : safeStringify(error));
   }
 }
+

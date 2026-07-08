@@ -73,7 +73,6 @@ import { triggerLightHaptic } from "../../lib/haptics";
 import { getBackendUrl } from "../../lib/pushRegister";
 import { addToOfflineQueue, getOfflineQueue, syncOfflineQueue, OfflineAction } from "../../lib/offlineQueue";
 import { AnalyticsScreen } from "./AnalyticsScreen";
-import { DevPanel } from "./DevPanel";
 import { CalendarWidget, AppointmentModal } from "../CalendarWidget";
 import { ServicesManagement, CollaboratorsManager, WorkingHoursManager } from "./ManagementScreens";
 import { ReviewModal } from "../common/ReviewModal";
@@ -129,12 +128,12 @@ export function EarningsDashboard({ appointments, services }: { appointments: an
 import { setupPushSubscription, getNotificationPermissionState, queryNotificationSupport } from "../../lib/pushRegister";
 import { useDebugMode } from "../../hooks/useDebugMode";
 
-export function DashboardScreen({ user, role, services, dashboardView, onBack, onNewBooking, onEditBooking }: { user: any, role: string, services: any[], dashboardView?: "agenda" | "list" | "calendar" | "services" | "hours" | "collaborators" | "earnings" | "developer", onBack: () => void, onNewBooking?: () => void, onEditBooking?: (app: any) => void }) {
+export function DashboardScreen({ user, role, services, dashboardView, onBack, onNewBooking, onEditBooking }: { user: any, role: string, services: any[], dashboardView?: "agenda" | "list" | "calendar" | "services" | "hours" | "collaborators" | "earnings", onBack: () => void, onNewBooking?: () => void, onEditBooking?: (app: any) => void }) {
   const isDebug = useDebugMode();
   const [pushPermission, setPushPermission] = useState<NotificationPermission>(getNotificationPermissionState());
   const [appointments, setAppointments] = useState<any[]>([]);
   const [barbers, setBarbers] = useState<any[]>([]);
-  const [selectedBarberId, setSelectedBarberId] = useState<string>(role === 'developer' ? user.uid : "all");
+  const [selectedBarberId, setSelectedBarberId] = useState<string>("all");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -145,7 +144,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
     return () => clearInterval(timer);
   }, []);
 
-  const [currentView, setCurrentView] = useState<"agenda" | "list" | "services" | "hours" | "collaborators" | "earnings" | "developer">(dashboardView || (role === 'client' ? 'list' : 'agenda'));
+  const [currentView, setCurrentView] = useState<"agenda" | "list" | "services" | "hours" | "collaborators" | "earnings">(dashboardView || (role === 'client' ? 'list' : 'agenda'));
   const [agendaMode, setAgendaMode] = useState<"day" | "week" | "month">("day");
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "confirmed" | "completed" | "cancelled">("all");
@@ -689,9 +688,6 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
       q = query(collection(firestore, "appointments"), orderBy("date", "asc"));
     } else if (role === 'barber') {
       q = query(collection(firestore, "appointments"), where("barberId", "==", user.uid), orderBy("date", "asc"));
-    } else if (role === 'developer') {
-      // Developer isolated view: empty list of appointments from others
-      q = query(collection(firestore, "appointments"), where("barberId", "==", "NOT_EXISTING_ID_FOR_DEVELOPER"));
     } else {
       q = query(collection(firestore, "appointments"), where("clientId", "==", user.uid), orderBy("date", "asc"));
     }
@@ -703,9 +699,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
       handleFirestoreError(error, OperationType.LIST, "appointments");
     });
 
-    const qBarbers = (role === 'developer')
-      ? query(collection(firestore, "users"), documentId() == user.uid ? where(documentId(), "==", user.uid) : where("uid", "==", user.uid))
-      : query(collection(firestore, "users"), where("role", "in", ["barber", "manager"]));
+    const qBarbers = query(collection(firestore, "users"), where("role", "in", ["barber", "manager"]));
     const unsubscribeBarbers = onSnapshot(qBarbers, (sn) => {
         setBarbers(sn.docs.map(d => ({ id: d.id, ...d.data() })));
     }, (error) => {
@@ -903,11 +897,6 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
 
       {/* Badge de visualização */}
       <div className="flex justify-center mt-2 mb-4">
-        {role === 'developer' && (
-          <div className="text-[10px] bg-blue-500/10 text-blue-400 border border-blue-500/20 px-4 py-1.5 rounded-full font-black uppercase tracking-widest inline-flex items-center gap-2">
-            Modo de Gestão Global: Isolado
-          </div>
-        )}
         {role === 'barber' && (
           <div className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-4 py-1.5 rounded-full font-black uppercase tracking-widest inline-flex items-center gap-2">
             Modo Profissional: Filtrado
@@ -1324,8 +1313,6 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
           onNewBooking={onNewBooking}
           onSelectAppointment={setSelectedAppointment}
         />
-      ) : currentView === 'developer' ? (
-        <DevPanel />
       ) : (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
               {currentView === 'list' && (
@@ -1690,11 +1677,6 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                                                </div>
                                                <p className="text-[10px] text-neutral-500 font-bold mt-1 text-left flex items-center gap-2">
                                                   Profissional: <span className="text-neutral-400 capitalize">{app.barberName}</span>
-                                                  {barbers.find(b => b.id === app.barberId)?.role === 'developer' && (
-                                                    <span className="text-[7.5px] font-black uppercase tracking-[0.25em] px-2 py-0.5 rounded leading-none inline-block text-red-400 bg-red-500/10 border border-red-500/20">
-                                                      DESENVOLVEDOR
-                                                    </span>
-                                                  )}
                                                   {isDebug && (
                                                     <span className="text-[7px] font-mono text-neutral-600 bg-black/30 px-1 py-0.5 rounded border border-white/5 truncate max-w-[80px]">
                                                       ID: {app.id}

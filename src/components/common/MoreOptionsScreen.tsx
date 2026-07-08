@@ -36,7 +36,7 @@ import { toast } from "../ui/Toast";
 // Dummy components
 const DarkScreen = ({ onBack }: { onBack: () => void }) => <div className="p-4">Dark Screen <button onClick={onBack}>Voltar</button></div>;
 
-export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotifications, appointments, onClearNotifications, onToggleTheme, isDarkMode, onReferrals, onPitch }: { user: any, role: string, onLogout: () => void, onBack: () => void, key?: any, staffNotifications: any[], appointments: any[], onClearNotifications: () => void, onToggleTheme: () => void, isDarkMode: boolean, onReferrals?: () => void, onPitch?: () => void }) {
+export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotifications, appointments, onClearNotifications, onToggleTheme, isDarkMode, onReferrals }: { user: any, role: string, onLogout: () => void, onBack: () => void, key?: any, staffNotifications: any[], appointments: any[], onClearNotifications: () => void, onToggleTheme: () => void, isDarkMode: boolean, onReferrals?: () => void }) {
   const [activeSubScreen, setActiveSubScreen] = useState<
     'main' | 'profile' | 'notif' | 'block' | 'share' | 'earnings' | 'week' | 'recon' | 'recurrence' | 'promotions' | 'inventory'
   >('main');
@@ -44,14 +44,12 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
   const unreadCount = staffNotifications.filter(n => !n.read).length;
 
   const getRoleLabel = () => {
-    if (role === 'developer') return 'Desenvolvedor do App 🛠️';
     if (role === 'manager') return 'Gestor';
     if (role === 'barber') return 'Profissional / Barbeiro';
     return 'Cliente VIP';
   };
 
   const getRoleBadgeClass = () => {
-    if (role === 'developer') return 'bg-red-500/25 text-red-400 border border-red-500/40 animate-pulse';
     if (role === 'manager') return 'bg-amber-500/10 text-amber-400 border border-amber-500/20';
     if (role === 'barber') return 'bg-purple-500/10 text-purple-400 border border-purple-500/20';
     return 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
@@ -93,19 +91,12 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
           badge: unreadCount > 0 ? (unreadCount > 99 ? '99+' : unreadCount.toString()) : undefined, 
           onClick: () => setActiveSubScreen('notif') 
         },
-        ...(role === 'barber' || role === 'manager' || role === 'developer' ? [{ 
+        ...(role === 'barber' || role === 'manager' ? [{ 
           id: 'earnings', 
           label: 'Meus Ganhos', 
           desc: 'Relatório financeiro de atendimentos e comissões',
           icon: <WalletCards className="w-5 h-5 text-emerald-500" />, 
           onClick: () => setActiveSubScreen('earnings') 
-        }] : []),
-        ...(role === 'barber' || role === 'manager' || role === 'developer' ? [{ 
-          id: 'pitch', 
-          label: 'Apresentação SaaS', 
-          desc: 'Pitch comercial completo do app e exportação PDF',
-          icon: <Presentation className="w-5 h-5 text-amber-500" />, 
-          onClick: onPitch 
         }] : []),
       ]
     },
@@ -140,7 +131,7 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
           icon: <RefreshCw className="w-5 h-5 text-teal-400" />, 
           onClick: () => setActiveSubScreen('recurrence') 
         },
-        ...(role === 'manager' || role === 'developer' ? [
+        ...(role === 'manager' ? [
           { 
             id: 'promotions', 
             label: 'Promoções', 

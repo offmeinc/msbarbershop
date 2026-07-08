@@ -98,7 +98,6 @@ function usePathNavigation<T extends string>(defaultScreen: T) {
 import { BrandLogo } from "./components/common/BrandLogo";
 import { Toaster, toast } from "./components/ui/Toast";
 import { NotificationModal } from "./components/common/NotificationModal";
-import { useFanMode } from "./lib/useFanMode";
 import { logToFirestore } from "./lib/logger";
 
 // Helper logic for preloading lazy-loaded components
@@ -139,7 +138,6 @@ const PortfolioManager = makePreloadableLazy(() => import("./components/professi
 const DashboardScreen = makePreloadableLazy(() => import("./components/manager/DashboardScreen").then(m => ({ default: m.DashboardScreen })));
 const ProfessionalClientChatsScreen = makePreloadableLazy(() => import("./components/ChatScreens").then(m => ({ default: m.ProfessionalClientChatsScreen })));
 const BarbershopManagement = makePreloadableLazy(() => import("./components/manager/BarbershopManagement").then(m => ({ default: m.BarbershopManagement })));
-const PitchDeck = makePreloadableLazy(() => import("./components/manager/PitchDeck").then(m => ({ default: m.PitchDeck })));
 
 if (typeof window !== "undefined") {
   (window as any).__pwaPreloaders = {
@@ -156,13 +154,11 @@ if (typeof window !== "undefined") {
     portfolio: () => PortfolioManager.preload(),
     "professional-chat": () => ProfessionalClientChatsScreen.preload(),
     "barber-management": () => BarbershopManagement.preload(),
-    pitch: () => PitchDeck.preload(),
   };
 }
 
 import { HomeScreen } from "./components/client/HomeScreen";
 import { BottomNav } from "./components/common/BottomNav";
-import { WorldCupDecor } from "./components/common/WorldCupDecor";
 import { PushPrompt } from "./components/pwa/PushPrompt";
 import { OfflineIndicator } from "./components/common/OfflineIndicator";
 import { Skeleton } from "./components/common/Skeleton";
@@ -231,7 +227,7 @@ import {
 } from "firebase/auth";
 
 
-type Screen = "home" | "booking" | "agenda" | "clients" | "client-details" | "more" | "login" | "collaborators" | "services" | "client-login" | "client-dashboard" | "earnings" | "promotions" | "portfolio" | "professional-chat" | "barber-management" | "pitch";
+type Screen = "home" | "booking" | "agenda" | "clients" | "client-details" | "more" | "login" | "collaborators" | "services" | "client-login" | "client-dashboard" | "earnings" | "promotions" | "portfolio" | "professional-chat" | "barber-management";
 
 
 function triggerLocalNotification(title: string, body: string, urlPath: string = "/") {
@@ -321,18 +317,8 @@ export default function App() {
   const { scrollY } = useScroll();
   const [hidden, setHidden] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [isFanMode, setIsFanMode] = useFanMode();
-  const [isButtonFaded, setIsButtonFaded] = useState(false);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      console.log("Hiding ball button...");
-      setIsButtonFaded(true);
-    }, 5000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const validScreens = ["home", "booking", "agenda", "clients", "client-details", "more", "login", "collaborators", "services", "client-login", "client-dashboard", "earnings", "promotions", "portfolio", "professional-chat", "barber-management", "checkout", "pitch"];
+  const validScreens = ["home", "booking", "agenda", "clients", "client-details", "more", "login", "collaborators", "services", "client-login", "client-dashboard", "earnings", "promotions", "portfolio", "professional-chat", "barber-management", "checkout"];
   const displayScreen = validScreens.includes(currentScreen as string) ? currentScreen : "home";
 
   useMotionValueEvent(scrollY, "change", (latest) => {
@@ -457,7 +443,7 @@ export default function App() {
         });
       }
 
-      if (["manager", "barber", "developer"].includes(userRole)) {
+      if (["manager", "barber"].includes(userRole)) {
         // Refresh staff-side unread states
         const qC = query(
           collection(firestore, "chats"), 
@@ -679,7 +665,7 @@ export default function App() {
     let totalCount = 0;
     if (userRole === "client" || (!user && loggedInClient)) {
       totalCount = clientUnreadChats + clientUnreadNotifications;
-    } else if (["manager", "barber", "developer"].includes(userRole)) {
+    } else if (["manager", "barber"].includes(userRole)) {
       const unreadStaffNotifications = staffNotifications.filter(n => !n.read).length;
       totalCount = staffUnreadChats + unreadStaffNotifications;
     }
@@ -727,10 +713,7 @@ export default function App() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    let themeColor = "#000000"; // Deep black default to match the app's native layout color
-    if (isFanMode) {
-      themeColor = "#06110b"; // Forest green base for active Copa/Fan Mode
-    }
+    const themeColor = "#000000"; // Deep black default to match the app's native layout color
 
     // 1. Update theme-color meta tag
     let metaTheme = document.querySelector('meta[name="theme-color"]');
@@ -753,7 +736,7 @@ export default function App() {
     // 3. Keep root backgrounds identical to prevent iOS viewport elastic overflow flashes
     document.documentElement.style.backgroundColor = themeColor;
     document.body.style.backgroundColor = themeColor;
-  }, [isDarkMode, isFanMode]);
+  }, [isDarkMode]);
 
   // Proactive background preloading of major screens when the app goes idle
   useEffect(() => {
@@ -764,7 +747,7 @@ export default function App() {
         
         if (userRole === "client") {
           ClientDashboardScreen.preload().catch(() => {});
-        } else if (["manager", "barber", "developer"].includes(userRole)) {
+        } else if (["manager", "barber"].includes(userRole)) {
           DashboardScreen.preload().catch(() => {});
           ClientsScreen.preload().catch(() => {});
           ProfessionalHome.preload().catch(() => {});
@@ -780,7 +763,7 @@ export default function App() {
   }, [userRole]);
 
   useEffect(() => {
-    if (!['manager', 'barber', 'developer'].includes(userRole)) {
+    if (!['manager', 'barber'].includes(userRole)) {
       setStaffNotifications([]);
       setStaffUnreadChats(0);
       return;
@@ -1144,7 +1127,6 @@ export default function App() {
           </div>
         </div>
       )}
-      <WorldCupDecor isFanMode={isFanMode} />
       <OfflineIndicator />
       <PushPrompt userId={user?.uid || loggedInClient?.id} userRole={userRole} />
       <motion.nav 
@@ -1197,7 +1179,7 @@ export default function App() {
                 >
                   Agenda
                 </button>
-                {(userRole === "manager" || userRole === "barber" || userRole === "developer") && (
+                {(userRole === "manager" || userRole === "barber") && (
                   <button 
                     onClick={() => {
                       setDashboardView("list");
@@ -1208,9 +1190,9 @@ export default function App() {
                     Atendimentos
                   </button>
                 )}
-                {(userRole === "manager" || userRole === "barber" || userRole === "developer") && (
+                {(userRole === "manager" || userRole === "barber") && (
                   <>
-                    {(userRole === "manager" || userRole === "developer") && (
+                    {userRole === "manager" && (
                         <button 
                           onClick={() => setCurrentScreen("collaborators")}
                           className={`hover:text-white transition-colors flex items-center gap-2 ${displayScreen === "collaborators" ? "text-amber-500" : ""}`}
@@ -1229,13 +1211,7 @@ export default function App() {
                 <div className="flex items-center gap-3 pl-6 border-l border-white/10">
                   <div className="text-right">
                     <p className="text-white text-xs font-bold leading-none">{user.displayName}</p>
-                    {userRole === 'developer' ? (
-                      <span className="inline-flex items-center gap-1 bg-red-500/20 text-red-400 border border-red-500/30 px-1.5 py-0.5 rounded-md text-[8px] font-extrabold uppercase tracking-widest animate-pulse leading-none mt-1">
-                        <Terminal className="w-2 h-2" /> Dev / Admin
-                      </span>
-                    ) : (
-                      <p className="text-[10px] text-amber-500 capitalize font-black">{userRole}</p>
-                    )}
+                    <p className="text-[10px] text-amber-500 capitalize font-black">{userRole}</p>
                   </div>
                   <div className="relative">
                     {user.photoURL ? (
@@ -1252,7 +1228,7 @@ export default function App() {
                     )}
                   </div>
 
-                  {['manager', 'barber', 'developer'].includes(userRole) && (
+                  {['manager', 'barber'].includes(userRole) && (
                     <div className="relative">
                       <button 
                         onClick={() => setShowNotifications(!showNotifications)}
@@ -1400,7 +1376,7 @@ export default function App() {
               className="w-full"
             >
               {displayScreen === "home" && (
-                (['manager', 'barber', 'developer'].includes(userRole)) 
+                (['manager', 'barber'].includes(userRole)) 
                 ? <ProfessionalHome 
                     user={user} 
                     role={userRole} 
@@ -1417,8 +1393,6 @@ export default function App() {
                     onStartBooking={() => setCurrentScreen("booking")} 
                     user={user} 
                     userRole={userRole} 
-                    isFanMode={isFanMode}
-                    setIsFanMode={setIsFanMode}
                     isScrolled={isScrolled}
                   />
               )}
@@ -1435,7 +1409,6 @@ export default function App() {
               {displayScreen === "client-details" && selectedClient && <ClientDetailsScreen client={selectedClient} onBack={() => { setCurrentScreen("clients"); setSelectedClient(null); }} onScheduleClient={(client) => { setClientToSchedule(client); setCurrentScreen("booking"); }} onMessageClient={(client) => { setSelectedClient(client); setCurrentScreen("professional-chat"); }} />}
               {displayScreen === "portfolio" && <PortfolioManager onBack={() => setCurrentScreen("home")} />}
               {displayScreen === "barber-management" && <BarbershopManagement user={user} role={userRole} onBack={() => setCurrentScreen("home")} />}
-              {displayScreen === "pitch" && <PitchDeck onBack={() => setCurrentScreen("home")} />}
               {displayScreen === "professional-chat" && (
                 <ProfessionalClientChatsScreen 
                   user={user} 
@@ -1459,7 +1432,6 @@ export default function App() {
                   }}
                   onToggleTheme={toggleTheme}
                   isDarkMode={isDarkMode}
-                  onPitch={() => setCurrentScreen("pitch")}
                 />
               )}
             </motion.div>
@@ -1476,7 +1448,7 @@ export default function App() {
         isVisible={!hidden}
       />
 
-      {['manager', 'barber', 'developer'].includes(userRole) && (
+      {['manager', 'barber'].includes(userRole) && (
         <NotificationModal 
             notifications={staffNotifications}
             onClose={() => {}}
@@ -1581,7 +1553,7 @@ export default function App() {
 
                     // Conditional items
                     if (user) {
-                      if (userRole === "manager" || userRole === "developer") {
+                      if (userRole === "manager") {
                         menuItems.push({
                           label: "Agenda",
                           icon: <Calendar className="w-4 h-4" />,
@@ -1594,14 +1566,6 @@ export default function App() {
                           onClick: () => { setDashboardView("list"); setCurrentScreen("agenda"); setIsMenuOpen(false); },
                           isActive: currentScreen === "agenda" && dashboardView === "list"
                         });
-                        if (userRole === "developer") {
-                          menuItems.push({
-                            label: "Painel Dev",
-                            icon: <Terminal className="w-4 h-4" />,
-                            onClick: () => { setDashboardView("developer"); setCurrentScreen("agenda"); setIsMenuOpen(false); },
-                            isActive: currentScreen === "agenda" && dashboardView === "developer"
-                          });
-                        }
                         menuItems.push({
                           label: "Time de Profissionais",
                           icon: <User className="w-4 h-4" />,
@@ -1753,67 +1717,6 @@ export default function App() {
       </AnimatePresence>
       <Toaster />
       
-      {/* Floating 2026 World Cup Ball Switch */}
-      <AnimatePresence>
-        {!isButtonFaded && (
-          <motion.button
-            key="wc-floater"
-            drag
-            dragMomentum={false}
-            initial={{ scale: 0, opacity: 0, y: 50 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0, opacity: 0, y: 20 }}
-            whileHover={{ scale: 1.15, rotate: 360, transition: { duration: 0.6 } }}
-            whileTap={{ scale: 0.9 }}
-            onClick={() => {
-              const nextFanMode = !isFanMode;
-              setIsFanMode(nextFanMode);
-              if (nextFanMode) {
-                if (typeof navigator !== "undefined" && navigator.vibrate) {
-                  navigator.vibrate([50, 30, 50]);
-                }
-                // Trigger glorious green & yellow confetti bursts from corners
-                confetti({
-                  particleCount: 100,
-                  angle: 60,
-                  spread: 60,
-                  origin: { x: 0, y: 1 },
-                  colors: ["#22c55e", "#eab308", "#10b981", "#facc15", "#ffffff"]
-                });
-                confetti({
-                  particleCount: 100,
-                  angle: 120,
-                  spread: 60,
-                  origin: { x: 1, y: 1 },
-                  colors: ["#eab308", "#22c55e", "#facc15", "#10b981", "#ffffff"]
-                });
-              }
-            }}
-            className={`fixed z-50 w-14 h-14 rounded-full flex items-center justify-center shadow-[0_0_25px_rgba(34,197,94,0.4)] cursor-pointer select-none transition-all duration-300 ${
-              isFanMode 
-                ? "bg-gradient-to-tr from-green-600 via-yellow-400 to-emerald-500 border-2 border-yellow-200 shadow-yellow-400/20" 
-                : "bg-neutral-800 border-2 border-neutral-700 text-white"
-            } bottom-32 right-5 md:bottom-8 md:right-8`}
-            title="Alternar Tema Copa do Mundo 2026"
-          >
-            <div className="relative w-full h-full flex items-center justify-center">
-              <div className={`absolute inset-0 rounded-full animate-ping opacity-25 ${
-                isFanMode ? "bg-yellow-400" : "bg-green-500"
-              }`} style={{ animationDuration: '2s' }} />
-              
-              <span className="text-3xl filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)] select-none">
-                ⚽
-              </span>
-              
-              <span className={`absolute -top-1 -right-1 text-[8px] font-black tracking-tighter px-1.5 py-0.5 rounded-full border border-black/20 ${
-                isFanMode ? "bg-green-600 text-white" : "bg-yellow-400 text-black"
-              }`}>
-                '26
-              </span>
-            </div>
-          </motion.button>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

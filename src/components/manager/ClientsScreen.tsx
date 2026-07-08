@@ -13,11 +13,6 @@ export function ClientsScreen({ onBack, onScheduleClient, onClientClick, user, r
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
-    if (role === 'developer') {
-      setClients([]);
-      setLoading(false);
-      return;
-    }
     const q = query(collection(db, "users"), where("role", "==", "client"), limit(50));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setClients(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
@@ -26,11 +21,11 @@ export function ClientsScreen({ onBack, onScheduleClient, onClientClick, user, r
       handleFirestoreError(error, OperationType.LIST, "users");
     });
     return () => unsubscribe();
-  }, [role]);
+  }, []);
 
   useEffect(() => {
     let qApps;
-    if (role === 'barber' || role === 'developer') {
+    if (role === 'barber') {
       qApps = query(collection(db, "appointments"), where("barberId", "==", user.uid));
     } else {
       qApps = query(collection(db, "appointments"));

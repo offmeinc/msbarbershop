@@ -38,7 +38,7 @@ export function CollaboratorsManager() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const q = query(collection(db, "users"), where("role", "in", ["barber", "manager", "developer"]));
+    const q = query(collection(db, "users"), where("role", "in", ["barber", "manager"]));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setBarbers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, (error) => {
@@ -182,7 +182,7 @@ export function WorkingHoursManager() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(collection(db, "users"), where("role", "in", ["barber", "manager", "developer"]));
+    const q = query(collection(db, "users"), where("role", "in", ["barber", "manager"]));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const barbersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setBarbers(barbersData);
