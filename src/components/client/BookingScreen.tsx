@@ -1691,6 +1691,9 @@ export function BookingScreen({
         }
       }
 
+      // Wake up the backend to process the background onSnapshot listeners for push notifications
+      fetch(getBackendUrl('/api/wake-up'), { method: 'POST' }).catch(() => {});
+
       setCreatedAppointmentId(appDocId);
       setShowConfirmation(true);
     } catch (error) {

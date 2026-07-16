@@ -3,6 +3,32 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 
+// Patch console to prevent AI Studio interceptor from crashing on cyclic objects
+const originalConsoleLog = console.log;
+const originalConsoleError = console.error;
+const originalConsoleWarn = console.warn;
+
+function sanitizeArgs(args: any[]) {
+  return args.map(arg => {
+    if (arg instanceof Error) {
+      return `[Error: ${arg.message}]\n${arg.stack}`;
+    }
+    if (typeof arg === 'object' && arg !== null) {
+      try {
+        JSON.stringify(arg);
+        return arg;
+      } catch (e) {
+        return `[Unserializable/Cyclic Object: ${arg.constructor?.name || 'Object'}]`;
+      }
+    }
+    return arg;
+  });
+}
+
+console.log = (...args) => originalConsoleLog(...sanitizeArgs(args));
+console.error = (...args) => originalConsoleError(...sanitizeArgs(args));
+console.warn = (...args) => originalConsoleWarn(...sanitizeArgs(args));
+
 // Automatically register service worker on load to qualify for PWA installation
 if (typeof window !== "undefined" && "serviceWorker" in navigator) {
   window.addEventListener("load", () => {

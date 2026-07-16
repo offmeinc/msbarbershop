@@ -341,6 +341,11 @@ Gere um relatório de desempenho em português (pt-BR).`;
     }
   });
 
+  // Ping endpoint to wake up Cloud Run background listeners
+  app.post("/api/wake-up", (req, res) => {
+    res.json({ ok: true, message: "Server is awake" });
+  });
+
   // Mercado Pago Payment Creation API
   app.post("/api/payments/mercado-pago/create-payment", async (req, res) => {
     const { transaction_amount, appointmentId, userId } = req.body;

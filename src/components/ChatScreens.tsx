@@ -242,6 +242,8 @@ export function ChatScreen({ user, onBack }: { user: any, onBack: () => void }) 
       unreadByClient: false
     }, { merge: true });
 
+    fetch(getBackendUrl('/api/wake-up'), { method: 'POST' }).catch(() => {});
+
     setNewMessage("");
   };
 
@@ -567,6 +569,8 @@ export function ProfessionalClientChatsScreen({ user, onBack, initialClientId, i
       unreadByClient: true,
       unreadByStaff: false
     }, { merge: true });
+
+    fetch(getBackendUrl('/api/wake-up'), { method: 'POST' }).catch(() => {});
 
     setNewMessage("");
   };

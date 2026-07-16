@@ -416,6 +416,9 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
       }
       
       await updateDoc(doc(firestore, "appointments", app.id), updatePayload);
+      
+      // Wake up the backend to process the background onSnapshot listeners for push notifications
+      fetch(getBackendUrl('/api/wake-up'), { method: 'POST' }).catch(() => {});
 
       // Async/non-blocking notifications to avoid UI freeze or catch-all failures
       (async () => {
