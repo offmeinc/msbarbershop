@@ -33,20 +33,32 @@ export function PushPrompt({ userId, userRole }: PushPromptProps) {
   }, [userId]);
 
   const handleEnable = async () => {
-    if (!userId || !userRole) return;
-    
-    // If permission is already denied, we can't request it. Just guide them.
-    if (Notification.permission === 'denied') {
-      toast.error("Vá em Ajustes > Notificações > App MS Barber para ativar.", { duration: 5000 });
-      return;
-    }
+    try {
+      console.log("[PushPrompt] handleEnable clicked. userId:", userId, "userRole:", userRole);
+      if (!userId || !userRole) {
+        toast.error("Usuário não identificado. Aguarde um instante e tente novamente.");
+        return;
+      }
+      
+      const permissionState = getNotificationPermissionState();
+      console.log("[PushPrompt] Current permission state:", permissionState);
 
-    const success = await setupPushSubscription(userId, userRole);
-    if (success) {
-      toast.success("Notificações ativadas com sucesso!");
-      setShowPrompt(false);
-    } else {
-      toast.error("Não foi possível ativar as notificações.");
+      // If permission is already denied, we can't request it. Just guide them.
+      if (permissionState === 'denied') {
+        toast.error("Vá em Ajustes > Notificações > App MS Barber para ativar.", { duration: 5000 });
+        return;
+      }
+
+      const success = await setupPushSubscription(userId, userRole);
+      if (success) {
+        toast.success("Notificações ativadas com sucesso!");
+        setShowPrompt(false);
+      } else {
+        toast.error("Não foi possível ativar as notificações.");
+      }
+    } catch (err: any) {
+      console.error("[PushPrompt] handleEnable error:", err);
+      toast.error(`Erro ao ativar: ${err.message || String(err)}`);
     }
   };
 

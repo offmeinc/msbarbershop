@@ -53,7 +53,19 @@ export async function setupPushSubscription(userId: string, userRole: string): P
     return false;
   }
 
-  const envVapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+  let envVapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+  if (!envVapidKey) {
+    try {
+      const res = await fetch(getBackendUrl("/api/push/vapid-key"));
+      if (res.ok) {
+        const data = await res.json();
+        envVapidKey = data.publicKey;
+      }
+    } catch (err) {
+      console.warn("Could not dynamically fetch VAPID key from server:", err);
+    }
+  }
+
   if (!envVapidKey) {
     console.error("VAPID_PUBLIC_KEY is not defined in the environment. Push registration aborted.");
     return false;

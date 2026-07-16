@@ -346,6 +346,11 @@ Gere um relatório de desempenho em português (pt-BR).`;
     res.json({ ok: true, message: "Server is awake" });
   });
 
+  // VAPID Public Key Endpoint
+  app.get("/api/push/vapid-key", (req, res) => {
+    res.json({ publicKey: process.env.VITE_VAPID_PUBLIC_KEY || "" });
+  });
+
   // Mercado Pago Payment Creation API
   app.post("/api/payments/mercado-pago/create-payment", async (req, res) => {
     const { transaction_amount, appointmentId, userId } = req.body;
