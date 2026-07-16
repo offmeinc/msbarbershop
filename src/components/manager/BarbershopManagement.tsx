@@ -55,6 +55,10 @@ interface BarbershopManagementProps {
   role: string;
 }
 
+import { AnalyticsScreen } from './AnalyticsScreen';
+import { InventoryScreen } from './InventoryScreen';
+import { GoalsDashboard } from './GoalsDashboard';
+
 export function BarbershopManagement({ onBack, user, role }: BarbershopManagementProps) {
   const [activeTab, setActiveTab] = useState<"dashboard" | "commissions" | "expenses" | "stock" | "goals" | "debts" | "loyalty" | "taxes">("dashboard");
   
@@ -68,6 +72,7 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
   
   // New States for requested systems
   const [monthlyGoal, setMonthlyGoal] = useState<number>(0);
+  const [monthlyGoalsMap, setMonthlyGoalsMap] = useState<Record<string, number>>({});
   const [loyaltyMultiplier, setLoyaltyMultiplier] = useState<number>(5);
   const [debts, setDebts] = useState<any[]>([]);
 
@@ -155,8 +160,14 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
     const unsubConfig = onSnapshot(configRef, (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.data();
-        if (data.monthlyGoal !== undefined) {
+        if (data.monthlyGoalsMap) {
+          setMonthlyGoalsMap(data.monthlyGoalsMap);
+          const currentMonthKey = format(new Date(), "yyyy-MM");
+          setMonthlyGoal(data.monthlyGoalsMap[currentMonthKey] || 0);
+        } else if (data.monthlyGoal !== undefined) {
           setMonthlyGoal(data.monthlyGoal);
+          const currentMonthKey = format(new Date(), "yyyy-MM");
+          setMonthlyGoalsMap({ [currentMonthKey]: data.monthlyGoal });
         }
         if (data.loyaltyMultiplier !== undefined) {
           setLoyaltyMultiplier(data.loyaltyMultiplier);
@@ -364,16 +375,27 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
   };
 
   // Configuration Handlers (Firestore)
-  const handleGoalChange = async (val: number) => {
-    setMonthlyGoal(val);
+  const handleUpdateMonthlyGoal = async (monthKey: string, val: number) => {
+    const updatedMap = { ...monthlyGoalsMap, [monthKey]: val };
+    setMonthlyGoalsMap(updatedMap);
+    if (monthKey === format(new Date(), "yyyy-MM")) {
+      setMonthlyGoal(val);
+    }
+    
     try {
       const firestore = db || getFirestore();
       await setDoc(doc(firestore, "settings", "config"), {
-        monthlyGoal: val
+        monthlyGoalsMap: updatedMap,
+        monthlyGoal: monthKey === format(new Date(), "yyyy-MM") ? val : monthlyGoal // keep backward compat
       }, { merge: true });
     } catch (err) {
       console.error("Failed to save goal to Firestore:", err);
     }
+  };
+
+  const handleGoalChange = async (val: number) => {
+    const currentMonthKey = format(new Date(), "yyyy-MM");
+    await handleUpdateMonthlyGoal(currentMonthKey, val);
   };
 
   const handleLoyaltyChange = async (val: number) => {
@@ -865,43 +887,12 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="space-y-6"
           >
-            <div className=" liquid-glass  p-6 rounded-[2.5rem] space-y-4">
-              <div>
-                <h3 className="text-lg font-black text-white flex items-center gap-2">
-                  <Target className="w-5 h-5 text-amber-500" />
-                  Gerenciamento de Metas Comerciais
-                </h3>
-                <p className="text-[9px] text-neutral-500 font-extrabold uppercase tracking-widest mt-1">
-                  Acompanhe e configure a projeção de faturamento bruto ideal do seu estabelecimento
-                </p>
-              </div>
-
-              <div className="p-6 liquid-glass rounded-3xl  grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-3">
-                  <label className="block text-[10px] font-black uppercase text-neutral-400 tracking-wider">Metas Mensal Ativa (R$)</label>
-                  <div className="flex gap-2">
-                    <input 
-                      type="number"
-                      value={monthlyGoal === 0 ? "" : monthlyGoal}
-                      onChange={e => {
-                        const val = e.target.value;
-                        handleGoalChange(val === "" ? 0 : Math.max(0, parseFloat(val) || 0));
-                      }}
-                      className="bg-black border border-white/10 p-4 rounded-2xl text-sm font-black text-white w-full outline-none focus:border-amber-500 transition-colors"
-                    />
-                  </div>
-                  <p className="text-[9px] text-neutral-500 font-bold uppercase">Configure o teto ideal de vendas para sua barbearia</p>
-                </div>
-
-                <div className=" liquid-glass  p-5 rounded-2xl flex flex-col justify-center space-y-2">
-                  <span className="text-[9px] font-black text-neutral-500 uppercase tracking-wide">Faturamento Atual</span>
-                  <p className="text-2xl font-black text-amber-500 leading-none">R$ {financialStats.grossEarnings.toFixed(2)}</p>
-                  <p className="text-[10px] text-neutral-400 uppercase font-black leading-none mt-1">Projeção: {goalPercent}% cumprida</p>
-                </div>
-              </div>
-            </div>
+            <GoalsDashboard 
+              appointments={appointments} 
+              monthlyGoalsMap={monthlyGoalsMap}
+              onUpdateGoal={handleUpdateMonthlyGoal}
+            />
           </motion.div>
         )}
 

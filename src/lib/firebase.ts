@@ -76,39 +76,62 @@ export interface FirestoreErrorInfo {
 
 export function safeStringify(obj: any): string {
   try {
-    const cache = new WeakSet();
-    return JSON.stringify(obj, (key, value) => {
-      if (typeof value === 'object' && value !== null) {
-        if (cache.has(value)) {
-          return '[Circular]';
-        }
-        
-        // Prevent traversing extremely heavy or internal class instances
-        if (value.constructor && value.constructor !== Object && value.constructor !== Array) {
-          const name = value.constructor.name || 'Object';
-          if (name === 'Date') {
-            return value.toISOString();
-          }
-          if (name === 'RegExp') {
-            return value.toString();
-          }
-          if (
-            name === 'Y2' || 
-            name === 'Ka' || 
-            name.startsWith('Firestore') || 
-            name.startsWith('Firebase') || 
-            name.includes('Auth') || 
-            name.includes('Google') ||
-            name.length <= 2
-          ) {
-            return `[${name}]`;
-          }
-        }
-        
-        cache.add(value);
+    const visited = new WeakSet<any>();
+    
+    function sanitize(val: any): any {
+      if (val === null || typeof val !== 'object') {
+        return val;
       }
-      return value;
-    }, 2);
+      
+      if (visited.has(val)) {
+        return '[Circular]';
+      }
+      
+      // Handle Dates
+      if (val instanceof Date) {
+        return val.toISOString();
+      }
+      
+      // Handle Firestore Timestamps
+      if (val.constructor && (val.constructor.name === 'Timestamp' || (val.seconds !== undefined && val.nanoseconds !== undefined))) {
+        return { seconds: val.seconds, nanoseconds: val.nanoseconds };
+      }
+      
+      // Check if it's a plain object or array
+      let isPlain = false;
+      const isArray = Array.isArray(val);
+      try {
+        const proto = Object.getPrototypeOf(val);
+        isPlain = proto === Object.prototype || proto === null || isArray;
+      } catch (e) {
+        // Safe fallback
+      }
+      
+      if (!isPlain) {
+        // For non-plain objects, represent them as their class name or string representation
+        const name = (val.constructor && val.constructor.name) || 'Object';
+        return `[Class: ${name}]`;
+      }
+      
+      visited.add(val);
+      
+      if (isArray) {
+        return val.map((item: any) => sanitize(item));
+      }
+      
+      const sanitizedObj: any = {};
+      for (const key of Object.keys(val)) {
+        try {
+          sanitizedObj[key] = sanitize(val[key]);
+        } catch (e) {
+          // Ignore non-accessible properties
+        }
+      }
+      return sanitizedObj;
+    }
+    
+    const sanitized = sanitize(obj);
+    return JSON.stringify(sanitized, null, 2);
   } catch (e) {
     return String(obj);
   }
