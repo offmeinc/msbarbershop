@@ -276,15 +276,39 @@ export function startAppointmentsListener() {
 
   const setupListener = () => {
     return onSnapshot(collection(db, "appointments"), (snapshot) => {
-      if (isInitial) {
+      const isFirstRun = isInitial;
+      if (isFirstRun) {
         isInitial = false;
         console.log(`[Push Service] Baselined existing appointments. Real-time notifications active.`);
-        return;
       }
 
       snapshot.docChanges().forEach(async (change) => {
         const docId = change.doc.id;
         const data = change.doc.data();
+
+        // Calculate message recency to prevent duplicate notifications during offline resyncs
+        let isRecent = false;
+        const targetTime = data.updatedAt || data.createdAt;
+        if (targetTime) {
+          try {
+            const msgTime = typeof targetTime.toDate === "function" 
+              ? targetTime.toDate().getTime() 
+              : (targetTime._seconds ? targetTime._seconds * 1000 : new Date(targetTime).getTime());
+            const diff = Date.now() - msgTime;
+            if (Math.abs(diff) < 30000) { // within 30 seconds
+              isRecent = true;
+            }
+          } catch (e) {
+            isRecent = true;
+          }
+        } else {
+          isRecent = true;
+        }
+
+        if (isFirstRun && !isRecent) {
+          return; // Ignore old events on first run
+        }
+
 
         // Check format of date to display
         let formattedDateStr = "";
@@ -530,10 +554,10 @@ export function startChatsListener() {
 
   const setupListener = () => {
     return onSnapshot(collection(db, "chats"), (snapshot) => {
-      if (isInitial) {
+      const isFirstRun = isInitial;
+      if (isFirstRun) {
         isInitial = false;
         console.log("[Push Service] Baselined existing chats. Real-time chat notifications active.");
-        return;
       }
 
       snapshot.docChanges().forEach(async (change) => {
@@ -559,6 +583,10 @@ export function startChatsListener() {
             }
           } else {
             isRecent = true;
+          }
+
+          if (isFirstRun && !isRecent) {
+            return; // Ignore old events on first run
           }
 
           if (isRecent) {
