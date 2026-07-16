@@ -33,10 +33,14 @@ export function PushPrompt({ userId, userRole }: PushPromptProps) {
   }, [userId]);
 
   const handleEnable = async () => {
+    let toastId = "";
     try {
       console.log("[PushPrompt] handleEnable clicked. userId:", userId, "userRole:", userRole);
+      
+      toastId = toast.loading("Iniciando ativação das notificações...");
+
       if (!userId || !userRole) {
-        toast.error("Usuário não identificado. Aguarde um instante e tente novamente.");
+        toast.error("Usuário não identificado. Por favor, faça login novamente.", { id: toastId });
         return;
       }
       
@@ -45,20 +49,28 @@ export function PushPrompt({ userId, userRole }: PushPromptProps) {
 
       // If permission is already denied, we can't request it. Just guide them.
       if (permissionState === 'denied') {
-        toast.error("Vá em Ajustes > Notificações > App MS Barber para ativar.", { duration: 5000 });
+        toast.error("As notificações estão bloqueadas. Vá em Ajustes > Notificações > App MS Barber para permitir.", { id: toastId, duration: 6000 });
         return;
       }
 
-      const success = await setupPushSubscription(userId, userRole);
+      const success = await setupPushSubscription(userId, userRole, (stepMsg) => {
+        toast.loading(stepMsg, { id: toastId });
+      });
+
       if (success) {
-        toast.success("Notificações ativadas com sucesso!");
+        toast.success("Notificações push ativadas com sucesso! 🎉", { id: toastId });
         setShowPrompt(false);
       } else {
-        toast.error("Não foi possível ativar as notificações.");
+        toast.error("Não foi possível ativar as notificações. Verifique se o app está instalado na tela inicial.", { id: toastId, duration: 5000 });
       }
     } catch (err: any) {
       console.error("[PushPrompt] handleEnable error:", err);
-      toast.error(`Erro ao ativar: ${err.message || String(err)}`);
+      const errMsg = err.message || String(err);
+      if (toastId) {
+        toast.error(`Falha ao ativar: ${errMsg}`, { id: toastId, duration: 6000 });
+      } else {
+        toast.error(`Falha ao ativar: ${errMsg}`);
+      }
     }
   };
 

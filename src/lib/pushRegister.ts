@@ -47,12 +47,18 @@ export function getNotificationPermissionState(): NotificationPermission {
 }
 
 // Register Push Service Worker and subscribe to Web Push
-export async function setupPushSubscription(userId: string, userRole: string): Promise<boolean> {
+export async function setupPushSubscription(
+  userId: string, 
+  userRole: string,
+  onStepChange?: (msg: string) => void
+): Promise<boolean> {
   if (!queryNotificationSupport()) {
     console.warn("Notifications or PushManager not supported.");
+    onStepChange?.("Notificações não são suportadas neste navegador.");
     return false;
   }
 
+  onStepChange?.("Buscando chaves de segurança...");
   let envVapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
   if (!envVapidKey) {
     try {
@@ -68,47 +74,107 @@ export async function setupPushSubscription(userId: string, userRole: string): P
 
   if (!envVapidKey) {
     console.error("VAPID_PUBLIC_KEY is not defined in the environment. Push registration aborted.");
+    onStepChange?.("Chave de segurança VAPID não encontrada no servidor.");
     return false;
   }
 
+  // Request notification permission with fallback
+  onStepChange?.("Aguardando permissão de notificação no navegador...");
+  let permission: NotificationPermission;
   try {
-    const permission = await Notification.requestPermission();
-    if (permission !== "granted") return false;
+    if (typeof Notification.requestPermission === "function") {
+      // Modern promise structure with callback fallback for older/webview implementations
+      permission = await new Promise<NotificationPermission>((resolve, reject) => {
+        try {
+          const p = Notification.requestPermission((res) => {
+            resolve(res);
+          });
+          if (p && typeof p.then === "function") {
+            p.then(resolve).catch(reject);
+          }
+        } catch (e) {
+          Notification.requestPermission().then(resolve).catch(reject);
+        }
+      });
+    } else {
+      permission = Notification.permission;
+    }
+  } catch (err: any) {
+    console.error("Error requesting notification permission:", err);
+    onStepChange?.(`Permissão negada ou com erro: ${err.message || String(err)}`);
+    return false;
+  }
 
-    // Register our SW with FCM
-    const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js", { scope: "/" });
+  if (permission !== "granted") {
+    console.warn("Notification permission was not granted:", permission);
+    onStepChange?.("Permissão de notificações negada pelo usuário.");
+    return false;
+  }
+
+  // Register service worker with progress
+  onStepChange?.("Registrando serviço em segundo plano (Service Worker)...");
+  let registration: ServiceWorkerRegistration;
+  try {
+    registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js", { scope: "/" });
     try {
       await registration.update();
     } catch (e) { /* ignore */ }
+  } catch (err: any) {
+    console.error("Service worker registration failed:", err);
+    onStepChange?.(`Falha no Service Worker: ${err.message || String(err)}`);
+    return false;
+  }
 
-    const msg = await messaging();
+  // Get Firebase messaging client
+  onStepChange?.("Conectando ao Firebase Cloud Messaging...");
+  let msg;
+  try {
+    msg = await messaging();
     if (!msg) {
        console.error("Firebase messaging not supported in this environment");
+       onStepChange?.("Mensagens Firebase não são suportadas neste dispositivo.");
        return false;
     }
+  } catch (err: any) {
+    console.error("Firebase messaging initialization failed:", err);
+    onStepChange?.(`Erro de Conexão Firebase: ${err.message || String(err)}`);
+    return false;
+  }
 
-    const currentToken = await getToken(msg, {
+  // Retrieve FCM token
+  onStepChange?.("Gerando token de identificação push...");
+  let currentToken = "";
+  try {
+    currentToken = await getToken(msg, {
       vapidKey: envVapidKey,
       serviceWorkerRegistration: registration,
     });
+  } catch (err: any) {
+    console.error("Error getting token:", err);
+    onStepChange?.(`Erro ao gerar token push: ${err.message || String(err)}`);
+    return false;
+  }
 
-    if (currentToken) {
-      // Save FCM Token to Firestore
-      await setDoc(doc(db, "fcm_tokens", currentToken), {
-        userId,
-        userRole,
-        token: currentToken,
-        createdAt: new Date().toISOString()
-      });
-      console.log("FCM Token saved successfully.");
-      return true;
-    } else {
-      console.warn("No registration token available. Request permission to generate one.");
-      return false;
-    }
-  } catch (error: any) {
-    const msg = error instanceof Error ? error.message : String(error);
-    console.warn("[Push Register - FCM] Failed.", msg);
+  if (!currentToken) {
+    console.warn("No registration token available. Request permission to generate one.");
+    onStepChange?.("O navegador não retornou um token push válido.");
+    return false;
+  }
+
+  // Save token to Firestore
+  onStepChange?.("Salvando identificador no banco de dados...");
+  try {
+    await setDoc(doc(db, "fcm_tokens", currentToken), {
+      userId,
+      userRole,
+      token: currentToken,
+      createdAt: new Date().toISOString()
+    });
+    console.log("FCM Token saved successfully.");
+    return true;
+  } catch (err: any) {
+    console.error("Error saving FCM token:", err);
+    onStepChange?.(`Erro ao registrar no banco de dados: ${err.message || String(err)}`);
     return false;
   }
 }
