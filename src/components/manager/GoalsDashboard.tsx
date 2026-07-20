@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Target, TrendingUp, TrendingDown, Lightbulb, CheckCircle2, ChevronLeft, ChevronRight, BarChart2 } from 'lucide-react';
 import { format, parseISO, subMonths, isSameMonth, addMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -12,6 +12,7 @@ interface GoalsDashboardProps {
 
 export function GoalsDashboard({ appointments, monthlyGoalsMap, onUpdateGoal }: GoalsDashboardProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [isUpdating, setIsUpdating] = useState(false);
   
   const monthKey = format(currentDate, "yyyy-MM");
   const previousMonthKey = format(subMonths(currentDate, 1), "yyyy-MM");
@@ -75,6 +76,14 @@ export function GoalsDashboard({ appointments, monthlyGoalsMap, onUpdateGoal }: 
     }
     return s;
   }, [currentGoal, currentPercent, currentMonthRevenue, previousMonthRevenue, currentDate]);
+  
+  useEffect(() => {
+    setIsUpdating(true);
+    const timer = setTimeout(() => {
+      setIsUpdating(false);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [currentMonthRevenue, currentGoal]);
 
   // Historical data for chart (last 6 months)
   const chartData = useMemo(() => {
@@ -161,8 +170,11 @@ export function GoalsDashboard({ appointments, monthlyGoalsMap, onUpdateGoal }: 
             <div className="bg-black/40 p-5 rounded-3xl border border-white/5 space-y-4">
               <div className="flex justify-between items-end">
                 <div>
-                  <p className="text-[9px] font-black text-neutral-500 uppercase tracking-widest mb-1">Alcançado</p>
-                  <p className="text-3xl font-black text-white leading-none">R$ {currentMonthRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                  <p className="text-[9px] font-black text-neutral-500 uppercase tracking-widest mb-1 flex items-center gap-2">
+                    Alcançado
+                    {isUpdating && <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.5)]" title="Sincronizando..." />}
+                  </p>
+                  <p className={`text-3xl font-black leading-none transition-colors duration-500 ${isUpdating ? 'text-amber-400' : 'text-white'}`}>R$ {currentMonthRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                 </div>
                 <div className="text-right">
                   <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-lg ${currentPercent >= 100 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-500'}`}>

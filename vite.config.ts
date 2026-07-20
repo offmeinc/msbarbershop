@@ -14,10 +14,13 @@ export default defineConfig(({ mode }) => {
         registerType: 'autoUpdate',
         includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
         workbox: {
-          globPatterns: ['**/*.{js,css,html,png,jpg,jpeg,svg,ico}'],
+          globPatterns: ['**/*.{js,css,html,png,jpg,jpeg,svg,ico,json,woff,woff2}'],
           cleanupOutdatedCaches: true,
           clientsClaim: true,
           skipWaiting: true,
+          navigateFallback: '/index.html',
+          navigateFallbackAllowlist: [/^(?!\/?api).*/],
+          importScripts: ['/firebase-messaging-sw.js'],
           runtimeCaching: [
             {
               urlPattern: /^https:\/\/fonts\.(?:googleapis|gstatic)\.com\/.*/i,

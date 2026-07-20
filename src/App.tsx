@@ -430,12 +430,7 @@ export default function App() {
           } else if (!notifiedIdsRef.current.has(docData.id)) {
             notifiedIdsRef.current.add(docData.id);
             
-            // Re-sync alert triggered synchronously!
-            triggerLocalNotification(
-              docData.title || "MS Barbearia ⭐", 
-              docData.message || "Nova atualização disponível."
-            );
-            
+            // FCM backend handles background pushes. Only show in-app toast if visible.
             if (typeof document !== "undefined" && document.visibilityState === "visible") {
               toast.info(docData.message || "Nova atualização recebida!");
             }
@@ -471,7 +466,7 @@ export default function App() {
               
               const title = docData.title || "Alerta de Agendamento 📅";
               const message = docData.message || "Você tem uma nova reserva ou cancelamento.";
-              triggerLocalNotification(title, message, "/agenda");
+              // FCM backend handles background pushes.
               
               if (typeof document !== "undefined" && document.visibilityState === "visible") {
                 toast.success(`${title}: ${message}`);
@@ -623,8 +618,9 @@ export default function App() {
           if (!isInitialRun && Date.now() - msgTime < 60000) {
             const bodyText = data.lastMessage || "Nova mensagem recebida! 💬";
             console.log("[Notification System] Client Chat Trigger:", bodyText);
-            setTimeout(() => toast.success(`MS Barbearia: ${bodyText}`), 0);
-            triggerLocalNotification("Nova mensagem - MS Barbearia 💬", bodyText, "/");
+            if (typeof document !== "undefined" && document.visibilityState === "visible") {
+              setTimeout(() => toast.success(`MS Barbearia: ${bodyText}`), 0);
+            }
           }
           lastProcessedClientMsgTimeRef.current = msgTime;
         } else if (!unread || msgTime > 0) {
@@ -800,8 +796,9 @@ export default function App() {
             const title = nData.title || "Alerta do Sistema 💈";
             const message = nData.message || "Nova atualização recebida.";
             console.log("[Notification System] Staff Notification Trigger:", title);
-            setTimeout(() => toast.success(`${title}: ${message}`), 0);
-            triggerLocalNotification(title, message, "/agenda");
+            if (typeof document !== "undefined" && document.visibilityState === "visible") {
+              setTimeout(() => toast.success(`${title}: ${message}`), 0);
+            }
           }
         }
         
@@ -840,8 +837,9 @@ export default function App() {
             const clientName = docData.clientName || "Cliente";
             const bodyText = docData.lastMessage || "Nova mensagem recebida! 💬";
             console.log("[Notification System] Staff Chat Trigger:", clientName);
-            setTimeout(() => toast.success(`${clientName}: ${bodyText}`), 0);
-            triggerLocalNotification(`${clientName} enviou uma mensagem 💬`, bodyText, "/professional-chat");
+            if (typeof document !== "undefined" && document.visibilityState === "visible") {
+              setTimeout(() => toast.success(`${clientName}: ${bodyText}`), 0);
+            }
           }
           lastProcessedStaffChatsRef.current[chatId] = msgTime;
         }

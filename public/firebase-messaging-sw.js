@@ -27,6 +27,7 @@ messaging.onBackgroundMessage((payload) => {
     navigator.setAppBadge(1).catch(() => {});
   }
   
+  // Custom display to ensure it shows up reliably when app is fully closed in PWA
   const title = payload.notification?.title || payload.data?.title || "MS BARBER SHOP";
   const body = payload.notification?.body || payload.data?.body || "Nova mensagem";
   const url = payload.data?.url || payload.fcmOptions?.link || "/";

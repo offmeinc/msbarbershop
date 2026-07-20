@@ -299,10 +299,10 @@ export function startAppointmentsListener() {
               isRecent = true;
             }
           } catch (e) {
-            isRecent = true;
+            isRecent = false;
           }
         } else {
-          isRecent = true;
+          isRecent = false;
         }
 
         if (isFirstRun && !isRecent) {
@@ -579,10 +579,10 @@ export function startChatsListener() {
                 isRecent = true;
               }
             } catch (e) {
-              isRecent = true;
+              isRecent = false;
             }
           } else {
-            isRecent = true;
+            isRecent = false;
           }
 
           if (isFirstRun && !isRecent) {

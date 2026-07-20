@@ -115,7 +115,8 @@ export async function setupPushSubscription(
   onStepChange?.("Registrando serviço em segundo plano (Service Worker)...");
   let registration: ServiceWorkerRegistration;
   try {
-    registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js", { scope: "/" });
+    const swUrl = import.meta.env.DEV ? "/firebase-messaging-sw.js" : "/sw.js";
+    registration = await navigator.serviceWorker.register(swUrl, { scope: "/" });
     try {
       await registration.update();
     } catch (e) { /* ignore */ }
