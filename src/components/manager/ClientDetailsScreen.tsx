@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { toast } from "react-hot-toast";
 import { motion } from "motion/react";
-import { ArrowLeft, Loader2, Calendar, Scissors, Clock, Star, MessageSquare, Repeat, Phone, Mail, Gift, DollarSign, User, Award, Zap, CalendarCheck } from "lucide-react";
-import { collection, query, onSnapshot, Timestamp } from "firebase/firestore";
+import { ArrowLeft, Loader2, Calendar, Scissors, Clock, Star, MessageSquare, Repeat, Phone, Mail, Gift, DollarSign, User, Award, Zap, CalendarCheck, Edit3, Save } from "lucide-react";
+import { collection, query, onSnapshot, Timestamp, doc, updateDoc } from "firebase/firestore";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
 import { format, parseISO, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -9,6 +10,25 @@ import { ptBR } from "date-fns/locale";
 export function ClientDetailsScreen({ client, onBack, onScheduleClient, onMessageClient }: { client: any, onBack: () => void, onScheduleClient?: (client: any) => void, onMessageClient?: (client: any) => void }) {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [notes, setNotes] = useState(client?.notes || "");
+  const [isSavingNotes, setIsSavingNotes] = useState(false);
+
+  const handleSaveNotes = async () => {
+    if (!client?.uid && !client?.id) return;
+    const clientId = client.uid || client.id;
+    setIsSavingNotes(true);
+    try {
+      await updateDoc(doc(db, "users", clientId), {
+        notes: notes
+      });
+      toast.success("Observações salvas com sucesso!");
+    } catch (error) {
+      console.error("Error saving notes:", error);
+      toast.error("Erro ao salvar observações");
+    } finally {
+      setIsSavingNotes(false);
+    }
+  };
 
   useEffect(() => {
     // Listen to all appointments to filter details accurately by many fields
@@ -325,6 +345,33 @@ export function ClientDetailsScreen({ client, onBack, onScheduleClient, onMessag
                 </button>
               )}
          </div>
+      </div>
+
+      {/* Client Notes Section */}
+      <div className="relative overflow-hidden liquid-glass backdrop-blur-md p-6 sm:p-8 rounded-[2.5rem] mb-8 shadow-xl">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Edit3 className="w-5 h-5 text-amber-500" />
+            <h3 className="text-lg font-black text-white uppercase italic tracking-tight">Observações Internas</h3>
+          </div>
+          <button
+            onClick={handleSaveNotes}
+            disabled={isSavingNotes || notes === (client?.notes || "")}
+            className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-black px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSavingNotes ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            Salvar
+          </button>
+        </div>
+        <p className="text-neutral-500 text-[10px] font-black uppercase tracking-widest mb-4">
+          Adicione preferências, histórico de química ou detalhes importantes (visível apenas para a equipe)
+        </p>
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Ex: Prefere degradê navalhado, alergia a gilete..."
+          className="w-full bg-neutral-900/50 border border-white/10 rounded-2xl p-4 text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/50 min-h-[120px] resize-y"
+        />
       </div>
 
       {/* History and details segment */}
