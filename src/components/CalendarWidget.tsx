@@ -12,7 +12,10 @@ import {
   Compass,
   Check,
   Users,
-  Briefcase
+  Briefcase,
+  Lock,
+  Unlock,
+  Trash2
 } from "lucide-react";
 import { 
   format, 
@@ -147,7 +150,9 @@ export function CalendarWidget({
   role, 
   updateStatus,
   onNewBooking,
-  onSelectAppointment
+  onSelectAppointment,
+  blockedTimes = [],
+  onDeleteBlockedTime
 }: { 
   appointments: any[], 
   services?: any[],
@@ -158,10 +163,31 @@ export function CalendarWidget({
   role: string,
   updateStatus: (app: any, status: string, extraData?: any) => void,
   onNewBooking?: () => void,
-  onSelectAppointment?: (app: any) => void
+  onSelectAppointment?: (app: any) => void,
+  blockedTimes?: any[],
+  onDeleteBlockedTime?: (id: string) => void
 }) {
   const [now, setNow] = useState(new Date());
   const [miniMonth, setMiniMonth] = useState(() => startOfMonth(currentDate));
+  const [selectedBlock, setSelectedBlock] = useState<any | null>(null);
+
+  const getLockDateObj = (lock: any) => {
+    if (!lock.date) return new Date(0);
+    if (lock.date instanceof Timestamp) return lock.date.toDate();
+    if (lock.date.toDate && typeof lock.date.toDate === "function") return lock.date.toDate();
+    if (lock.date instanceof Date) return lock.date;
+    if (typeof lock.date === "string") return parseISO(lock.date);
+    return new Date(lock.date);
+  };
+
+  const getBlockedTimesForDay = (date: Date) => {
+    if (!blockedTimes) return [];
+    return blockedTimes.filter(block => {
+      if (!block.date) return false;
+      const blockDate = block.date instanceof Timestamp ? block.date.toDate() : (typeof block.date === 'string' ? parseISO(block.date) : block.date);
+      return blockDate instanceof Date && !isNaN(blockDate.getTime()) && isSameDay(blockDate, date);
+    });
+  };
 
   // Auto-sync mini picker month when active calendar date changes
   useEffect(() => {
@@ -414,6 +440,7 @@ export function CalendarWidget({
       for (let i = 0; i < 7; i++) {
         const cloneDay = day;
         const dayAppointments = getAppointmentsForDay(day);
+        const dayBlocks = getBlockedTimesForDay(day);
         const isSelected = isSameDay(day, currentDate);
         const isCurrentMonth = isSameMonth(day, monthStart);
         const isTodayDate = isToday(day);
@@ -436,31 +463,70 @@ export function CalendarWidget({
               }`}>
                 {format(day, "d")}
               </span>
-              {dayAppointments.length > 0 && (
-                <span className="text-[8px] font-black text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-full">
-                  {dayAppointments.length}
-                </span>
-              )}
+              <div className="flex items-center gap-1">
+                {dayBlocks.length > 0 && (
+                  <span className="text-[8px] font-black text-red-400 bg-red-500/15 border border-red-500/30 px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                    <Lock className="w-2 h-2 text-red-500" /> {dayBlocks.length}
+                  </span>
+                )}
+                {dayAppointments.length > 0 && (
+                  <span className="text-[8px] font-black text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-full">
+                    {dayAppointments.length}
+                  </span>
+                )}
+              </div>
             </div>
 
-            {/* Render mini color tags for professional slots inside cell */}
+            {/* Render mini color tags for professional slots and blocks inside cell */}
             <div className="space-y-1 my-1.5 overflow-hidden flex-1 flex flex-col justify-end">
-               {dayAppointments.slice(0, 3).map((app, idx) => {
-                 const colorObj = barberColorMap.get(app.barberId) || BARBER_COLORS[idx % BARBER_COLORS.length];
+               {/* Show up to 3 combined items */}
+               {(() => {
+                 const combined = [
+                   ...dayAppointments.map(app => ({ type: 'app' as const, data: app, id: app.id, time: app.time })),
+                   ...dayBlocks.map(block => ({ type: 'block' as const, data: block, id: block.id, time: block.startTime }))
+                 ].sort((a, b) => {
+                   const [ah, am] = (a.time || "00:00").split(':').map(Number);
+                   const [bh, bm] = (b.time || "00:00").split(':').map(Number);
+                   return (ah * 60 + am) - (bh * 60 + bm);
+                 });
+
+                 const itemsToShow = combined.slice(0, 3);
                  return (
-                   <div 
-                     key={idx} 
-                     onClick={(e) => { e.stopPropagation(); onSelectAppointment && onSelectAppointment(app); }} 
-                     className={`text-[8px] ${colorObj.bg} ${colorObj.text} ${colorObj.border} border px-2 py-0.5 rounded-lg truncate font-black flex items-center justify-between group hover:brightness-125 transition-all`}
-                   >
-                     <span className="truncate max-w-[80%]">{app.clientName?.split(' ')[0]}</span>
-                     <span className="opacity-70 text-[7px] shrink-0">{app.time || '00:00'}</span>
-                   </div>
+                   <>
+                     {itemsToShow.map((item, idx) => {
+                       if (item.type === 'app') {
+                         const app = item.data;
+                         const colorObj = barberColorMap.get(app.barberId) || BARBER_COLORS[idx % BARBER_COLORS.length];
+                         return (
+                           <div 
+                             key={`app-month-${app.id || idx}`} 
+                             onClick={(e) => { e.stopPropagation(); onSelectAppointment && onSelectAppointment(app); }} 
+                             className={`text-[8px] ${colorObj.bg} ${colorObj.text} ${colorObj.border} border px-2 py-0.5 rounded-lg truncate font-black flex items-center justify-between group hover:brightness-125 transition-all`}
+                           >
+                             <span className="truncate max-w-[80%]">{app.clientName?.split(' ')[0]}</span>
+                             <span className="opacity-70 text-[7px] shrink-0">{app.time || '00:00'}</span>
+                           </div>
+                         );
+                       } else {
+                         const block = item.data;
+                         return (
+                           <div 
+                             key={`block-month-${block.id || idx}`} 
+                             onClick={(e) => { e.stopPropagation(); setSelectedBlock(block); }} 
+                             className="text-[8px] bg-red-500/10 text-red-400 border border-red-500/20 px-2 py-0.5 rounded-lg truncate font-black flex items-center justify-between group hover:brightness-125 transition-all cursor-pointer"
+                           >
+                             <span className="truncate max-w-[80%] flex items-center gap-0.5"><Lock className="w-2 h-2 shrink-0 text-red-500" /> {block.reason || 'Bloqueado'}</span>
+                             <span className="opacity-70 text-[7px] shrink-0">{block.startTime || '00:00'}</span>
+                           </div>
+                         );
+                       }
+                     })}
+                     {combined.length > 3 && (
+                       <div className="text-[7px] text-neutral-600 font-extrabold pl-1.5 uppercase">+{combined.length - 3} mais</div>
+                     )}
+                   </>
                  );
-               })}
-               {dayAppointments.length > 3 && (
-                 <div className="text-[7px] text-neutral-600 font-extrabold pl-1.5 uppercase">+{dayAppointments.length - 3} mais</div>
-               )}
+               })()}
             </div>
           </div>
         );
@@ -583,6 +649,53 @@ export function CalendarWidget({
                         isSameDay(day, currentDate) ? "bg-white/[0.005]" : ""
                       }`}
                     >
+                      {/* Weekly Blocked Times */}
+                      {getBlockedTimesForDay(day).map((block) => {
+                        const [sh, sm] = block.startTime.split(':').map(Number);
+                        const startMins = sh * 60 + sm;
+                        const [eh, em] = block.endTime.split(':').map(Number);
+                        const endMins = eh * 60 + em;
+                        const dayStartMins = 8 * 60;
+                        const dayEndMins = 22 * 60;
+                        
+                        if (startMins < dayEndMins && endMins > dayStartMins) {
+                          const visibleStartMins = Math.max(startMins, dayStartMins);
+                          const visibleEndMins = Math.min(endMins, dayEndMins);
+                          const visibleDuration = visibleEndMins - visibleStartMins;
+
+                          const startOffset = ((visibleStartMins - dayStartMins) / 60) * ROW_HEIGHT;
+                          const heightPixels = (visibleDuration / 60) * ROW_HEIGHT;
+
+                          return (
+                            <div
+                              key={`block-week-${block.id}`}
+                              onClick={() => setSelectedBlock(block)}
+                              className="absolute rounded-xl px-1.5 py-1 sm:px-2 sm:py-1.5 cursor-pointer flex flex-col justify-between overflow-hidden group hover:shadow-xl active:scale-95 transition-all border-l-2 sm:border-l-4 border-l-red-500 bg-red-500/5 hover:bg-red-500/10 border-red-500/10 hover:border-red-500/20"
+                              style={{
+                                top: `${startOffset + 2}px`,
+                                height: `${heightPixels - 4}px`,
+                                left: '2px',
+                                width: 'calc(100% - 4px)',
+                                zIndex: 12
+                              }}
+                            >
+                              <div className="text-left select-none space-y-0.5 min-w-0">
+                                <p className="text-[9px] sm:text-[10px] font-black text-red-400 truncate leading-none">Bloqueado 🔒</p>
+                                <p className="text-[7px] sm:text-[8px] font-extrabold text-neutral-400 uppercase truncate mb-1">{block.reason}</p>
+                              </div>
+                              
+                              <div className="flex items-center justify-between pointer-events-none gap-1 mt-auto">
+                                <span className="text-[7px] sm:text-[8px] font-bold text-white/50 shrink-0">{block.startTime}h - {block.endTime}h</span>
+                                <span className="liquid-glass text-[6px] sm:text-[7px] font-black uppercase text-red-400 px-1 rounded max-w-[50%] truncate hidden sm:inline-block">
+                                  {block.barberName === 'Todos' ? 'Geral' : block.barberName?.split(' ')[0]}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })}
+
                       {positionedApps.map((app, appIdx) => {
                         const startOffset = ((app.start - (8 * 60)) / 60) * ROW_HEIGHT;
                         const duration = app.actualDuration;
@@ -642,6 +755,8 @@ export function CalendarWidget({
               const isTodayDate = isToday(day);
               const isSelected = isSameDay(day, currentDate);
               const dApps = getAppointmentsForDay(day);
+              const dBlocks = getBlockedTimesForDay(day);
+              const hasItems = dApps.length > 0 || dBlocks.length > 0;
               
               return (
                 <button
@@ -653,8 +768,8 @@ export function CalendarWidget({
                 >
                   <span className="text-[8px] font-black uppercase tracking-widest">{format(day, 'eeeee', { locale: ptBR })}</span>
                   <span className="text-xs font-black mt-1">{format(day, 'd')}</span>
-                  {dApps.length > 0 && (
-                    <div className={`w-1 h-1 rounded-full mt-1 ${isSelected ? 'bg-black' : 'bg-amber-500'}`} />
+                  {hasItems && (
+                    <div className={`w-1 h-1 rounded-full mt-1 ${isSelected ? 'bg-black' : dBlocks.length > 0 && dApps.length === 0 ? 'bg-red-500' : 'bg-amber-500'}`} />
                   )}
                 </button>
               );
@@ -662,42 +777,83 @@ export function CalendarWidget({
           </div>
 
           <div className="space-y-3">
-            {getAppointmentsForDay(currentDate).length === 0 ? (
-              <div className="liquid-glass p-16 text-center -2 -dashed rounded-3xl opacity-60">
-                <Clock className="w-6 h-6 text-neutral-500 mx-auto mb-2" />
-                <p className="text-[10px] text-neutral-400 font-black uppercase tracking-widest">Nenhuma reserva para este dia</p>
-                <p className="text-[8px] text-neutral-600 font-extrabold uppercase tracking-wide mt-1">Selecione outra data ou marque um corte</p>
-              </div>
-            ) : (
-              getAppointmentsForDay(currentDate).map((app, idx) => {
-                const colorObj = barberColorMap.get(app.barberId) || BARBER_COLORS[idx % BARBER_COLORS.length];
+            {(() => {
+              const dayApps = getAppointmentsForDay(currentDate);
+              const dayBlocks = getBlockedTimesForDay(currentDate);
+              const combinedItems = [
+                ...dayApps.map(app => ({ type: 'appointment' as const, data: app, time: app.time })),
+                ...dayBlocks.map(block => ({ type: 'block' as const, data: block, time: block.startTime }))
+              ].sort((a, b) => {
+                const [ah, am] = (a.time || "00:00").split(':').map(Number);
+                const [bh, bm] = (b.time || "00:00").split(':').map(Number);
+                return (ah * 60 + am) - (bh * 60 + bm);
+              });
+
+              if (combinedItems.length === 0) {
                 return (
-                  <div
-                    key={idx}
-                    onClick={() => onSelectAppointment && onSelectAppointment(app)}
-                    className={`bg-neutral-900/60 p-4 rounded-2xl border-l-4 flex items-center justify-between ${colorObj.accent} border border-white/5 shadow-md active:scale-98 transition`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl liquid-glass flex items-center justify-center  text-xs font-black text-amber-500 overflow-hidden">
-                        {app.clientPhoto ? (
-                          <img src={app.clientPhoto} alt={app.clientName} className="w-full h-full object-cover" />
-                        ) : (
-                          app.clientName?.charAt(0) || '?'
-                        )}
-                      </div>
-                      <div className="text-left">
-                        <p className="text-xs font-black text-white">{app.clientName}</p>
-                        <p className="text-[9px] text-neutral-500 font-extrabold uppercase mt-0.5">{app.serviceName}</p>
-                        <p className="text-[8px] text-amber-500 font-black uppercase tracking-wide mt-1">Profissional: {app.barberName}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-[10px] font-black text-white liquid-glass  px-2.5 py-1.5 rounded-xl block tracking-widest">{app.time || '00:00'}</span>
-                    </div>
+                  <div className="liquid-glass p-16 text-center -2 -dashed rounded-3xl opacity-60">
+                    <Clock className="w-6 h-6 text-neutral-500 mx-auto mb-2" />
+                    <p className="text-[10px] text-neutral-400 font-black uppercase tracking-widest">Nenhuma atividade para este dia</p>
+                    <p className="text-[8px] text-neutral-600 font-extrabold uppercase tracking-wide mt-1">Nenhum agendamento ou bloqueio ativo</p>
                   </div>
                 );
-              })
-            )}
+              }
+
+              return combinedItems.map((item, idx) => {
+                if (item.type === 'appointment') {
+                  const app = item.data;
+                  const colorObj = barberColorMap.get(app.barberId) || BARBER_COLORS[idx % BARBER_COLORS.length];
+                  return (
+                    <div
+                      key={`app-${app.id || idx}`}
+                      onClick={() => onSelectAppointment && onSelectAppointment(app)}
+                      className={`bg-neutral-900/60 p-4 rounded-2xl border-l-4 flex items-center justify-between ${colorObj.accent} border border-white/5 shadow-md active:scale-98 transition text-left`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl liquid-glass flex items-center justify-center  text-xs font-black text-amber-500 overflow-hidden">
+                          {app.clientPhoto ? (
+                            <img src={app.clientPhoto} alt={app.clientName} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          ) : (
+                            app.clientName?.charAt(0) || '?'
+                          )}
+                        </div>
+                        <div className="text-left">
+                          <p className="text-xs font-black text-white">{app.clientName}</p>
+                          <p className="text-[9px] text-neutral-500 font-extrabold uppercase mt-0.5">{app.serviceName}</p>
+                          <p className="text-[8px] text-amber-500 font-black uppercase tracking-wide mt-1">Profissional: {app.barberName}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[10px] font-black text-white liquid-glass  px-2.5 py-1.5 rounded-xl block tracking-widest">{app.time || '00:00'}</span>
+                      </div>
+                    </div>
+                  );
+                } else {
+                  const block = item.data;
+                  return (
+                    <div
+                      key={`block-${block.id || idx}`}
+                      onClick={() => setSelectedBlock(block)}
+                      className="bg-red-500/5 hover:bg-red-500/10 p-4 rounded-2xl border-l-4 border-l-red-500 border border-white/5 shadow-md active:scale-98 transition flex items-center justify-between cursor-pointer text-left"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-500 shrink-0">
+                          <Lock className="w-4 h-4" />
+                        </div>
+                        <div className="text-left min-w-0">
+                          <p className="text-xs font-black text-red-400">HORÁRIO BLOQUEADO 🔒</p>
+                          <p className="text-[9px] text-neutral-400 font-extrabold uppercase mt-0.5 truncate">{block.reason || 'Bloqueio administrativo'}</p>
+                          <p className="text-[8px] text-amber-500 font-black uppercase tracking-wide mt-1">Profissional: {block.barberName === 'Todos' ? 'Geral / Todos' : block.barberName}</p>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className="text-[10px] font-black text-white bg-red-500/10 border border-red-500/20 px-2.5 py-1.5 rounded-xl block tracking-widest">{block.startTime}h - {block.endTime}h</span>
+                      </div>
+                    </div>
+                  );
+                }
+              });
+            })()}
           </div>
         </div>
       </div>
@@ -730,6 +886,75 @@ export function CalendarWidget({
 
             {/* Absolute Placed appointments container */}
             <div className="absolute top-0 bottom-0 right-4 left-16 z-10">
+              {/* Daily Blocked Times */}
+              {getBlockedTimesForDay(currentDate).map((block) => {
+                const [sh, sm] = block.startTime.split(':').map(Number);
+                const startMins = sh * 60 + sm;
+                const [eh, em] = block.endTime.split(':').map(Number);
+                const endMins = eh * 60 + em;
+                const dayStartMins = 8 * 60;
+                const dayEndMins = 22 * 60;
+                
+                if (startMins < dayEndMins && endMins > dayStartMins) {
+                  const visibleStartMins = Math.max(startMins, dayStartMins);
+                  const visibleEndMins = Math.min(endMins, dayEndMins);
+                  const visibleDuration = visibleEndMins - visibleStartMins;
+
+                  const startOffset = ((visibleStartMins - dayStartMins) / 60) * ROW_HEIGHT;
+                  const heightPixels = (visibleDuration / 60) * ROW_HEIGHT;
+
+                  return (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.98 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      key={`block-${block.id}`}
+                      onClick={() => setSelectedBlock(block)}
+                      className="absolute cursor-pointer rounded-xl px-3 py-1.5 overflow-hidden group hover:shadow-2xl active:scale-98 border border-red-500/10 hover:border-red-500/35 transition-all text-left flex justify-between items-start border-l-4 border-l-red-500 bg-red-500/5 hover:bg-red-500/10"
+                      style={{
+                        top: `${startOffset + 2}px`,
+                        height: `${heightPixels - 4}px`,
+                        left: '4px',
+                        width: 'calc(100% - 8px)',
+                        zIndex: 15
+                      }}
+                    >
+                      <div className="flex items-start gap-2.5 h-full max-w-[75%] min-w-0">
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center shrink-0">
+                          <Lock className="w-3.5 h-3.5 text-red-400" />
+                        </div>
+                        <div className="flex flex-col justify-center h-full text-white min-w-0">
+                          <div className="truncate">
+                            <p className="text-[10px] sm:text-xs font-black uppercase tracking-wide truncate leading-tight text-red-400">Horário Bloqueado 🔒</p>
+                            <p className="text-[8px] sm:text-[9px] font-extrabold text-neutral-400 uppercase tracking-wider truncate leading-none mt-0.5">{block.reason}</p>
+                          </div>
+                          <span className="text-[7px] sm:text-[8px] font-black text-amber-500 uppercase tracking-widest truncate leading-none flex items-center gap-1 mt-1">
+                            <User className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-amber-500 shrink-0" /> {block.barberName === 'Todos' ? 'Geral / Todos' : block.barberName}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col justify-between items-end h-full select-none shrink-0 gap-1">
+                        <span className="text-[9px] sm:text-[10px] font-black text-white bg-red-500/10 border border-red-500/20 px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-lg shadow-inner tracking-widest">{block.startTime}h - {block.endTime}h</span>
+                        
+                        {onDeleteBlockedTime && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedBlock(block);
+                            }}
+                            className="p-1 text-neutral-500 hover:text-red-400 rounded-lg hover:bg-red-500/10 transition cursor-pointer"
+                            title="Desbloquear"
+                          >
+                            <Unlock className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                }
+                return null;
+              })}
+
               {positionedApps.map((app, idx) => {
                 const startOffset = ((app.start - (8 * 60)) / 60) * ROW_HEIGHT;
                 const duration = app.actualDuration;
@@ -938,6 +1163,99 @@ export function CalendarWidget({
           </AnimatePresence>
         </div>
       </div>
+
+      {/* Custom Confirmation Modal for Block Deletion */}
+      <AnimatePresence>
+        {selectedBlock && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[9999] flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="liquid-glass max-w-md w-full p-6 sm:p-8 rounded-[2rem] border border-white/10 shadow-2xl space-y-6 text-left relative overflow-hidden bg-neutral-950"
+            >
+              <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 rounded-full blur-3xl pointer-events-none" />
+              
+              <div className="flex items-center justify-between">
+                <div className="p-3 bg-red-500/10 text-red-400 rounded-2xl border border-red-500/20">
+                  <Unlock className="w-5 h-5 animate-pulse" />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedBlock(null)}
+                  className="p-2 text-neutral-500 hover:text-white transition-colors rounded-xl hover:bg-white/5 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-xl font-black text-white uppercase italic tracking-tight">Desbloquear Horário?</h3>
+                <p className="text-xs text-neutral-400 leading-relaxed">
+                  Você está prestes a remover o bloqueio selecionado. Isso liberará o horário correspondente para novos agendamentos dos clientes.
+                </p>
+              </div>
+
+              {/* Block Details */}
+              <div className="bg-white/5 border border-white/5 rounded-2xl p-4 space-y-3">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <span className="text-[8px] text-neutral-500 uppercase font-black tracking-widest block">Motivo</span>
+                    <span className="text-sm font-bold text-white leading-tight block mt-0.5">{selectedBlock.reason || "Bloqueio de Horário"}</span>
+                  </div>
+                  <span className="text-[8px] font-black uppercase px-2 py-1 rounded bg-neutral-800 text-neutral-300">
+                    {selectedBlock.barberId === "all" ? "Geral / Todos" : selectedBlock.barberName}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 pt-2 border-t border-white/5">
+                  <div>
+                     <span className="text-[8px] text-neutral-500 uppercase font-black tracking-widest block">Data</span>
+                     <span className="text-xs font-bold text-white">
+                       {format(getLockDateObj(selectedBlock), "dd/MM/yyyy")}
+                     </span>
+                  </div>
+                  <div>
+                    <span className="text-[8px] text-neutral-500 uppercase font-black tracking-widest block">Horário</span>
+                    <span className="text-xs font-bold text-amber-500 flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {selectedBlock.startTime && selectedBlock.endTime ? `${selectedBlock.startTime}h - ${selectedBlock.endTime}h` : "Horário específico"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedBlock(null)}
+                  className="flex-1 bg-white/5 hover:bg-white/10 text-white py-3.5 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/5 transition-all active:scale-95 cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onDeleteBlockedTime) {
+                      onDeleteBlockedTime(selectedBlock.id);
+                    }
+                    setSelectedBlock(null);
+                  }}
+                  className="flex-1 bg-red-500 hover:bg-red-400 text-white py-3.5 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 shadow-lg shadow-red-500/10"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Confirmar
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

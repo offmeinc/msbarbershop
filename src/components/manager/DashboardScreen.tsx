@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { toast } from "react-hot-toast";
 import { motion, AnimatePresence } from "motion/react";
 import { 
   TrendingUp, 
@@ -222,11 +223,11 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
   const handleAddLock = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!lockDate) {
-      alert("Selecione uma data para o bloqueio!");
+      toast.error("Selecione uma data para o bloqueio!");
       return;
     }
     if (!startTime || !endTime) {
-      alert("Selecione os horários inicial e final!");
+      toast.error("Selecione os horários inicial e final!");
       return;
     }
     const firestore = db || getFirestore();
@@ -246,11 +247,10 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
       setEndTime("");
       setLockReason("");
       setBlockingBarberId("all");
-      setStatusMsg("Horário bloqueado com sucesso real-time!");
-      setTimeout(() => setStatusMsg(null), 3000);
+      toast.success("Horário bloqueado com sucesso!");
     } catch (err) {
       console.error("Error creating block limit:", err);
-      alert("Erro ao criar bloqueio.");
+      toast.error("Erro ao criar bloqueio.");
     }
   };
 
@@ -258,11 +258,10 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
     const firestore = db || getFirestore();
     try {
       await deleteDoc(doc(firestore, "blocked_times", lockId));
-      setStatusMsg("Bloqueio removido com sucesso!");
-      setTimeout(() => setStatusMsg(null), 3000);
+      toast.success("Bloqueio removido com sucesso!");
     } catch (err) {
       console.error("Error deleting block limit:", err);
-      alert("Erro ao deletar bloqueio.");
+      toast.error("Erro ao deletar bloqueio.");
     }
   };
 
@@ -1315,6 +1314,8 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
           updateStatus={handleStatusUpdate}
           onNewBooking={onNewBooking}
           onSelectAppointment={setSelectedAppointment}
+          blockedTimes={blockedTimes.filter(b => selectedBarberId === 'all' || b.barberId === 'all' || b.barberId === selectedBarberId)}
+          onDeleteBlockedTime={handleDeleteLock}
         />
       ) : (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">

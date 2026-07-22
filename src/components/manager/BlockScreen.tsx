@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { 
   ArrowLeft, Loader2, Calendar, Clock, User, Users, Lock, Unlock, 
-  Trash2, Plus, Search, AlertCircle, Coffee, Sparkles, ShieldAlert, ListFilter 
+  Trash2, Plus, Search, AlertCircle, Coffee, Sparkles, ShieldAlert, ListFilter, X
 } from "lucide-react";
 import { 
   collection, query, onSnapshot, doc, deleteDoc, addDoc, 
@@ -11,6 +11,7 @@ import {
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
 import { format, parseISO, isAfter, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { toast } from "../ui/Toast";
 
 // Suggested preset reasons for quick block
 const PRESET_REASONS = [
@@ -27,6 +28,7 @@ export function BlockScreen({ onBack }: { onBack: () => void }) {
   const [barbers, setBarbers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [lockToDelete, setLockToDelete] = useState<any | null>(null);
 
   // Form States
   const [lockDate, setLockDate] = useState("");
@@ -77,15 +79,15 @@ export function BlockScreen({ onBack }: { onBack: () => void }) {
   const handleCreateBlock = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!lockDate) {
-      alert("Selecione uma data para o bloqueio!");
+      toast.error("Selecione uma data para o bloqueio!");
       return;
     }
     if (!startTime || !endTime) {
-      alert("Selecione o horário inicial e final!");
+      toast.error("Selecione o horário inicial e final!");
       return;
     }
     if (startTime >= endTime) {
-      alert("O horário final deve ser após o horário inicial.");
+      toast.error("O horário final deve ser após o horário inicial.");
       return;
     }
 
@@ -114,27 +116,28 @@ export function BlockScreen({ onBack }: { onBack: () => void }) {
       setLockReason("");
       setBlockingBarberId("all");
       
-      setStatusMsg("Horário bloqueado com sucesso real-time!");
-      setTimeout(() => setStatusMsg(null), 3500);
+      toast.success("Horário bloqueado com sucesso!");
     } catch (err) {
       console.error("Error creating block limit:", err);
-      alert("Erro ao criar bloqueio.");
+      toast.error("Erro ao criar bloqueio.");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleDeleteLock = async (lockId: string) => {
-    if (!confirm("Deseja realmente descontinuar este bloqueio e liberar o horário correspondente?")) {
-      return;
-    }
+  const handleDeleteLock = (lock: any) => {
+    setLockToDelete(lock);
+  };
+
+  const handleExecuteDelete = async (lockId: string) => {
     try {
       await deleteDoc(doc(db, "blocked_times", lockId));
-      setStatusMsg("Horário desbloqueado com sucesso!");
-      setTimeout(() => setStatusMsg(null), 3500);
+      toast.success("Bloqueio removido com sucesso!");
     } catch (err) {
       console.error("Error deleting block limit:", err);
-      alert("Erro ao deletar bloqueio.");
+      toast.error("Erro ao deletar bloqueio.");
+    } finally {
+      setLockToDelete(null);
     }
   };
 
@@ -431,15 +434,13 @@ export function BlockScreen({ onBack }: { onBack: () => void }) {
                           </div>
 
                           {/* Quick delete / unlock action */}
-                          {activeTab === "upcoming" && (
-                            <button
-                              onClick={() => handleDeleteLock(lock.id)}
-                              className="p-2.5 bg-red-500/5 hover:bg-red-500/15 border border-red-500/10 hover:border-red-500/30 text-red-400 rounded-xl transition-all cursor-pointer group-hover:scale-105 active:scale-95"
-                              title="Remover restrição de horário"
-                            >
-                              <Unlock className="w-4 h-4" />
-                            </button>
-                          )}
+                          <button
+                            onClick={() => handleDeleteLock(lock)}
+                            className="p-2.5 bg-red-500/5 hover:bg-red-500/15 border border-red-500/10 hover:border-red-500/30 text-red-400 rounded-xl transition-all cursor-pointer group-hover:scale-105 active:scale-95"
+                            title={activeTab === "upcoming" ? "Remover restrição de horário" : "Excluir histórico de bloqueio"}
+                          >
+                            <Unlock className="w-4 h-4" />
+                          </button>
                         </motion.div>
                       );
                     })}
@@ -470,6 +471,94 @@ export function BlockScreen({ onBack }: { onBack: () => void }) {
         </div>
 
       </div>
+
+      {/* Custom Confirmation Modal */}
+      <AnimatePresence>
+        {lockToDelete && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[9999] flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="liquid-glass max-w-md w-full p-6 sm:p-8 rounded-[2rem] border border-white/10 shadow-2xl space-y-6 text-left relative overflow-hidden bg-neutral-950"
+            >
+              <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 rounded-full blur-3xl pointer-events-none" />
+              
+              <div className="flex items-center justify-between">
+                <div className="p-3 bg-red-500/10 text-red-400 rounded-2xl border border-red-500/20">
+                  <Unlock className="w-5 h-5 animate-pulse" />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setLockToDelete(null)}
+                  className="p-2 text-neutral-500 hover:text-white transition-colors rounded-xl hover:bg-white/5 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-xl font-black text-white uppercase italic tracking-tight">Desbloquear Horário?</h3>
+                <p className="text-xs text-neutral-400 leading-relaxed">
+                  Você está prestes a remover o bloqueio selecionado. Isso liberará o horário correspondente para novos agendamentos dos clientes.
+                </p>
+              </div>
+
+              {/* Block Details */}
+              <div className="bg-white/5 border border-white/5 rounded-2xl p-4 space-y-3">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <span className="text-[8px] text-neutral-500 uppercase font-black tracking-widest block">Motivo</span>
+                    <span className="text-sm font-bold text-white leading-tight block mt-0.5">{lockToDelete.reason || "Bloqueio de Horário"}</span>
+                  </div>
+                  <span className="text-[8px] font-black uppercase px-2 py-1 rounded bg-neutral-800 text-neutral-300">
+                    {lockToDelete.barberId === "all" ? "Geral / Todos" : lockToDelete.barberName}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 pt-2 border-t border-white/5">
+                  <div>
+                    <span className="text-[8px] text-neutral-500 uppercase font-black tracking-widest block">Data</span>
+                    <span className="text-xs font-bold text-white">
+                      {format(getLockDateObj(lockToDelete), "dd/MM/yyyy")}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[8px] text-neutral-500 uppercase font-black tracking-widest block">Horário</span>
+                    <span className="text-xs font-bold text-amber-500 flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {lockToDelete.startTime && lockToDelete.endTime ? `${lockToDelete.startTime}h - ${lockToDelete.endTime}h` : "Horário específico"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setLockToDelete(null)}
+                  className="flex-1 bg-white/5 hover:bg-white/10 text-white py-3.5 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/5 transition-all active:scale-95 cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleExecuteDelete(lockToDelete.id)}
+                  className="flex-1 bg-red-500 hover:bg-red-400 text-white py-3.5 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 shadow-lg shadow-red-500/10"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Confirmar
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
