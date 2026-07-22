@@ -31,6 +31,7 @@ import { EarningsScreen } from "../manager/EarningsScreen";
 import { StaffChatScreen, ChatScreen } from "../ChatScreens";
 import { GOOGLE_REVIEW_URL } from "../../constants";
 import { MyWeekScreen } from "../manager/MyWeekScreen";
+import { PWANotificationsScreen } from "../pwa/PWANotificationsScreen";
 import { toast } from "../ui/Toast";
 
 // Dummy components
@@ -38,7 +39,7 @@ const DarkScreen = ({ onBack }: { onBack: () => void }) => <div className="p-4">
 
 export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotifications, appointments, onClearNotifications, onToggleTheme, isDarkMode, onReferrals }: { user: any, role: string, onLogout: () => void, onBack: () => void, key?: any, staffNotifications: any[], appointments: any[], onClearNotifications: () => void, onToggleTheme: () => void, isDarkMode: boolean, onReferrals?: () => void }) {
   const [activeSubScreen, setActiveSubScreen] = useState<
-    'main' | 'profile' | 'notif' | 'block' | 'share' | 'earnings' | 'week' | 'recon' | 'recurrence' | 'promotions' | 'inventory'
+    'main' | 'profile' | 'notif' | 'block' | 'share' | 'earnings' | 'week' | 'recon' | 'recurrence' | 'promotions' | 'inventory' | 'pwa'
   >('main');
 
   const unreadCount = staffNotifications.filter(n => !n.read).length;
@@ -90,6 +91,13 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
           icon: <Bell className="w-5 h-5 text-emerald-400" />, 
           badge: unreadCount > 0 ? (unreadCount > 99 ? '99+' : unreadCount.toString()) : undefined, 
           onClick: () => setActiveSubScreen('notif') 
+        },
+        { 
+          id: 'pwa', 
+          label: 'Notificações Push', 
+          desc: 'Ativar, testar e configurar alertas em segundo plano',
+          icon: <Bell className="w-5 h-5 text-amber-500 animate-pulse" />, 
+          onClick: () => setActiveSubScreen('pwa') 
         },
         ...(role === 'barber' || role === 'manager' ? [{ 
           id: 'earnings', 
@@ -168,6 +176,7 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
   if (activeSubScreen === 'notif') return <NotificationsScreen notifications={staffNotifications} appointments={appointments} onClear={onClearNotifications} onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'earnings') return <EarningsScreen onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'week') return <MyWeekScreen user={user} appointments={appointments} onBack={() => setActiveSubScreen('main')} />;
+  if (activeSubScreen === 'pwa') return <PWANotificationsScreen user={user} role={role} onBack={() => setActiveSubScreen('main')} />;
 
 
   return (
@@ -282,21 +291,15 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
           </div>
         ))}
 
-        {/* Temorary FCM Diagnostic Button */}
+        {/* PWA Diagnostic Control Center Button */}
         <div className="pt-4">
           <button 
             type="button"
-            onClick={async () => {
-               const currentPermission = Notification.permission;
-               console.log("Current Notification Permission before request:", currentPermission);
-               const result = await Notification.requestPermission();
-               console.log("Notification Request Result:", result);
-               alert(`Permissão atualizada para: ${result}`);
-            }}
-            className="w-full bg-indigo-500/10 hover:bg-indigo-500 hover:text-black border border-indigo-500/20 p-5 rounded-[2rem] flex items-center justify-center gap-3 active:scale-95 transition-all text-indigo-400 font-bold cursor-pointer"
+            onClick={() => setActiveSubScreen('pwa')}
+            className="w-full bg-amber-500/10 hover:bg-amber-500 hover:text-black border border-amber-500/20 p-5 rounded-[2rem] flex items-center justify-center gap-3 active:scale-95 transition-all text-amber-500 font-bold cursor-pointer"
           >
-            <Bell className="w-5 h-5 shrink-0" />
-            <span className="text-[10px] font-black uppercase tracking-widest italic">ATIVAR NOTIFICACOES NO DISPOSITIVO</span>
+            <Bell className="w-5 h-5 shrink-0 animate-pulse" />
+            <span className="text-[10px] font-black uppercase tracking-widest italic">CONFIGURAR & TESTAR NOTIFICAÇÕES</span>
           </button>
         </div>
 

@@ -351,6 +351,26 @@ Gere um relatório de desempenho em português (pt-BR).`;
     res.json({ publicKey: process.env.VITE_VAPID_PUBLIC_KEY || "" });
   });
 
+  // Test Push Notification Endpoint
+  app.post("/api/push/test", async (req, res) => {
+    const { userId, title, body } = req.body;
+    if (!userId) {
+      return res.status(400).json({ error: "Missing userId" });
+    }
+    try {
+      console.log(`[API] Dispatching test notification to userId: ${userId}`);
+      await sendPushNotification(userId, {
+        title: title || "Teste de Notificação 🔔",
+        body: body || "Seu dispositivo está configurado corretamente!",
+        url: "/"
+      });
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("[Push Test Error]:", error.message);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Mercado Pago Payment Creation API
   app.post("/api/payments/mercado-pago/create-payment", async (req, res) => {
     const { transaction_amount, appointmentId, userId } = req.body;
