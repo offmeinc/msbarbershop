@@ -1921,10 +1921,10 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                   <h4 className="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-3">Bloqueios Ativos Recentes</h4>
                 </div>
                 <div className="max-h-[160px] overflow-y-auto pr-1 space-y-2 no-scrollbar">
-                  {blockedTimes.length === 0 ? (
+                  {blockedTimes.filter(b => selectedBarberId === 'all' || b.barberId === 'all' || b.barberId === selectedBarberId).length === 0 ? (
                     <p className="text-center py-4 text-xs font-bold text-neutral-600 uppercase tracking-widest">Nenhum bloqueio cadastrado</p>
                   ) : (
-                    blockedTimes.map(b => {
+                    blockedTimes.filter(b => selectedBarberId === 'all' || b.barberId === 'all' || b.barberId === selectedBarberId).map(b => {
                       const dateVal = b.date instanceof Timestamp ? b.date.toDate() : (typeof b.date === 'string' ? parseISO(b.date) : b.date);
                       return (
                         <div key={b.id} className=" liquid-glass  p-3 rounded-2xl flex justify-between items-center group hover:border-amber-500/20 transition-all">

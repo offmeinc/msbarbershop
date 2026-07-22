@@ -147,9 +147,10 @@ export function BlockScreen({ onBack }: { onBack: () => void }) {
   const filteredBlocks = useMemo(() => {
     return blockedTimes.filter(lock => {
       const lockDt = getLockDateObj(lock);
+      const isToday = format(lockDt, "yyyy-MM-dd") === format(now, "yyyy-MM-dd");
       const matchesTab = activeTab === "upcoming" 
-        ? isAfter(lockDt, now) || Math.abs(differenceInMinutes(lockDt, now)) < 60
-        : isBefore(lockDt, now);
+        ? isToday || isAfter(lockDt, now) || Math.abs(differenceInMinutes(lockDt, now)) < 60
+        : !isToday && isBefore(lockDt, now);
 
       const normalizedSearch = searchTerm.toLowerCase();
       const matchesSearch = 

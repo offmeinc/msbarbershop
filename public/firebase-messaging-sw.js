@@ -44,24 +44,49 @@ messaging.onBackgroundMessage((payload) => {
   });
 });
 
-// Fallback for native push events not caught by FCM SDK
+// Fallback and direct handler for push events to guarantee delivery in iOS Safari background
 self.addEventListener("push", (event) => {
   console.log("[SW] Push Event received", event);
   if (event.data) {
     try {
-      const data = event.data.json();
-      // Only handle if it doesn't look like a standard FCM notification payload that FCM handles itself
-      if (!data.notification && data.data) {
-        const title = data.data.title || "MS BARBER SHOP";
-        const options = {
-          body: data.data.body || "Nova notificação",
-          icon: data.data.icon || "/favicon.ico",
-          data: { url: data.data.url || "/" }
-        };
-        event.waitUntil(self.registration.showNotification(title, options));
-      }
+      const payload = event.data.json();
+      console.log("[SW] Parsed push payload:", payload);
+      
+      const notification = payload.notification || {};
+      const dataPayload = payload.data || {};
+      
+      const title = notification.title || dataPayload.title || "MS BARBER SHOP";
+      const body = notification.body || dataPayload.body || "Nova notificação";
+      const url = dataPayload.url || notification.click_action || "/";
+      const icon = dataPayload.icon || notification.icon || "https://i.ibb.co/LXjzGkFs/cd17f19f-71a4-453e-b9d7-f129a7ecfb2f.jpg";
+      
+      // Use a consistent tag to prevent duplicate alerts on platforms that trigger twice
+      const tag = dataPayload.tag || notification.tag || "fcm-push-msg";
+      
+      const options = {
+        body: body,
+        icon: icon,
+        badge: icon,
+        data: { url: url },
+        tag: tag,
+        requireInteraction: true,
+        vibrate: [200, 100, 200]
+      };
+      
+      event.waitUntil(self.registration.showNotification(title, options));
     } catch (e) {
-      console.error("Error parsing push data", e);
+      console.error("[SW] Push Event parsing error, falling back to raw text:", e);
+      const text = event.data.text();
+      if (text) {
+        event.waitUntil(
+          self.registration.showNotification("MS BARBER SHOP", {
+            body: text,
+            icon: "https://i.ibb.co/LXjzGkFs/cd17f19f-71a4-453e-b9d7-f129a7ecfb2f.jpg",
+            tag: "fcm-push-msg-raw",
+            requireInteraction: true
+          })
+        );
+      }
     }
   }
 });

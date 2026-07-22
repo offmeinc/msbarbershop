@@ -1595,7 +1595,18 @@ export default function App() {
                           onClick: () => { setCurrentScreen("services"); setIsMenuOpen(false); },
                           isActive: currentScreen === "services"
                         });
-                      } else if (userRole === "client") {
+                      }
+                      
+                      if (userRole === "manager" || userRole === "barber") {
+                        menuItems.push({
+                          label: "Ajustes & Notificações",
+                          icon: <Settings className="w-4 h-4" />,
+                          onClick: () => { setCurrentScreen("more"); setIsMenuOpen(false); },
+                          isActive: currentScreen === "more"
+                        });
+                      }
+                      
+                      if (userRole === "client") {
                         menuItems.push({
                           label: "Agendar",
                           icon: <Plus className="w-4 h-4" />,
