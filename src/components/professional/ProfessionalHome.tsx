@@ -297,7 +297,7 @@ export function ProfessionalHome({ user, role, setCurrentScreen, services = [] }
         <div className="flex items-center gap-4">
           <div className="liquid-glass w-16 h-16 rounded-[1.75rem] overflow-hidden -amber-500/20 shadow-lg shadow-amber-500/10 shrink-0 relative group">
             <img 
-              src={user?.photoURL || user?.photoUrl || `https://ui-avatars.com/api/?name=${user?.displayName || user?.name || 'Profissional'}&background=1a1a1a&color=fff`} 
+              src={user?.photoURL || user?.photoUrl || user?.photo || user?.avatar || user?.avatarUrl || user?.profilePic || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.displayName || user?.name || 'Profissional')}&background=1a1a1a&color=fff`} 
               alt="Avatar" 
               className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
               referrerPolicy="no-referrer"

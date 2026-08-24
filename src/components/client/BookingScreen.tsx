@@ -780,8 +780,13 @@ function PortfolioModal({ barber, onClose }: PortfolioModalProps) {
         {/* Barber Header */}
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-[1.2rem] liquid-glass  overflow-hidden">
-            {barber.profilePic ? (
-              <img src={barber.profilePic} alt={barber.name} className="w-full h-full object-cover" />
+            {(barber.photoURL || barber.photoUrl || barber.photo || barber.avatar || barber.profilePic || barber.avatarUrl) ? (
+              <img 
+                src={barber.photoURL || barber.photoUrl || barber.photo || barber.avatar || barber.profilePic || barber.avatarUrl} 
+                alt={barber.name} 
+                className="w-full h-full object-cover" 
+                referrerPolicy="no-referrer"
+              />
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-amber-500/10 text-amber-500 animate-pulse">
                 <User className="w-8 h-8" />
@@ -2015,7 +2020,7 @@ export function BookingScreen({
                             <div className="flex items-center gap-5">
                               <div className="relative shrink-0">
                                 <img
-                                  src={b.photoURL || `https://ui-avatars.com/api/?name=${b.name}`}
+                                  src={b.photoURL || b.photoUrl || b.photo || b.avatar || b.profilePic || b.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(b.name || "Profissional")}&background=1a1a1a&color=fff`}
                                   className="w-16 h-16 sm:w-20 sm:h-20 rounded-[1.75rem] object-cover border-2 border-white/10 group-hover:border-amber-500/30 transition-all"
                                   alt={b.name}
                                   referrerPolicy="no-referrer"
@@ -2726,7 +2731,7 @@ export function BookingScreen({
                     {selectedBarberObj ? (
                       <div className="flex items-center gap-3">
                         <img 
-                          src={selectedBarberObj.photoURL || `https://ui-avatars.com/api/?name=${selectedBarberObj.name}`} 
+                          src={selectedBarberObj.photoURL || selectedBarberObj.photoUrl || selectedBarberObj.photo || selectedBarberObj.avatar || selectedBarberObj.profilePic || selectedBarberObj.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedBarberObj.name || "Profissional")}&background=1a1a1a&color=fff`} 
                           className="w-8 h-8 rounded-xl object-cover border border-white/10 shrink-0" 
                           alt={selectedBarberObj.name}
                           referrerPolicy="no-referrer"

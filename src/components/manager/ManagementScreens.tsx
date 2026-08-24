@@ -155,8 +155,17 @@ export function CollaboratorsManager() {
             {barbers.map(barber => (
               <div key={barber.id} className=" liquid-glass p-4 rounded-3xl  flex items-center justify-between shadow-lg">
                 <div className="flex items-center gap-4">
-                  <div className="liquid-glass w-12 h-12 rounded-2xl flex items-center justify-center text-neutral-500 overflow-hidden">
-                    {barber.photoURL ? <img src={barber.photoURL} alt={barber.name} className="w-full h-full object-cover" /> : <User className="w-6 h-6" />}
+                  <div className="liquid-glass w-12 h-12 rounded-2xl flex items-center justify-center text-neutral-500 overflow-hidden shrink-0">
+                    {(barber.photoURL || barber.photoUrl || barber.photo || barber.avatar || barber.profilePic || barber.avatarUrl) ? (
+                      <img 
+                        src={barber.photoURL || barber.photoUrl || barber.photo || barber.avatar || barber.profilePic || barber.avatarUrl} 
+                        alt={barber.name} 
+                        className="w-full h-full object-cover" 
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <User className="w-6 h-6" />
+                    )}
                   </div>
                   <div>
                       <p className="font-bold text-white leading-none mb-1">{barber.name}</p>

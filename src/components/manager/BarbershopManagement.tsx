@@ -287,7 +287,7 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
       return {
         id: b.id,
         name: b.name || b.displayName || "Profissional",
-        photoURL: b.photoURL,
+        photoURL: b.photoURL || b.photoUrl || b.photo || b.avatar || b.profilePic || b.avatarUrl,
         cutsCount: barberCuts.length,
         revenue,
         commissionRate: rate,
@@ -921,9 +921,10 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
                       
                       <div className="flex items-center gap-4">
                         <img 
-                          src={barb.photoURL || `https://ui-avatars.com/api/?name=${barb.name}&background=1a1a1a&color=fff`} 
+                          src={barb.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(barb.name)}&background=1a1a1a&color=fff`} 
                           alt={barb.name} 
                           className="w-12 h-12 rounded-2xl object-cover border border-white/10"
+                          referrerPolicy="no-referrer"
                         />
                         <div>
                           <h4 className="font-bold text-white text-base leading-none mb-1.5">{barb.name}</h4>

@@ -208,9 +208,9 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
         
         <div className="flex items-center gap-4">
           {/* Avatar frame */}
-          {user?.photoURL || user?.photoUrl ? (
+          {(user?.photoURL || user?.photoUrl || user?.photo || user?.avatar || user?.avatarUrl || user?.profilePic) ? (
             <img 
-              src={user.photoURL || user.photoUrl} 
+              src={user.photoURL || user.photoUrl || user.photo || user.avatar || user.avatarUrl || user.profilePic} 
               alt={user?.name || "Usuário"} 
               className="w-16 h-16 rounded-[1.75rem] object-cover border border-amber-500/20 shadow-lg shadow-amber-500/10 pointer-events-none select-none"
               referrerPolicy="no-referrer"

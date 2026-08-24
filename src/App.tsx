@@ -279,6 +279,7 @@ export default function App() {
 
   const [clientLoginCode, setClientLoginCode] = useState<string>("");
   const [loggedInClient, setLoggedInClient] = useState<any>(null);
+  const [userDocData, setUserDocData] = useState<any>(null);
   const [userRole, setUserRole] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('ais_role_override') || "client";
@@ -887,15 +888,34 @@ export default function App() {
   }, [user?.uid, userRole]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setUserDocData(null);
+      return;
+    }
     const userDocRef = doc(db, "users", user.uid);
     const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
       if (docSnap.exists()) {
-        setUserRole(docSnap.data().role || "client");
+        const data = docSnap.data();
+        setUserDocData(data);
+        setUserRole(data.role || "client");
       }
     });
     return () => unsubscribe();
   }, [user]);
+
+  const effectiveUser = useMemo(() => {
+    if (!user) return null;
+    const photo = userDocData?.photoURL || userDocData?.photoUrl || userDocData?.photo || userDocData?.avatar || userDocData?.avatarUrl || userDocData?.profilePic || user.photoURL;
+    const name = userDocData?.name || userDocData?.displayName || user.displayName || "Profissional";
+    return {
+      ...user,
+      ...(userDocData || {}),
+      displayName: name,
+      name: name,
+      photoURL: photo,
+      photoUrl: photo,
+    };
+  }, [user, userDocData]);
 
   useEffect(() => {
     if (!loggedInClient?.id) return;
@@ -1208,16 +1228,16 @@ export default function App() {
                 )}
                 <div className="flex items-center gap-3 pl-6 border-l border-white/10">
                   <div className="text-right">
-                    <p className="text-white text-xs font-bold leading-none">{user.displayName}</p>
+                    <p className="text-white text-xs font-bold leading-none">{effectiveUser?.displayName || effectiveUser?.name || user.displayName}</p>
                     <p className="text-[10px] text-amber-500 capitalize font-black">{userRole}</p>
                   </div>
                   <div className="relative">
-                    {user.photoURL ? (
+                    {(effectiveUser?.photoURL || effectiveUser?.photoUrl || user.photoURL) ? (
                       <img 
-                        src={user.photoURL} 
+                        src={effectiveUser?.photoURL || effectiveUser?.photoUrl || user.photoURL} 
                         className="w-10 h-10 rounded-xl border border-amber-500/50 object-cover" 
                         referrerPolicy="no-referrer"
-                        alt={user.displayName || "User avatar"}
+                        alt={effectiveUser?.displayName || user.displayName || "User avatar"}
                       />
                     ) : (
                       <div className="liquid-glass w-10 h-10 rounded-xl flex items-center justify-center">
@@ -1376,7 +1396,7 @@ export default function App() {
               {displayScreen === "home" && (
                 (['manager', 'barber'].includes(userRole)) 
                 ? <ProfessionalHome 
-                    user={user} 
+                    user={effectiveUser || user} 
                     role={userRole} 
                     services={services}
                     setCurrentScreen={(screen) => {
@@ -1389,7 +1409,7 @@ export default function App() {
                 : <HomeScreen 
                     services={services} 
                     onStartBooking={() => setCurrentScreen("booking")} 
-                    user={user} 
+                    user={effectiveUser || user} 
                     userRole={userRole} 
                     isScrolled={isScrolled}
                   />
@@ -1397,19 +1417,19 @@ export default function App() {
               {displayScreen === "login" && <CollaboratorLoginScreen onLogin={handleLogin} setCurrentScreen={setCurrentScreen} setRequestedRole={setRequestedRole} />}
               {displayScreen === "client-login" && <ClientPortalScreen onLogin={handleClientLogin} onBack={() => setCurrentScreen("home")} />}
               {(displayScreen === "client-dashboard" || displayScreen === "checkout") && <ClientDashboardScreen user={loggedInClient} onBack={() => setCurrentScreen("home")} />}
-              {displayScreen === "booking" && <BookingScreen user={user} role={userRole} services={services} onBack={() => { setCurrentScreen("home"); setAppointmentToEdit(null); setClientToSchedule(null); }} editAppointment={appointmentToEdit} initialClient={clientToSchedule} />}
-              {displayScreen === "agenda" && <DashboardScreen user={user} role={userRole} services={services} dashboardView={dashboardView} onBack={() => setCurrentScreen("home")} onNewBooking={() => setCurrentScreen("booking")} onEditBooking={(app) => { setAppointmentToEdit(app); setCurrentScreen("booking"); }} />}
-              {displayScreen === "collaborators" && <DashboardScreen user={user} role={userRole} services={services} dashboardView="collaborators" onBack={() => setCurrentScreen("home")} onNewBooking={() => setCurrentScreen("booking")} onEditBooking={(app) => { setAppointmentToEdit(app); setCurrentScreen("booking"); }} />}
-              {displayScreen === "services" && <DashboardScreen user={user} role={userRole} services={services} dashboardView="services" onBack={() => setCurrentScreen("home")} onNewBooking={() => setCurrentScreen("booking")} onEditBooking={(app) => { setAppointmentToEdit(app); setCurrentScreen("booking"); }} />}
+              {displayScreen === "booking" && <BookingScreen user={effectiveUser || user} role={userRole} services={services} onBack={() => { setCurrentScreen("home"); setAppointmentToEdit(null); setClientToSchedule(null); }} editAppointment={appointmentToEdit} initialClient={clientToSchedule} />}
+              {displayScreen === "agenda" && <DashboardScreen user={effectiveUser || user} role={userRole} services={services} dashboardView={dashboardView} onBack={() => setCurrentScreen("home")} onNewBooking={() => setCurrentScreen("booking")} onEditBooking={(app) => { setAppointmentToEdit(app); setCurrentScreen("booking"); }} />}
+              {displayScreen === "collaborators" && <DashboardScreen user={effectiveUser || user} role={userRole} services={services} dashboardView="collaborators" onBack={() => setCurrentScreen("home")} onNewBooking={() => setCurrentScreen("booking")} onEditBooking={(app) => { setAppointmentToEdit(app); setCurrentScreen("booking"); }} />}
+              {displayScreen === "services" && <DashboardScreen user={effectiveUser || user} role={userRole} services={services} dashboardView="services" onBack={() => setCurrentScreen("home")} onNewBooking={() => setCurrentScreen("booking")} onEditBooking={(app) => { setAppointmentToEdit(app); setCurrentScreen("booking"); }} />}
               {displayScreen === "earnings" && <EarningsScreen onBack={() => setCurrentScreen("home")} />}
               {displayScreen === "promotions" && <PromotionsManager onBack={() => setCurrentScreen("home")} />}
-              {displayScreen === "clients" && <ClientsScreen user={user} role={userRole} onBack={() => setCurrentScreen("home")} onScheduleClient={(client) => { setClientToSchedule(client); setCurrentScreen("booking"); }} onClientClick={(client) => { setSelectedClient(client); setCurrentScreen("client-details"); }} />}
+              {displayScreen === "clients" && <ClientsScreen user={effectiveUser || user} role={userRole} onBack={() => setCurrentScreen("home")} onScheduleClient={(client) => { setClientToSchedule(client); setCurrentScreen("booking"); }} onClientClick={(client) => { setSelectedClient(client); setCurrentScreen("client-details"); }} />}
               {displayScreen === "client-details" && selectedClient && <ClientDetailsScreen client={selectedClient} onBack={() => { setCurrentScreen("clients"); setSelectedClient(null); }} onScheduleClient={(client) => { setClientToSchedule(client); setCurrentScreen("booking"); }} onMessageClient={(client) => { setSelectedClient(client); setCurrentScreen("professional-chat"); }} />}
               {displayScreen === "portfolio" && <PortfolioManager onBack={() => setCurrentScreen("home")} />}
-              {displayScreen === "barber-management" && <BarbershopManagement user={user} role={userRole} onBack={() => setCurrentScreen("home")} />}
+              {displayScreen === "barber-management" && <BarbershopManagement user={effectiveUser || user} role={userRole} onBack={() => setCurrentScreen("home")} />}
               {displayScreen === "professional-chat" && (
                 <ProfessionalClientChatsScreen 
-                  user={user} 
+                  user={effectiveUser || user} 
                   onBack={() => { setCurrentScreen("home"); setSelectedClient(null); }} 
                   initialClientId={selectedClient?.id} 
                   initialClientName={selectedClient?.name} 
@@ -1417,7 +1437,7 @@ export default function App() {
               )}
               {displayScreen === "more" && (
                 <MoreOptionsScreen 
-                  user={user || loggedInClient} 
+                  user={effectiveUser || user || loggedInClient} 
                   role={userRole} 
                   onLogout={handleLogout} 
                   onBack={() => setCurrentScreen("home")}
@@ -1694,15 +1714,20 @@ export default function App() {
                 {user ? (
                   <div className="space-y-4">
                     <div className="liquid-glass flex items-center gap-3 p-3 rounded-2xl">
-                      {user.photoURL ? (
-                        <img src={user.photoURL} className="w-10 h-10 rounded-xl object-cover border border-amber-500/30" />
+                      {(effectiveUser?.photoURL || effectiveUser?.photoUrl || user.photoURL) ? (
+                        <img 
+                          src={effectiveUser?.photoURL || effectiveUser?.photoUrl || user.photoURL} 
+                          className="w-10 h-10 rounded-xl object-cover border border-amber-500/30" 
+                          referrerPolicy="no-referrer"
+                          alt={effectiveUser?.displayName || user.displayName || "Avatar"}
+                        />
                       ) : (
                         <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500 border border-amber-500/20">
                           <User className="w-5 h-5" />
                         </div>
                       )}
                       <div className="text-left overflow-hidden">
-                        <h4 className="text-xs font-black uppercase text-white truncate italic tracking-wide">{user.displayName || user.name || "Profissional"}</h4>
+                        <h4 className="text-xs font-black uppercase text-white truncate italic tracking-wide">{effectiveUser?.displayName || effectiveUser?.name || user.displayName || user.name || "Profissional"}</h4>
                         <p className="text-[9px] text-amber-500/80 font-black uppercase tracking-widest mt-0.5">{userRole}</p>
                       </div>
                     </div>

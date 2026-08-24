@@ -1044,7 +1044,12 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                       className="flex flex-col items-center gap-2 min-w-[64px]"
                     >
                         <div className={`w-14 h-14 rounded-full border-2 overflow-hidden transition-all relative ${selectedBarberId === barber.id ? 'border-amber-500 shadow-lg shadow-amber-500/10' : 'border-white/10 opacity-50'}`}>
-                            <img src={barber.photoURL || `https://ui-avatars.com/api/?name=${barber.name}`} alt={barber.name} className="w-full h-full object-cover" />
+                            <img 
+                              src={barber.photoURL || barber.photoUrl || barber.photo || barber.avatar || barber.profilePic || barber.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(barber.name || "Barbeiro")}&background=1a1a1a&color=fff`} 
+                              alt={barber.name} 
+                              className="w-full h-full object-cover" 
+                              referrerPolicy="no-referrer"
+                            />
                             {barberAppsCount > 0 && (
                               <div className="absolute -top-0.5 -right-0.5 bg-amber-500 text-black text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-black">
                                 {barberAppsCount}

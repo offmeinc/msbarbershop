@@ -34,7 +34,7 @@ import { toast } from "../ui/Toast";
 export function ProfileEditScreen({ user, onBack, isClient = false }: { user: any, onBack: () => void, isClient?: boolean }) {
   const [profileData, setProfileData] = useState({
     name: user?.displayName || user?.name || "",
-    photoUrl: user?.photoURL || user?.photoUrl || "",
+    photoUrl: user?.photoURL || user?.photoUrl || user?.avatar || user?.avatarUrl || user?.photo || user?.profilePic || "",
     whatsapp: "",
     bio: "",
     password: "",
@@ -87,7 +87,7 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
         const data = docSnap.data();
         setProfileData({
           name: data.name || data.displayName || user?.displayName || "",
-          photoUrl: data.photoUrl || data.photoURL || user?.photoURL || "",
+          photoUrl: data.photoUrl || data.photoURL || data.avatar || data.avatarUrl || data.photo || data.profilePic || user?.photoURL || user?.photoUrl || "",
           whatsapp: data.whatsapp || "",
           bio: data.bio || "",
           password: data.password || "",
@@ -111,10 +111,14 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
     try {
       // Update Firebase Auth profile if applicable
       if (user && typeof user.getIdToken === 'function') {
-        await updateProfile(user, { 
-          displayName: profileData.name,
-          photoURL: profileData.photoUrl
-        });
+        try {
+          await updateProfile(user, { 
+            displayName: profileData.name,
+            photoURL: profileData.photoUrl
+          });
+        } catch (authErr) {
+          console.warn("Auth profile update warning:", authErr);
+        }
       }
 
       // Update Firestore
@@ -124,6 +128,10 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
         displayName: profileData.name,
         photoUrl: profileData.photoUrl,
         photoURL: profileData.photoUrl,
+        avatar: profileData.photoUrl,
+        avatarUrl: profileData.photoUrl,
+        photo: profileData.photoUrl,
+        profilePic: profileData.photoUrl,
         whatsapp: profileData.whatsapp,
         bio: profileData.bio,
         password: profileData.password,
