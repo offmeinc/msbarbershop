@@ -42,6 +42,14 @@ async function safelySendFcm(message: Message) {
   }
 }
 
+// Helper to enforce production domain for PWA push clicks
+const ensureProductionUrl = (url: string) => {
+  const baseUrl = "https://msbarbershop.com";
+  if (url.startsWith("/")) return baseUrl + url;
+  if (!url.startsWith("http")) return baseUrl + "/" + url;
+  return url;
+};
+
 // Function to send a push notification to a specific user using FCM
 export async function sendPushNotification(
   userId: string,
@@ -89,11 +97,11 @@ export async function sendPushNotification(
           body: payload.body,
         },
         data: {
-          url: payload.url || "/",
+          url: ensureProductionUrl(payload.url || "/"),
         },
         webpush: {
           fcmOptions: {
-            link: payload.url || "/",
+            link: ensureProductionUrl(payload.url || "/"),
           }
         }
       };
@@ -156,11 +164,11 @@ export async function sendNotificationToCollaborators(
           body: payload.body,
         },
         data: {
-          url: payload.url || "/",
+          url: ensureProductionUrl(payload.url || "/"),
         },
         webpush: {
           fcmOptions: {
-            link: payload.url || "/",
+            link: ensureProductionUrl(payload.url || "/"),
           }
         }
       };

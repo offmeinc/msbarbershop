@@ -94,10 +94,19 @@ self.addEventListener("push", (event) => {
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   
-  let url = event.notification.data?.url || "/";
+  let rawUrl = event.notification.data?.url || "/";
   // Attempt to extract FCM fcmOptions link if present in native FCM push wrapper
   if (event.notification.data?.FCM_MSG?.fcmOptions?.link) {
-    url = event.notification.data.FCM_MSG.fcmOptions.link;
+    rawUrl = event.notification.data.FCM_MSG.fcmOptions.link;
+  }
+  
+  // Enforce production domain
+  const baseUrl = "https://msbarbershop.com";
+  let url = rawUrl;
+  if (rawUrl.startsWith("/")) {
+    url = baseUrl + rawUrl;
+  } else if (!rawUrl.startsWith("http")) {
+    url = baseUrl + "/" + rawUrl;
   }
   
   event.waitUntil(
