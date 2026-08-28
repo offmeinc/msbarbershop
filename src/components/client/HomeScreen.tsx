@@ -5,6 +5,7 @@ import { BARBERSHOP_NAME, BARBERSHOP_ADDRESS, BARBERSHOP_PHONE, BARBERSHOP_INSTA
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
 import { collection, query, orderBy, limit, onSnapshot } from "firebase/firestore";
 import { Skeleton } from "../common/Skeleton";
+import { BrandLogo } from "../common/BrandLogo";
 
 const triggerBookingPreload = () => {
   if (typeof window !== "undefined" && (window as any).__pwaPreloaders?.booking) {
@@ -143,6 +144,9 @@ export const HomeScreen = memo(function HomeScreen({
                               alt={item.caption} 
                               className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
                               referrerPolicy="no-referrer"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="250" viewBox="0 0 200 250"><rect width="100%" height="100%" fill="%23171717"/><text x="50%" y="45%" fill="%23f59e0b" font-family="sans-serif" font-size="12" font-weight="950" text-anchor="middle" dominant-baseline="middle">MS BARBER</text><text x="50%" y="55%" fill="%23525252" font-family="sans-serif" font-size="8" font-weight="700" text-anchor="middle" dominant-baseline="middle" letter-spacing="2">GALERIA</text></svg>';
+                              }}
                           />
                           <div className="absolute inset-x-0 bottom-0 p-6 bg-gradient-to-t from-black/90 via-black/20 to-transparent">
                               <p className="text-[10px] font-black uppercase text-white tracking-widest leading-tight">{item.caption || "Top Styles"}</p>
@@ -225,14 +229,10 @@ export const HomeScreen = memo(function HomeScreen({
                  >
                     <div className={`absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-3xl rounded-full transition-opacity ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} />
                     
-                    <div className={`relative z-10 w-10 sm:w-12 h-10 sm:h-12 rounded-2xl bg-white/5 overflow-hidden flex items-center justify-center transition-all duration-500 shadow-lg border ${isSelected ? 'border-amber-500 scale-110' : 'border-white/5 group-hover:scale-110 group-hover:border-amber-500/50'}`}>
-                      <img 
-                        src="https://i.ibb.co/LXjzGkFs/cd17f19f-71a4-453e-b9d7-f129a7ecfb2f.jpg" 
-                        alt="Logo"
-                        className="w-full h-full object-cover"
-                        referrerPolicy="no-referrer"
-                      />
-                    </div>
+                     <BrandLogo 
+                       className={`relative z-10 w-10 sm:w-12 h-10 sm:h-12 transition-all duration-500 shadow-lg ${isSelected ? 'scale-110' : 'group-hover:scale-110'}`} 
+                       iconSize="w-5.5 h-5.5"
+                     />
 
                     <div className="relative z-10 mt-4">
                        <h4 className={`font-black uppercase italic tracking-tighter text-sm sm:text-base mb-2 line-clamp-2 transition-all duration-300 ${isSelected ? 'text-amber-500 scale-105 origin-left' : 'text-white'}`}>

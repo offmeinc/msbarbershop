@@ -32,6 +32,7 @@ import { StaffChatScreen, ChatScreen } from "../ChatScreens";
 import { GOOGLE_REVIEW_URL } from "../../constants";
 import { MyWeekScreen } from "../manager/MyWeekScreen";
 import { PWANotificationsScreen } from "../pwa/PWANotificationsScreen";
+import { PortfolioManager } from "../professional/PortfolioManager";
 import { toast } from "../ui/Toast";
 
 // Dummy components
@@ -39,7 +40,7 @@ const DarkScreen = ({ onBack }: { onBack: () => void }) => <div className="p-4">
 
 export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotifications, appointments, onClearNotifications, onToggleTheme, isDarkMode, onReferrals }: { user: any, role: string, onLogout: () => void, onBack: () => void, key?: any, staffNotifications: any[], appointments: any[], onClearNotifications: () => void, onToggleTheme: () => void, isDarkMode: boolean, onReferrals?: () => void }) {
   const [activeSubScreen, setActiveSubScreen] = useState<
-    'main' | 'profile' | 'notif' | 'block' | 'share' | 'earnings' | 'week' | 'recon' | 'recurrence' | 'promotions' | 'inventory' | 'pwa'
+    'main' | 'profile' | 'notif' | 'block' | 'share' | 'earnings' | 'week' | 'recon' | 'recurrence' | 'promotions' | 'inventory' | 'pwa' | 'portfolio'
   >('main');
 
   const unreadCount = staffNotifications.filter(n => !n.read).length;
@@ -105,6 +106,12 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
           desc: 'Relatório financeiro de atendimentos e comissões',
           icon: <WalletCards className="w-5 h-5 text-emerald-500" />, 
           onClick: () => setActiveSubScreen('earnings') 
+        }, {
+          id: 'portfolio',
+          label: 'Upload de Fotos / Portfólio',
+          desc: 'Cadastrar novos cortes, referências e trabalhos',
+          icon: <MonitorSmartphone className="w-5 h-5 text-cyan-400" />,
+          onClick: () => setActiveSubScreen('portfolio')
         }] : []),
       ]
     },
@@ -172,11 +179,12 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
   if (activeSubScreen === 'recurrence') return <RecurrenceScreen onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'promotions') return <PromotionsManager onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'inventory') return <InventoryScreen onBack={() => setActiveSubScreen('main')} />;
-  if (activeSubScreen === 'profile') return <ProfileEditScreen user={user} onBack={() => setActiveSubScreen('main')} />;
+  if (activeSubScreen === 'profile') return <ProfileEditScreen user={user} onBack={() => setActiveSubScreen('main')} isClient={role === 'client'} />;
   if (activeSubScreen === 'notif') return <NotificationsScreen notifications={staffNotifications} appointments={appointments} onClear={onClearNotifications} onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'earnings') return <EarningsScreen onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'week') return <MyWeekScreen user={user} appointments={appointments} onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'pwa') return <PWANotificationsScreen user={user} role={role} onBack={() => setActiveSubScreen('main')} />;
+  if (activeSubScreen === 'portfolio') return <PortfolioManager onBack={() => setActiveSubScreen('main')} />;
 
 
   return (

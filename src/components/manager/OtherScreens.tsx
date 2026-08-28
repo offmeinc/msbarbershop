@@ -41,6 +41,7 @@ import { BARBERSHOP_NAME, BARBERSHOP_ADDRESS } from "../../constants";
 import { toPng } from 'html-to-image';
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "../ui/Toast";
+import { BrandLogo } from "../common/BrandLogo";
 
 export function HelpScreen({ onBack }: { onBack: () => void }) {
   return (
@@ -547,13 +548,7 @@ export function ShareScreen({ onBack }: { onBack: () => void }) {
               {/* Header inside mockup */}
               <div className="w-full text-center space-y-2.5 relative z-10 pt-4">
                 {showLogo && (
-                  <div className="liquid-glass w-14 h-14 rounded-2xl flex items-center justify-center mx-auto shadow-md relative overflow-hidden">
-                    <img 
-                      src="https://i.ibb.co/LXjzGkFs/cd17f19f-71a4-453e-b9d7-f129a7ecfb2f.jpg" 
-                      alt="Logo"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
+                  <BrandLogo className="w-14 h-14 mx-auto" />
                 )}
                 
                 <div className="space-y-1">
@@ -670,13 +665,7 @@ export function ShareScreen({ onBack }: { onBack: () => void }) {
           {/* Header */}
           <div className="w-full text-center space-y-12 relative z-10 pt-16">
             {showLogo && (
-              <div className="liquid-glass w-48 h-48 rounded-[4rem] flex items-center justify-center mx-auto shadow-2xl relative overflow-hidden">
-                <img 
-                  src="https://i.ibb.co/LXjzGkFs/cd17f19f-71a4-453e-b9d7-f129a7ecfb2f.jpg" 
-                  alt="Logo"
-                  className="w-full h-full object-cover"
-                />
-              </div>
+              <BrandLogo className="w-48 h-48 rounded-[4rem] mx-auto" />
             )}
             <div className="space-y-4">
               <p className={`font-black uppercase tracking-[0.6em] text-2xl ${activeTheme.textClass}`}>

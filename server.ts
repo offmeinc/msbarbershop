@@ -347,8 +347,13 @@ Gere um relatório de desempenho em português (pt-BR).`;
   });
 
   // VAPID Public Key Endpoint
-  app.get("/api/push/vapid-key", (req, res) => {
-    res.json({ publicKey: process.env.VITE_VAPID_PUBLIC_KEY || "" });
+  app.get("/api/push/vapid-key", async (req, res) => {
+    try {
+      const keys = await initVapid();
+      res.json({ publicKey: keys.publicKey });
+    } catch (err: any) {
+      res.status(500).json({ error: "Failed to load VAPID key", details: err.message });
+    }
   });
 
   // Test Push Notification Endpoint

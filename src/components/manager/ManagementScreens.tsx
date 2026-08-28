@@ -29,6 +29,7 @@ import {
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { auth, db, handleFirestoreError, OperationType } from "../../lib/firebase";
 import { toast } from "../ui/Toast";
+import { BrandLogo } from "../common/BrandLogo";
 
 export function CollaboratorsManager() {
   const [barbers, setBarbers] = useState<any[]>([]);
@@ -495,14 +496,7 @@ export function ServicesManagement({ services }: { services: any[] }) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-20">
         {services.length === 0 ? (
           <div className="col-span-full py-20 flex flex-col items-center justify-center opacity-30 border-2 border-dashed border-white/10 rounded-[3rem]">
-            <div className="w-16 h-16 mb-4 rounded-3xl overflow-hidden border border-white/5 opacity-50 grayscale">
-              <img 
-                src="https://i.ibb.co/LXjzGkFs/cd17f19f-71a4-453e-b9d7-f129a7ecfb2f.jpg" 
-                alt="Logo"
-                className="w-full h-full object-cover"
-                referrerPolicy="no-referrer"
-              />
-            </div>
+            <BrandLogo className="w-16 h-16 mb-4 opacity-50 grayscale" />
             <p className="font-black uppercase tracking-[0.2em] text-[10px] text-neutral-400">Nenhum serviço catalogado</p>
           </div>
         ) : (
@@ -514,16 +508,9 @@ export function ServicesManagement({ services }: { services: any[] }) {
               }`}
             >
               <div className="flex justify-between items-start mb-6">
-                <div className={`w-14 h-14 rounded-2xl overflow-hidden flex items-center justify-center border border-white/5 ${
+                <BrandLogo className={`w-14 h-14 ${
                   service.active === false ? "opacity-50 grayscale" : ""
-                }`}>
-                  <img 
-                    src="https://i.ibb.co/LXjzGkFs/cd17f19f-71a4-453e-b9d7-f129a7ecfb2f.jpg" 
-                    alt="Logo"
-                    className="w-full h-full object-cover"
-                    referrerPolicy="no-referrer"
-                  />
-                </div>
+                }`} />
                 <div className="flex gap-2">
                   <button 
                     onClick={() => handleEdit(service)}

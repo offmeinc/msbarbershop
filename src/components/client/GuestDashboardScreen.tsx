@@ -5,6 +5,7 @@ import { collection, query, where, onSnapshot, Timestamp } from "firebase/firest
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { BrandLogo } from "../common/BrandLogo";
 
 export function GuestDashboardScreen({ loginCode, onBack }: { loginCode: string, onBack: () => void }) {
   const [appointments, setAppointments] = useState<any[]>([]);
@@ -47,14 +48,7 @@ export function GuestDashboardScreen({ loginCode, onBack }: { loginCode: string,
                   return (
                       <div key={app.id} className=" liquid-glass  p-6 rounded-[2.5rem] flex items-center justify-between group">
                           <div className="flex items-center gap-4">
-                              <div className="w-12 h-12 liquid-glass rounded-2xl overflow-hidden flex items-center justify-center ">
-                                <img 
-                                  src="https://i.ibb.co/LXjzGkFs/cd17f19f-71a4-453e-b9d7-f129a7ecfb2f.jpg" 
-                                  alt="Logo"
-                                  className="w-full h-full object-cover"
-                                  referrerPolicy="no-referrer"
-                                />
-                              </div>
+                              <BrandLogo className="w-12 h-12" />
                               <div>
                                   <h4 className="font-black text-white uppercase italic text-sm">{app.serviceName}</h4>
                                   <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-tight">
