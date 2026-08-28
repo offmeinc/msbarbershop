@@ -67,14 +67,16 @@ export default defineConfig(({ mode }) => {
           ]
         },
         manifest: {
+          id: 'https://msbarbershop.com.br/',
           name: 'MS BARBER SHOP',
-          short_name: 'MS Barber',
+          short_name: 'MS BARBER SHOP',
           description: 'Plataforma completa de agendamento e gestão para MS BARBER SHOP.',
-          theme_color: '#171717',
+          theme_color: '#000000',
           background_color: '#000000',
           display: 'standalone',
           orientation: 'portrait',
           start_url: '/',
+          scope: '/',
           icons: [
             {
               src: 'https://i.ibb.co/LXjzGkFs/cd17f19f-71a4-453e-b9d7-f129a7ecfb2f.jpg',

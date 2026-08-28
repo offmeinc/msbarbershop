@@ -1,9 +1,12 @@
 {
+  "id": "https://msbarbershop.com.br/",
   "name": "MS BARBER SHOP",
   "short_name": "MS BARBER SHOP",
   "description": "Plataforma completa de agendamento e gestão para MS BARBER SHOP.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#000000",
   "theme_color": "#000000",
   "gcm_sender_id": "103953800507",

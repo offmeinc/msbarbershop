@@ -101,10 +101,12 @@ self.addEventListener("notificationclick", (event) => {
   }
   
   // Enforce production domain
-  const baseUrl = "https://msbarbershop.com";
+  const baseUrl = "https://msbarbershop.com.br";
   let url = rawUrl;
   if (rawUrl.startsWith("/")) {
-    url = baseUrl + rawUrl;
+    url = (self.location && self.location.origin && !self.location.origin.includes("localhost") && !self.location.origin.includes("run.app")) 
+      ? self.location.origin + rawUrl 
+      : baseUrl + rawUrl;
   } else if (!rawUrl.startsWith("http")) {
     url = baseUrl + "/" + rawUrl;
   }

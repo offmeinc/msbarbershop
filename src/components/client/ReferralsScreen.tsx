@@ -28,6 +28,7 @@ import {
 import { db } from "../../lib/firebase";
 import { toast } from "../ui/Toast";
 import { triggerLightHaptic, triggerSuccessHaptic } from "../../lib/haptics";
+import { APP_URL } from "../../constants";
 
 interface ReferralsScreenProps {
   user: any;
@@ -320,13 +321,16 @@ export function ReferralsScreen({ user, onBack, stats, appointments }: Referrals
   const handleShareLink = () => {
     if (!referralCode) return;
     triggerSuccessHaptic();
-    const inviteText = `Use meu código ${referralCode} ao agendar seu corte na barbearia! Você ganha R$ 5,00 de saldo inicial na carteira e eu também ganho quando você cortar! Agende seu horário aqui: ${window.location.origin}`;
+    const appOrigin = typeof window !== "undefined" && window.location.origin && !window.location.origin.includes("run.app") && !window.location.origin.includes("localhost")
+      ? window.location.origin
+      : APP_URL;
+    const inviteText = `Use meu código ${referralCode} ao agendar seu corte na barbearia! Você ganha R$ 5,00 de saldo inicial na carteira e eu também ganho quando você cortar! Agende seu horário aqui: ${appOrigin}`;
     
     if (navigator.share) {
       navigator.share({
         title: "Ganhe R$ 5,00 na Barbearia!",
         text: inviteText,
-        url: window.location.origin
+        url: appOrigin
       }).catch(console.error);
     } else {
       navigator.clipboard.writeText(inviteText);

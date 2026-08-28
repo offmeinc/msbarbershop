@@ -1,3 +1,5 @@
+export const APP_DOMAIN = "msbarbershop.com.br";
+export const APP_URL = "https://msbarbershop.com.br";
 export const BARBERSHOP_ADDRESS = "Rua São Pedro, 46 - Vista Alegre, Cachoeirinha - RS";
 export const BARBERSHOP_NAME = "MS BARBER SHOP";
 export const BARBERSHOP_PHONE = "5551992590046";

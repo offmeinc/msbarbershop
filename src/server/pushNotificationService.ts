@@ -102,7 +102,7 @@ async function safelySendFcm(message: Message) {
 
 // Helper to enforce production domain for PWA push clicks
 const ensureProductionUrl = (url: string) => {
-  const baseUrl = "https://msbarbershop.com";
+  const baseUrl = "https://msbarbershop.com.br";
   if (url.startsWith("/")) return baseUrl + url;
   if (!url.startsWith("http")) return baseUrl + "/" + url;
   return url;
