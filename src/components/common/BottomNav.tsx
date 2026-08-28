@@ -1,9 +1,11 @@
-import { memo } from "react";
+import { memo, useRef } from "react";
 import { Home, CalendarDays, Users, Scissors, GripHorizontal, Sliders } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { triggerLightHaptic } from "../../lib/haptics";
 
 export const BottomNav = memo(function BottomNav({ userRole, currentScreen, setCurrentScreen, user, unreadCount, isVisible = true }: { userRole: string, currentScreen: string, setCurrentScreen: (s: any) => void, user: any, unreadCount: number, isVisible?: boolean }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
   if (!user) return null;
 
   const items = [];
@@ -36,8 +38,37 @@ export const BottomNav = memo(function BottomNav({ userRole, currentScreen, setC
     screen: "more"
   });
 
+  const handleTouchTracking = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!containerRef.current) return;
+    const touch = e.touches[0];
+    if (!touch) return;
+
+    // Identify which button is under the user's touch coordinate
+    const buttons = containerRef.current.querySelectorAll("button[data-screen]");
+    for (let i = 0; i < buttons.length; i++) {
+      const btn = buttons[i] as HTMLButtonElement;
+      const rect = btn.getBoundingClientRect();
+      
+      // Check if touch point falls within the button's coordinates (with generous vertical padding of 40px)
+      if (
+        touch.clientX >= rect.left &&
+        touch.clientX <= rect.right &&
+        touch.clientY >= rect.top - 40 &&
+        touch.clientY <= rect.bottom + 40
+      ) {
+        const targetScreen = btn.getAttribute("data-screen");
+        if (targetScreen && currentScreen !== targetScreen) {
+          triggerLightHaptic();
+          setCurrentScreen(targetScreen);
+        }
+        break;
+      }
+    }
+  };
+
   return (
     <motion.div 
+      ref={containerRef}
       variants={{
         visible: { y: 0, opacity: 1 },
         hidden: { y: "100%", opacity: 0 },
@@ -49,7 +80,9 @@ export const BottomNav = memo(function BottomNav({ userRole, currentScreen, setC
         ease: [0.33, 1, 0.68, 1],
         opacity: { duration: 0.25 }
       }}
-      className="md:hidden fixed left-1/2 -translate-x-1/2 liquid-glass backdrop-blur-2xl p-1.5 flex items-center gap-1 z-40 rounded-[2.5rem] shadow-2xl shadow-amber-500/5 ring-1 ring-white/5 bottom-[calc(1.5rem+env(safe-area-inset-bottom))]"
+      onTouchStart={handleTouchTracking}
+      onTouchMove={handleTouchTracking}
+      className="md:hidden fixed left-1/2 -translate-x-1/2 liquid-glass backdrop-blur-2xl p-1.5 flex items-center gap-1 z-40 rounded-[2.5rem] shadow-2xl shadow-amber-500/5 ring-1 ring-white/5 bottom-[calc(1.5rem+env(safe-area-inset-bottom))] max-w-[95vw] select-none touch-pan-y"
     >
       {items.map(item => {
         const isActive = currentScreen === item.screen;
@@ -57,6 +90,7 @@ export const BottomNav = memo(function BottomNav({ userRole, currentScreen, setC
           <motion.button 
             key={item.id} 
             layout
+            data-screen={item.screen}
             onMouseEnter={() => {
               if (typeof window !== "undefined" && (window as any).__pwaPreloaders?.[item.screen]) {
                 (window as any).__pwaPreloaders[item.screen]();
