@@ -71,23 +71,37 @@ export const BottomNav = memo(function BottomNav({ userRole, currentScreen, setC
               triggerLightHaptic();
               setCurrentScreen(currentScreen === item.screen ? "home" : item.screen as any);
             }} 
-            className={`flex items-center justify-center gap-2 py-3.5 px-5 rounded-full transition-all duration-300 relative group ${isActive ? "bg-amber-500 text-black shadow-lg shadow-amber-500/20" : "text-neutral-500 hover:text-white"}`}
+            className={`flex items-center justify-center gap-2 py-3.5 px-5 rounded-full transition-colors duration-300 relative group select-none outline-none ${isActive ? "text-black font-black" : "text-neutral-500 hover:text-white"}`}
           >
-            <div className={`transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>
-              {item.icon}
+            {isActive && (
+              <motion.div
+                layoutId="active-nav-pill"
+                className="absolute inset-0 bg-amber-500 rounded-full z-0 shadow-lg shadow-amber-500/30"
+                transition={{
+                  type: "spring",
+                  stiffness: 350,
+                  damping: 26,
+                  mass: 0.8
+                }}
+              />
+            )}
+            <div className="flex items-center justify-center gap-2 relative z-10">
+              <div className={`transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>
+                {item.icon}
+              </div>
+              <AnimatePresence mode="wait">
+                {isActive && (
+                  <motion.span 
+                    initial={{ opacity: 0, width: 0, x: -5 }} 
+                    animate={{ opacity: 1, width: 'auto', x: 0 }} 
+                    exit={{ opacity: 0, width: 0, x: -5 }}
+                    className="text-[10px] font-black uppercase tracking-widest italic whitespace-nowrap overflow-hidden"
+                  >
+                    {item.label}
+                  </motion.span>
+                )}
+              </AnimatePresence>
             </div>
-            <AnimatePresence mode="wait">
-              {isActive && (
-                <motion.span 
-                  initial={{ opacity: 0, width: 0, x: -5 }} 
-                  animate={{ opacity: 1, width: 'auto', x: 0 }} 
-                  exit={{ opacity: 0, width: 0, x: -5 }}
-                  className="text-[10px] font-black uppercase tracking-widest italic whitespace-nowrap overflow-hidden"
-                >
-                  {item.label}
-                </motion.span>
-              )}
-            </AnimatePresence>
           </motion.button>
         );
       })}
