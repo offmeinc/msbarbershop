@@ -840,6 +840,11 @@ export function ProfessionalHome({ user, role, setCurrentScreen, services = [] }
                       {app.clientName}
                     </h4>
                     <p className="text-[8px] text-neutral-500 font-extrabold uppercase tracking-wide">{app.serviceName}</p>
+                    {app.addon && (
+                      <p className={`text-[7px] font-black uppercase tracking-widest ${app.addon.accepted ? "text-amber-500" : "text-neutral-600"}`}>
+                        {app.addon.accepted ? "+ " : "- "}{app.addon.name}
+                      </p>
+                    )}
                   </div>
                 </div>
                 

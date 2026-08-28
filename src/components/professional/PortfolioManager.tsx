@@ -74,7 +74,7 @@ export function PortfolioManager({ onBack }: { onBack: () => void }) {
     setUploadError("");
     
     try {
-      const response = await uploadImage(file);
+      const response = await uploadImage(file, true); // Watermark is applied here
       if (response && response.success && response.data?.url) {
         setImageUrl(response.data.url);
       } else {

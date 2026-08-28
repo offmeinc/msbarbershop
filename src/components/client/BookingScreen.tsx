@@ -46,6 +46,7 @@ import {
   Star,
   Mic,
   MicOff,
+  X,
 } from "lucide-react";
 import { db, handleFirestoreError, OperationType, safeStringify } from "../../lib/firebase";
 import { signInWithGoogleCalendar, addEventToCalendar, getCalendarAccessToken } from "../../lib/calendar";
@@ -708,6 +709,7 @@ function PortfolioModal({ barber, onClose }: PortfolioModalProps) {
   const [ratingsStats, setRatingsStats] = useState<{ average: number; count: number } | null>(null);
   const [recentReviews, setRecentReviews] = useState<any[]>([]);
   const [loadingStats, setLoadingStats] = useState(true);
+  const [expandedImage, setExpandedImage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!barber?.id) return;
@@ -818,9 +820,16 @@ function PortfolioModal({ barber, onClose }: PortfolioModalProps) {
         <div className="grid grid-cols-2 gap-3 max-h-[300px] overflow-y-auto pr-1">
           {barber.portfolio && barber.portfolio.length > 0 ? (
             barber.portfolio.map((imgUrl: string, idx: number) => (
-              <div key={idx} className="aspect-square liquid-glass rounded-2xl overflow-hidden  group relative">
+              <button 
+                key={idx} 
+                onClick={() => setExpandedImage(imgUrl)}
+                className="aspect-square liquid-glass rounded-2xl overflow-hidden group relative cursor-pointer outline-none active:scale-95 transition-all"
+              >
                 <img src={imgUrl} alt={`Corte ${idx + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" referrerPolicy="no-referrer" />
-              </div>
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                   <span className="text-[10px] font-black uppercase tracking-widest text-white drop-shadow-md">Ampliar</span>
+                </div>
+              </button>
             ))
           ) : (
             <div className="liquid-glass col-span-2 py-12 text-center text-neutral-500 text-[10px] uppercase font-black tracking-widest -dashed rounded-2xl">
@@ -852,6 +861,34 @@ function PortfolioModal({ barber, onClose }: PortfolioModalProps) {
             </div>
           </div>
         )}
+
+        <AnimatePresence>
+          {expandedImage && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="fixed inset-0 z-[120] bg-black/95 backdrop-blur-2xl flex flex-col items-center justify-center p-4"
+              onClick={() => setExpandedImage(null)}
+            >
+              <button 
+                className="absolute top-6 right-6 p-2 bg-neutral-900 rounded-full text-white hover:text-amber-500 transition-colors z-[130]"
+                onClick={() => setExpandedImage(null)}
+              >
+                <X className="w-6 h-6" />
+              </button>
+              
+              <div className="relative w-full max-w-2xl aspect-auto max-h-[85vh] rounded-3xl overflow-hidden shadow-2xl border border-white/10" onClick={(e) => e.stopPropagation()}>
+                <img 
+                  src={expandedImage} 
+                  alt="Portfolio Ampliado" 
+                  className="w-full h-full object-contain"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <button
           onClick={onClose}
@@ -896,6 +933,10 @@ export function BookingScreen({
   );
   const [serviceSearchQuery, setServiceSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("todos");
+
+  const [showAddonModal, setShowAddonModal] = useState(false);
+  const [pendingServiceSelection, setPendingServiceSelection] = useState<any | null>(null);
+  const [selectedAddon, setSelectedAddon] = useState<{name: string, price: number, accepted: boolean} | null>(null);
 
   const categories = useMemo(() => {
     const raw = services.filter(s => s.active !== false).map((s) => s.category || "Corte & Barba");
@@ -1637,7 +1678,12 @@ export function BookingScreen({
         serviceDuration: customDuration || service?.duration || 30,
         clientPhoto: clientPhotoData,
         status: "pending",
-        totalPrice: (Number(service?.price) || 0) * (1 - appliedDiscount / 100),
+        addon: selectedAddon ? {
+          name: selectedAddon.name,
+          price: selectedAddon.price,
+          accepted: selectedAddon.accepted
+        } : null,
+        totalPrice: ((Number(service?.price) || 0) + (selectedAddon?.accepted ? selectedAddon.price : 0)) * (1 - appliedDiscount / 100),
         createdAt: serverTimestamp(),
         couponCode: couponCode || null,
         loginCode,
@@ -1730,6 +1776,58 @@ export function BookingScreen({
   return (
     <>
       <AnimatePresence>
+        {showAddonModal && pendingServiceSelection && (() => {
+          const serviceNameLower = (pendingServiceSelection.name || "").toLowerCase();
+          const isSobrancelha = serviceNameLower.includes("corte") && serviceNameLower.includes("sobrancelha");
+          
+          const addonName = isSobrancelha ? "Limpeza de Pele" : "Esfoliação";
+          const addonPrice = isSobrancelha ? 20 : 10;
+          const addonText = isSobrancelha 
+            ? "Gostaria de adicionar uma limpeza de pele completa por apenas " 
+            : "Gostaria de adicionar uma esfoliação facial por apenas ";
+
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowAddonModal(false)} />
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="relative bg-neutral-900 border border-amber-500/30 rounded-[2rem] p-8 w-full max-w-sm shadow-2xl"
+              >
+                <p className="text-white text-lg font-bold mb-8 text-center leading-relaxed">
+                  {addonText} <span className="text-amber-500 font-black text-xl whitespace-nowrap">R$ {addonPrice}</span>?
+                </p>
+                <div className="flex flex-col gap-3">
+                  <button 
+                    onClick={() => {
+                      setSelectedAddon({ name: addonName, price: addonPrice, accepted: true });
+                      setSelectedService(pendingServiceSelection.id);
+                      setCustomDuration(pendingServiceSelection.duration || 30);
+                      setShowAddonModal(false);
+                      setStep(2);
+                    }}
+                    className="w-full bg-amber-500 text-black py-4 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-amber-400 transition-colors shadow-lg shadow-amber-500/20"
+                  >
+                    Sim, adicionar (R$ {addonPrice})
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setSelectedAddon({ name: addonName, price: addonPrice, accepted: false });
+                      setSelectedService(pendingServiceSelection.id);
+                      setCustomDuration(pendingServiceSelection.duration || 30);
+                      setShowAddonModal(false);
+                      setStep(2);
+                    }}
+                    className="w-full bg-neutral-800 text-neutral-300 py-4 rounded-xl font-bold uppercase tracking-widest text-[10px] hover:bg-neutral-700 transition-colors border border-white/5"
+                  >
+                    Não, apenas {pendingServiceSelection.name}
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          );
+        })()}
         {showConfirmation && (
           <ConfirmationModal
             user={user}
@@ -1926,9 +2024,18 @@ export function BookingScreen({
                           whileTap={{ scale: 0.99 }}
                           onClick={() => {
                             triggerLightHaptic();
-                            setSelectedService(s.id);
-                            setCustomDuration(s.duration || 30);
-                            setStep(2);
+                            const serviceNameLower = (s.name || "").toLowerCase();
+                            if (
+                              (serviceNameLower.includes("corte") && serviceNameLower.includes("sobrancelha")) ||
+                              (serviceNameLower.includes("corte") && serviceNameLower.includes("barba"))
+                            ) {
+                              setPendingServiceSelection(s);
+                              setShowAddonModal(true);
+                            } else {
+                              setSelectedService(s.id);
+                              setCustomDuration(s.duration || 30);
+                              setStep(2);
+                            }
                           }}
                           className={`group p-6 rounded-[2.2rem] border text-left transition-all relative overflow-hidden flex flex-col justify-between min-h-[140px] ${
                             isSelected 
@@ -2639,11 +2746,11 @@ export function BookingScreen({
                     <div className="text-right">
                       {appliedDiscount > 0 && (
                         <span className="text-xs text-neutral-500 line-through mr-2 font-bold select-none">
-                          R$ {Number(services.find((s) => s.id === selectedService)?.price || 0).toFixed(2).replace(".", ",")}
+                          R$ {(Number(services.find((s) => s.id === selectedService)?.price || 0) + (selectedAddon?.accepted ? selectedAddon.price : 0)).toFixed(2).replace(".", ",")}
                         </span>
                       )}
                       <span className="text-3xl font-black text-white">
-                        R$ {((Number(services.find((s) => s.id === selectedService)?.price) || 0) * (1 - appliedDiscount / 100)).toFixed(2).replace(".", ",")}
+                        R$ {(((Number(services.find((s) => s.id === selectedService)?.price) || 0) + (selectedAddon?.accepted ? selectedAddon.price : 0)) * (1 - appliedDiscount / 100)).toFixed(2).replace(".", ",")}
                       </span>
                     </div>
                   </div>
@@ -2715,9 +2822,14 @@ export function BookingScreen({
                     {selectedServiceObj ? (
                       <div>
                         <p className="text-neutral-200 text-sm font-black uppercase tracking-wide normal-case first-letter:uppercase">{selectedServiceObj.name}</p>
+                        {selectedAddon?.accepted && (
+                          <p className="text-amber-500 text-[10px] font-bold uppercase tracking-wider mt-0.5 flex items-center gap-1">
+                            + {selectedAddon.name}
+                          </p>
+                        )}
                         <div className="flex items-center justify-between text-[9px] text-neutral-500 font-extrabold mt-1">
                           <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {customDuration || selectedServiceObj.duration} MIN</span>
-                          <span className="text-amber-500 font-black">R$ {selectedServiceObj.price}</span>
+                          <span className="text-amber-500 font-black">R$ {(Number(selectedServiceObj.price) + (selectedAddon?.accepted ? selectedAddon.price : 0)).toFixed(2).replace(".", ",")}</span>
                         </div>
                       </div>
                     ) : (
@@ -2774,18 +2886,24 @@ export function BookingScreen({
                 <div className="space-y-2.5">
                   <div className="flex justify-between items-center text-[10px] uppercase font-black text-neutral-500">
                     <span>SUBTOTAL PROCEDIMENTO</span>
-                    <span className="text-neutral-300">R$ {Number(selectedServiceObj?.price || 0).toFixed(2).replace(".", ",")}</span>
+                    <span className="text-neutral-300">R$ {(Number(selectedServiceObj?.price || 0) + (selectedAddon?.accepted ? selectedAddon.price : 0)).toFixed(2).replace(".", ",")}</span>
                   </div>
+                  {selectedAddon?.accepted && (
+                    <div className="flex justify-between items-center text-[10px] uppercase font-black text-amber-500">
+                      <span>{selectedAddon.name}</span>
+                      <span>+R$ {selectedAddon.price.toFixed(2).replace(".", ",")}</span>
+                    </div>
+                  )}
                   {appliedDiscount > 0 && (
                     <div className="flex justify-between items-center text-[10px] uppercase font-black text-emerald-500">
                       <span>CUPOM APLICADO ({appliedDiscount}%)</span>
-                      <span>-R$ {((Number(selectedServiceObj?.price || 0) * appliedDiscount) / 100).toFixed(2).replace(".", ",")}</span>
+                      <span>-R$ {(((Number(selectedServiceObj?.price || 0) + (selectedAddon?.accepted ? selectedAddon.price : 0)) * appliedDiscount) / 100).toFixed(2).replace(".", ",")}</span>
                     </div>
                   )}
                   <div className="flex justify-between items-center pt-2.5 border-t border-white/5">
                     <span className="text-[11px] font-black uppercase text-neutral-300">TOTAL ESTIMADO</span>
                     <span className="text-lg font-black text-amber-500">
-                      R$ {((Number(selectedServiceObj?.price || 0) * (1 - appliedDiscount / 100))).toFixed(2).replace(".", ",")}
+                      R$ {(((Number(selectedServiceObj?.price || 0) + (selectedAddon?.accepted ? selectedAddon.price : 0)) * (1 - appliedDiscount / 100))).toFixed(2).replace(".", ",")}
                     </span>
                   </div>
                 </div>

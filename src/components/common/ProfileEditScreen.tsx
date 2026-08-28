@@ -48,6 +48,7 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
   const [fetching, setFetching] = useState(true);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [completedAppointments, setCompletedAppointments] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<"dados" | "trabalhos" | "avaliacoes">("dados");
 
   useEffect(() => {
     if (!isClient || !user) return;
@@ -180,7 +181,7 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
     
     try {
       const { uploadImage } = await import('../../lib/uploadService');
-      const data = await uploadImage(file);
+      const data = await uploadImage(file, isPortfolio); // Apply watermark to portfolio
       if (data.success) {
         if (isPortfolio) {
             setProfileData(prev => ({ ...prev, portfolio: [...prev.portfolio, data.data.url] }));
@@ -281,9 +282,48 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
           </div>
         </div>
 
-        {/* Basic Information Layout Fields Card */}
-        <div className=" liquid-glass backdrop-blur-md rounded-[2.5rem]  p-6 space-y-5 text-left shadow-xl relative overflow-hidden">
-          <div className="border-b border-white/5 pb-3">
+        {/* Tab Navigation */}
+        <div className="flex bg-black border border-white/5 rounded-2xl p-1 gap-1 sticky top-2 z-50 shadow-2xl overflow-x-auto no-scrollbar">
+          <button
+            type="button"
+            onClick={() => setActiveTab("dados")}
+            className={`flex-1 min-w-[100px] py-3 px-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+              activeTab === "dados" ? "bg-amber-500 text-black shadow-lg" : "text-neutral-500 hover:text-white"
+            }`}
+          >
+            Dados & Infos
+          </button>
+          {!isClient && (
+            <button
+              type="button"
+              onClick={() => setActiveTab("trabalhos")}
+              className={`flex-1 min-w-[120px] py-3 px-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap flex items-center justify-center gap-1.5 ${
+                activeTab === "trabalhos" ? "bg-amber-500 text-black shadow-lg" : "text-neutral-500 hover:text-white"
+              }`}
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              Catálogo
+            </button>
+          )}
+          {isClient && (
+            <button
+              type="button"
+              onClick={() => setActiveTab("avaliacoes")}
+              className={`flex-1 min-w-[120px] py-3 px-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap flex items-center justify-center gap-1.5 ${
+                activeTab === "avaliacoes" ? "bg-amber-500 text-black shadow-lg" : "text-neutral-500 hover:text-white"
+              }`}
+            >
+              <Star className="w-3.5 h-3.5" />
+              Avaliações
+            </button>
+          )}
+        </div>
+
+        {activeTab === "dados" && (
+          <div className="animate-fade-in space-y-6">
+            {/* Basic Information Layout Fields Card */}
+            <div className=" liquid-glass backdrop-blur-md rounded-[2.5rem]  p-6 space-y-5 text-left shadow-xl relative overflow-hidden">
+              <div className="border-b border-white/5 pb-3">
              <span className="text-[10px] text-amber-500 font-sans uppercase font-black tracking-widest block flex items-center gap-2">
                <User className="w-4 h-4 text-amber-500" /> DADOS DO SEU PERFIL
              </span>
@@ -377,11 +417,14 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
             )}
           </div>
         </div>
+      </div>
+    )}
 
-        {/* Professional Profile Section */}
-        {!isClient && (
-          <div className=" liquid-glass backdrop-blur-md rounded-[2.5rem]  p-6 space-y-6 text-left shadow-xl">
-            <div className="border-b border-white/5 pb-3">
+    {/* Professional Profile Section */}
+    {!isClient && activeTab === "trabalhos" && (
+      <div className="animate-fade-in space-y-6">
+        <div className=" liquid-glass backdrop-blur-md rounded-[2.5rem]  p-6 space-y-6 text-left shadow-xl">
+          <div className="border-b border-white/5 pb-3">
                <span className="text-[10px] text-amber-500 font-sans uppercase font-black tracking-widest block flex items-center gap-2">
                  <LayoutGrid className="w-4 h-4 text-amber-500" /> EXPOSIÇÃO PROFISSIONAL E BIO
                </span>
@@ -485,11 +528,13 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
             </div>
 
           </div>
-        )}
+        </div>
+    )}
 
-        {/* Avaliar Meus Atendimentos Section */}
-        {isClient && (
-          <div className=" liquid-glass backdrop-blur-md rounded-[2.5rem]  p-6 space-y-6 text-left shadow-xl relative overflow-hidden">
+    {/* Avaliar Meus Atendimentos Section */}
+    {isClient && activeTab === "avaliacoes" && (
+      <div className="animate-fade-in space-y-6">
+        <div className=" liquid-glass backdrop-blur-md rounded-[2.5rem]  p-6 space-y-6 text-left shadow-xl relative overflow-hidden">
              <div className="border-b border-white/5 pb-3 flex items-center justify-between">
                 <span className="text-[10px] text-amber-500 font-sans uppercase font-black tracking-widest block flex items-center gap-2">
                   <Star className="w-4 h-4 text-amber-500 fill-current" /> AVALIAR MEUS ATENDIMENTOS
@@ -511,9 +556,10 @@ export function ProfileEditScreen({ user, onBack, isClient = false }: { user: an
                </div>
              )}
           </div>
-        )}
+        </div>
+    )}
 
-        {/* Global form submit button at the bottom */}
+    {/* Global form submit button at the bottom */}
         <button 
           type="submit"
           disabled={loading}

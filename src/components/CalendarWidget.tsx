@@ -79,7 +79,14 @@ export function AppointmentModal({ appointment, onClose, onUpdate, onEdit, onDel
         </div>
         
         <h2 className="text-xl font-black uppercase italic text-white leading-none tracking-tight mb-2">{appointment.clientName}</h2>
-        <p className="text-amber-500 text-[9px] font-black uppercase tracking-widest bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full inline-block mb-6">{appointment.serviceName}</p>
+        <div className="mb-6 flex flex-col items-center gap-2">
+          <p className="text-amber-500 text-[9px] font-black uppercase tracking-widest bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full inline-block">{appointment.serviceName}</p>
+          {appointment.addon && (
+            <p className={`text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full inline-block ${appointment.addon.accepted ? "bg-amber-500/10 text-amber-500 border border-amber-500/20" : "bg-neutral-800 text-neutral-500 border border-white/5"}`}>
+              {appointment.addon.accepted ? "✨ Adicional: " : "❌ Recusou: "} {appointment.addon.name}
+            </p>
+          )}
+        </div>
 
         <div className=" liquid-glass p-5 rounded-2xl  space-y-3.5 mb-6 text-left text-xs uppercase tracking-widest font-black text-neutral-400">
             <div className="flex items-center gap-3">
@@ -988,6 +995,11 @@ export function CalendarWidget({
                         <div className="truncate">
                           <p className="text-[10px] sm:text-xs font-black uppercase tracking-wide truncate leading-tight">{app.clientName}</p>
                           <p className="text-[8px] sm:text-[9px] font-extrabold text-neutral-400 uppercase tracking-wider truncate leading-none mt-0.5">{app.serviceName}</p>
+                          {app.addon && (
+                            <p className={`text-[7px] sm:text-[8px] font-black uppercase tracking-widest mt-0.5 ${app.addon.accepted ? "text-amber-500" : "text-neutral-600"}`}>
+                              {app.addon.accepted ? "+ " : "- "}{app.addon.name}
+                            </p>
+                          )}
                         </div>
                         <span className="text-[7px] sm:text-[8px] font-black text-amber-400 uppercase tracking-widest truncate leading-none flex items-center gap-1 mt-1">
                           <Users className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-amber-500 shrink-0" /> {app.barberName}

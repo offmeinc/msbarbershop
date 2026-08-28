@@ -674,6 +674,11 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                         </div>
                      </div>
                      <h4 className="text-2xl font-black uppercase italic tracking-tighter mb-1 leading-tight">{stats.upcoming.serviceName}</h4>
+                     {stats.upcoming.addon && (
+                       <p className={`text-[10px] font-black uppercase tracking-widest mb-4 inline-block px-3 py-1 rounded-full ${stats.upcoming.addon.accepted ? "bg-amber-500/10 border border-amber-500/20 text-amber-500" : "bg-neutral-800 border border-white/5 text-neutral-500"}`}>
+                         {stats.upcoming.addon.accepted ? "✨ Adicional: " : "❌ Recusou: "} {stats.upcoming.addon.name}
+                       </p>
+                     )}
                      <div className="flex items-center gap-4 text-xs font-bold opacity-80 mb-6">
                         <p>{(() => {
                            const d = stats.upcoming.date instanceof Timestamp ? stats.upcoming.date.toDate() : parseISO(stats.upcoming.date);
@@ -964,6 +969,11 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                           </div>
                           <div>
                             <h4 className="text-sm font-bold text-white uppercase italic">{app.serviceName}</h4>
+                            {app.addon && (
+                              <p className={`text-[8px] font-black uppercase tracking-widest ${app.addon.accepted ? "text-amber-500" : "text-neutral-600"}`}>
+                                {app.addon.accepted ? "+ " : "- "}{app.addon.name}
+                              </p>
+                            )}
                             <p className="text-[10px] text-neutral-600 uppercase font-bold tracking-tight">
                               {format(app.date instanceof Timestamp ? app.date.toDate() : parseISO(app.date), "dd/MM/yyyy • HH:mm", { locale: ptBR })}
                             </p>

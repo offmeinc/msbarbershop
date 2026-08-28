@@ -171,6 +171,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
   const [lockReason, setLockReason] = useState("");
   const [blockingBarberId, setBlockingBarberId] = useState<string>(role === 'manager' ? "all" : (user?.uid || "all"));
   const [searchQuery, setSearchQuery] = useState("");
+  const [listSearchQuery, setListSearchQuery] = useState("");
 
   const [offlineQueue, setOfflineQueue] = useState<OfflineAction[]>([]);
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
@@ -619,9 +620,17 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
           if (app.status !== filterStatus) return false;
         }
       }
+
+      if (listSearchQuery.trim()) {
+        const qLower = listSearchQuery.toLowerCase();
+        const clientMatch = (app.clientName || "").toLowerCase().includes(qLower);
+        const serviceMatch = (app.serviceName || "").toLowerCase().includes(qLower);
+        if (!clientMatch && !serviceMatch) return false;
+      }
+
       return true;
     });
-  }, [baseFilteredAppointments, filterStatus]);
+  }, [baseFilteredAppointments, filterStatus, listSearchQuery]);
 
   const statusCounts = useMemo(() => {
     const counts = {
@@ -1452,6 +1461,26 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                         </motion.div>
                       </div>
 
+                      {/* List Search Query Input */}
+                      <div className="mb-4 relative w-full">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
+                        <input 
+                          type="text"
+                          placeholder="Buscar por nome do cliente ou serviço..."
+                          value={listSearchQuery}
+                          onChange={(e) => setListSearchQuery(e.target.value)}
+                          className="w-full bg-black/40 border border-white/5 rounded-2xl pl-12 pr-10 py-3.5 text-xs text-white uppercase font-black tracking-widest outline-none focus:border-amber-500/50 focus:bg-black/60 transition-all placeholder:text-neutral-700 shadow-inner"
+                        />
+                        {listSearchQuery && (
+                          <button
+                            onClick={() => setListSearchQuery("")}
+                            className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-amber-500 transition-colors p-1"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+
                       {/* Styled Filter Controls */}
                       <div className="flex gap-2 pb-2.5 overflow-x-auto no-scrollbar border-b border-white/5 mb-5 select-none scroll-smooth">
                         {[
@@ -1659,6 +1688,13 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                                                     )}
                                                   </p>
                                                   <h4 className="font-medium text-lg text-white tracking-tight mt-1 leading-none">{app.serviceName}</h4>
+                                                  {app.addon && (
+                                                    <div className={`mt-2 flex items-center gap-1.5 px-2 py-1 rounded-lg w-fit ${app.addon.accepted ? "bg-amber-500/10 border border-amber-500/20 text-amber-400" : "bg-neutral-800 border border-white/5 text-neutral-500"}`}>
+                                                      <span className="text-[9px] font-black uppercase tracking-wider">
+                                                        {app.addon.accepted ? "✨ Adicional: " : "❌ Recusou: "} {app.addon.name}
+                                                      </span>
+                                                    </div>
+                                                  )}
                                               </div>
                                               <div className={`px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5 ${statusColor}`}>
                                                   <div className={`w-1.5 h-1.5 rounded-full ${badgeDot}`} />
@@ -2028,6 +2064,11 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                           <p className="text-[8px] text-neutral-500 font-bold uppercase tracking-widest leading-none">
                             {app.serviceName} com <span className="text-white capitalize">{app.barberName}</span>
                           </p>
+                          {app.addon && (
+                            <p className={`text-[7px] font-black uppercase tracking-widest ${app.addon.accepted ? "text-amber-500" : "text-neutral-600"}`}>
+                              {app.addon.accepted ? "+ " : "- "}{app.addon.name}
+                            </p>
+                          )}
                           <p className="text-[8px] text-neutral-600 font-medium uppercase tracking-widest">
                             {format(dateVal, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                           </p>
