@@ -6,6 +6,8 @@ import { collection, query, onSnapshot, Timestamp, doc, updateDoc } from "fireba
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
 import { format, parseISO, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { BARBERSHOP_NAME } from "../../constants";
+import { triggerLightHaptic } from "../../lib/haptics";
 
 export function ClientDetailsScreen({ client, onBack, onScheduleClient, onMessageClient }: { client: any, onBack: () => void, onScheduleClient?: (client: any) => void, onMessageClient?: (client: any) => void }) {
   const [appointments, setAppointments] = useState<any[]>([]);
@@ -127,7 +129,10 @@ export function ClientDetailsScreen({ client, onBack, onScheduleClient, onMessag
   }, [createdDate]);
 
   const cleanedPhone = (client.whatsapp || "").replace(/\D/g, "");
-  const waUrl = cleanedPhone ? `https://wa.me/55${cleanedPhone}` : null;
+  const fullPhone = cleanedPhone.length >= 12 && cleanedPhone.startsWith("55") ? cleanedPhone : `55${cleanedPhone}`;
+  const waUrl = cleanedPhone 
+    ? `https://wa.me/${fullPhone}?text=${encodeURIComponent(`Olá ${client.name ? client.name : "cliente"}! Tudo bem? Aqui é da ${BARBERSHOP_NAME}.`)}` 
+    : null;
 
   // CRM client ranks
   const completedCount = completedAppointments.length;
@@ -206,11 +211,22 @@ export function ClientDetailsScreen({ client, onBack, onScheduleClient, onMessag
               </div>
               
               <div className="flex flex-wrap justify-center sm:justify-start gap-3 text-neutral-400 text-xs">
-                {client.whatsapp && (
+                {client.whatsapp && waUrl ? (
+                  <a 
+                    href={waUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => triggerLightHaptic()}
+                    className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide liquid-glass px-3 py-1.5 rounded-xl border border-white/5 hover:border-emerald-500/40 hover:bg-emerald-500/10 text-emerald-400 hover:text-emerald-300 transition-all active:scale-95 cursor-pointer"
+                    title="Conversar no WhatsApp"
+                  >
+                    <Phone className="w-3.5 h-3.5 text-emerald-500" /> {client.whatsapp}
+                  </a>
+                ) : client.whatsapp ? (
                   <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide liquid-glass px-3 py-1.5 rounded-xl ">
                     <Phone className="w-3.5 h-3.5 text-amber-500" /> {client.whatsapp}
                   </span>
-                )}
+                ) : null}
                 {client.email && (
                   <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide liquid-glass px-3 py-1.5 rounded-xl ">
                     <Mail className="w-3.5 h-3.5 text-amber-500" /> {client.email}

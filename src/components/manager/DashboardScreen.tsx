@@ -1795,7 +1795,9 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                                                             e.stopPropagation();
                                                             const dateFormatted = format(app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
                                                             const text = `Olá ${app.clientName}, passando para confirmar seu agendamento de ${app.serviceName} no dia ${dateFormatted}. Aguardamos você!`;
-                                                            window.open(`https://wa.me/${app.clientPhone.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`, '_blank');
+                                                            const rawDigits = (app.clientPhone || "").replace(/\D/g, "");
+                                                            const phoneWithCountry = rawDigits.length >= 12 && rawDigits.startsWith("55") ? rawDigits : `55${rawDigits}`;
+                                                            window.open(`https://wa.me/${phoneWithCountry}?text=${encodeURIComponent(text)}`, '_blank');
                                                         }} 
                                                         className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-[11px] font-black uppercase tracking-widest py-2.5 rounded-xl border border-emerald-500/20 hover:border-emerald-500 flex-1 transition-all duration-300"
                                                     >

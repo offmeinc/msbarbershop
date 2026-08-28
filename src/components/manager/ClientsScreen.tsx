@@ -5,6 +5,8 @@ import { collection, query, where, limit, onSnapshot, Timestamp } from "firebase
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
 import { format, parseISO, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { BARBERSHOP_NAME } from "../../constants";
+import { triggerLightHaptic } from "../../lib/haptics";
 
 export function ClientsScreen({ onBack, onScheduleClient, onClientClick, user, role }: { onBack: () => void, onScheduleClient?: (client: any) => void, onClientClick?: (client: any) => void, key?: any, user: any, role: string }) {
   const [clients, setClients] = useState<any[]>([]);
@@ -112,7 +114,10 @@ export function ClientsScreen({ onBack, onScheduleClient, onClientClick, user, r
               filteredClients.map((client, index) => {
                 // Strip non-digits from phone for WhatsApp redirect
                 const cleanedPhone = (client.whatsapp || "").replace(/\D/g, "");
-                const waUrl = cleanedPhone ? `https://wa.me/55${cleanedPhone}` : null;
+                const fullPhone = cleanedPhone.length >= 12 && cleanedPhone.startsWith("55") ? cleanedPhone : `55${cleanedPhone}`;
+                const waUrl = cleanedPhone 
+                  ? `https://wa.me/${fullPhone}?text=${encodeURIComponent(`Olá ${client.name ? client.name : "cliente"}! Tudo bem? Aqui é da ${BARBERSHOP_NAME}.`)}` 
+                  : null;
 
                 // Find client's appointments
                 const clientApps = appointments.filter(app => {
@@ -215,12 +220,26 @@ export function ClientsScreen({ onBack, onScheduleClient, onClientClick, user, r
                       {/* Contact Badges Info */}
                       <div className="space-y-1.5">
                         {client.whatsapp && (
-                          <div className="flex items-center justify-between liquid-glass  py-1.5 pl-3 pr-2.5 rounded-xl">
-                            <span className="text-[10px] text-neutral-500 uppercase font-black tracking-widest flex items-center gap-1.5">
-                              <Phone className="w-3 h-3 text-emerald-500" /> WhatsApp
+                          <a
+                            id={`badge-wa-${client.id}`}
+                            href={waUrl || `https://wa.me/55${(client.whatsapp || "").replace(/\D/g, "")}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              triggerLightHaptic();
+                            }}
+                            className="flex items-center justify-between liquid-glass py-2 pl-3 pr-2.5 rounded-xl border border-white/5 hover:border-emerald-500/40 hover:bg-emerald-500/10 active:scale-[0.98] transition-all group/wa cursor-pointer"
+                            title="Conversar no WhatsApp"
+                          >
+                            <span className="text-[10px] text-neutral-400 group-hover/wa:text-emerald-400 uppercase font-black tracking-widest flex items-center gap-1.5 transition-colors">
+                              <Phone className="w-3.5 h-3.5 text-emerald-500 group-hover/wa:scale-110 transition-transform" /> WhatsApp
                             </span>
-                            <span className="text-white text-[10px] font-black tracking-tight">{client.whatsapp}</span>
-                          </div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-white group-hover/wa:text-emerald-300 text-[10px] font-black tracking-tight transition-colors">{client.whatsapp}</span>
+                              <MessageSquare className="w-3 h-3 text-emerald-500 opacity-60 group-hover/wa:opacity-100 group-hover/wa:scale-110 transition-all" />
+                            </div>
+                          </a>
                         )}
                         
                         {/* Optional balance or loyalty placeholder */}
