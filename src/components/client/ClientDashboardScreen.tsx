@@ -69,7 +69,7 @@ import { PreferencesSummary } from "./PreferencesSummary";
 import { NotificationsScreen } from "../NotificationsScreen";
 import { ChatScreen } from "../ChatScreens";
 import { ReferralsScreen } from "./ReferralsScreen";
-import { GOOGLE_REVIEW_URL } from "../../constants";
+import { GOOGLE_REVIEW_URL, BARBERSHOP_PHONE } from "../../constants";
 import { toast } from "../ui/Toast";
 import { triggerLightHaptic } from "../../lib/haptics";
 
@@ -566,7 +566,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
   const currentClientPhoto = liveUser?.photoURL || liveUser?.photoUrl || user?.photoURL || user?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentClientName)}&background=1a1a1a&color=fff`;
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-[100dvh] bg-black text-white pb-32">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-[100dvh] bg-black text-white pb-32 max-w-md md:max-w-4xl lg:max-w-5xl mx-auto px-4 sm:px-6 py-6">
       <AnimatePresence mode="wait">
         {currentView === 'home' && (
           <motion.div 
@@ -575,7 +575,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
           >
-            <div className="liquid-glass p-6 backdrop-blur-2xl z-20 border border-white/5 mb-6">
+            <div className="liquid-glass p-6 backdrop-blur-2xl z-20 border border-white/5 mb-8 rounded-[2.5rem] shadow-2xl shadow-amber-500/5 ring-1 ring-white/5">
               <div className="flex items-center justify-between w-full">
                   <div className="flex items-center gap-4">
                      <div className="w-14 h-14 rounded-full liquid-glass overflow-hidden shadow-xl shrink-0  relative group">
@@ -610,7 +610,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
               </div>
             </div>
 
-            <div className="px-6 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
               
               {/* Push permission request banner */}
               {pushPermission !== "granted" && queryNotificationSupport() && (
@@ -650,6 +650,17 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                   <CalendarCheck className="w-6 h-6" />
                   AGENDAR HORÁRIO
                 </button>
+
+                <a
+                  href={`https://wa.me/${BARBERSHOP_PHONE}?text=${encodeURIComponent("Olá! Me chamo " + currentClientName + " e gostaria de tirar uma dúvida sobre o meu agendamento.")}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => triggerLightHaptic()}
+                  className="w-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 py-5 rounded-[2rem] font-black italic uppercase tracking-widest text-sm hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2.5 shadow-[0_0_30px_rgba(16,185,129,0.05)] cursor-pointer"
+                >
+                  <MessageCircle className="w-5 h-5 text-emerald-400 animate-pulse" />
+                  CONTATAR WHATSAPP DA BARBEARIA
+                </a>
 
                 {stats.upcoming && (
                   <div className={`p-6 rounded-[2.5rem] shadow-2xl transition-all ${
@@ -767,7 +778,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
 
 
               {/* Digital Wallet Card */}
-              <div className="bg-gradient-to-br from-neutral-800 to-neutral-900 border border-white/10 p-8 rounded-[3.5rem] relative overflow-hidden group shadow-2xl">
+              <div className="liquid-glass hover:border-amber-500/20 p-8 rounded-[3.5rem] relative overflow-hidden group shadow-2xl">
                  <div className="absolute -right-8 -top-8 text-amber-500/5 group-hover:scale-110 transition-transform duration-1000 rotate-12">
                     <Wallet size={200} />
                   </div>
@@ -827,7 +838,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                   triggerLightHaptic();
                   setCurrentView('referrals');
                 }}
-                className="bg-neutral-900  liquid-glass  hover:border-amber-500/10 p-8 rounded-[3rem] shadow-2xl relative overflow-hidden group mt-6 cursor-pointer transition-all duration-300"
+                className="liquid-glass hover:border-amber-500/20 p-8 rounded-[3rem] shadow-2xl relative overflow-hidden group mt-6 cursor-pointer transition-all duration-300"
               >
                 <div className="absolute -right-4 -bottom-4 text-white/5 group-hover:scale-110 transition-transform duration-700">
                   <Gift size={160} />
