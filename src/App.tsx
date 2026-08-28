@@ -1158,9 +1158,9 @@ export default function App() {
           ease: [0.33, 1, 0.68, 1], // Custom cubic-bezier for a smoother feel
           opacity: { duration: 0.25 }
         }}
-        className="liquid-glass !rounded-none !rounded-b-[2rem] fixed top-0 w-full z-50 border-b border-white/5 backdrop-blur-xl pt-[max(env(safe-area-inset-top),1rem)] lg:pt-[max(env(safe-area-inset-top),0rem)]"
+        className="fixed top-[calc(1rem+env(safe-area-inset-top))] left-1/2 -translate-x-1/2 w-[92vw] max-w-7xl liquid-glass backdrop-blur-2xl z-50 rounded-[2.5rem] shadow-2xl shadow-amber-500/5 ring-1 ring-white/5"
       >
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+        <div className="w-full px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between">
           <div 
             className="flex items-center gap-4 cursor-pointer group"
             onClick={() => setCurrentScreen("home")}
