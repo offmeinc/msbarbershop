@@ -28,8 +28,14 @@ import {
   AlertTriangle,
   ChevronDown,
   ChevronUp,
-  Activity
+  Activity,
+  UserX,
+  Play,
+  Receipt,
+  Check
 } from "lucide-react";
+import { CheckoutModal } from "../professional/CheckoutModal";
+import { NoShowModal } from "../professional/NoShowModal";
 import { 
   BarChart, 
   Bar, 
@@ -77,6 +83,7 @@ import { AnalyticsScreen } from "./AnalyticsScreen";
 import { CalendarWidget, AppointmentModal } from "../CalendarWidget";
 import { ServicesManagement, CollaboratorsManager, WorkingHoursManager } from "./ManagementScreens";
 import { ReviewModal } from "../common/ReviewModal";
+import { ConfirmModal } from "../common/ConfirmModal";
 import { Skeleton } from "../common/Skeleton";
 import { BrandLogo } from "../common/BrandLogo";
 import { EmptyState } from "../common/EmptyState";
@@ -149,7 +156,9 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
   const [currentView, setCurrentView] = useState<"agenda" | "list" | "services" | "hours" | "collaborators" | "earnings">(dashboardView || (role === 'client' ? 'list' : 'agenda'));
   const [agendaMode, setAgendaMode] = useState<"day" | "week" | "month">("day");
   const [loading, setLoading] = useState(true);
-  const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "confirmed" | "completed" | "cancelled">("all");
+  const [filterStatus, setFilterStatus] = useState<"all" | "in_progress" | "pending_checkout" | "confirmed" | "pending" | "completed" | "no_show" | "cancelled">("all");
+  const [checkoutAppointment, setCheckoutAppointment] = useState<any | null>(null);
+  const [noShowAppointment, setNoShowAppointment] = useState<any | null>(null);
   const [reviewAppointment, setReviewAppointment] = useState<any>(null);
   const [listScope, setListScope] = useState<"day" | "all">("day");
   const [expandedAppointmentId, setExpandedAppointmentId] = useState<string | null>(null);
@@ -211,6 +220,21 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
       setSelectedBarberId(user.uid);
     }
   }, [role, user?.uid]);
+
+  const [confirmModalState, setConfirmModalState] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText?: string;
+    cancelText?: string;
+    isDestructive?: boolean;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    onConfirm: () => {}
+  });
 
   const handleRefreshSync = async () => {
     setIsSyncing(true);
@@ -415,6 +439,9 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
         updatePayload.paymentStatus = 'paid';
         updatePayload.paidAt = serverTimestamp();
       }
+      if (newStatus === 'no_show') {
+        updatePayload.paymentStatus = 'pending';
+      }
       
       await updateDoc(doc(firestore, "appointments", app.id), updatePayload);
       
@@ -611,12 +638,30 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
   }, [appointments, selectedBarberId, listScope, currentDate]);
 
   const filteredAppointmentsList = useMemo(() => {
+    const now = new Date();
     return baseFilteredAppointments.filter(app => {
       // Status Filter
       if (filterStatus !== 'all') {
         const isPending = !app.status || app.status === 'pending';
-        if (filterStatus === 'pending') {
+        const isPendingCheckout = app.status === 'in_progress' || (
+          app.status !== 'completed' &&
+          app.status !== 'cancelled' &&
+          app.status !== 'no_show' &&
+          (() => {
+            if (!app.date) return false;
+            const appDate = app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date);
+            return appDate <= now;
+          })()
+        );
+
+        if (filterStatus === 'in_progress') {
+          if (app.status !== 'in_progress') return false;
+        } else if (filterStatus === 'pending_checkout') {
+          if (!isPendingCheckout) return false;
+        } else if (filterStatus === 'pending') {
           if (!isPending) return false;
+        } else if (filterStatus === 'no_show') {
+          if (app.status !== 'no_show') return false;
         } else {
           if (app.status !== filterStatus) return false;
         }
@@ -634,21 +679,42 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
   }, [baseFilteredAppointments, filterStatus, listSearchQuery]);
 
   const statusCounts = useMemo(() => {
+    const now = new Date();
     const counts = {
       all: baseFilteredAppointments.length,
+      in_progress: 0,
+      pending_checkout: 0,
       pending: 0,
       confirmed: 0,
       completed: 0,
+      no_show: 0,
       cancelled: 0,
     };
     baseFilteredAppointments.forEach(app => {
       const isPending = !app.status || app.status === 'pending';
-      if (isPending) {
+      const isPendingCheckout = app.status === 'in_progress' || (
+        app.status !== 'completed' &&
+        app.status !== 'cancelled' &&
+        app.status !== 'no_show' &&
+        (() => {
+          if (!app.date) return false;
+          const appDate = app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date);
+          return appDate <= now;
+        })()
+      );
+
+      if (isPendingCheckout) counts.pending_checkout++;
+
+      if (app.status === 'in_progress') {
+        counts.in_progress++;
+      } else if (isPending) {
         counts.pending++;
       } else if (app.status === 'confirmed') {
         counts.confirmed++;
       } else if (app.status === 'completed') {
         counts.completed++;
+      } else if (app.status === 'no_show') {
+        counts.no_show++;
       } else if (app.status === 'cancelled') {
         counts.cancelled++;
       }
@@ -658,7 +724,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
 
   const statsForListMode = useMemo(() => {
     const completed = baseFilteredAppointments.filter(app => app.status === 'completed' && app.status !== 'cancelled');
-    const scheduled = baseFilteredAppointments.filter(app => (app.status === 'confirmed' || app.status === 'pending') && app.status !== 'cancelled');
+    const scheduled = baseFilteredAppointments.filter(app => (app.status === 'confirmed' || app.status === 'pending' || app.status === 'in_progress' || !app.status) && app.status !== 'cancelled' && app.status !== 'no_show');
     
     const totalValue = completed.reduce((sum, app) => {
       const rawPrice = app.totalPrice || app.price || 0;
@@ -1307,6 +1373,14 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
               setSelectedAppointment(null);
               if (onEditBooking) onEditBooking(app);
           }}
+          onCheckout={(app) => {
+              setSelectedAppointment(null);
+              setCheckoutAppointment(app);
+          }}
+          onNoShow={(app) => {
+              setSelectedAppointment(null);
+              setNoShowAppointment(app);
+          }}
         />
       )}
       
@@ -1479,9 +1553,12 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                       <div className="flex gap-2 pb-2.5 overflow-x-auto no-scrollbar border-b border-white/5 mb-5 select-none scroll-smooth">
                         {[
                           { id: 'all', label: 'Todos', icon: Calendar, color: 'amber' },
-                          { id: 'pending', label: 'Pendentes', icon: Clock, color: 'orange' },
+                          { id: 'in_progress', label: 'Na Cadeira', icon: Scissors, color: 'cyan' },
+                          { id: 'pending_checkout', label: 'Pendentes Baixa', icon: AlertTriangle, color: 'orange' },
                           { id: 'confirmed', label: 'Confirmados', icon: CheckCircle2, color: 'amber' },
-                          { id: 'completed', label: 'Atendidos', icon: Sparkles, color: 'emerald' },
+                          { id: 'pending', label: 'Aguardando', icon: Clock, color: 'blue' },
+                          { id: 'completed', label: 'Atendidos (Pagos)', icon: Sparkles, color: 'emerald' },
+                          { id: 'no_show', label: 'Faltas', icon: UserX, color: 'purple' },
                           { id: 'cancelled', label: 'Cancelados', icon: XCircle, color: 'rose' }
                         ].map((tab) => {
                           const id = tab.id;
@@ -1502,6 +1579,15 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                           } else if (tab.color === 'rose') {
                             activeClass = "bg-rose-500/10 border-rose-500/40 text-rose-400 shadow-md shadow-rose-500/5";
                             inactiveHoverClass = "hover:border-rose-500/20 hover:text-rose-300";
+                          } else if (tab.color === 'cyan') {
+                            activeClass = "bg-cyan-500/10 border-cyan-500/40 text-cyan-400 shadow-md shadow-cyan-500/5 animate-pulse";
+                            inactiveHoverClass = "hover:border-cyan-500/20 hover:text-cyan-300";
+                          } else if (tab.color === 'blue') {
+                            activeClass = "bg-blue-500/10 border-blue-500/40 text-blue-400 shadow-md shadow-blue-500/5";
+                            inactiveHoverClass = "hover:border-blue-500/20 hover:text-blue-300";
+                          } else if (tab.color === 'purple') {
+                            activeClass = "bg-purple-500/10 border-purple-500/40 text-purple-400 shadow-md shadow-purple-500/5";
+                            inactiveHoverClass = "hover:border-purple-500/20 hover:text-purple-300";
                           } else { // 'amber'
                             activeClass = "bg-amber-500/10 border-amber-500/40 text-amber-500 shadow-md shadow-amber-500/5";
                             inactiveHoverClass = "hover:border-amber-500/20 hover:text-amber-400";
@@ -1532,6 +1618,9 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                                   ? tab.color === 'orange' ? 'bg-orange-500/20 text-orange-400'
                                     : tab.color === 'emerald' ? 'bg-emerald-500/20 text-emerald-400'
                                     : tab.color === 'rose' ? 'bg-rose-500/20 text-rose-400'
+                                    : tab.color === 'cyan' ? 'bg-cyan-500/20 text-cyan-400'
+                                    : tab.color === 'blue' ? 'bg-blue-500/20 text-blue-400'
+                                    : tab.color === 'purple' ? 'bg-purple-500/20 text-purple-400'
                                     : 'bg-amber-500/20 text-amber-500'
                                   : 'bg-white/5 text-neutral-600 group-hover:bg-white/10 group-hover:text-neutral-400'
                               }`}>
@@ -1545,6 +1634,9 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                                     tab.color === 'orange' ? 'bg-orange-500/70'
                                       : tab.color === 'emerald' ? 'bg-emerald-500/70'
                                       : tab.color === 'rose' ? 'bg-rose-500/70'
+                                      : tab.color === 'cyan' ? 'bg-cyan-500/70'
+                                      : tab.color === 'blue' ? 'bg-blue-500/70'
+                                      : tab.color === 'purple' ? 'bg-purple-500/70'
                                       : 'bg-amber-500/70'
                                   }`} 
                                   transition={{ type: "spring", stiffness: 380, damping: 30 }}
@@ -1607,6 +1699,16 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                                     statusText = "Atendido";
                                     borderAccent = "border-l-emerald-500 shadow-[inset_1px_0_10px_rgba(16,185,129,0.05)]";
                                     badgeDot = "bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.5)]";
+                                  } else if (app.status === 'in_progress') {
+                                    statusColor = "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 animate-pulse";
+                                    statusText = "Na Cadeira";
+                                    borderAccent = "border-l-cyan-500 shadow-[inset_1px_0_10px_rgba(6,182,212,0.15)]";
+                                    badgeDot = "bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.8)]";
+                                  } else if (app.status === 'no_show') {
+                                    statusColor = "bg-purple-500/10 text-purple-400 border border-purple-500/20";
+                                    statusText = "Faltou";
+                                    borderAccent = "border-l-purple-500 shadow-[inset_1px_0_10px_rgba(168,85,247,0.05)]";
+                                    badgeDot = "bg-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.5)]";
                                   } else if (app.status === 'confirmed') {
                                     statusColor = "bg-amber-500/10 text-amber-400 border border-amber-500/20";
                                     statusText = "Confirmado";
@@ -1772,19 +1874,43 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
 
                                           {/* Direct Role Action Control panel */}
                                           {(role === 'manager' || role === 'barber') && (
-                                            <div className="flex gap-2 mt-4" onClick={(e) => e.stopPropagation()}>
+                                            <div className="flex flex-wrap gap-2 mt-4" onClick={(e) => e.stopPropagation()}>
                                                 {(app.status === 'pending' || !app.status) && (
                                                   <button 
                                                     onClick={() => handleStatusUpdate(app, 'confirmed')} 
-                                                    className="bg-green-500/15 hover:bg-green-500 hover:text-black border border-green-500/20 text-green-400 text-[11px] font-black uppercase tracking-widest py-2 rounded-xl flex-1 transition-all active:scale-95 duration-200 cursor-pointer"
+                                                    className="bg-green-500/15 hover:bg-green-500 hover:text-black border border-green-500/20 text-green-400 text-[11px] font-black uppercase tracking-widest py-2 px-3 rounded-xl flex-1 transition-all active:scale-95 duration-200 cursor-pointer"
                                                   >
                                                     Confirmar
+                                                  </button>
+                                                )}
+                                                {(app.status === 'confirmed' || app.status === 'scheduled' || app.status === 'pending' || !app.status) && (
+                                                  <button 
+                                                    onClick={() => handleStatusUpdate(app, 'in_progress')} 
+                                                    className="bg-cyan-500/15 hover:bg-cyan-500 hover:text-black border border-cyan-500/20 text-cyan-400 text-[11px] font-black uppercase tracking-widest py-2 px-3 rounded-xl flex-1 transition-all active:scale-95 duration-200 cursor-pointer flex items-center justify-center gap-1.5"
+                                                  >
+                                                    <Play className="w-3.5 h-3.5" /> Na Cadeira
+                                                  </button>
+                                                )}
+                                                {app.status !== 'completed' && app.status !== 'cancelled' && app.status !== 'no_show' && (
+                                                  <button 
+                                                    onClick={() => setCheckoutAppointment(app)} 
+                                                    className="bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-500/20 text-[11px] font-black uppercase tracking-widest py-2 px-3 rounded-xl flex-1 transition-all active:scale-95 duration-200 cursor-pointer flex items-center justify-center gap-1.5"
+                                                  >
+                                                    <Receipt className="w-3.5 h-3.5" /> Baixa
+                                                  </button>
+                                                )}
+                                                {(app.status === 'confirmed' || app.status === 'scheduled' || app.status === 'pending' || !app.status) && (
+                                                  <button 
+                                                    onClick={() => setNoShowAppointment(app)} 
+                                                    className="bg-purple-500/10 hover:bg-purple-500 hover:text-white text-purple-400 text-[11px] font-black uppercase tracking-widest py-2 px-3 rounded-xl flex-1 border border-purple-500/20 transition-all active:scale-95 duration-200 cursor-pointer flex items-center justify-center gap-1.5"
+                                                  >
+                                                    <UserX className="w-3.5 h-3.5" /> Faltou
                                                   </button>
                                                 )}
                                                 {app.status !== 'cancelled' && app.status !== 'completed' && app.status !== 'pending' && app.status && (
                                                   <button 
                                                     onClick={() => handleStatusUpdate(app, 'cancelled')} 
-                                                    className="bg-red-500/10 hover:bg-red-500 hover:text-white text-red-500 text-[11px] font-black uppercase tracking-widest py-2.5 rounded-xl flex-1 border border-red-500/20 transition-all active:scale-95 duration-200 cursor-pointer"
+                                                    className="bg-red-500/10 hover:bg-red-500 hover:text-white text-red-500 text-[11px] font-black uppercase tracking-widest py-2 px-3 rounded-xl flex-1 border border-red-500/20 transition-all active:scale-95 duration-200 cursor-pointer"
                                                   >
                                                     Cancelar
                                                   </button>
@@ -1799,10 +1925,18 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                                                             const phoneWithCountry = rawDigits.length >= 12 && rawDigits.startsWith("55") ? rawDigits : `55${rawDigits}`;
                                                             window.open(`https://wa.me/${phoneWithCountry}?text=${encodeURIComponent(text)}`, '_blank');
                                                         }} 
-                                                        className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-[11px] font-black uppercase tracking-widest py-2.5 rounded-xl border border-emerald-500/20 hover:border-emerald-500 flex-1 transition-all duration-300"
+                                                        className="bg-neutral-800 hover:bg-emerald-500/20 text-neutral-400 hover:text-emerald-400 text-[11px] font-black uppercase tracking-widest py-2 px-3 rounded-xl border border-white/5 hover:border-emerald-500/20 transition-all duration-300"
                                                     >
                                                         WhatsApp
                                                     </button>
+                                                )}
+                                                {app.status === 'completed' && (
+                                                  <button 
+                                                    onClick={() => setCheckoutAppointment(app)} 
+                                                    className="bg-neutral-900 hover:bg-neutral-800 text-neutral-300 border border-white/5 text-[10px] font-bold uppercase tracking-wider py-2 px-3 rounded-xl flex-1 transition-all active:scale-95 duration-200 cursor-pointer flex items-center justify-center gap-1.5"
+                                                  >
+                                                    <Receipt className="w-3 h-3 text-emerald-400" /> Ver Recibo
+                                                  </button>
                                                 )}
                                             </div>
                                           )}
@@ -1826,6 +1960,22 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
               {currentView === 'collaborators' && <CollaboratorsManager />}
               {currentView === 'hours' && <WorkingHoursManager />}
               {reviewAppointment && <ReviewModal appointment={reviewAppointment} onClose={() => setReviewAppointment(null)} />}
+              {checkoutAppointment && (
+                <CheckoutModal
+                  isOpen={true}
+                  appointment={checkoutAppointment}
+                  onClose={() => setCheckoutAppointment(null)}
+                  onSuccess={() => setCheckoutAppointment(null)}
+                />
+              )}
+              {noShowAppointment && (
+                <NoShowModal
+                  isOpen={true}
+                  appointment={noShowAppointment}
+                  onClose={() => setNoShowAppointment(null)}
+                  onSuccess={() => setNoShowAppointment(null)}
+                />
+              )}
           </div>
       )}
 
@@ -2251,19 +2401,28 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                 </button>
 
                 <button 
-                  onClick={async () => {
-                    const confirmDel = window.confirm("Excluir permanentemente este agendamento do banco de dados? Esta ação não pode ser desfeita.");
-                    if (!confirmDel) return;
-                    setIsManagerCancelling(true);
-                    try {
-                      await handleDelete(managerAppToCancel);
-                    } catch (err) {
-                      console.error(err);
-                    } finally {
-                      setIsManagerCancelling(false);
-                      setManagerAppToCancel(null);
-                      setManagerCancelReason("");
-                    }
+                  onClick={() => {
+                    setConfirmModalState({
+                      isOpen: true,
+                      title: "Atenção",
+                      message: "Excluir permanentemente este agendamento do banco de dados? Esta ação não pode ser desfeita.",
+                      confirmText: "Sim, Excluir",
+                      cancelText: "Cancelar",
+                      isDestructive: true,
+                      onConfirm: async () => {
+                        setConfirmModalState(prev => ({ ...prev, isOpen: false }));
+                        setIsManagerCancelling(true);
+                        try {
+                          await handleDelete(managerAppToCancel);
+                        } catch (err) {
+                          console.error(err);
+                        } finally {
+                          setIsManagerCancelling(false);
+                          setManagerAppToCancel(null);
+                          setManagerCancelReason("");
+                        }
+                      }
+                    });
                   }}
                   disabled={isManagerCancelling}
                   className="w-full bg-red-950/40 hover:bg-red-950/70 text-red-400 border border-red-500/30 py-4 rounded-xl text-[10px] font-black uppercase italic tracking-widest transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 disabled:cursor-not-allowed"
@@ -2290,6 +2449,17 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
           </div>
         )}
       </AnimatePresence>
+
+      <ConfirmModal
+        isOpen={confirmModalState.isOpen}
+        title={confirmModalState.title}
+        message={confirmModalState.message}
+        confirmText={confirmModalState.confirmText}
+        cancelText={confirmModalState.cancelText}
+        isDestructive={confirmModalState.isDestructive}
+        onConfirm={confirmModalState.onConfirm}
+        onCancel={() => setConfirmModalState(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }

@@ -48,8 +48,7 @@ const BARBER_COLORS = [
   { name: "Âmbar Luxo", bg: "bg-amber-500/10 hover:bg-amber-500/20", border: "border-amber-500/20 hover:border-amber-500/40", text: "text-amber-400", accent: "border-l-amber-500", rawBg: "rgba(245, 158, 11, 0.1)", rawBorder: "rgba(245, 158, 11, 0.3)", rawText: "#fbbf24", dot: "bg-amber-400" },
 ];
 
-export function AppointmentModal({ appointment, onClose, onUpdate, onEdit, onDelete }: { appointment: any, onClose: () => void, onUpdate: (app: any, status: string, extraData?: any) => void, onEdit?: (app: any) => void, onDelete?: (app: any) => void }) {
-  const [payerName, setPayerName] = useState("");
+export function AppointmentModal({ appointment, onClose, onUpdate, onEdit, onDelete, onCheckout, onNoShow }: { appointment: any, onClose: () => void, onUpdate: (app: any, status: string, extraData?: any) => void, onEdit?: (app: any) => void, onDelete?: (app: any) => void, onCheckout?: (app: any) => void, onNoShow?: (app: any) => void }) {
   if (!appointment) return null;
   const d = appointment.date instanceof Timestamp ? appointment.date.toDate() : (typeof appointment.date === 'string' ? parseISO(appointment.date) : appointment.date);
 
@@ -64,83 +63,103 @@ export function AppointmentModal({ appointment, onClose, onUpdate, onEdit, onDel
         initial={{ scale: 0.95, y: 15 }}
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.95, y: 15 }}
-        className=" liquid-glass  p-8 rounded-[2.5rem] w-full max-w-sm text-center relative shadow-2xl"
+        className=" liquid-glass  p-8 rounded-[2.5rem] w-full max-w-sm text-center relative shadow-2xl flex flex-col max-h-[90vh]"
       >
         <button onClick={onClose} className="absolute top-6 right-6 text-neutral-500 hover:text-white transition-colors p-1" id="close-modal">
           <X className="w-5 h-5"/>
         </button>
         
-        <div className="w-20 h-20 bg-amber-500/10 border border-amber-500/20 rounded-3xl mx-auto flex items-center justify-center mb-6 shadow-xl overflow-hidden relative group">
-          {appointment.clientPhoto ? (
-             <img src={appointment.clientPhoto} alt={appointment.clientName} className="w-full h-full object-cover group-hover:scale-105 transition" />
-          ) : (
-             <User className="w-8 h-8 text-amber-500 outline-none" />
-          )}
-        </div>
-        
-        <h2 className="text-xl font-black uppercase italic text-white leading-none tracking-tight mb-2">{appointment.clientName}</h2>
-        <div className="mb-6 flex flex-col items-center gap-2">
-          <p className="text-amber-500 text-[9px] font-black uppercase tracking-widest bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full inline-block">{appointment.serviceName}</p>
-          {appointment.addon && (
-            <p className={`text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full inline-block ${appointment.addon.accepted ? "bg-amber-500/10 text-amber-500 border border-amber-500/20" : "bg-neutral-800 text-neutral-500 border border-white/5"}`}>
-              {appointment.addon.accepted ? "✨ Adicional: " : "❌ Recusou: "} {appointment.addon.name}
-            </p>
-          )}
-        </div>
-
-        <div className=" liquid-glass p-5 rounded-2xl  space-y-3.5 mb-6 text-left text-xs uppercase tracking-widest font-black text-neutral-400">
-            <div className="flex items-center gap-3">
-                <CalendarIcon className="w-4 h-4 text-neutral-600" />
-                <span className="text-white/90 text-[10px]">{format(d, "dd 'de' MMMM", { locale: ptBR })}</span>
-            </div>
-            <div className="flex items-center gap-3">
-                <Clock className="w-4 h-4 text-neutral-600" />
-                <span className="text-white/90 text-[10px]">{appointment.time || format(d, 'HH:mm')}</span>
-            </div>
-            <div className="flex items-center gap-3">
-                <User className="w-4 h-4 text-neutral-600" />
-                <span className="text-white/90 text-[10px] truncate">Profissional: <span className="text-amber-500">{appointment.barberName}</span></span>
-            </div>
-        </div>
-
-        {appointment.selectedStyle && (
-          <div className="liquid-glass p-4 rounded-[1.25rem] -amber-500/10 mb-6 text-left flex items-center gap-3">
-            <img src={appointment.selectedStyle.imageUrl} className="w-11 h-11 object-cover rounded-xl border border-white/10 shrink-0" alt="Referência" referrerPolicy="no-referrer" />
-            <div className="overflow-hidden">
-              <span className="text-[7px] font-black uppercase text-amber-500 tracking-wider block">Estilo de Referência</span>
-              <p className="text-[10px] font-black text-white uppercase italic truncate mt-0.5" title={appointment.selectedStyle.title}>
-                {appointment.selectedStyle.title}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {appointment.status !== 'completed' && (
-          <div className="mb-6">
-            <input 
-              type="text" 
-              placeholder="Quem pagou? (Opcional)" 
-              value={payerName}
-              onChange={(e) => setPayerName(e.target.value)}
-              className="w-full liquid-glass  rounded-2xl p-4 text-[10px] font-black uppercase tracking-widest text-white placeholder:text-neutral-700 focus:border-amber-500 outline-none transition-all"
-            />
-          </div>
-        )}
-
-        <div className="space-y-2">
-            <div className="grid grid-cols-2 gap-2.5">
-               <button onClick={() => { triggerSuccessHaptic(); onUpdate(appointment, 'confirmed'); onClose(); }} className="liquid-glass py-3  hover:text-black rounded-xl font-black uppercase tracking-widest text-[9px] transition-all">CONFIRMAR</button>
-               <button onClick={() => { triggerSuccessHaptic(); onUpdate(appointment, 'completed', { payerName: payerName || appointment.clientName }); onClose(); }} className="py-3 bg-green-500 hover:bg-green-600 text-black rounded-xl font-black uppercase tracking-widest text-[9px] transition-all" title="Registra o comparecimento e atualiza os ganhos automaticamente">COMPARECEU ✅</button>
-            </div>
-            <div className="grid grid-cols-2 gap-2.5">
-               <button onClick={() => { triggerWarningHaptic(); onUpdate(appointment, 'cancelled'); onClose(); }} className="py-3 bg-red-500/10 hover:bg-red-500/25 text-red-500 border border-red-500/20 rounded-xl font-black uppercase tracking-widest text-[9px] transition-all">CANCELAR</button>
-               {onDelete && (
-                   <button onClick={() => { triggerWarningHaptic(); onDelete(appointment); onClose(); }} className="liquid-glass py-3  text-red-400 -red-500/10 rounded-xl font-black uppercase tracking-widest text-[9px] transition-all">EXCLUIR</button>
-               )}
-            </div>
-            {onEdit && (
-                <button onClick={() => { triggerLightHaptic(); if (onEdit) onEdit(appointment); onClose(); }} className="w-full py-3.5 liquid-glass text-neutral-300  rounded-xl font-black uppercase tracking-widest text-[9px] hover:text-white hover:bg-neutral-800 transition-all">EDITAR AGENDAMENTO</button>
+        <div className="overflow-y-auto no-scrollbar pb-4 flex-1">
+          <div className="w-20 h-20 bg-amber-500/10 border border-amber-500/20 rounded-3xl mx-auto flex items-center justify-center mb-6 shadow-xl overflow-hidden relative group">
+            {appointment.clientPhoto ? (
+               <img src={appointment.clientPhoto} alt={appointment.clientName} className="w-full h-full object-cover group-hover:scale-105 transition" />
+            ) : (
+               <User className="w-8 h-8 text-amber-500 outline-none" />
             )}
+          </div>
+          
+          <h2 className="text-xl font-black uppercase italic text-white leading-none tracking-tight mb-2">{appointment.clientName}</h2>
+          <div className="mb-6 flex flex-col items-center gap-2">
+            <p className="text-amber-500 text-[9px] font-black uppercase tracking-widest bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full inline-block">{appointment.serviceName}</p>
+            {appointment.addon && (
+              <p className={`text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full inline-block ${appointment.addon.accepted ? "bg-amber-500/10 text-amber-500 border border-amber-500/20" : "bg-neutral-800 text-neutral-500 border border-white/5"}`}>
+                {appointment.addon.accepted ? "✨ Adicional: " : "❌ Recusou: "} {appointment.addon.name}
+              </p>
+            )}
+          </div>
+
+          <div className=" liquid-glass p-5 rounded-2xl  space-y-3.5 mb-6 text-left text-xs uppercase tracking-widest font-black text-neutral-400">
+              <div className="flex items-center gap-3">
+                  <CalendarIcon className="w-4 h-4 text-neutral-600" />
+                  <span className="text-white/90 text-[10px]">{format(d, "dd 'de' MMMM", { locale: ptBR })}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                  <Clock className="w-4 h-4 text-neutral-600" />
+                  <span className="text-white/90 text-[10px]">{appointment.time || format(d, 'HH:mm')}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                  <User className="w-4 h-4 text-neutral-600" />
+                  <span className="text-white/90 text-[10px] truncate">Profissional: <span className="text-amber-500">{appointment.barberName}</span></span>
+              </div>
+          </div>
+
+          {appointment.selectedStyle && (
+            <div className="liquid-glass p-4 rounded-[1.25rem] -amber-500/10 mb-6 text-left flex items-center gap-3">
+              <img src={appointment.selectedStyle.imageUrl} className="w-11 h-11 object-cover rounded-xl border border-white/10 shrink-0" alt="Referência" referrerPolicy="no-referrer" />
+              <div className="overflow-hidden">
+                <span className="text-[7px] font-black uppercase text-amber-500 tracking-wider block">Estilo de Referência</span>
+                <p className="text-[10px] font-black text-white uppercase italic truncate mt-0.5" title={appointment.selectedStyle.title}>
+                  {appointment.selectedStyle.title}
+                </p>
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-2.5">
+                 {(appointment.status === 'pending' || !appointment.status) && (
+                   <button onClick={() => { triggerSuccessHaptic(); onUpdate(appointment, 'confirmed'); onClose(); }} className="liquid-glass py-3  hover:text-black rounded-xl font-black uppercase tracking-widest text-[9px] transition-all">CONFIRMAR</button>
+                 )}
+                 {(appointment.status === 'confirmed' || appointment.status === 'pending' || !appointment.status || appointment.status === 'scheduled') && (
+                   <button onClick={() => { triggerSuccessHaptic(); onUpdate(appointment, 'in_progress'); onClose(); }} className="py-3 bg-cyan-500/10 hover:bg-cyan-500 hover:text-black text-cyan-400 border border-cyan-500/20 rounded-xl font-black uppercase tracking-widest text-[9px] transition-all flex items-center justify-center gap-1.5"><Play className="w-3 h-3" /> NA CADEIRA</button>
+                 )}
+              </div>
+              <div className="grid grid-cols-2 gap-2.5">
+                 {appointment.status !== 'completed' && appointment.status !== 'cancelled' && appointment.status !== 'no_show' && (
+                   <button onClick={() => { 
+                      triggerSuccessHaptic(); 
+                      onClose();
+                      if (onCheckout) {
+                        onCheckout(appointment);
+                      } else {
+                        onUpdate(appointment, 'completed');
+                      }
+                   }} className="py-3 bg-emerald-600 hover:bg-emerald-500 shadow-md shadow-emerald-500/20 text-white rounded-xl font-black uppercase tracking-widest text-[9px] transition-all flex items-center justify-center gap-1.5"><Receipt className="w-3 h-3" /> DAR BAIXA</button>
+                 )}
+                 {(appointment.status === 'confirmed' || appointment.status === 'scheduled' || appointment.status === 'pending' || !appointment.status) && (
+                   <button onClick={() => { 
+                      triggerWarningHaptic(); 
+                      onClose();
+                      if (onNoShow) {
+                        onNoShow(appointment);
+                      } else {
+                        onUpdate(appointment, 'no_show');
+                      }
+                   }} className="py-3 bg-purple-500/10 hover:bg-purple-500/25 text-purple-400 border border-purple-500/20 rounded-xl font-black uppercase tracking-widest text-[9px] transition-all">FALTOU</button>
+                 )}
+              </div>
+              <div className="grid grid-cols-2 gap-2.5">
+                 {appointment.status !== 'cancelled' && appointment.status !== 'completed' && appointment.status !== 'pending' && appointment.status && (
+                   <button onClick={() => { triggerWarningHaptic(); onUpdate(appointment, 'cancelled'); onClose(); }} className="py-3 bg-red-500/10 hover:bg-red-500/25 text-red-500 border border-red-500/20 rounded-xl font-black uppercase tracking-widest text-[9px] transition-all">CANCELAR</button>
+                 )}
+                 {onDelete && (
+                     <button onClick={() => { triggerWarningHaptic(); onDelete(appointment); onClose(); }} className="liquid-glass py-3  text-red-400 -red-500/10 rounded-xl font-black uppercase tracking-widest text-[9px] transition-all">EXCLUIR</button>
+                 )}
+              </div>
+              {onEdit && (
+                  <button onClick={() => { triggerLightHaptic(); if (onEdit) onEdit(appointment); onClose(); }} className="w-full py-3.5 liquid-glass text-neutral-300  rounded-xl font-black uppercase tracking-widest text-[9px] hover:text-white hover:bg-neutral-800 transition-all mt-4">EDITAR AGENDAMENTO</button>
+              )}
+          </div>
         </div>
       </motion.div>
     </motion.div>

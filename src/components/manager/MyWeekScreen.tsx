@@ -40,11 +40,16 @@ import {
 } from "recharts";
 import { toast } from "../ui/Toast";
 import { safeStringify } from "../../lib/firebase";
+import { AppointmentModal } from "../CalendarWidget";
+import { CheckoutModal } from "../professional/CheckoutModal";
+import { NoShowModal } from "../professional/NoShowModal";
 
 interface MyWeekScreenProps {
   user: any;
   appointments: any[];
   onBack: () => void;
+  onUpdateStatus?: (app: any, status: string, extraData?: any) => void;
+  onDeleteBooking?: (app: any) => void;
 }
 
 interface ChatMessage {
@@ -52,8 +57,11 @@ interface ChatMessage {
   content: string;
 }
 
-export function MyWeekScreen({ user, appointments, onBack }: MyWeekScreenProps) {
+export function MyWeekScreen({ user, appointments, onBack, onUpdateStatus, onDeleteBooking }: MyWeekScreenProps) {
   const [selectedDay, setSelectedDay] = useState<Date>(new Date());
+  const [selectedAppointment, setSelectedAppointment] = useState<any | null>(null);
+  const [checkoutAppointment, setCheckoutAppointment] = useState<any | null>(null);
+  const [noShowAppointment, setNoShowAppointment] = useState<any | null>(null);
   
   // Weekly analysis states
   const [aiReport, setAiReport] = useState<string>("");
@@ -441,7 +449,9 @@ export function MyWeekScreen({ user, appointments, onBack }: MyWeekScreenProps) 
                 </div>
 
                 {/* Event Card */}
-                <div className={`flex-1 p-3.5 rounded-2xl flex items-center justify-between relative ${
+                <div 
+                  onClick={() => setSelectedAppointment(app)}
+                  className={`flex-1 p-3.5 rounded-2xl flex items-center justify-between relative cursor-pointer active:scale-[0.98] transition-transform ${
                   app.status === "completed" ? "bg-gray-100 opacity-70" :
                   app.status === "cancelled" ? "bg-red-50 opacity-60" :
                   "bg-[#eef2fa]" // soft blue background like the screenshot
@@ -491,6 +501,45 @@ export function MyWeekScreen({ user, appointments, onBack }: MyWeekScreenProps) 
           )}
         </div>
       </div>
+      
+      {selectedAppointment && (
+        <AppointmentModal 
+          appointment={selectedAppointment} 
+          onClose={() => setSelectedAppointment(null)} 
+          onUpdate={onUpdateStatus || (() => {})}
+          onDelete={onDeleteBooking}
+          onCheckout={(app) => {
+              setSelectedAppointment(null);
+              setCheckoutAppointment(app);
+          }}
+          onNoShow={(app) => {
+              setSelectedAppointment(null);
+              setNoShowAppointment(app);
+          }}
+        />
+      )}
+
+      {checkoutAppointment && (
+        <CheckoutModal
+          appointment={checkoutAppointment}
+          onClose={() => setCheckoutAppointment(null)}
+          onSuccess={(app, status, data) => {
+            if (onUpdateStatus) onUpdateStatus(app, status, data);
+            setCheckoutAppointment(null);
+          }}
+        />
+      )}
+
+      {noShowAppointment && (
+        <NoShowModal
+          appointment={noShowAppointment}
+          onClose={() => setNoShowAppointment(null)}
+          onConfirm={(app, status, data) => {
+            if (onUpdateStatus) onUpdateStatus(app, status, data);
+            setNoShowAppointment(null);
+          }}
+        />
+      )}
     </motion.div>
   );
 }

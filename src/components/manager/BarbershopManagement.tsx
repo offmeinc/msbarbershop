@@ -42,10 +42,11 @@ import {
   Gift,
   BookOpen,
   Printer,
-  Coins
+  Coins,
+  CalendarClock
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { format, subDays, startOfDay, endOfDay, parseISO, isSameDay } from "date-fns";
+import { format, subDays, startOfDay, endOfDay, parseISO, isSameDay, isSameMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "../ui/Toast";
 
@@ -224,33 +225,74 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
 
   // Calculations & Statistics
   const financialStats = useMemo(() => {
-    // 1. Gross Earnings (Billing Completed)
+    const now = new Date();
+
+    // 1. Gross Earnings (Billing Completed in current filter period)
     const grossEarnings = filteredAppointments.reduce((acc, curr) => {
       const p = curr.totalPrice || curr.price || 0;
       const parsed = typeof p === "string" ? parseFloat(p.replace(/[^0-9.-]+/g, "")) : p;
       return acc + (Number(parsed) || 0);
     }, 0);
 
-    // 2. Expenses
+    // 2. Future Projected Earnings (Scheduled/confirmed appointments)
+    const futureEarnings = appointments.reduce((acc, curr) => {
+      if (curr.status === "completed" || curr.status === "cancelled") return acc;
+      const appDate = curr.date instanceof Timestamp ? curr.date.toDate() : (typeof curr.date === 'string' ? parseISO(curr.date) : curr.date);
+      if (!(appDate instanceof Date) || isNaN(appDate.getTime())) return acc;
+      
+      let minDate = new Date(0);
+      if (periodFilter === "today") minDate = startOfDay(now);
+      else if (periodFilter === "7days") minDate = startOfDay(subDays(now, 7));
+      else if (periodFilter === "30days") minDate = startOfDay(subDays(now, 30));
+
+      if (periodFilter === "all" || appDate >= minDate) {
+        const p = curr.totalPrice || curr.price || 0;
+        const parsed = typeof p === "string" ? parseFloat(p.replace(/[^0-9.-]+/g, "")) : p;
+        return acc + (Number(parsed) || 0);
+      }
+      return acc;
+    }, 0);
+
+    // 3. Current Month Specific Realized & Future (for Monthly Goal calculation)
+    let currentMonthRealized = 0;
+    let currentMonthFuture = 0;
+
+    appointments.forEach(app => {
+      if (app.status === 'cancelled') return;
+      const appDate = app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === 'string' ? parseISO(app.date) : app.date);
+      if (appDate instanceof Date && !isNaN(appDate.getTime()) && isSameMonth(appDate, now)) {
+        const p = app.totalPrice || app.price || 0;
+        const parsed = typeof p === "string" ? parseFloat(p.replace(/[^0-9.-]+/g, "")) : p;
+        const price = Number(parsed) || 0;
+        if (app.status === 'completed') {
+          currentMonthRealized += price;
+        } else {
+          currentMonthFuture += price;
+        }
+      }
+    });
+
+    const currentMonthProjected = currentMonthRealized + currentMonthFuture;
+
+    // 4. Expenses
     const totalExpenses = filteredExpenses.reduce((acc, curr) => {
       const value = Number(curr.value) || 0;
       return acc + value;
     }, 0);
 
-    // 3. Net Profit (Billing - Expenses)
+    // 5. Net Profit (Billing - Expenses)
     const netProfit = grossEarnings - totalExpenses;
 
-    // 4. Cuts Done
+    // 6. Cuts Done
     const totalCuts = filteredAppointments.length;
 
-    // 5. Average Ticket
+    // 7. Average Ticket
     const avgTicket = totalCuts > 0 ? (grossEarnings / totalCuts) : 0;
 
-    // 6. Simulated Tax Calculation
-    // Base standard Simulated MEI / Simples Nacional (approx 6% bracket on gross revenue)
+    // 8. Simulated Tax Calculation (approx 6% bracket on gross revenue)
     const predictedTaxes = grossEarnings * 0.06;
 
-    // 7. Payment method distribution calculation
+    // 9. Payment method distribution calculation
     const payments = {
       pix: 0,
       money: 0,
@@ -259,15 +301,26 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
     filteredAppointments.forEach((app, idx) => {
       const p = app.totalPrice || app.price || 0;
       const price = typeof p === "string" ? parseFloat(p.replace(/[^0-9.-]+/g, "")) : Number(p) || 0;
-      // Deterministically split methods for simulated reporting or if property exists
       const method = app.paymentMethod || (idx % 3 === 0 ? "pix" : idx % 3 === 1 ? "money" : "card");
       if (method === "pix") payments.pix += price;
       else if (method === "money") payments.money += price;
       else payments.card += price;
     });
 
-    return { grossEarnings, totalExpenses, netProfit, totalCuts, avgTicket, predictedTaxes, payments };
-  }, [filteredAppointments, filteredExpenses]);
+    return { 
+      grossEarnings, 
+      futureEarnings,
+      currentMonthRealized,
+      currentMonthFuture,
+      currentMonthProjected,
+      totalExpenses, 
+      netProfit, 
+      totalCuts, 
+      avgTicket, 
+      predictedTaxes, 
+      payments 
+    };
+  }, [appointments, filteredAppointments, filteredExpenses, periodFilter]);
 
   // Barber Performance and Commissions Breakdown
   const barberPerformance = useMemo(() => {
@@ -499,7 +552,8 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
   }
 
   // Calculate percentages for target goals
-  const goalPercent = monthlyGoal > 0 ? Math.min(100, Math.round((financialStats.grossEarnings / monthlyGoal) * 100)) : 0;
+  const goalPercentRealized = monthlyGoal > 0 ? Math.min(100, Math.round((financialStats.currentMonthRealized / monthlyGoal) * 100)) : 0;
+  const goalPercentProjected = monthlyGoal > 0 ? Math.min(100, Math.round((financialStats.currentMonthProjected / monthlyGoal) * 100)) : 0;
 
   return (
     <div className="max-w-xl md:max-w-4xl lg:max-w-6xl mx-auto py-6 px-4 space-y-8 animate-in fade-in duration-500 pb-20">
@@ -605,8 +659,8 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
               
               <div className=" liquid-glass  rounded-[2rem] p-6 space-y-3 relative overflow-hidden group">
                 <div className="flex justify-between items-start">
-                  <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">Faturamento Bruto</p>
-                  <div className="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500">
+                  <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">Faturamento Realizado</p>
+                  <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
                     <TrendingUp className="w-4 h-4" />
                   </div>
                 </div>
@@ -614,7 +668,14 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
                   <h3 className="text-3xl font-black text-white tracking-tighter">
                     R$ {financialStats.grossEarnings.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </h3>
-                  <p className="text-[9px] text-neutral-500 font-extrabold uppercase mt-1">Soma de atendimentos concluídos</p>
+                  <div className="flex items-center justify-between mt-1">
+                    <p className="text-[9px] text-neutral-500 font-extrabold uppercase">{financialStats.totalCuts} cortes realizados</p>
+                    {financialStats.futureEarnings > 0 && (
+                      <span className="text-[9px] font-black text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded-md">
+                        +R$ {financialStats.futureEarnings.toFixed(2)} agendado
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -672,27 +733,38 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
                   <Target className="w-5 h-5 animate-pulse" />
                 </div>
                 <div>
-                  <p className="text-xs font-black text-white">Faturamento Alvo Comercial</p>
-                  <p className="text-[9px] text-neutral-500 uppercase font-bold mt-0.5">Sua meta e desempenho empresarial</p>
+                  <p className="text-xs font-black text-white">Meta Mensal Comercial</p>
+                  <p className="text-[9px] text-neutral-500 uppercase font-bold mt-0.5">Realizado R$ {financialStats.currentMonthRealized.toFixed(2)} | Previsão R$ {financialStats.currentMonthProjected.toFixed(2)}</p>
                 </div>
               </div>
               <div className="flex-1 max-w-md mx-4 min-w-[200px]">
-                <div className="w-full bg-black h-3.5 rounded-full overflow-hidden border border-white/5 p-0.5">
+                <div className="w-full bg-black h-3.5 rounded-full overflow-hidden border border-white/5 relative flex">
+                  {/* Realized segment */}
                   <div 
-                    className="bg-amber-500 h-full rounded-full transition-all duration-500"
-                    style={{ width: `${goalPercent}%` }}
+                    className="bg-emerald-500 h-full transition-all duration-500"
+                    style={{ width: `${Math.min(100, goalPercentRealized)}%` }}
+                    title={`Realizado: ${goalPercentRealized}%`}
+                  />
+                  {/* Future projected segment */}
+                  <div 
+                    className="bg-blue-500/70 h-full border-l border-black/30 transition-all duration-500"
+                    style={{ width: `${Math.max(0, Math.min(100 - goalPercentRealized, goalPercentProjected - goalPercentRealized))}%` }}
+                    title={`Projetado: ${goalPercentProjected}%`}
                   />
                 </div>
                 <div className="flex justify-between items-center text-[9px] font-black text-neutral-500 uppercase mt-1">
-                  <span>Concluído: {goalPercent}%</span>
-                  <span>Meta: R$ {monthlyGoal.toFixed(2)}</span>
+                  <span className="text-emerald-400">Real: {goalPercentRealized}%</span>
+                  {goalPercentProjected > goalPercentRealized && (
+                    <span className="text-blue-400">Previsto: {goalPercentProjected}%</span>
+                  )}
+                  <span>Alvo: R$ {monthlyGoal.toFixed(2)}</span>
                 </div>
               </div>
               <button 
                 onClick={() => setActiveTab("goals")}
                 className="liquid-glass px-4 py-2  text-white font-extrabold text-[9px] uppercase tracking-wider rounded-xl transition-all"
               >
-                Configurar Alvo
+                Painel de Metas
               </button>
             </div>
 

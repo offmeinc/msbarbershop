@@ -1,9 +1,12 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, setPersistence, browserLocalPersistence } from 'firebase/auth';
-import { getFirestore, doc, getDocFromServer, initializeFirestore, enableMultiTabIndexedDbPersistence, enableIndexedDbPersistence, runTransaction, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, doc, getDocFromServer, initializeFirestore, enableMultiTabIndexedDbPersistence, enableIndexedDbPersistence, runTransaction, serverTimestamp, setLogLevel } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { getMessaging, isSupported } from 'firebase/messaging';
 import firebaseConfig from '../../firebase-applet-config.json';
+
+// Suppress transient Firestore connection errors (Code: 13 INTERNAL) that are handled automatically
+setLogLevel('silent');
 
 export const app = initializeApp(firebaseConfig);
 

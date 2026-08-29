@@ -160,6 +160,7 @@ if (typeof window !== "undefined") {
 import { HomeScreen } from "./components/client/HomeScreen";
 import { BottomNav } from "./components/common/BottomNav";
 import { PushPrompt } from "./components/pwa/PushPrompt";
+import { NativeInstallPrompt } from "./components/pwa/NativeInstallPrompt";
 import { OfflineIndicator } from "./components/common/OfflineIndicator";
 import { Skeleton } from "./components/common/Skeleton";
 
@@ -899,6 +900,8 @@ export default function App() {
         setUserDocData(data);
         setUserRole(data.role || "client");
       }
+    }, (error) => {
+      console.warn("Firestore snapshot error ignored:", error);
     });
     return () => unsubscribe();
   }, [user]);
@@ -924,6 +927,8 @@ export default function App() {
       if (docSnap.exists()) {
         setLoggedInClient({ id: docSnap.id, ...docSnap.data() });
       }
+    }, (error) => {
+      console.warn("Firestore snapshot error ignored:", error);
     });
     return unsubscribe;
   }, [loggedInClient?.id]);
@@ -1147,6 +1152,7 @@ export default function App() {
       )}
       <OfflineIndicator />
       <PushPrompt userId={user?.uid || loggedInClient?.id} userRole={userRole} />
+      <NativeInstallPrompt />
       <motion.nav 
         variants={{
           visible: { y: 0, opacity: 1 },
