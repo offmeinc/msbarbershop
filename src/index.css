@@ -37,10 +37,24 @@
   animation: gradient-x 3s linear infinite;
 }
 
+html, body {
+  overscroll-behavior: none;
+  touch-action: none;
+}
+
+#root {
+  height: 100dvh;
+  height: 100svh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  touch-action: pan-y;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+}
+
 body {
   @apply transition-colors duration-300;
   -webkit-tap-highlight-color: transparent;
-  overscroll-behavior-y: none;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

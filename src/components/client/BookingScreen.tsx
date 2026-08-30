@@ -1777,14 +1777,9 @@ export function BookingScreen({
     <>
       <AnimatePresence>
         {showAddonModal && pendingServiceSelection && (() => {
-          const serviceNameLower = (pendingServiceSelection.name || "").toLowerCase();
-          const isSobrancelha = serviceNameLower.includes("corte") && serviceNameLower.includes("sobrancelha");
-          
-          const addonName = isSobrancelha ? "Limpeza de Pele" : "Esfoliação";
-          const addonPrice = isSobrancelha ? 20 : 10;
-          const addonText = isSobrancelha 
-            ? "Gostaria de adicionar uma limpeza de pele completa por apenas " 
-            : "Gostaria de adicionar uma esfoliação facial por apenas ";
+          const addonName = "Limpeza de Pele";
+          const addonPrice = 20;
+          const addonText = "Gostaria de adicionar uma limpeza de pele completa por apenas ";
 
           return (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -2026,8 +2021,7 @@ export function BookingScreen({
                             triggerLightHaptic();
                             const serviceNameLower = (s.name || "").toLowerCase();
                             if (
-                              (serviceNameLower.includes("corte") && serviceNameLower.includes("sobrancelha")) ||
-                              (serviceNameLower.includes("corte") && serviceNameLower.includes("barba"))
+                              serviceNameLower.includes("corte") && serviceNameLower.includes("sobrancelha")
                             ) {
                               setPendingServiceSelection(s);
                               setShowAddonModal(true);

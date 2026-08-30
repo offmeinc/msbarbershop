@@ -1389,16 +1389,16 @@ export default function App() {
       </motion.nav>
 
       <main className="pt-[calc(max(env(safe-area-inset-top),1rem)+6rem)] lg:pt-[calc(max(env(safe-area-inset-top),0rem)+6rem)] max-w-7xl mx-auto px-4 md:px-6 pb-12">
-        <Suspense fallback={<LoadingFallback />}>
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={displayScreen}
-              initial={{ opacity: 0, x: 24 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -24 }}
-              transition={{ duration: 0.28, ease: [0.25, 0.1, 0.25, 1.0] }}
-              className="w-full"
-            >
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={displayScreen}
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+            className="w-full"
+          >
+            <Suspense fallback={<LoadingFallback />}>
               {displayScreen === "home" && (
                 (['manager', 'barber'].includes(userRole)) 
                 ? <ProfessionalHome 
@@ -1458,9 +1458,9 @@ export default function App() {
                   isDarkMode={isDarkMode}
                 />
               )}
-            </motion.div>
-          </AnimatePresence>
-        </Suspense>
+            </Suspense>
+          </motion.div>
+        </AnimatePresence>
       </main>
 
       <BottomNav 
