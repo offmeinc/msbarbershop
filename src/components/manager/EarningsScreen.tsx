@@ -38,13 +38,16 @@ import {
   Layers,
   ArrowUpRight
 } from "lucide-react";
+import { ExpensesManagement } from "./ExpensesManagement";
 
 interface EarningsScreenProps {
   onBack: () => void;
 }
 
 export const EarningsScreen = ({ onBack }: EarningsScreenProps) => {
+  const [activeTab, setActiveTab] = useState<"receitas" | "despesas">("receitas");
   const [appointments, setAppointments] = useState<any[]>([]);
+  const [expenses, setExpenses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<"day" | "week" | "month" | "all">("month");
   const [chartViewMode, setChartViewMode] = useState<"combined" | "realized" | "future">("combined");
@@ -60,7 +63,18 @@ export const EarningsScreen = ({ onBack }: EarningsScreenProps) => {
       handleFirestoreError(error, OperationType.LIST, "appointments");
       setLoading(false);
     });
-    return () => unsubscribe();
+
+    // Real-time listener for expenses
+    const qExpenses = query(collection(db, "expenses"));
+    const unsubscribeExpenses = onSnapshot(qExpenses, (snapshot) => {
+      const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setExpenses(docs);
+    });
+
+    return () => {
+      unsubscribe();
+      unsubscribeExpenses();
+    };
   }, []);
 
   // Helper to parse price reliably
@@ -120,6 +134,18 @@ export const EarningsScreen = ({ onBack }: EarningsScreenProps) => {
       return true;
     });
 
+    // Filter expenses by timeRange
+    const filteredExpenses = expenses.filter(exp => {
+      const expDate = exp.date?.toDate ? exp.date.toDate() : new Date(exp.date);
+      if (isNaN(expDate.getTime())) return false;
+      if (timeRange === "day") return isSameDay(expDate, now);
+      if (timeRange === "week") return isSameWeek(expDate, now, { weekStartsOn: 0, locale: ptBR });
+      if (timeRange === "month") return isSameMonth(expDate, now);
+      return true;
+    });
+
+    const totalExpenses = filteredExpenses.reduce((acc, exp) => acc + (exp.amount || 0), 0);
+
     // 1. Realized Revenue (Clientes que compareceram)
     const realizedRevenue = filteredCompleted.reduce((acc, app) => acc + parsePrice(app), 0);
     const completedCount = filteredCompleted.length;
@@ -131,6 +157,9 @@ export const EarningsScreen = ({ onBack }: EarningsScreenProps) => {
     // 3. Combined Total Potential
     const totalPotentialRevenue = realizedRevenue + futureRevenue;
     const totalAppointmentsCombined = completedCount + futureCount;
+
+    // Lucro Líquido
+    const netProfit = realizedRevenue - totalExpenses;
 
     // 4. Ticket Médio (sobre realizados)
     const avgTicket = completedCount > 0 ? realizedRevenue / completedCount : 0;
@@ -155,6 +184,8 @@ export const EarningsScreen = ({ onBack }: EarningsScreenProps) => {
       .reduce((acc, app) => acc + parsePrice(app), 0);
 
     return { 
+      totalExpenses,
+      netProfit,
       realizedRevenue, 
       futureRevenue, 
       totalPotentialRevenue, 
@@ -298,7 +329,7 @@ export const EarningsScreen = ({ onBack }: EarningsScreenProps) => {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-8">
         
         {/* Header */}
-        <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <header className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           <div>
             <button 
               onClick={onBack} 
@@ -308,34 +339,59 @@ export const EarningsScreen = ({ onBack }: EarningsScreenProps) => {
               <span className="text-[10px] font-black uppercase tracking-widest">Voltar ao Painel</span>
             </button>
             <div className="flex items-center gap-2">
-              <h2 className="text-2xl sm:text-3xl font-black italic uppercase tracking-tighter">Business Analytics & Ganhos</h2>
+              <h2 className="text-2xl sm:text-3xl font-black italic uppercase tracking-tighter">Financeiro</h2>
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.7)]" title="Atualização em tempo real ativa" />
             </div>
-            <p className="text-xs text-neutral-400 font-bold uppercase tracking-wider mt-1">
-              Ganhos realizados de clientes atendidos e projeção de agendamentos futuros
+            <p className="text-xs text-neutral-400 font-bold uppercase tracking-wider mt-1 mb-4">
+              Ganhos realizados de clientes atendidos, projeções e despesas
             </p>
-          </div>
 
-          {/* Time Range Selector */}
-          <div className="flex bg-neutral-900/80 p-1.5 rounded-2xl border border-white/5 w-fit">
-            {(["day", "week", "month", "all"] as const).map((r) => (
-              <button 
-                key={r}
-                onClick={() => setTimeRange(r)}
+            <div className="flex bg-neutral-900/80 p-1.5 rounded-2xl border border-white/5 w-fit">
+              <button
+                onClick={() => setActiveTab("receitas")}
                 className={`px-4 sm:px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer ${
-                  timeRange === r 
-                    ? 'bg-amber-500 text-black font-black shadow-lg shadow-amber-500/20' 
+                  activeTab === "receitas"
+                    ? 'bg-amber-500 text-black font-black shadow-lg shadow-amber-500/20'
                     : 'text-neutral-400 hover:text-white'
                 }`}
               >
-                {r === 'day' ? 'Hoje' : r === 'week' ? 'Semana' : r === 'month' ? 'Mês' : 'Geral'}
+                Faturamento
               </button>
-            ))}
+              <button
+                onClick={() => setActiveTab("despesas")}
+                className={`px-4 sm:px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer ${
+                  activeTab === "despesas"
+                    ? 'bg-rose-500 text-black font-black shadow-lg shadow-rose-500/20'
+                    : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                Despesas & Custos
+              </button>
+            </div>
           </div>
+
+          {activeTab === "receitas" && (
+            <div className="flex bg-neutral-900/80 p-1.5 rounded-2xl border border-white/5 w-fit">
+              {(["day", "week", "month", "all"] as const).map((r) => (
+                <button 
+                  key={r}
+                  onClick={() => setTimeRange(r)}
+                  className={`px-4 sm:px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer ${
+                    timeRange === r 
+                      ? 'bg-amber-500 text-black font-black shadow-lg shadow-amber-500/20' 
+                      : 'text-neutral-400 hover:text-white'
+                  }`}
+                >
+                  {r === 'day' ? 'Hoje' : r === 'week' ? 'Semana' : r === 'month' ? 'Mês' : 'Geral'}
+                </button>
+              ))}
+            </div>
+          )}
         </header>
 
-        {/* 1. Real-Time Earnings Overview: Realized vs. Future Projected */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {activeTab === "receitas" && (
+          <>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           
           {/* Card 1: Ganhos Realizados (Compareceram) */}
           <div className="liquid-glass p-6 rounded-[2rem] border border-emerald-500/20 relative overflow-hidden group shadow-xl bg-gradient-to-br from-emerald-950/20 to-black">
@@ -391,6 +447,25 @@ export const EarningsScreen = ({ onBack }: EarningsScreenProps) => {
             </h3>
             <p className="text-[9px] text-neutral-400 font-bold uppercase mt-3 flex items-center gap-1">
               Faturamento consolidado + projeção de agenda
+            </p>
+          </div>
+
+          {/* Card 4: Lucro Líquido (Realizado - Despesas) */}
+          <div className="liquid-glass p-6 rounded-[2rem] border border-green-500/20 relative overflow-hidden group shadow-xl bg-gradient-to-br from-green-950/20 to-black">
+            <div className="absolute top-0 right-0 w-28 h-28 bg-green-500/10 rounded-full blur-2xl pointer-events-none" />
+            <div className="flex justify-between items-center mb-3">
+              <span className="text-[9px] font-black uppercase text-green-400 tracking-[0.2em] flex items-center gap-1.5">
+                <DollarSign className="w-3.5 h-3.5" /> Lucro Líquido
+              </span>
+              <span className="text-[9px] px-2 py-0.5 rounded-md bg-green-500/10 text-green-400 font-black uppercase">
+                R$ {stats.totalExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} em despesas
+              </span>
+            </div>
+            <h3 className="text-2xl sm:text-3xl font-black italic text-green-400 tracking-tight leading-none">
+              R$ {stats.netProfit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </h3>
+            <p className="text-[9px] text-neutral-400 font-bold uppercase mt-3 flex items-center gap-1">
+              Ganhos realizados subtraídos das despesas
             </p>
           </div>
 
@@ -618,9 +693,13 @@ export const EarningsScreen = ({ onBack }: EarningsScreenProps) => {
               {stats.retentionRate >= 50 ? 'Ótima taxa de retorno dos clientes!' : 'Oportunidade para aplicar campanhas de cashback e fidelização.'}
             </p>
           </div>
-
         </div>
+        </>
+        )}
 
+        {activeTab === "despesas" && (
+          <ExpensesManagement currentDate={new Date()} />
+        )}
       </div>
     </div>
   );

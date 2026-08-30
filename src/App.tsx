@@ -1563,7 +1563,20 @@ export default function App() {
               <div className="flex-1 py-8 overflow-y-auto space-y-4 pr-1">
                 <p className="text-[9px] font-black uppercase text-neutral-500 tracking-widest pl-2">Navegação</p>
                 
-                <div className="space-y-2.5">
+                <motion.div 
+                  className="space-y-2.5"
+                  initial="hidden"
+                  animate="visible"
+                  variants={{
+                    hidden: {},
+                    visible: {
+                      transition: {
+                        staggerChildren: 0.08,
+                        delayChildren: 0.1
+                      }
+                    }
+                  }}
+                >
                   {(() => {
                     const menuItems = [];
                     
@@ -1695,9 +1708,10 @@ export default function App() {
                       return (
                         <motion.button
                           key={idx}
-                          initial={{ opacity: 0, x: 20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: idx * 0.05 }}
+                          variants={{
+                            hidden: { opacity: 0, x: 20 },
+                            visible: { opacity: 1, x: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+                          }}
                           onClick={item.onClick}
                           className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all group active:scale-95 duration-200 border ${isActive ? "bg-amber-500 border-amber-500 text-black shadow-lg shadow-amber-500/10" : "bg-white/5 border-white/5 text-neutral-400 hover:text-white hover:bg-white/10"}`}
                         >
@@ -1712,7 +1726,7 @@ export default function App() {
                       );
                     });
                   })()}
-                </div>
+                </motion.div>
               </div>
 
               {/* Drawer Footer */}

@@ -1,0 +1,28 @@
+--- src/components/manager/EarningsScreen.tsx
++++ src/components/manager/EarningsScreen.tsx
+@@ -134,6 +134,17 @@
+       return true;
+     });
+ 
++    // Filter expenses by timeRange
++    const filteredExpenses = expenses.filter(exp => {
++      const expDate = exp.date?.toDate ? exp.date.toDate() : new Date(exp.date);
++      if (isNaN(expDate.getTime())) return false;
++      if (timeRange === "day") return isSameDay(expDate, now);
++      if (timeRange === "week") return isSameWeek(expDate, now, { weekStartsOn: 0, locale: ptBR });
++      if (timeRange === "month") return isSameMonth(expDate, now);
++      return true;
++    });
++    const totalExpenses = filteredExpenses.reduce((acc, exp) => acc + (exp.amount || 0), 0);
++
+     // 1. Realized Revenue (Clientes que compareceram)
+     const realizedRevenue = filteredCompleted.reduce((acc, app) => acc + parsePrice(app), 0);
+     const completedCount = filteredCompleted.length;
+@@ -145,6 +156,7 @@
+     // 3. Combined Total Potential
+     const totalPotentialRevenue = realizedRevenue + futureRevenue;
+     const totalAppointmentsCombined = completedCount + futureCount;
++    const netProfit = realizedRevenue - totalExpenses;
+ 
+     // 4. Ticket Médio (sobre realizados)
+     const avgTicket = completedCount > 0 ? realizedRevenue / completedCount : 0;

@@ -523,8 +523,8 @@ export function MyWeekScreen({ user, appointments, onBack, onUpdateStatus, onDel
         <CheckoutModal
           appointment={checkoutAppointment}
           onClose={() => setCheckoutAppointment(null)}
-          onSuccess={(app, status, data) => {
-            if (onUpdateStatus) onUpdateStatus(app, status, data);
+          isOpen={true}
+          onSuccess={() => {
             setCheckoutAppointment(null);
           }}
         />
@@ -534,8 +534,8 @@ export function MyWeekScreen({ user, appointments, onBack, onUpdateStatus, onDel
         <NoShowModal
           appointment={noShowAppointment}
           onClose={() => setNoShowAppointment(null)}
-          onConfirm={(app, status, data) => {
-            if (onUpdateStatus) onUpdateStatus(app, status, data);
+          isOpen={true}
+          onSuccess={() => {
             setNoShowAppointment(null);
           }}
         />

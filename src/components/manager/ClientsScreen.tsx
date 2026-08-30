@@ -103,13 +103,31 @@ export function ClientsScreen({ onBack, onScheduleClient, onClientClick, user, r
           <Loader2 className="animate-spin text-amber-500 w-10 h-10" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          <AnimatePresence>
+        <motion.div 
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"
+          initial="hidden"
+          animate="visible"
+          variants={{
+            hidden: {},
+            visible: {
+              transition: {
+                staggerChildren: 0.08,
+                delayChildren: 0.1
+              }
+            }
+          }}
+        >
+          <AnimatePresence mode="popLayout">
             {filteredClients.length === 0 ? (
-              <div className="col-span-full text-center py-20 liquid-glass rounded-[2.5rem]  space-y-2">
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="col-span-full text-center py-20 liquid-glass rounded-[2.5rem]  space-y-2"
+              >
                 <p className="text-neutral-500 text-sm font-black uppercase tracking-widest">Nenhum cliente cadastrado correspondente</p>
                 <p className="text-[10px] text-neutral-600 font-bold uppercase tracking-widest">Os dados de usuários estão sincronizados em tempo real com o Firestore</p>
-              </div>
+              </motion.div>
             ) : (
               filteredClients.map((client, index) => {
                 // Strip non-digits from phone for WhatsApp redirect
@@ -172,11 +190,13 @@ export function ClientsScreen({ onBack, onScheduleClient, onClientClick, user, r
                   <motion.div 
                     id={`client-card-${client.id}`}
                     key={client.id}
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: Math.min(index * 0.04, 0.4) }}
+                    variants={{
+                      hidden: { opacity: 0, y: 15 },
+                      visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+                    }}
+                    exit={{ opacity: 0, scale: 0.95 }}
                     onClick={() => onClientClick?.(client)} 
-                    className="group relative overflow-hidden liquid-glass backdrop-blur-md p-5 rounded-[2.5rem]  flex flex-col justify-between hover:border-amber-500/30 hover:bg-white/[0.06] transition-all duration-300 cursor-pointer shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] animate-fade-in"
+                    className="group relative overflow-hidden liquid-glass backdrop-blur-md p-5 rounded-[2.5rem]  flex flex-col justify-between hover:border-amber-500/30 hover:bg-white/[0.06] transition-all duration-300 cursor-pointer shadow-[0_8px_32px_0_rgba(0,0,0,0.37)]"
                   >
                     {/* Visual Card Accents */}
                     <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-2xl group-hover:bg-amber-500/10 transition-colors" />
@@ -374,7 +394,7 @@ export function ClientsScreen({ onBack, onScheduleClient, onClientClick, user, r
               })
             )}
           </AnimatePresence>
-        </div>
+        </motion.div>
       )}
     </motion.div>
   );

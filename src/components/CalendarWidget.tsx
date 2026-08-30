@@ -15,7 +15,9 @@ import {
   Briefcase,
   Lock,
   Unlock,
-  Trash2
+  Trash2,
+  Receipt,
+  Play,
 } from "lucide-react";
 import { 
   format, 
@@ -1279,7 +1281,8 @@ export function CalendarWidget({
                   }}
                   className="flex-1 bg-red-500 hover:bg-red-400 text-white py-3.5 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 shadow-lg shadow-red-500/10"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 
+  className="w-4 h-4" />
                   Confirmar
                 </button>
               </div>
