@@ -474,7 +474,13 @@ export function startAppointmentsListener() {
 
           const urlPath = "/";
 
-          if (status === "confirmed" && clientTarget) {
+          if (status === "confirmed" && clientTarget && !data.confirmationPushSent) {
+            // Mark it so we don't send duplicate confirmation pushes
+            try {
+               const { updateDoc, doc } = require("firebase/firestore");
+               await updateDoc(doc(db, "appointments", docId), { confirmationPushSent: true });
+            } catch (e) {}
+
             await sendPushNotification(clientTarget, {
               title: "Agendamento Confirmado! ✅",
               body: `Excelente! Seu agendamento de ${serviceName} com ${barberName} foi confirmado para ${formattedDateStr}.`,
@@ -499,7 +505,11 @@ export function startAppointmentsListener() {
             }
 
             await checkAndNotifyReferralFirstAppointmentConfirmed(clientId, clientName, serviceName, formattedDateStr, docId);
-          } else if (status === "cancelled") {
+          } else if (status === "cancelled" && !data.cancellationPushSent) {
+            try {
+               const { updateDoc, doc } = require("firebase/firestore");
+               await updateDoc(doc(db, "appointments", docId), { cancellationPushSent: true });
+            } catch (e) {}
             if (clientTarget) {
               await sendPushNotification(clientTarget, {
                 title: "Agendamento Cancelado ❌",
