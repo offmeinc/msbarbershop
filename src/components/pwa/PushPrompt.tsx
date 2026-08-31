@@ -29,6 +29,11 @@ export function PushPrompt({ userId, userRole }: PushPromptProps) {
     const dismissedAt = localStorage.getItem('ais_push_dismissed_at');
     const isRecentlyDismissed = dismissedAt && (Date.now() - parseInt(dismissedAt) < 7 * 24 * 60 * 60 * 1000); // 7 days dismissal
 
+    if (permission === 'granted') {
+      setShowPrompt(false);
+      return;
+    }
+
     if (isRecentlyDismissed) {
       return;
     }
@@ -36,8 +41,14 @@ export function PushPrompt({ userId, userRole }: PushPromptProps) {
     // iOS check: If not standalone, they need PWA installation.
     // If standalone, they need push permission.
     if (isIOS) {
-      // Prompt either to install (if in Safari browser) or to activate notifications (if in Home Screen app)
-      setShowPrompt(true);
+      if (!isStandalone) {
+        // Show PWA install prompt for iOS
+        setShowPrompt(true);
+      } else {
+        if (permission === 'default' || permission === 'denied') {
+          setShowPrompt(true);
+        }
+      }
     } else {
       // Android / Desktop standard prompt
       if (permission === 'default' || permission === 'denied') {
