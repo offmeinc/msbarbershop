@@ -124,6 +124,7 @@ export async function sendPushNotification(
     const bodyData: any = {
       app_id: appId,
       target_channel: "push",
+      include_external_user_ids: [userId, cleanUserId],
       include_aliases: {
         external_id: [userId, cleanUserId]
       },
@@ -175,6 +176,7 @@ export async function sendNotificationToCollaborators(
     const bodyData: any = {
       app_id: appId,
       target_channel: "push",
+      include_external_user_ids: collaboratorIds,
       include_aliases: {
         external_id: collaboratorIds
       },
