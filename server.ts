@@ -10,7 +10,7 @@ import FormData from "form-data";
 import { GoogleGenAI, Type } from "@google/genai";
 import { initVapid, startAppointmentsListener, startChatsListener, notifyUserAccess, sendPushNotification, sendNotificationToCollaborators } from "./src/server/pushNotificationService";
 import { startAppointmentAutoUpdater } from "./src/server/appointmentAutoUpdater";
-import { adminMessaging, db } from "./src/server/firebaseAdmin";
+import { adminMessaging, adminDb, db } from "./src/server/firebaseAdmin";
 import { doc, getDoc, updateDoc, setDoc, runTransaction, serverTimestamp, increment, deleteDoc } from "firebase/firestore";
 
 const _filename = typeof __filename !== 'undefined' ? __filename : fileURLToPath(import.meta.url);
@@ -353,6 +353,26 @@ Gere um relatório de desempenho em português (pt-BR).`;
       res.json({ publicKey: keys.publicKey });
     } catch (err: any) {
       res.status(500).json({ error: "Failed to load VAPID key", details: err.message });
+    }
+  });
+
+  // Save W3C Web Push subscription
+  app.post("/api/push/subscribe", async (req, res) => {
+    try {
+      const { userId, userRole, subscription } = req.body;
+      if (!userId || !subscription) {
+        return res.status(400).json({ error: "Missing userId or subscription" });
+      }
+      const cleanUserId = userId.replace(/[\s\-\(\)\+]/g, "");
+      await adminDb.collection("web_push_subscriptions").doc(cleanUserId).set({
+        userId,
+        userRole,
+        subscription,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
     }
   });
 

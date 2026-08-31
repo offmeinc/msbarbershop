@@ -109,17 +109,63 @@ const ensureProductionUrl = (url: string) => {
   return url;
 };
 
-// Function to send a push notification to a specific user using OneSignal
+// Function to send a push notification to a specific user using FCM Web Push & OneSignal
 export async function sendPushNotification(
   userId: string,
   payload: { title: string; body: string; url?: string }
 ) {
   try {
     const cleanUserId = userId.replace(/[\s\-\(\)\+]/g, "");
+    
+    // 1. Send via Firebase Admin FCM if token exists
+    try {
+      const tokenDocRef = adminDb.collection("web_push_tokens").doc(cleanUserId);
+      const tokenDoc = await tokenDocRef.get();
+      if (tokenDoc.exists) {
+        const tokenData = tokenDoc.data();
+        const fcmToken = tokenData?.token;
+        if (fcmToken) {
+          await safelySendFcm({
+            token: fcmToken,
+            notification: {
+              title: payload.title,
+              body: payload.body,
+            },
+            data: {
+              url: ensureProductionUrl(payload.url || "/")
+            }
+          });
+          console.log(`[FCM Push] Successfully sent push to user ${userId} via token`);
+        }
+      }
+    } catch (fcmErr: any) {
+      console.warn("[FCM Push] Error sending FCM push:", fcmErr.message);
+    }
+
+    // 2. Also send via OneSignal & W3C WebPush
+    try {
+      const vapidKeys = await initVapid();
+      webpush.setVapidDetails('mailto:support@msbarbershop.com.br', vapidKeys.publicKey, vapidKeys.privateKey);
+
+      const subDocRef = adminDb.collection("web_push_subscriptions").doc(cleanUserId);
+      const subDoc = await subDocRef.get();
+      if (subDoc.exists) {
+        const subData = subDoc.data();
+        if (subData?.subscription) {
+          await webpush.sendNotification(subData.subscription, JSON.stringify({
+            title: payload.title,
+            body: payload.body,
+            url: ensureProductionUrl(payload.url || "/")
+          }));
+          console.log(`[W3C WebPush] Successfully sent push to user ${userId}`);
+        }
+      }
+    } catch (wpErr: any) {
+      console.warn("[W3C WebPush] Error sending web push:", wpErr.message);
+    }
+
     const appId = "bd551445-f043-4d0e-b393-3937c7dbef57";
     const apiKey = process.env.ONESIGNAL_REST_API_KEY || process.env.ONESIGNAL_API_KEY || "";
-
-    console.log(`[OneSignal Push] Sending notification to user: ${userId} (clean: ${cleanUserId})`);
 
     const bodyData: any = {
       app_id: appId,
@@ -141,16 +187,15 @@ export async function sendPushNotification(
 
     if (apiKey) {
       headers["Authorization"] = `Key ${apiKey}`;
+      const response = await axios.post("https://onesignal.com/api/v1/notifications", bodyData, { headers });
+      console.log("[OneSignal Push] Response:", response.data);
     }
-
-    const response = await axios.post("https://onesignal.com/api/v1/notifications", bodyData, { headers });
-    console.log("[OneSignal Push] Response:", response.data);
   } catch (error: any) {
-    console.error("[OneSignal Push] Error sending notification:", error.response?.data || error.message);
+    console.error("[Push Service] Error sending push notification:", error.response?.data || error.message);
   }
 }
 
-// Send notification to all collaborators (managers / barbers) using OneSignal
+// Send notification to all collaborators (managers / barbers) using FCM & OneSignal
 export async function sendNotificationToCollaborators(
   payload: { title: string; body: string; url?: string }
 ) {
@@ -166,10 +211,38 @@ export async function sendNotificationToCollaborators(
     });
 
     if (collaboratorIds.length === 0) {
-      console.log("[OneSignal Push] No collaborators found to notify.");
+      console.log("[Push Service] No collaborators found to notify.");
       return;
     }
 
+    // 1. Send FCM push to all collaborator tokens
+    for (const collabId of collaboratorIds) {
+      const cleanCollabId = collabId.replace(/[\s\-\(\)\+]/g, "");
+      try {
+        const tokenDocRef = adminDb.collection("web_push_tokens").doc(cleanCollabId);
+        const tokenDoc = await tokenDocRef.get();
+        if (tokenDoc.exists) {
+          const tokenData = tokenDoc.data();
+          const fcmToken = tokenData?.token;
+          if (fcmToken) {
+            await safelySendFcm({
+              token: fcmToken,
+              notification: {
+                title: payload.title,
+                body: payload.body,
+              },
+              data: {
+                url: ensureProductionUrl(payload.url || "/")
+              }
+            });
+          }
+        }
+      } catch (err) {
+        // individual token error ignore
+      }
+    }
+
+    // 2. Also send via OneSignal
     const appId = "bd551445-f043-4d0e-b393-3937c7dbef57";
     const apiKey = process.env.ONESIGNAL_REST_API_KEY || process.env.ONESIGNAL_API_KEY || "";
 
@@ -191,12 +264,11 @@ export async function sendNotificationToCollaborators(
 
     if (apiKey) {
       headers["Authorization"] = `Key ${apiKey}`;
+      const response = await axios.post("https://onesignal.com/api/v1/notifications", bodyData, { headers });
+      console.log("[OneSignal Push] Collaborator notification response:", response.data);
     }
-
-    const response = await axios.post("https://onesignal.com/api/v1/notifications", bodyData, { headers });
-    console.log("[OneSignal Push] Collaborator notification response:", response.data);
   } catch (error: any) {
-    console.warn("[OneSignal Push] Collaborator notification error:", error.response?.data || error.message);
+    console.warn("[Push Service] Collaborator notification error:", error.response?.data || error.message);
   }
 }
 

@@ -1,3 +1,23 @@
+import { getToken } from "firebase/messaging";
+import { messaging, db } from "./firebase";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+
+// Helper to convert VAPID key
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding)
+    .replace(/\-/g, '+')
+    .replace(/_/g, '/');
+
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
 // Resolve backend paths
 export function getBackendUrl(path: string): string {
   const cleanPath = path.startsWith("/") ? path : `/${path}`;
@@ -36,7 +56,7 @@ export function getNotificationPermissionState(): NotificationPermission {
   return Notification.permission;
 }
 
-// Register Push Service Worker and subscribe to OneSignal with robust fallback and preview domain handling
+// Register Push Service Worker and subscribe to W3C Web Push & FCM
 export async function setupPushSubscription(
   userId: string, 
   userRole: string,
@@ -45,78 +65,71 @@ export async function setupPushSubscription(
   if (!queryNotificationSupport()) {
     console.warn("Notifications or PushManager not supported.");
     onStepChange?.("Notificações ativadas com sucesso! ✨");
-    return true; // Return true so onboarding doesn't get stuck
+    return true;
   }
 
   onStepChange?.("Solicitando permissão de notificações...");
 
-  return await new Promise<boolean>((resolve) => {
-    let resolved = false;
-
-    // Timeout fallback after 3 seconds so it never hangs indefinitely
-    const timer = setTimeout(() => {
-      if (!resolved) {
-        resolved = true;
-        console.warn("[Push] OneSignal setup timed out, activating notifications fallback...");
-        onStepChange?.("Notificações ativadas com sucesso! ✨");
-        resolve(true);
-      }
-    }, 3000);
-
-    const tryOneSignal = async () => {
-      try {
-        const OneSignal = (window as any).OneSignal;
-        
-        if (OneSignal && typeof OneSignal.Notifications?.requestPermission === "function") {
-          try {
-            await OneSignal.Notifications.requestPermission();
-          } catch (osErr: any) {
-            console.warn("OneSignal requestPermission restriction (preview domain):", osErr);
-            // If restricted to msbarbershop.com.br, we still allow success for user experience
-          }
-          if (userId && typeof OneSignal.login === "function") {
-            try {
-              await OneSignal.login(userId);
-            } catch (err) {
-              console.warn("OneSignal login warning:", err);
-            }
-          }
-          if (!resolved) {
-            resolved = true;
-            clearTimeout(timer);
-            onStepChange?.("Notificações ativadas com sucesso via OneSignal! ✨");
-            resolve(true);
-          }
-          return;
-        }
-
-        // Try standard Notification API
-        const perm = await Notification.requestPermission().catch(() => "granted");
-        if (!resolved) {
-          resolved = true;
-          clearTimeout(timer);
-          onStepChange?.("Notificações ativadas com sucesso! ✨");
-          resolve(true);
-        }
-      } catch (e: any) {
-        console.error("Push setup error:", e);
-        if (!resolved) {
-          resolved = true;
-          clearTimeout(timer);
-          onStepChange?.("Notificações ativadas com sucesso! ✨");
-          resolve(true); // Always succeed so onboarding never gets stuck
-        }
-      }
-    };
-
-    if (typeof window !== "undefined" && (window as any).OneSignal) {
-      tryOneSignal();
-    } else if (typeof window !== "undefined" && (window as any).OneSignalDeferred) {
-      (window as any).OneSignalDeferred.push(async () => {
-        await tryOneSignal();
-      });
-    } else {
-      tryOneSignal();
+  try {
+    // 1. Request browser notification permission
+    const permission = await Notification.requestPermission();
+    if (permission !== "granted") {
+      onStepChange?.("Permissão de notificação negada pelo navegador.");
+      return false;
     }
-  });
+
+    onStepChange?.("Registrando Web Push nativo...");
+
+    // 2. Register W3C Web Push subscription
+    try {
+      if ("serviceWorker" in navigator && "PushManager" in window) {
+        const registration = await navigator.serviceWorker.ready;
+        const vapidRes = await fetch(getBackendUrl("/api/push/vapid-key"));
+        const vapidData = await vapidRes.json();
+        if (vapidData.publicKey) {
+          const applicationServerKey = urlBase64ToUint8Array(vapidData.publicKey);
+          const subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey
+          });
+
+          await fetch(getBackendUrl("/api/push/subscribe"), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId, userRole, subscription })
+          });
+          onStepChange?.("Inscrição Web Push registrada com sucesso! 🔔");
+        }
+      }
+    } catch (wpSubErr: any) {
+      console.warn("W3C WebPush subscription warning:", wpSubErr);
+    }
+
+    // 3. Register FCM token as secondary backup
+    try {
+      const messagingInstance = await messaging();
+      if (messagingInstance) {
+        const token = await getToken(messagingInstance).catch(() => null);
+        if (token && userId) {
+          const cleanUserId = userId.replace(/[\s\-\(\)\+]/g, "");
+          await setDoc(doc(db, "web_push_tokens", cleanUserId), {
+            token,
+            userId,
+            role: userRole,
+            updatedAt: serverTimestamp(),
+            userAgent: navigator.userAgent
+          }, { merge: true });
+        }
+      }
+    } catch (fcmErr: any) {
+      console.warn("FCM fallback warning:", fcmErr?.message);
+    }
+
+    onStepChange?.("Notificações ativadas com sucesso! ✨");
+    return true;
+  } catch (e: any) {
+    console.error("Push setup error:", e);
+    onStepChange?.("Notificações ativadas com sucesso! ✨");
+    return true; // Return true so user onboarding never blocks
+  }
 }

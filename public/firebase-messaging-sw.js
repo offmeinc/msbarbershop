@@ -82,3 +82,30 @@ self.addEventListener("notificationclick", (event) => {
     })
   );
 });
+
+// Handle standard W3C Web Push events
+self.addEventListener("push", (event) => {
+  let data = { title: "MS BARBER SHOP", body: "Nova notificação", url: "/" };
+  try {
+    if (event.data) {
+      data = event.data.json();
+    }
+  } catch (e) {
+    if (event.data) {
+      data.body = event.data.text();
+    }
+  }
+
+  const options = {
+    body: data.body,
+    icon: data.icon || "https://i.ibb.co/LXjzGkFs/cd17f19f-71a4-453e-b9d7-f129a7ecfb2f.jpg",
+    badge: "https://i.ibb.co/LXjzGkFs/cd17f19f-71a4-453e-b9d7-f129a7ecfb2f.jpg",
+    data: { url: data.url || "/" },
+    vibrate: [200, 100, 200]
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(data.title || "MS BARBER SHOP", options)
+  );
+});
+
