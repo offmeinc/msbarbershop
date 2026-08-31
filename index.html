@@ -38,6 +38,26 @@
     <meta name="twitter:title" content="MS BARBER SHOP" />
     <meta name="twitter:description" content="Plataforma completa de agendamento e gestão para MS BARBER SHOP, com Insights por IA (Gemini), Sistema de Indicações e Portfólio de Cortes." />
     <meta name="twitter:image" content="https://i.ibb.co/LXjzGkFs/cd17f19f-71a4-453e-b9d7-f129a7ecfb2f.jpg" />
+
+    <!-- OneSignal Web SDK -->
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+    <script>
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      window.OneSignalDeferred.push(async function(OneSignal) {
+        try {
+          await OneSignal.init({
+            appId: "bd551445-f043-4d0e-b393-3937c7dbef57",
+            safari_web_id: "",
+            notifyButton: {
+              enable: true,
+            },
+            allowLocalhostAsSecureOrigin: true,
+          });
+        } catch (e) {
+          console.warn("OneSignal init restricted on preview domain:", e);
+        }
+      });
+    </script>
   </head>
   <body>
     <div id="root"></div>
