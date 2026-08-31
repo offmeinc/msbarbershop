@@ -155,9 +155,18 @@ export async function sendPushNotification(
           body: payload.body,
         },
         data: {
+          title: payload.title,
+          body: payload.body,
           url: ensureProductionUrl(payload.url || "/"),
         },
         webpush: {
+          notification: {
+            title: payload.title,
+            body: payload.body,
+            icon: "https://i.ibb.co/LXjzGkFs/cd17f19f-71a4-453e-b9d7-f129a7ecfb2f.jpg",
+            badge: "https://i.ibb.co/LXjzGkFs/cd17f19f-71a4-453e-b9d7-f129a7ecfb2f.jpg",
+            vibrate: [200, 100, 200]
+          },
           fcmOptions: {
             link: ensureProductionUrl(payload.url || "/"),
           }
