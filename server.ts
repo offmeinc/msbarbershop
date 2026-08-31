@@ -396,6 +396,37 @@ Gere um relatório de desempenho em português (pt-BR).`;
     }
   });
 
+  // Instant Notify Collaborators Endpoint
+  app.post("/api/push/notify-collaborators", async (req, res) => {
+    const { title, body, url } = req.body;
+    try {
+      await sendNotificationToCollaborators({
+        title: title || "Nova Atualização 📅",
+        body: body || "Você tem uma nova atualização.",
+        url: url || "/agenda"
+      });
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Instant Notify Client Endpoint
+  app.post("/api/push/notify-client", async (req, res) => {
+    const { clientId, title, body, url } = req.body;
+    if (!clientId) return res.status(400).json({ error: "Missing clientId" });
+    try {
+      await sendPushNotification(clientId, {
+        title: title || "Atualização da Reserva 💈",
+        body: body || "Você tem uma nova atualização.",
+        url: url || "/"
+      });
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // Mercado Pago Payment Creation API
   app.post("/api/payments/mercado-pago/create-payment", async (req, res) => {
     const { transaction_amount, appointmentId, userId } = req.body;

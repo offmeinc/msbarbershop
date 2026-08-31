@@ -585,6 +585,29 @@ export default function App() {
     }
   }, [user, loggedInClient, userRole]);
 
+  // Real-time PWA App Icon Badge Sync
+  useEffect(() => {
+    if (typeof window === "undefined" || !("setAppBadge" in navigator)) return;
+
+    let totalUnread = 0;
+    if (userRole === "client") {
+      totalUnread = clientUnreadNotifications + clientUnreadChats;
+    } else if (userRole === "manager" || userRole === "barber") {
+      const unreadStaffNotifications = staffNotifications.filter(n => !n.read).length;
+      totalUnread = unreadStaffNotifications + staffUnreadChats;
+    }
+
+    try {
+      if (totalUnread > 0) {
+        (navigator as any).setAppBadge(totalUnread).catch(() => {});
+      } else {
+        (navigator as any).clearAppBadge?.().catch(() => {});
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, [clientUnreadNotifications, clientUnreadChats, staffNotifications, staffUnreadChats, userRole]);
+
   // 3. Listen to live client-side notifications/chats to update icon badges in real-time
   useEffect(() => {
     let clientUid = "";

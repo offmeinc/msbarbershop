@@ -105,7 +105,10 @@ self.addEventListener("push", (event) => {
   };
 
   event.waitUntil(
-    self.registration.showNotification(data.title || "MS BARBER SHOP", options)
+    Promise.all([
+      self.registration.showNotification(data.title || "MS BARBER SHOP", options),
+      ("setAppBadge" in navigator) ? navigator.setAppBadge(1).catch(() => {}) : Promise.resolve()
+    ])
   );
 });
 

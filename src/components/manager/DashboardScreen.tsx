@@ -444,8 +444,19 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
       
       await updateDoc(doc(firestore, "appointments", app.id), updatePayload);
       
-      // Wake up the backend to process the background onSnapshot listeners for push notifications
-      fetch(getBackendUrl('/api/wake-up'), { method: 'POST' }).catch(() => {});
+      // Wake up the backend and trigger push notification immediately
+      if (app.clientId && app.clientId !== "guest") {
+        fetch(getBackendUrl('/api/push/notify-client'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            clientId: app.clientId,
+            title: "Atualização de Status 💈",
+            body: `Seu agendamento mudou para: ${newStatus === 'confirmed' ? 'Confirmado' : newStatus === 'completed' ? 'Concluído' : newStatus === 'cancelled' ? 'Cancelado' : newStatus}`,
+            url: "/"
+          })
+        }).catch(() => {});
+      }
 
       // Async/non-blocking notifications to avoid UI freeze or catch-all failures
       (async () => {
