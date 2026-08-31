@@ -63,6 +63,7 @@ import {
 } from "lucide-react";
 import React, { useState, useEffect, useRef, useMemo, ChangeEvent, FormEvent, lazy, Suspense, useCallback } from "react";
 import confetti from "canvas-confetti";
+import { triggerOsPushNotification } from "./lib/osNotifications";
 
 // --- Custom Hook for Path-based Routing ---
 function usePathNavigation<T extends string>(defaultScreen: T) {
@@ -531,6 +532,7 @@ export default function App() {
   const lastProcessedClientMsgTimeRef = useRef<number>(0);
   const lastProcessedStaffChatsRef = useRef<Record<string, number>>({});
   const lastProcessedStaffNotificationTimeRef = useRef<number>(0);
+  const lastProcessedClientNotificationTimeRef = useRef<number>(0);
   const notifiedIdsRef = useRef<Set<string>>(new Set());
   const isInitialSyncRef = useRef<boolean>(true);
 
@@ -645,6 +647,35 @@ export default function App() {
     );
     const unsubscribeNotifications = onSnapshot(q, (snapshot) => {
       setClientUnreadNotifications(snapshot.size);
+
+      const isInitialRun = lastProcessedClientNotificationTimeRef.current === 0;
+      let highestTime = lastProcessedClientNotificationTimeRef.current;
+
+      snapshot.docs.forEach(docSnap => {
+        const nData = docSnap.data();
+        const timestamp = nData.timestamp && typeof nData.timestamp.toDate === "function"
+          ? nData.timestamp.toDate().getTime()
+          : (nData.timestamp && nData.timestamp._seconds ? nData.timestamp._seconds * 1000 : new Date(nData.timestamp || Date.now()).getTime());
+          
+        if (timestamp > highestTime) {
+          highestTime = timestamp;
+        }
+
+        if (!isInitialRun && timestamp > lastProcessedClientNotificationTimeRef.current) {
+          if (Date.now() - timestamp < 60000) {
+            const title = nData.title || "Atualização da Reserva 💈";
+            const message = nData.message || "Você tem uma nova atualização.";
+            triggerOsPushNotification(title, message, nData.url || "/");
+            if (typeof document !== "undefined" && document.visibilityState === "visible") {
+              toast.success(`${title}: ${message}`);
+            }
+          }
+        }
+      });
+
+      if (highestTime > 0) {
+        lastProcessedClientNotificationTimeRef.current = highestTime;
+      }
     }, () => {
       setClientUnreadNotifications(0);
     });
@@ -816,6 +847,7 @@ export default function App() {
             const title = nData.title || "Alerta do Sistema 💈";
             const message = nData.message || "Nova atualização recebida.";
             console.log("[Notification System] Staff Notification Trigger:", title);
+            triggerOsPushNotification(title, message, nData.url || "/");
             if (typeof document !== "undefined" && document.visibilityState === "visible") {
               setTimeout(() => toast.success(`${title}: ${message}`), 0);
             }
