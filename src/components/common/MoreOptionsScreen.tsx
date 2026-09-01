@@ -184,7 +184,7 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
   if (activeSubScreen === 'earnings') return <EarningsScreen onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'week') return <MyWeekScreen user={user} appointments={appointments} onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'pwa') return <PWANotificationsScreen user={user} role={role} onBack={() => setActiveSubScreen('main')} />;
-  if (activeSubScreen === 'portfolio') return <PortfolioManager onBack={() => setActiveSubScreen('main')} />;
+  if (activeSubScreen === 'portfolio') return <PortfolioManager onBack={() => setActiveSubScreen('main')} user={user} role={role} />;
 
 
   return (

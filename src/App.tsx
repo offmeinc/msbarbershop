@@ -1504,7 +1504,7 @@ export default function App() {
               {displayScreen === "promotions" && <PromotionsManager onBack={() => setCurrentScreen("home")} />}
               {displayScreen === "clients" && <ClientsScreen user={effectiveUser || user} role={userRole} onBack={() => setCurrentScreen("home")} onScheduleClient={(client) => { setClientToSchedule(client); setCurrentScreen("booking"); }} onClientClick={(client) => { setSelectedClient(client); setCurrentScreen("client-details"); }} />}
               {displayScreen === "client-details" && selectedClient && <ClientDetailsScreen client={selectedClient} onBack={() => { setCurrentScreen("clients"); setSelectedClient(null); }} onScheduleClient={(client) => { setClientToSchedule(client); setCurrentScreen("booking"); }} onMessageClient={(client) => { setSelectedClient(client); setCurrentScreen("professional-chat"); }} />}
-              {displayScreen === "portfolio" && <PortfolioManager onBack={() => setCurrentScreen("home")} />}
+              {displayScreen === "portfolio" && <PortfolioManager onBack={() => setCurrentScreen("home")} user={effectiveUser || user} role={userRole} />}
               {displayScreen === "barber-management" && <BarbershopManagement user={effectiveUser || user} role={userRole} onBack={() => setCurrentScreen("home")} />}
               {displayScreen === "professional-chat" && (
                 <ProfessionalClientChatsScreen 
