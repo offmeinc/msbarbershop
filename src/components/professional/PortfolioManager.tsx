@@ -605,15 +605,14 @@ export function PortfolioManager({ onBack, user, role }: { onBack: () => void, u
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {filteredItems.map(item => {
-            const currentUserId = user?.uid || user?.id;
-            const canManage = role === "manager" || !item.barberId || item.barberId === currentUserId;
+            const canManage = true; // Any logged-in staff can manage portfolio cuts
             return (
               <div key={item.id} className="relative aspect-square rounded-[2rem] overflow-hidden group border border-white/5 shadow-lg">
                   <img src={item.imageUrl} alt={item.caption} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" referrerPolicy="no-referrer" />
                   
-                  {/* Actions float top-right */}
+                  {/* Actions float top-right (Always visible on mobile/desktop) */}
                   {canManage && (
-                    <div className="absolute top-3 right-3 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                    <div className="absolute top-3 right-3 flex items-center gap-1.5 z-10">
                       <button 
                         onClick={() => {
                           setEditingItem(item);
@@ -622,13 +621,13 @@ export function PortfolioManager({ onBack, user, role }: { onBack: () => void, u
                           setEditSelectedClient(item.clientId ? { id: item.clientId, name: item.clientName, email: item.clientEmail } : null);
                           setEditSelectedService(item.serviceId ? { id: item.serviceId, name: item.serviceName } : null);
                         }}
-                        className="p-2 bg-neutral-900/95 backdrop-blur-md hover:bg-amber-500 hover:text-black rounded-xl text-white transition-all cursor-pointer active:scale-95"
+                        className="p-2 bg-neutral-900/95 backdrop-blur-md hover:bg-amber-500 hover:text-black rounded-xl text-white transition-all cursor-pointer active:scale-95 border border-white/10"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
                       <button 
                         onClick={() => handleDelete(item.id)}
-                        className="p-2 bg-red-600/95 backdrop-blur-md hover:bg-red-700 rounded-xl text-white transition-all cursor-pointer active:scale-95"
+                        className="p-2 bg-red-600/95 backdrop-blur-md hover:bg-red-700 rounded-xl text-white transition-all cursor-pointer active:scale-95 border border-white/10"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
