@@ -63,8 +63,8 @@ export async function triggerOsPushNotification(title: string, body: string, url
   try {
     const options: any = {
       body,
-      icon: "https://i.ibb.co/LXjzGkFs/cd17f19f-71a4-453e-b9d7-f129a7ecfb2f.jpg",
-      badge: "https://i.ibb.co/LXjzGkFs/cd17f19f-71a4-453e-b9d7-f129a7ecfb2f.jpg",
+      icon: "/logo.jpg",
+      badge: "/logo.jpg",
       vibrate: [200, 100, 200],
       tag: "ms-barber-notification",
       data: { url }

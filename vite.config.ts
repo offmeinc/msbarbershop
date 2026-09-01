@@ -12,7 +12,7 @@ export default defineConfig(({ mode }) => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
+        includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'logo.jpg'],
         workbox: {
           globPatterns: ['**/*.{js,css,html,png,jpg,jpeg,svg,ico,json,woff,woff2}'],
           cleanupOutdatedCaches: true,
@@ -51,13 +51,13 @@ export default defineConfig(({ mode }) => {
               }
             },
             {
-              urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/i,
-              handler: 'StaleWhileRevalidate',
+              urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)/i,
+              handler: 'CacheFirst',
               options: {
                 cacheName: 'external-images',
                 expiration: {
-                  maxEntries: 100,
-                  maxAgeSeconds: 60 * 60 * 24 * 30 // 30 days
+                  maxEntries: 150,
+                  maxAgeSeconds: 60 * 60 * 24 * 60 // 60 days
                 },
                 cacheableResponse: {
                   statuses: [0, 200]
@@ -79,17 +79,17 @@ export default defineConfig(({ mode }) => {
           scope: '/',
           icons: [
             {
-              src: 'https://i.ibb.co/LXjzGkFs/cd17f19f-71a4-453e-b9d7-f129a7ecfb2f.jpg',
+              src: '/logo.jpg',
               sizes: '192x192',
               type: 'image/jpeg'
             },
             {
-              src: 'https://i.ibb.co/LXjzGkFs/cd17f19f-71a4-453e-b9d7-f129a7ecfb2f.jpg',
+              src: '/logo.jpg',
               sizes: '512x512',
               type: 'image/jpeg'
             },
             {
-              src: 'https://i.ibb.co/LXjzGkFs/cd17f19f-71a4-453e-b9d7-f129a7ecfb2f.jpg',
+              src: '/logo.jpg',
               sizes: '512x512',
               type: 'image/jpeg',
               purpose: 'any maskable'
