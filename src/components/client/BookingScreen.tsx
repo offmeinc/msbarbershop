@@ -53,6 +53,7 @@ import { signInWithGoogleCalendar, addEventToCalendar, getCalendarAccessToken } 
 import { setupPushSubscription, getNotificationPermissionState, queryNotificationSupport, getBackendUrl } from "../../lib/pushRegister";
 import { toast } from "../ui/Toast";
 import { triggerSuccessHaptic, triggerLightHaptic } from "../../lib/haptics";
+import { StoryViewer } from "../common/StoryViewer";
 
 import { QRCodeCanvas } from "qrcode.react";
 import { generatePixString } from "../../lib/pix";
@@ -709,7 +710,7 @@ function PortfolioModal({ barber, onClose }: PortfolioModalProps) {
   const [ratingsStats, setRatingsStats] = useState<{ average: number; count: number } | null>(null);
   const [recentReviews, setRecentReviews] = useState<any[]>([]);
   const [loadingStats, setLoadingStats] = useState(true);
-  const [expandedImage, setExpandedImage] = useState<string | null>(null);
+  const [expandedImageIndex, setExpandedImageIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (!barber?.id) return;
@@ -822,7 +823,7 @@ function PortfolioModal({ barber, onClose }: PortfolioModalProps) {
             barber.portfolio.map((imgUrl: string, idx: number) => (
               <button 
                 key={idx} 
-                onClick={() => setExpandedImage(imgUrl)}
+                onClick={() => setExpandedImageIndex(idx)}
                 className="aspect-square liquid-glass rounded-2xl overflow-hidden group relative cursor-pointer outline-none active:scale-95 transition-all"
               >
                 <img src={imgUrl} alt={`Corte ${idx + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" referrerPolicy="no-referrer" />
@@ -863,30 +864,16 @@ function PortfolioModal({ barber, onClose }: PortfolioModalProps) {
         )}
 
         <AnimatePresence>
-          {expandedImage && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="fixed inset-0 z-[120] bg-black/95 backdrop-blur-2xl flex flex-col items-center justify-center p-4"
-              onClick={() => setExpandedImage(null)}
-            >
-              <button 
-                className="absolute top-6 right-6 p-2 bg-neutral-900 rounded-full text-white hover:text-amber-500 transition-colors z-[130]"
-                onClick={() => setExpandedImage(null)}
-              >
-                <X className="w-6 h-6" />
-              </button>
-              
-              <div className="relative w-full max-w-2xl aspect-auto max-h-[85vh] rounded-3xl overflow-hidden shadow-2xl border border-white/10" onClick={(e) => e.stopPropagation()}>
-                <img 
-                  src={expandedImage} 
-                  alt="Portfolio Ampliado" 
-                  className="w-full h-full object-contain"
-                  referrerPolicy="no-referrer"
-                />
-              </div>
-            </motion.div>
+          {expandedImageIndex !== null && barber.portfolio && (
+            <StoryViewer 
+              items={barber.portfolio.map((img: string) => ({ id: img, imageUrl: img, barberName: barber.name }))}
+              initialIndex={expandedImageIndex}
+              onClose={() => setExpandedImageIndex(null)}
+              onBookNow={() => {
+                setExpandedImageIndex(null);
+                onClose();
+              }}
+            />
           )}
         </AnimatePresence>
 

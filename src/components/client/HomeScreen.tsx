@@ -6,6 +6,7 @@ import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
 import { collection, query, orderBy, limit, onSnapshot } from "firebase/firestore";
 import { Skeleton } from "../common/Skeleton";
 import { BrandLogo } from "../common/BrandLogo";
+import { StoryViewer } from "../common/StoryViewer";
 
 const triggerBookingPreload = () => {
   if (typeof window !== "undefined" && (window as any).__pwaPreloaders?.booking) {
@@ -31,6 +32,7 @@ export const HomeScreen = memo(function HomeScreen({
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
   const [portfolio, setPortfolio] = useState<any[]>([]);
   const [loadingPortfolio, setLoadingPortfolio] = useState(true);
+  const [storyIndex, setStoryIndex] = useState<number | null>(null);
 
   useEffect(() => {
     setLoadingPortfolio(true);
@@ -137,7 +139,8 @@ export const HomeScreen = memo(function HomeScreen({
                           initial={{ opacity: 0, scale: 0.9 }}
                           whileInView={{ opacity: 1, scale: 1 }}
                           transition={{ delay: idx * 0.1 }}
-                          className="flex-shrink-0 md:flex-shrink w-48 md:w-full aspect-[3/4] rounded-[2.5rem] overflow-hidden relative group border border-white/5"
+                          onClick={() => setStoryIndex(idx)}
+                          className="cursor-pointer flex-shrink-0 md:flex-shrink w-48 md:w-full aspect-[3/4] rounded-[2.5rem] overflow-hidden relative group border border-white/5"
                       >
                           <img 
                               src={item.imageUrl} 
@@ -422,8 +425,21 @@ export const HomeScreen = memo(function HomeScreen({
             <Star className="w-6 h-6 fill-transparent hover:fill-amber-500/10" />
           </a>
         </div>
-
       </div>
+
+      <AnimatePresence>
+        {storyIndex !== null && (
+          <StoryViewer 
+            items={portfolio} 
+            initialIndex={storyIndex} 
+            onClose={() => setStoryIndex(null)} 
+            onBookNow={() => {
+              setStoryIndex(null);
+              if (onStartBooking) onStartBooking();
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 });

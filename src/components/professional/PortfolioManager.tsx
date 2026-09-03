@@ -32,12 +32,6 @@ export function PortfolioManager({ onBack, user, role }: { onBack: () => void, u
   const [dragActive, setDragActive] = useState(false);
   const [uploadError, setUploadError] = useState("");
 
-  // Client link states
-  const [clients, setClients] = useState<any[]>([]);
-  const [clientSearch, setClientSearch] = useState("");
-  const [selectedClient, setSelectedClient] = useState<any | null>(null);
-  const [showClientDropdown, setShowClientDropdown] = useState(false);
-
   // Service link states for adding
   const [services, setServices] = useState<any[]>([]);
   const [selectedService, setSelectedService] = useState<any | null>(null);
@@ -50,9 +44,6 @@ export function PortfolioManager({ onBack, user, role }: { onBack: () => void, u
   // Editing state
   const [editingItem, setEditingItem] = useState<any | null>(null);
   const [editCaption, setEditCaption] = useState("");
-  const [editSelectedClient, setEditSelectedClient] = useState<any | null>(null);
-  const [editClientSearch, setEditClientSearch] = useState("");
-  const [editShowClientDropdown, setEditShowClientDropdown] = useState(false);
   const [editSelectedService, setEditSelectedService] = useState<any | null>(null);
   const [editShowServiceDropdown, setEditShowServiceDropdown] = useState(false);
   const [editImageUrl, setEditImageUrl] = useState("");
@@ -80,19 +71,6 @@ export function PortfolioManager({ onBack, user, role }: { onBack: () => void, u
     const unsubscribe = onSnapshot(qServices, (snapshot) => {
       setServices(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, (err) => console.error("[PortfolioManager] Error fetching services list:", err));
-    return () => unsubscribe();
-  }, []);
-
-  // Sync / fetch clients
-  useEffect(() => {
-    const qClients = query(
-      collection(db, "users"), 
-      where("role", "==", "client"), 
-      limit(100)
-    );
-    const unsubscribe = onSnapshot(qClients, (snapshot) => {
-      setClients(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    }, (err) => console.error("[PortfolioManager] Error fetching clients list:", err));
     return () => unsubscribe();
   }, []);
 
@@ -190,9 +168,6 @@ export function PortfolioManager({ onBack, user, role }: { onBack: () => void, u
       await addDoc(collection(db, "portfolio"), {
         imageUrl,
         caption,
-        clientId: selectedClient ? (selectedClient.id || selectedClient.uid || null) : null,
-        clientName: selectedClient ? (selectedClient.name || null) : null,
-        clientEmail: selectedClient ? (selectedClient.email || null) : null,
         barberId: user?.uid || user?.id || "anonymous",
         barberName: user?.name || "Profissional",
         serviceId: selectedService ? selectedService.id : null,
@@ -201,8 +176,6 @@ export function PortfolioManager({ onBack, user, role }: { onBack: () => void, u
       });
       setImageUrl("");
       setCaption("");
-      setSelectedClient(null);
-      setClientSearch("");
       setSelectedService(null);
       setServiceSearch("");
       setUploadError("");
@@ -221,9 +194,6 @@ export function PortfolioManager({ onBack, user, role }: { onBack: () => void, u
       await updateDoc(docRef, {
         imageUrl: editImageUrl,
         caption: editCaption,
-        clientId: editSelectedClient ? (editSelectedClient.id || editSelectedClient.uid || null) : null,
-        clientName: editSelectedClient ? (editSelectedClient.name || null) : null,
-        clientEmail: editSelectedClient ? (editSelectedClient.email || null) : null,
         serviceId: editSelectedService ? editSelectedService.id : null,
         serviceName: editSelectedService ? editSelectedService.name : null,
         updatedAt: serverTimestamp()
@@ -231,11 +201,8 @@ export function PortfolioManager({ onBack, user, role }: { onBack: () => void, u
       setEditingItem(null);
       setEditImageUrl("");
       setEditCaption("");
-      setEditSelectedClient(null);
-      setEditClientSearch("");
       setEditSelectedService(null);
       setEditShowServiceDropdown(false);
-      setEditShowClientDropdown(false);
       setEditUploadError("");
     } catch (err) {
       handleFirestoreError(err, OperationType.WRITE, "portfolio");
@@ -265,7 +232,10 @@ export function PortfolioManager({ onBack, user, role }: { onBack: () => void, u
         <button onClick={onBack} className="liquid-glass p-3 rounded-2xl text-neutral-500 hover:text-white transition-all">
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <h2 className="text-3xl font-black italic uppercase tracking-tighter">Galeria</h2>
+        <div>
+          <h2 className="text-3xl font-black italic uppercase tracking-tighter">Nossos Serviços</h2>
+          <p className="text-[10px] text-neutral-500 font-extrabold uppercase tracking-widest mt-1">Aqui estão alguns de nossos serviços</p>
+        </div>
       </header>
 
       <div className=" liquid-glass/50 p-6 rounded-[2.5rem]  mb-10">
@@ -367,95 +337,6 @@ export function PortfolioManager({ onBack, user, role }: { onBack: () => void, u
                 </motion.div>
               )}
             </AnimatePresence>
-
-            {/* Premium Client Selector */}
-            {selectedClient ? (
-              <div className="bg-amber-500/10 border border-amber-500/20 rounded-[2rem] p-5 flex items-center justify-between">
-                <div className="flex items-center gap-3.5">
-                  <div className="w-10 h-10 rounded-2xl bg-amber-500/20 flex items-center justify-center text-amber-500 font-bold overflow-hidden border border-amber-500/30">
-                    {selectedClient.photoURL ? (
-                      <img src={selectedClient.photoURL} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <User className="w-4 h-4" />
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-[9px] font-black uppercase text-amber-500/80 tracking-widest leading-none mb-1">Corte do Cliente</p>
-                    <p className="text-sm font-black uppercase italic text-white">{selectedClient.name}</p>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => { setSelectedClient(null); setClientSearch(""); }}
-                  className="p-3 bg-neutral-900  liquid-glass rounded-2xl text-neutral-400 hover:text-red-500 transition-all  active:scale-95"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-1.5 relative">
-                <label className="text-[9px] font-black uppercase text-neutral-600 tracking-widest px-2">Vincular a um Cliente (Opcional)</label>
-                <div className="relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
-                  <input 
-                    type="text" 
-                    placeholder="Buscar cliente por nome..." 
-                    value={clientSearch}
-                    onChange={e => {
-                      setClientSearch(e.target.value);
-                      setShowClientDropdown(true);
-                    }}
-                    onFocus={() => setShowClientDropdown(true)}
-                    className="w-full bg-black border border-white/5 rounded-2xl p-4 pl-12 text-xs font-bold uppercase tracking-widest focus:border-amber-500 transition-colors placeholder:text-neutral-700"
-                  />
-                  {clientSearch && (
-                    <button 
-                      onClick={() => { setClientSearch(""); setShowClientDropdown(false); }}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-white"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-                
-                {/* Search Dropdown */}
-                {showClientDropdown && (
-                  <div className="absolute left-0 right-0 max-h-52 overflow-y-auto liquid-glass  rounded-2xl mt-2.5 z-[60] shadow-2xl divide-y divide-white/5 no-scrollbar">
-                    {clients
-                      .filter(c => (c.name || "").toLowerCase().includes(clientSearch.toLowerCase()))
-                      .map(c => (
-                        <button
-                          key={c.id}
-                          type="button"
-                          onClick={() => {
-                            setSelectedClient(c);
-                            setClientSearch(c.name || "");
-                            setShowClientDropdown(false);
-                          }}
-                          className="liquid-glass w-full text-left p-4  transition-colors flex items-center justify-between text-xs"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-xl liquid-glass  overflow-hidden flex items-center justify-center text-[10px] font-bold text-neutral-400">
-                              {c.photoURL ? <img src={c.photoURL} alt="" className="w-full h-full object-cover" /> : <User className="w-4 h-4" />}
-                            </div>
-                            <div>
-                              <p className="font-bold text-white uppercase">{c.name}</p>
-                              <p className="text-[9px] text-neutral-500">{c.email || c.whatsapp || "Sem contato"}</p>
-                            </div>
-                          </div>
-                          <Check className="w-4 h-4 text-neutral-800 hover:text-amber-500" />
-                        </button>
-                      ))}
-                    {clients.filter(c => (c.name || "").toLowerCase().includes(clientSearch.toLowerCase())).length === 0 && (
-                      <p className="p-4 text-center text-[10px] uppercase font-black tracking-widest text-neutral-600">Nenhum cliente encontrado</p>
-                    )}
-                  </div>
-                )}
-                {showClientDropdown && (
-                  /* Overlay wrapper for simple clicks outside */
-                  <div className="fixed inset-0 z-50 bg-transparent" onClick={() => setShowClientDropdown(false)} />
-                )}
-              </div>
-            )}
 
             {/* Premium Service Selector */}
             {selectedService ? (
@@ -618,7 +499,6 @@ export function PortfolioManager({ onBack, user, role }: { onBack: () => void, u
                           setEditingItem(item);
                           setEditImageUrl(item.imageUrl || "");
                           setEditCaption(item.caption || "");
-                          setEditSelectedClient(item.clientId ? { id: item.clientId, name: item.clientName, email: item.clientEmail } : null);
                           setEditSelectedService(item.serviceId ? { id: item.serviceId, name: item.serviceName } : null);
                         }}
                         className="p-2 bg-neutral-900/95 backdrop-blur-md hover:bg-amber-500 hover:text-black rounded-xl text-white transition-all cursor-pointer active:scale-95 border border-white/10"
@@ -639,11 +519,6 @@ export function PortfolioManager({ onBack, user, role }: { onBack: () => void, u
                       {item.serviceName && (
                           <p className="text-[8px] font-black uppercase tracking-wider text-cyan-400 truncate flex items-center gap-1 mt-0.5">
                               ✂️ {item.serviceName}
-                          </p>
-                      )}
-                      {item.clientName && (
-                          <p className="text-[8px] font-black uppercase tracking-wider text-amber-500/90 truncate flex items-center gap-1 mt-0.5">
-                              💇‍♂️ {item.clientName}
                           </p>
                       )}
                       {item.barberName && (
@@ -683,7 +558,6 @@ export function PortfolioManager({ onBack, user, role }: { onBack: () => void, u
                     setEditingItem(null);
                     setEditImageUrl("");
                     setEditCaption("");
-                    setEditSelectedClient(null);
                     setEditSelectedService(null);
                     setEditUploadError("");
                   }}
@@ -749,31 +623,6 @@ export function PortfolioManager({ onBack, user, role }: { onBack: () => void, u
                   )}
                 </div>
 
-                {/* Client Link Select */}
-                <div className="space-y-1.5">
-                  <label className="text-[9px] font-black uppercase text-neutral-600 tracking-widest px-2">Vincular a um Cliente (Opcional)</label>
-                  <select 
-                    value={editSelectedClient?.id || editSelectedClient?.uid || ""}
-                    onChange={e => {
-                      const val = e.target.value;
-                      if (!val) {
-                        setEditSelectedClient(null);
-                      } else {
-                        const client = clients.find(c => c.id === val);
-                        if (client) setEditSelectedClient(client);
-                      }
-                    }}
-                    className="w-full bg-black border border-white/5 rounded-2xl p-4 text-xs font-bold uppercase tracking-widest focus:border-amber-500 transition-colors text-white"
-                  >
-                    <option value="" className="bg-black text-neutral-500">Nenhum Cliente</option>
-                    {clients.map(c => (
-                      <option key={c.id} value={c.id} className="bg-black text-white">
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
                 {/* Service Link Select */}
                 <div className="space-y-1.5">
                   <label className="text-[9px] font-black uppercase text-neutral-600 tracking-widest px-2">Vincular a um Serviço/Corte (Opcional)</label>
@@ -817,7 +666,6 @@ export function PortfolioManager({ onBack, user, role }: { onBack: () => void, u
                       setEditingItem(null);
                       setEditImageUrl("");
                       setEditCaption("");
-                      setEditSelectedClient(null);
                       setEditSelectedService(null);
                       setEditUploadError("");
                     }}
