@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { ChevronRight, Sparkles, MapPin, Instagram, Phone, Clock, Scissors, Image as ImageIcon, Star, AlertCircle } from "lucide-react";
 import { BARBERSHOP_NAME, BARBERSHOP_ADDRESS, BARBERSHOP_PHONE, BARBERSHOP_INSTAGRAM, GOOGLE_REVIEW_URL } from "../../constants";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
-import { collection, query, orderBy, limit, onSnapshot } from "firebase/firestore";
+import { collection, query, orderBy, limit, onSnapshot, getDocs } from "firebase/firestore";
 import { Skeleton } from "../common/Skeleton";
 import { BrandLogo } from "../common/BrandLogo";
 import { StoryViewer } from "../common/StoryViewer";
@@ -33,6 +33,37 @@ export const HomeScreen = memo(function HomeScreen({
   const [portfolio, setPortfolio] = useState<any[]>([]);
   const [loadingPortfolio, setLoadingPortfolio] = useState(true);
   const [storyIndex, setStoryIndex] = useState<number | null>(null);
+  const [popularServices, setPopularServices] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchPopular = async () => {
+      try {
+        const qApps = query(collection(db, "appointments"), orderBy("date", "desc"), limit(100));
+        const snapshot = await getDocs(qApps);
+        const counts: Record<string, number> = {};
+        
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          if (data.serviceId) {
+            counts[data.serviceId] = (counts[data.serviceId] || 0) + 1;
+          }
+        });
+        
+        const sortedServiceIds = Object.keys(counts).sort((a, b) => counts[b] - counts[a]).slice(0, 5);
+        const popular = sortedServiceIds.map(id => services.find(s => s.id === id)).filter(Boolean);
+        
+        if (popular.length > 0) {
+          setPopularServices(popular);
+        }
+      } catch (err) {
+        console.error("Failed to fetch popular services:", err);
+      }
+    };
+    
+    if (services && services.length > 0) {
+      fetchPopular();
+    }
+  }, [services]);
 
   useEffect(() => {
     setLoadingPortfolio(true);
@@ -119,6 +150,68 @@ export const HomeScreen = memo(function HomeScreen({
           </p>
         </div>
       </div>
+
+      {/* Cortes Mais Procurados Section */}
+      {popularServices.length > 0 && (
+        <div className="px-6 mb-12">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xs font-black uppercase tracking-[0.2em] text-neutral-500 flex items-center">
+              <Sparkles className="w-3 h-3 inline-block mr-2 text-amber-500" />
+              Mais Procurados na Semana
+            </h2>
+          </div>
+          <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar -mx-6 px-6 scrollbar-hide">
+            {popularServices.map((service, idx) => {
+              const isSelected = selectedServiceId === (service.id || idx.toString());
+              return (
+                <motion.div 
+                   key={idx}
+                   initial={{ opacity: 0, x: 20 }}
+                   whileInView={{ opacity: 1, x: 0 }}
+                   viewport={{ once: true }}
+                   transition={{ delay: idx * 0.1 }}
+                   onClick={() => {
+                     if (isSelected) {
+                       onStartBooking();
+                     } else {
+                       setSelectedServiceId(service.id || idx.toString());
+                     }
+                   }}
+                   onMouseEnter={triggerBookingPreload}
+                   onTouchStart={triggerBookingPreload}
+                   className={`w-40 sm:w-48 flex-shrink-0 min-h-[13rem] rounded-[2.5rem] border ${
+                     isSelected ? 'border-amber-500 bg-neutral-900 shadow-amber-500/10' : 'border-white/5 bg-neutral-900/50'
+                   } p-5 flex flex-col justify-between group cursor-pointer transition-all duration-500 shadow-xl relative overflow-hidden`}
+                >
+                  <div className={`absolute top-0 right-0 w-24 h-24 bg-amber-500/10 blur-3xl rounded-full transition-opacity ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} />
+                  
+                  <div className="flex justify-between items-start relative z-10">
+                    <BrandLogo 
+                      className={`w-10 h-10 transition-transform duration-500 ${isSelected ? 'scale-110' : 'group-hover:scale-110'}`} 
+                      iconSize="w-5 h-5"
+                    />
+                    <div className="bg-amber-500/10 text-amber-500 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border border-amber-500/20 shadow-inner">
+                      #{idx + 1}
+                    </div>
+                  </div>
+
+                  <div className="relative z-10 mt-4">
+                     <h4 className={`font-black uppercase italic tracking-tighter text-sm mb-2 line-clamp-2 transition-all duration-300 ${isSelected ? 'text-amber-500 scale-105 origin-left' : 'text-white'}`}>
+                       {service.name}
+                     </h4>
+                     <div className="flex items-center gap-2">
+                        <div className={`h-px bg-amber-500/30 transition-all ${isSelected ? 'w-8' : 'w-4 group-hover:w-6'}`} />
+                        <p className={`text-amber-500 font-extrabold tracking-tight transition-all duration-500 ${isSelected ? 'text-lg scale-110' : 'text-xs'}`}>
+                          R$ {Number(service.price || 0).toFixed(2)}
+                        </p>
+                     </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Portfolio Gallery */}
       <div className="px-6 mb-12">
