@@ -151,68 +151,6 @@ export const HomeScreen = memo(function HomeScreen({
         </div>
       </div>
 
-      {/* Cortes Mais Procurados Section */}
-      {popularServices.length > 0 && (
-        <div className="px-6 mb-12">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xs font-black uppercase tracking-[0.2em] text-neutral-500 flex items-center">
-              <Sparkles className="w-3 h-3 inline-block mr-2 text-amber-500" />
-              Mais Procurados na Semana
-            </h2>
-          </div>
-          <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar -mx-6 px-6 scrollbar-hide">
-            {popularServices.map((service, idx) => {
-              const isSelected = selectedServiceId === (service.id || idx.toString());
-              return (
-                <motion.div 
-                   key={idx}
-                   initial={{ opacity: 0, x: 20 }}
-                   whileInView={{ opacity: 1, x: 0 }}
-                   viewport={{ once: true }}
-                   transition={{ delay: idx * 0.1 }}
-                   onClick={() => {
-                     if (isSelected) {
-                       onStartBooking();
-                     } else {
-                       setSelectedServiceId(service.id || idx.toString());
-                     }
-                   }}
-                   onMouseEnter={triggerBookingPreload}
-                   onTouchStart={triggerBookingPreload}
-                   className={`w-40 sm:w-48 flex-shrink-0 min-h-[13rem] rounded-[2.5rem] border ${
-                     isSelected ? 'border-amber-500 bg-neutral-900 shadow-amber-500/10' : 'border-white/5 bg-neutral-900/50'
-                   } p-5 flex flex-col justify-between group cursor-pointer transition-all duration-500 shadow-xl relative overflow-hidden`}
-                >
-                  <div className={`absolute top-0 right-0 w-24 h-24 bg-amber-500/10 blur-3xl rounded-full transition-opacity ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} />
-                  
-                  <div className="flex justify-between items-start relative z-10">
-                    <BrandLogo 
-                      className={`w-10 h-10 transition-transform duration-500 ${isSelected ? 'scale-110' : 'group-hover:scale-110'}`} 
-                      iconSize="w-5 h-5"
-                    />
-                    <div className="bg-amber-500/10 text-amber-500 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border border-amber-500/20 shadow-inner">
-                      #{idx + 1}
-                    </div>
-                  </div>
-
-                  <div className="relative z-10 mt-4">
-                     <h4 className={`font-black uppercase italic tracking-tighter text-sm mb-2 line-clamp-2 transition-all duration-300 ${isSelected ? 'text-amber-500 scale-105 origin-left' : 'text-white'}`}>
-                       {service.name}
-                     </h4>
-                     <div className="flex items-center gap-2">
-                        <div className={`h-px bg-amber-500/30 transition-all ${isSelected ? 'w-8' : 'w-4 group-hover:w-6'}`} />
-                        <p className={`text-amber-500 font-extrabold tracking-tight transition-all duration-500 ${isSelected ? 'text-lg scale-110' : 'text-xs'}`}>
-                          R$ {Number(service.price || 0).toFixed(2)}
-                        </p>
-                     </div>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
       {/* Portfolio Gallery */}
       <div className="px-6 mb-12">
           <div className="flex items-center justify-between mb-6">
@@ -278,12 +216,20 @@ export const HomeScreen = memo(function HomeScreen({
              const displayServices = activeServices.length > 0 ? activeServices : services;
              
              const featuredServices = [...displayServices].sort((a, b) => {
-               const priority = ["Corte + Barba", "Corte Degrade", "Barba completa", "Corte+ sobrancelha"];
-               const aIdx = priority.indexOf(a.name);
-               const bIdx = priority.indexOf(b.name);
-               if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
-               if (aIdx !== -1) return -1;
-               if (bIdx !== -1) return 1;
+               if (popularServices.length > 0) {
+                 const aIdx = popularServices.findIndex(ps => ps.id === a.id);
+                 const bIdx = popularServices.findIndex(ps => ps.id === b.id);
+                 if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
+                 if (aIdx !== -1) return -1;
+                 if (bIdx !== -1) return 1;
+               } else {
+                 const priority = ["Corte + Barba", "Corte Degrade", "Barba completa", "Corte+ sobrancelha"];
+                 const aIdx = priority.indexOf(a.name);
+                 const bIdx = priority.indexOf(b.name);
+                 if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
+                 if (aIdx !== -1) return -1;
+                 if (bIdx !== -1) return 1;
+               }
                return 0;
              }).slice(0, 4);
 
@@ -325,10 +271,17 @@ export const HomeScreen = memo(function HomeScreen({
                  >
                     <div className={`absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-3xl rounded-full transition-opacity ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} />
                     
-                     <BrandLogo 
-                       className={`relative z-10 w-10 sm:w-12 h-10 sm:h-12 transition-all duration-500 shadow-lg ${isSelected ? 'scale-110' : 'group-hover:scale-110'}`} 
-                       iconSize="w-5.5 h-5.5"
-                     />
+                     <div className="flex justify-between items-start relative z-10">
+                        <BrandLogo 
+                          className={`w-10 sm:w-12 h-10 sm:h-12 transition-all duration-500 shadow-lg ${isSelected ? 'scale-110' : 'group-hover:scale-110'}`} 
+                          iconSize="w-5.5 h-5.5"
+                        />
+                        {popularServices.findIndex(ps => ps.id === service.id) !== -1 && (
+                          <div className="bg-amber-500/10 text-amber-500 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border border-amber-500/20 shadow-inner">
+                            #{popularServices.findIndex(ps => ps.id === service.id) + 1}
+                          </div>
+                        )}
+                     </div>
 
                     <div className="relative z-10 mt-4">
                        <h4 className={`font-black uppercase italic tracking-tighter text-sm sm:text-base mb-2 line-clamp-2 transition-all duration-300 ${isSelected ? 'text-amber-500 scale-105 origin-left' : 'text-white'}`}>
