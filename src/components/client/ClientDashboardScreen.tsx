@@ -343,7 +343,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
         return dateA.getTime() - dateB.getTime();
       })[0];
 
-    return { totalSpent, completedCount, upcoming, daysToReturn, nextSuggestedDate };
+    return { totalSpent, completedCount, upcoming, daysToReturn, nextSuggestedDate, lastAppointment };
   }, [appointments]);
 
   useEffect(() => {
@@ -750,9 +750,35 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                  </div>
               </div>
 
+              {/* Action Buttons */}
+              <div className="flex flex-col gap-3 mb-8">
+                <button 
+                  onClick={() => setCurrentView('booking')}
+                  className="w-full py-5 bg-white text-black font-black uppercase italic tracking-widest rounded-2xl hover:bg-neutral-200 transition-colors shadow-xl"
+                >
+                  NOVO AGENDAMENTO
+                </button>
+                {stats.lastAppointment && (
+                  <button 
+                    onClick={() => {
+                      setInitialBookingServiceId(stats.lastAppointment.serviceId);
+                      setInitialBookingBarberId(stats.lastAppointment.barberId);
+                      setCurrentView('booking');
+                    }}
+                    className="w-full py-5 bg-amber-500 text-black font-black uppercase italic tracking-widest rounded-2xl hover:bg-amber-600 transition-colors shadow-lg flex items-center justify-center gap-2"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    AGENDAMENTO EXPRESSO
+                    <span className="text-[9px] font-bold tracking-normal opacity-70 bg-black/10 px-2 py-0.5 rounded-full ml-1">
+                      ({stats.lastAppointment.serviceName})
+                    </span>
+                  </button>
+                )}
+              </div>
+
               {/* Return Reminder Widget */}
               {!stats.upcoming && stats.nextSuggestedDate && (
-                <div className=" liquid-glass  p-8 rounded-[3rem] relative overflow-hidden group shadow-xl">
+                <div className=" liquid-glass p-8 rounded-[3rem] relative overflow-hidden group shadow-xl mb-8">
                    <div className="absolute right-0 top-0 p-8 opacity-10 group-hover:scale-125 transition-transform duration-1000">
                        <Calendar className="w-20 h-20 text-amber-500" />
                    </div>
