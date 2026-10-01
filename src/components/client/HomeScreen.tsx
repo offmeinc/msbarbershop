@@ -253,8 +253,10 @@ export const HomeScreen = memo(function HomeScreen({
                    key={idx} 
                    initial={{ opacity: 0, x: 20 }}
                    whileInView={{ opacity: 1, x: 0 }}
+                   whileHover={{ y: -4, scale: 1.015 }}
+                   whileTap={{ scale: 0.97 }}
                    viewport={{ once: true }}
-                   transition={{ delay: idx * 0.1 }}
+                   transition={{ delay: idx * 0.08, type: 'spring', stiffness: 400, damping: 25 }}
                    layout
                    onClick={() => {
                      if (isSelected) {

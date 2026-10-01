@@ -942,6 +942,42 @@ export function BookingScreen({
   const [selectedBarber, setSelectedBarber] = useState<string | null>(
     editAppointment?.barberId || initialBarberId || null,
   );
+  const [animatingServiceId, setAnimatingServiceId] = useState<string | null>(null);
+  const [animatingBarberId, setAnimatingBarberId] = useState<string | null>(null);
+
+  const handleServiceSelect = (s: any) => {
+    triggerLightHaptic();
+    const serviceNameLower = (s.name || "").toLowerCase();
+    if (
+      serviceNameLower.includes("corte") && serviceNameLower.includes("sobrancelha")
+    ) {
+      setPendingServiceSelection(s);
+      setShowAddonModal(true);
+      return;
+    }
+    
+    setSelectedService(s.id);
+    setCustomDuration(s.duration || 30);
+    setAnimatingServiceId(s.id);
+
+    // Micro-delay so user experiences the spring & glow selection animation before transitioning
+    setTimeout(() => {
+      setStep(2);
+      setAnimatingServiceId(null);
+    }, 240);
+  };
+
+  const handleBarberSelect = (b: any) => {
+    triggerLightHaptic();
+    setSelectedBarber(b.id);
+    setAnimatingBarberId(b.id);
+
+    // Micro-delay for a smooth, high-fidelity selection feel
+    setTimeout(() => {
+      setStep(3);
+      setAnimatingBarberId(null);
+    }, 240);
+  };
   const [barbers, setBarbers] = useState<any[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(
     editAppointment?.date
@@ -1929,23 +1965,46 @@ export function BookingScreen({
 
           {/* Real-time Summary Badges for Mobile */}
           {(selectedServiceObj || selectedBarberObj || selectedTime) && (
-            <div className="flex sm:hidden flex-wrap gap-2 mb-6 liquid-glass/40 p-3 rounded-2xl  items-center justify-start text-left">
+            <div className="flex sm:hidden flex-wrap gap-2 mb-6 liquid-glass/40 p-3 rounded-2xl items-center justify-start text-left">
               <span className="text-[7.5px] font-black uppercase text-neutral-500 tracking-wider mr-1">RESUMO:</span>
-              {selectedServiceObj && (
-                <div className="bg-amber-500/15 border border-amber-500/10 rounded-lg px-2.5 py-1 text-[8.5px] font-bold text-amber-500 flex items-center gap-1">
-                  <span>✂️</span> {selectedServiceObj.name}
-                </div>
-              )}
-              {selectedBarberObj && (
-                <div className="liquid-glass rounded-lg px-2.5 py-1 text-[8.5px] font-bold text-neutral-300 flex items-center gap-1">
-                  <span>💈</span> {selectedBarberObj.name}
-                </div>
-              )}
-              {selectedTime && (
-                <div className="liquid-glass rounded-lg px-2.5 py-1 text-[8.5px] font-bold text-neutral-300 flex items-center gap-1">
-                  <span>📅</span> {format(selectedDate, "dd/MM")} às {selectedTime}
-                </div>
-              )}
+              <AnimatePresence>
+                {selectedServiceObj && (
+                  <motion.div
+                    key={`resumo-svc-${selectedServiceObj.id}`}
+                    initial={{ scale: 0.8, opacity: 0, y: 3 }}
+                    animate={{ scale: 1, opacity: 1, y: 0 }}
+                    exit={{ scale: 0.8, opacity: 0 }}
+                    transition={{ type: "spring", stiffness: 450, damping: 25 }}
+                    className="bg-amber-500/15 border border-amber-500/30 rounded-lg px-2.5 py-1 text-[8.5px] font-bold text-amber-500 flex items-center gap-1 shadow-sm"
+                  >
+                    <span>✂️</span> {selectedServiceObj.name}
+                  </motion.div>
+                )}
+                {selectedBarberObj && (
+                  <motion.div
+                    key={`resumo-barber-${selectedBarberObj.id}`}
+                    initial={{ scale: 0.8, opacity: 0, y: 3 }}
+                    animate={{ scale: 1, opacity: 1, y: 0 }}
+                    exit={{ scale: 0.8, opacity: 0 }}
+                    transition={{ type: "spring", stiffness: 450, damping: 25 }}
+                    className="liquid-glass border border-amber-500/20 rounded-lg px-2.5 py-1 text-[8.5px] font-bold text-neutral-200 flex items-center gap-1 shadow-sm"
+                  >
+                    <span>💈</span> {selectedBarberObj.name}
+                  </motion.div>
+                )}
+                {selectedTime && (
+                  <motion.div
+                    key={`resumo-time-${selectedTime}`}
+                    initial={{ scale: 0.8, opacity: 0, y: 3 }}
+                    animate={{ scale: 1, opacity: 1, y: 0 }}
+                    exit={{ scale: 0.8, opacity: 0 }}
+                    transition={{ type: "spring", stiffness: 450, damping: 25 }}
+                    className="liquid-glass rounded-lg px-2.5 py-1 text-[8.5px] font-bold text-neutral-300 flex items-center gap-1"
+                  >
+                    <span>📅</span> {format(selectedDate, "dd/MM")} às {selectedTime}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           )}
 
@@ -2007,34 +2066,46 @@ export function BookingScreen({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {filteredServicesList.map((s) => {
                       const isSelected = selectedService === s.id;
+                      const isAnimating = animatingServiceId === s.id;
                       return (
                         <motion.button
                           key={s.id}
-                          whileHover={{ y: -3, scale: 1.01 }}
-                          whileTap={{ scale: 0.99 }}
-                          onClick={() => {
-                            triggerLightHaptic();
-                            const serviceNameLower = (s.name || "").toLowerCase();
-                            if (
-                              serviceNameLower.includes("corte") && serviceNameLower.includes("sobrancelha")
-                            ) {
-                              setPendingServiceSelection(s);
-                              setShowAddonModal(true);
-                            } else {
-                              setSelectedService(s.id);
-                              setCustomDuration(s.duration || 30);
-                              setStep(2);
-                            }
-                          }}
-                          className={`group p-6 rounded-[2.2rem] border text-left transition-all relative overflow-hidden flex flex-col justify-between min-h-[140px] ${
+                          layout
+                          whileHover={{ y: -3, scale: 1.012 }}
+                          whileTap={{ scale: 0.96 }}
+                          transition={{ type: "spring", stiffness: 450, damping: 26 }}
+                          onClick={() => handleServiceSelect(s)}
+                          className={`group p-6 rounded-[2.2rem] border text-left transition-all duration-300 relative overflow-hidden flex flex-col justify-between min-h-[140px] cursor-pointer ${
                             isSelected 
-                              ? "border-amber-500 bg-neutral-900/90 shadow-2xl shadow-amber-500/10" 
+                              ? "border-amber-500 bg-neutral-900/95 shadow-2xl shadow-amber-500/20 ring-1 ring-amber-500/40" 
                               : "border-white/5 bg-neutral-900/40 hover:border-white/10 hover:bg-neutral-900/60"
                           }`}
                         >
-                          {isSelected && (
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-2xl pointer-events-none" />
-                          )}
+                          {/* Radial golden glow on selection */}
+                          <AnimatePresence>
+                            {isSelected && (
+                              <motion.div
+                                initial={{ opacity: 0, scale: 0.6 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.6 }}
+                                transition={{ duration: 0.35, ease: "easeOut" }}
+                                className="absolute -top-12 -right-12 w-48 h-48 bg-gradient-to-br from-amber-500/25 via-amber-500/10 to-transparent rounded-full blur-2xl pointer-events-none"
+                              />
+                            )}
+                          </AnimatePresence>
+
+                          {/* Expanding ripple burst upon click */}
+                          <AnimatePresence>
+                            {isAnimating && (
+                              <motion.span
+                                initial={{ scale: 0.92, opacity: 0.9 }}
+                                animate={{ scale: 1.08, opacity: 0 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.35, ease: "easeOut" }}
+                                className="absolute inset-0 rounded-[2.2rem] border-2 border-amber-400 pointer-events-none z-20"
+                              />
+                            )}
+                          </AnimatePresence>
                           
                           <div className="flex justify-between items-start w-full relative z-10 mb-5">
                             <div className="space-y-1 max-w-[70%]">
@@ -2046,20 +2117,49 @@ export function BookingScreen({
                               </h4>
                             </div>
                             
-                            <div className={`px-4 py-2 rounded-2xl transition-all border shrink-0 ${
-                              isSelected 
-                                ? "bg-amber-500 border-amber-400 text-black shadow-lg shadow-amber-500/5" 
-                                : "bg-amber-500/5 border-amber-500/10 text-amber-500"
-                            }`}>
+                            <motion.div 
+                              animate={{ scale: isSelected ? 1.04 : 1 }}
+                              transition={{ type: "spring", stiffness: 450, damping: 22 }}
+                              className={`px-4 py-2 rounded-2xl transition-all border shrink-0 flex items-center gap-1.5 ${
+                                isSelected 
+                                  ? "bg-amber-500 border-amber-400 text-black shadow-lg shadow-amber-500/20" 
+                                  : "bg-amber-500/5 border-amber-500/10 text-amber-500"
+                              }`}
+                            >
+                              <AnimatePresence>
+                                {isSelected && (
+                                  <motion.span
+                                    initial={{ scale: 0, rotate: -25, opacity: 0 }}
+                                    animate={{ scale: 1, rotate: 0, opacity: 1 }}
+                                    exit={{ scale: 0, opacity: 0 }}
+                                    transition={{ type: "spring", stiffness: 500, damping: 22 }}
+                                    className="flex items-center"
+                                  >
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-black fill-black" />
+                                  </motion.span>
+                                )}
+                              </AnimatePresence>
                               <span className="text-sm font-black italic">
                                 R${s.price}
                               </span>
-                            </div>
+                            </motion.div>
                           </div>
 
-                          <div className="flex items-center justify-between w-full mt-auto text-neutral-500 text-[10px] font-extrabold uppercase pt-2 border-t border-white/5">
+                          <div className="flex items-center justify-between w-full mt-auto text-neutral-500 text-[10px] font-extrabold uppercase pt-2 border-t border-white/5 relative z-10">
                             <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-neutral-600" /> {s.duration} min</span>
-                            <span className="text-[8px] text-neutral-600 group-hover:text-amber-500/80 transition-colors flex items-center gap-1">SELECIONAR &rarr;</span>
+                            {isSelected ? (
+                              <motion.span 
+                                initial={{ opacity: 0, x: -4 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                className="text-[8.5px] text-amber-500 font-black tracking-wider flex items-center gap-1"
+                              >
+                                SELECIONADO ✓
+                              </motion.span>
+                            ) : (
+                              <span className="text-[8px] text-neutral-600 group-hover:text-amber-500/80 transition-colors flex items-center gap-1">
+                                SELECIONAR &rarr;
+                              </span>
+                            )}
                           </div>
                         </motion.button>
                       );
@@ -2095,37 +2195,88 @@ export function BookingScreen({
                   ) : (
                     barbers.map((b) => {
                       const isSelected = selectedBarber === b.id;
+                      const isAnimating = animatingBarberId === b.id;
                       return (
                         <motion.div
                           key={b.id}
-                          whileHover={{ y: -3, scale: 1.01 }}
+                          layout
+                          whileHover={{ y: -3, scale: 1.012 }}
+                          whileTap={{ scale: 0.96 }}
+                          transition={{ type: "spring", stiffness: 450, damping: 26 }}
                           className="relative"
                         >
+                          {/* Expanding ripple burst upon click */}
+                          <AnimatePresence>
+                            {isAnimating && (
+                              <motion.span
+                                initial={{ scale: 0.92, opacity: 0.9 }}
+                                animate={{ scale: 1.08, opacity: 0 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.35, ease: "easeOut" }}
+                                className="absolute inset-0 rounded-[2.2rem] border-2 border-amber-400 pointer-events-none z-20"
+                              />
+                            )}
+                          </AnimatePresence>
+
                           <button
-                            onClick={() => {
-                              triggerLightHaptic();
-                              setSelectedBarber(b.id);
-                              setStep(3);
-                            }}
-                            className={`w-full p-6 py-7 rounded-[2.2rem] border flex items-center justify-between transition-all group text-left ${
+                            onClick={() => handleBarberSelect(b)}
+                            className={`w-full p-6 py-7 rounded-[2.2rem] border flex items-center justify-between transition-all duration-300 group text-left relative overflow-hidden cursor-pointer ${
                               isSelected 
-                                ? "border-amber-500 bg-neutral-900/90 shadow-2xl shadow-amber-500/10" 
+                                ? "border-amber-500 bg-neutral-900/95 shadow-2xl shadow-amber-500/20 ring-1 ring-amber-500/40" 
                                 : "border-white/5 bg-neutral-900/40 hover:border-white/10 hover:bg-neutral-900/60"
                             }`}
                           >
-                            <div className="flex items-center gap-5">
-                              <div className="relative shrink-0">
+                            {/* Radial golden glow on selection */}
+                            <AnimatePresence>
+                              {isSelected && (
+                                <motion.div
+                                  initial={{ opacity: 0, scale: 0.6 }}
+                                  animate={{ opacity: 1, scale: 1 }}
+                                  exit={{ opacity: 0, scale: 0.6 }}
+                                  transition={{ duration: 0.35, ease: "easeOut" }}
+                                  className="absolute -top-12 -right-12 w-48 h-48 bg-gradient-to-br from-amber-500/25 via-amber-500/10 to-transparent rounded-full blur-2xl pointer-events-none"
+                                />
+                              )}
+                            </AnimatePresence>
+
+                            <div className="flex items-center gap-5 relative z-10">
+                              <motion.div 
+                                animate={{ scale: isSelected ? 1.05 : 1 }}
+                                transition={{ type: "spring", stiffness: 450, damping: 22 }}
+                                className="relative shrink-0"
+                              >
                                 <img
                                   src={b.photoURL || b.photoUrl || b.photo || b.avatar || b.profilePic || b.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(b.name || "Profissional")}&background=1a1a1a&color=fff`}
-                                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-[1.75rem] object-cover border-2 border-white/10 group-hover:border-amber-500/30 transition-all"
+                                  className={`w-16 h-16 sm:w-20 sm:h-20 rounded-[1.75rem] object-cover border-2 transition-all ${
+                                    isSelected 
+                                      ? "border-amber-500 ring-2 ring-amber-500/30 ring-offset-2 ring-offset-black shadow-lg shadow-amber-500/25" 
+                                      : "border-white/10 group-hover:border-amber-500/30"
+                                  }`}
                                   alt={b.name}
                                   referrerPolicy="no-referrer"
-                                  />
-                                <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-black animate-pulse" />
-                              </div>
+                                />
+                                <AnimatePresence>
+                                  {isSelected ? (
+                                    <motion.div
+                                      key="selected-check"
+                                      initial={{ scale: 0, rotate: -30, opacity: 0 }}
+                                      animate={{ scale: 1, rotate: 0, opacity: 1 }}
+                                      exit={{ scale: 0, opacity: 0 }}
+                                      transition={{ type: "spring", stiffness: 500, damping: 22 }}
+                                      className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-amber-500 text-black border-2 border-black flex items-center justify-center shadow-lg shadow-amber-500/40"
+                                    >
+                                      <CheckCircle2 className="w-3.5 h-3.5 text-black fill-black" />
+                                    </motion.div>
+                                  ) : (
+                                    <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-black animate-pulse" />
+                                  )}
+                                </AnimatePresence>
+                              </motion.div>
                               
                               <div className="text-left space-y-1">
-                                <span className="text-[7.5px] font-black uppercase tracking-[0.25em] px-2 py-0.5 rounded leading-none inline-block text-amber-500 bg-amber-500/10">
+                                <span className={`text-[7.5px] font-black uppercase tracking-[0.25em] px-2 py-0.5 rounded leading-none inline-block transition-colors ${
+                                  isSelected ? "text-black bg-amber-500 font-bold" : "text-amber-500 bg-amber-500/10"
+                                }`}>
                                   {b.role === "manager" ? "Barbeiro" : "Especialista"}
                                 </span>
                                 <h4 className="font-sans font-black text-white text-base sm:text-lg uppercase italic tracking-tight group-hover:text-amber-400 transition-colors leading-none">
@@ -2145,7 +2296,20 @@ export function BookingScreen({
                               </div>
                             </div>
 
-                            <ChevronRight className="w-5 h-5 text-neutral-700 group-hover:text-amber-500 group-hover:translate-x-1 transition-all shrink-0" />
+                            <div className="relative z-10 shrink-0">
+                              {isSelected ? (
+                                <motion.div
+                                  initial={{ scale: 0 }}
+                                  animate={{ scale: 1 }}
+                                  transition={{ type: "spring", stiffness: 500, damping: 22 }}
+                                  className="w-8 h-8 rounded-full bg-amber-500 text-black flex items-center justify-center shadow-md shadow-amber-500/30"
+                                >
+                                  <CheckCircle2 className="w-4 h-4 text-black fill-black" />
+                                </motion.div>
+                              ) : (
+                                <ChevronRight className="w-5 h-5 text-neutral-700 group-hover:text-amber-500 group-hover:translate-x-1 transition-all" />
+                              )}
+                            </div>
                           </button>
 
                           {b.portfolio && b.portfolio.length > 0 && (
@@ -2154,7 +2318,7 @@ export function BookingScreen({
                                 e.stopPropagation();
                                 setViewingPortfolio(b);
                               }}
-                              className="absolute right-14 top-1/2 -translate-y-1/2 p-3 liquid-glass  rounded-2xl text-neutral-400 hover:text-amber-500 hover:border-amber-500/30 active:scale-95 transition-all shadow-inner cursor-pointer"
+                              className="absolute right-14 top-1/2 -translate-y-1/2 p-3 liquid-glass rounded-2xl text-neutral-400 hover:text-amber-500 hover:border-amber-500/30 active:scale-95 transition-all shadow-inner cursor-pointer z-10"
                               title="Ver Portfólio de Trabalhos"
                             >
                               <ImageIcon className="w-5 h-5" />

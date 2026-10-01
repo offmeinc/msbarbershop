@@ -59,9 +59,10 @@ interface BarbershopManagementProps {
 import { AnalyticsScreen } from './AnalyticsScreen';
 import { InventoryScreen } from './InventoryScreen';
 import { GoalsDashboard } from './GoalsDashboard';
+import { ClientsManagementTab } from './ClientsManagementTab';
 
 export function BarbershopManagement({ onBack, user, role }: BarbershopManagementProps) {
-  const [activeTab, setActiveTab] = useState<"dashboard" | "commissions" | "expenses" | "stock" | "goals" | "debts" | "loyalty" | "taxes">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "clients" | "commissions" | "expenses" | "stock" | "goals" | "debts" | "loyalty" | "taxes">("dashboard");
   
   // Data State
   const [appointments, setAppointments] = useState<any[]>([]);
@@ -616,6 +617,7 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
       <div className="flex gap-2 pb-1 overflow-x-auto no-scrollbar border-b border-white/5">
         {[
           { id: "dashboard", label: "Geral", icon: <ChartIcon className="w-4 h-4" /> },
+          { id: "clients", label: "Clientes", icon: <Users className="w-4 h-4" /> },
           { id: "goals", label: "Metas", icon: <Target className="w-4 h-4" /> },
           { id: "commissions", label: "Comissões", icon: <Percent className="w-4 h-4" /> },
           { id: "expenses", label: "Caixa", icon: <Receipt className="w-4 h-4" /> },
@@ -917,7 +919,14 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
             {/* Quick action section */}
             <div className=" liquid-glass  rounded-[2.5rem] p-6">
               <h3 className="text-base font-black text-white mb-4">Módulos Inteligentes Incorporados</h3>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                <button 
+                  onClick={() => setActiveTab("clients")} 
+                  className=" liquid-glass hover:border-amber-500/40 p-4 rounded-2xl text-center space-y-2 group transition-all bg-amber-500/[0.04]"
+                >
+                  <Users className="w-5 h-5 text-amber-500 mx-auto group-hover:scale-110 transition-transform" />
+                  <p className="text-[9px] font-black text-white uppercase tracking-widest">Painel de Clientes</p>
+                </button>
                 <button 
                   onClick={() => setActiveTab("goals")} 
                   className=" liquid-glass  hover:border-amber-500/30 p-4 rounded-2xl text-center space-y-2 group transition-all"
@@ -950,6 +959,16 @@ export function BarbershopManagement({ onBack, user, role }: BarbershopManagemen
             </div>
 
           </motion.div>
+        )}
+
+        {/* Tab: Clientes Focado (Dia, Semana, Mês, Por Vir & Ficha Completa) */}
+        {activeTab === "clients" && (
+          <ClientsManagementTab
+            appointments={appointments}
+            barbers={barbers}
+            user={user}
+            role={role}
+          />
         )}
 
         {/* Tab: Goals Configuration */}

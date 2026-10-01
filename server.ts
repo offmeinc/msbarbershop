@@ -36,7 +36,9 @@ function getGeminiClient(): GoogleGenAI {
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const portArgIndex = process.argv.indexOf('--port');
+  const portFromArgs = portArgIndex !== -1 ? parseInt(process.argv[portArgIndex + 1], 10) : undefined;
+  const PORT = portFromArgs || 3000;
   
   // Support standard JSON body parsing for API routes
   app.use(express.json());
@@ -59,12 +61,6 @@ async function startServer() {
     methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
   }));
-  
-  // Initialize Push notifications
-  const vapid = await initVapid();
-  startAppointmentsListener();
-  startChatsListener();
-  startAppointmentAutoUpdater();
   
   const upload = multer({ storage: multer.memoryStorage() });
 
@@ -453,9 +449,29 @@ Gere um relatório de desempenho em português (pt-BR).`;
   });
 
   // Vite and Static handling
+  let viteMiddleware: any = null;
   if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({ server: { middlewareMode: true }, appType: "spa" });
-    app.use(vite.middlewares);
+    createViteServer({ server: { middlewareMode: true }, appType: "spa" })
+      .then((vite) => {
+        viteMiddleware = vite.middlewares;
+        console.log("[Vite] Middleware mode initialized.");
+      })
+      .catch((err) => {
+        console.error("[Vite] Failed to create Vite server:", err);
+      });
+
+    app.use((req, res, next) => {
+      if (req.path.startsWith('/api/')) return next();
+      if (viteMiddleware) {
+        return viteMiddleware(req, res, next);
+      }
+      const checkInterval = setInterval(() => {
+        if (viteMiddleware) {
+          clearInterval(checkInterval);
+          viteMiddleware(req, res, next);
+        }
+      }, 50);
+    });
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
@@ -464,6 +480,19 @@ Gere um relatório de desempenho em português (pt-BR).`;
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`  ➜  Local:   http://localhost:${PORT}/`);
+    console.log(`  ➜  Network: http://0.0.0.0:${PORT}/`);
+
+    // Initialize Push notifications and background listeners asynchronously without delaying server readiness
+    initVapid()
+      .then(() => {
+        startAppointmentsListener();
+        startChatsListener();
+        startAppointmentAutoUpdater();
+      })
+      .catch((err) => {
+        console.warn("[Push Service] Background init warning:", err?.message || err);
+      });
   });
 }
 
