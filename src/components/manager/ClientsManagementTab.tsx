@@ -39,7 +39,9 @@ import {
   Loader2,
   Smile,
   Flame,
-  ArrowRight
+  ArrowRight,
+  Bell,
+  Send
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { 
@@ -90,6 +92,13 @@ export function ClientsManagementTab({
   const [selectedClientModal, setSelectedClientModal] = useState<any | null>(null);
   const [clientNotes, setClientNotes] = useState("");
   const [isSavingNotes, setIsSavingNotes] = useState(false);
+  const [sendingPushClientIds, setSendingPushClientIds] = useState<string[]>([]);
+  const [batchPushLoading, setBatchPushLoading] = useState(false);
+  const [whatsAppModalData, setWhatsAppModalData] = useState<{
+    client: any;
+    templateIndex: number;
+    customMessage: string;
+  } | null>(null);
 
   // Real-time listener for users with role="client"
   useEffect(() => {
@@ -588,6 +597,119 @@ export function ClientsManagementTab({
     return `https://wa.me/${number}?text=${encodeURIComponent(text)}`;
   };
 
+  // Dispatch PWA push reminder to a single client
+  const handleSendHaircutReminderPush = async (client: any) => {
+    const st = clientStatsMap.get(client.id);
+    const daysSince = st?.daysSinceLastVisit || 0;
+    const barberName = st?.favoriteBarber || "seu barbeiro habitual";
+    
+    setSendingPushClientIds((prev) => [...prev, client.id]);
+    try {
+      const res = await fetch("/api/push/send-haircut-reminder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientId: client.uid || client.id,
+          clientPhone: client.whatsapp || client.phone,
+          clientName: client.name,
+          daysSince,
+          barberName
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success(`Notificação PWA enviada para ${client.name}! 🔔`);
+      } else {
+        toast.error(data.error || "Não foi possível enviar a notificação PWA.");
+      }
+    } catch (err: any) {
+      toast.error("Erro ao conectar com o serviço de notificações.");
+    } finally {
+      setSendingPushClientIds((prev) => prev.filter((id) => id !== client.id));
+    }
+  };
+
+  // Dispatch PWA push reminders to ALL overdue clients in batch
+  const handleBatchSendHaircutReminders = async () => {
+    const overdueList = combinedClients.filter((c) => {
+      const st = clientStatsMap.get(c.id);
+      return st && st.daysSinceLastVisit !== null && st.daysSinceLastVisit >= 21 && st.upcomingApps.length === 0;
+    });
+
+    if (overdueList.length === 0) {
+      toast.info("Não há clientes com corte vencido (+21 dias) no momento.");
+      return;
+    }
+
+    if (!window.confirm(`Deseja disparar a notificação PWA de retorno para todos os ${overdueList.length} clientes na janela de corte?`)) {
+      return;
+    }
+
+    setBatchPushLoading(true);
+    let sentSuccess = 0;
+
+    for (const cli of overdueList) {
+      const st = clientStatsMap.get(cli.id);
+      try {
+        await fetch("/api/push/send-haircut-reminder", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            clientId: cli.uid || cli.id,
+            clientPhone: cli.whatsapp || cli.phone,
+            clientName: cli.name,
+            daysSince: st?.daysSinceLastVisit || 0,
+            barberName: st?.favoriteBarber || "a equipe"
+          })
+        });
+        sentSuccess++;
+      } catch (e) {}
+    }
+
+    setBatchPushLoading(false);
+    toast.success(`Disparo PWA concluído: ${sentSuccess} de ${overdueList.length} clientes notificados! 🚀`);
+  };
+
+  // Helper to generate the 3 WhatsApp templates
+  const getWhatsAppTemplates = (client: any) => {
+    const st = clientStatsMap.get(client?.id);
+    const daysSince = st?.daysSinceLastVisit || 25;
+    const barberName = st?.favoriteBarber || "seu barbeiro favorito";
+    const firstName = client?.name ? client.name.split(" ")[0] : "Amigo";
+    const appUrl = typeof window !== "undefined" ? window.location.origin : "https://barbearia.app";
+
+    return [
+      {
+        id: 0,
+        title: "Estilo & Régua (Recomendado)",
+        desc: "Foco no visual impecável e alinhamento",
+        text: `Fala, ${firstName}! Tudo bem? Já se passaram ${daysSince} dias desde o seu último corte na ${BARBERSHOP_NAME}. Seu visual na régua faz toda a diferença na sua presença! Que tal garantir seu horário com ${barberName} para esta semana? ✂️💈\n\nAgende seu horário aqui: ${appUrl}`
+      },
+      {
+        id: 1,
+        title: "Lembrete VIP & Exclusivo",
+        desc: "Tom cordial e atencioso para clientes fiéis",
+        text: `Olá, ${firstName}! Tudo bem? Passando para te lembrar que estamos na janela ideal para a manutenção do seu corte com ${barberName} na ${BARBERSHOP_NAME}. Podemos reservar um horário especial pra você esta semana? Abraço!\n\nLink rápido: ${appUrl}`
+      },
+      {
+        id: 2,
+        title: "Direto & Rápido",
+        desc: "Mensagem curta e objetiva",
+        text: `${firstName}, na régua de novo? Seu corte já completou ${daysSince} dias! Garanta sua vaga com a gente antes que a agenda esgote: ${appUrl}`
+      }
+    ];
+  };
+
+  const handleOpenWhatsAppModal = (client: any) => {
+    const templates = getWhatsAppTemplates(client);
+    setWhatsAppModalData({
+      client,
+      templateIndex: 0,
+      customMessage: templates[0].text
+    });
+    triggerLightHaptic();
+  };
+
   return (
     <motion.div
       key="clients-management-tab"
@@ -1028,25 +1150,40 @@ export function ClientsManagementTab({
               </div>
             </div>
 
-            {/* Inactive / Overdue Alert */}
+            {/* Inactive / Overdue Alert & Batch PWA Trigger */}
             {metrics.overdueClientsCount > 0 && (
-              <button
-                onClick={() => setFilterCategory("overdue")}
-                className="w-full p-3.5 bg-amber-500/10 hover:bg-amber-500/15 border border-amber-500/20 rounded-2xl text-left flex items-center justify-between group transition-colors"
-              >
-                <div className="flex items-center gap-2.5">
-                  <ShieldAlert className="w-4 h-4 text-amber-500 shrink-0" />
-                  <div>
-                    <p className="text-xs font-black text-amber-400 uppercase">
-                      {metrics.overdueClientsCount} Clientes para Resgatar
-                    </p>
-                    <p className="text-[8px] text-neutral-400 font-bold">
-                      Não voltam há mais de 30 dias
-                    </p>
+              <div className="space-y-2">
+                <button
+                  onClick={() => setFilterCategory("overdue")}
+                  className="w-full p-3.5 bg-amber-500/10 hover:bg-amber-500/15 border border-amber-500/20 rounded-2xl text-left flex items-center justify-between group transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <ShieldAlert className="w-4 h-4 text-amber-500 shrink-0" />
+                    <div>
+                      <p className="text-xs font-black text-amber-400 uppercase">
+                        {metrics.overdueClientsCount} Clientes para Resgatar
+                      </p>
+                      <p className="text-[8px] text-neutral-400 font-bold">
+                        Não voltam há mais de 30 dias
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <ChevronRight className="w-4 h-4 text-amber-500 group-hover:translate-x-1 transition-transform" />
-              </button>
+                  <ChevronRight className="w-4 h-4 text-amber-500 group-hover:translate-x-1 transition-transform" />
+                </button>
+
+                <button
+                  onClick={handleBatchSendHaircutReminders}
+                  disabled={batchPushLoading}
+                  className="w-full py-2.5 px-3 bg-amber-500 hover:bg-amber-400 text-black text-[9px] font-black uppercase tracking-wider rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  {batchPushLoading ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Bell className="w-3.5 h-3.5" />
+                  )}
+                  Disparar PWA Push em Massa ({metrics.overdueClientsCount})
+                </button>
+              </div>
             )}
           </div>
         </div>
@@ -1230,22 +1367,42 @@ export function ClientsManagementTab({
                   </div>
 
                   {/* Action buttons */}
-                  <div className="flex items-center gap-2 pt-3 border-t border-white/5">
+                  <div className="flex items-center gap-1.5 pt-3 border-t border-white/5 flex-wrap">
+                    {/* Botão Notificar PWA */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSendHaircutReminderPush(client);
+                      }}
+                      disabled={sendingPushClientIds.includes(client.id)}
+                      className="py-1.5 px-2 rounded-xl text-[9px] font-black uppercase tracking-wider flex items-center justify-center gap-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 transition-colors disabled:opacity-50 cursor-pointer"
+                      title="Disparar notificação PWA no celular do cliente"
+                    >
+                      {sendingPushClientIds.includes(client.id) ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
+                        <Bell className="w-3 h-3" />
+                      )}
+                      <span>PWA</span>
+                    </button>
+
+                    {/* Botão WhatsApp com Templates */}
                     {cleanPhone && (
-                      <a
-                        href={waUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className={`py-1.5 px-3 rounded-xl text-[9px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors border ${
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenWhatsAppModal(client);
+                        }}
+                        className={`py-1.5 px-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors border flex-1 cursor-pointer ${
                           isOverdue 
-                            ? "bg-amber-500/15 border-amber-500/30 text-amber-400 hover:bg-amber-500/25 flex-1" 
-                            : "bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 flex-1"
+                            ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25" 
+                            : "bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20"
                         }`}
+                        title="Enviar lembrete pelo WhatsApp com modelos personalizados"
                       >
                         <MessageSquare className="w-3 h-3" />
-                        {isOverdue ? "Resgatar WhatsApp" : "WhatsApp"}
-                      </a>
+                        <span>{isOverdue ? "Resgatar Whats" : "WhatsApp"}</span>
+                      </button>
                     )}
 
                     <button
@@ -1253,7 +1410,7 @@ export function ClientsManagementTab({
                         e.stopPropagation();
                         handleOpenClientDetails(client);
                       }}
-                      className="py-1.5 px-3 liquid-glass hover:bg-white/10 text-neutral-300 hover:text-white rounded-xl text-[9px] font-black uppercase tracking-wider transition-all"
+                      className="py-1.5 px-2.5 liquid-glass hover:bg-white/10 text-neutral-300 hover:text-white rounded-xl text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer"
                     >
                       Ficha
                     </button>
@@ -1401,20 +1558,31 @@ export function ClientsManagementTab({
                     </div>
 
                     {/* Modal Bottom Actions */}
-                    <div className="flex items-center gap-3 pt-4 border-t border-white/5">
+                    <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-white/5">
+                      {/* Enviar Notificação PWA Push */}
+                      <button
+                        onClick={() => handleSendHaircutReminderPush(selectedClientModal)}
+                        disabled={sendingPushClientIds.includes(selectedClientModal.id)}
+                        className="py-3 px-4 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-400 font-black uppercase tracking-wider text-xs rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
+                        title="Disparar notificação PWA de retorno de corte"
+                      >
+                        {sendingPushClientIds.includes(selectedClientModal.id) ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Bell className="w-4 h-4" />
+                        )}
+                        Lembrete PWA
+                      </button>
+
+                      {/* Mandar WhatsApp com Modelos */}
                       {cleanPhone && (
-                        <a
-                          href={getWhatsAppMessageUrl(
-                            cleanPhone,
-                            `Olá ${selectedClientModal.name || "Cliente"}! Como vai? Equipe da ${BARBERSHOP_NAME} aqui!`
-                          )}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex-1 py-3 bg-emerald-500 text-black font-black uppercase tracking-wider text-xs rounded-2xl flex items-center justify-center gap-2 hover:bg-emerald-400 transition-colors shadow-lg"
+                        <button
+                          onClick={() => handleOpenWhatsAppModal(selectedClientModal)}
+                          className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-400 text-black font-black uppercase tracking-wider text-xs rounded-2xl flex items-center justify-center gap-2 transition-colors shadow-lg cursor-pointer"
                         >
                           <MessageSquare className="w-4 h-4" />
-                          Conversar no WhatsApp
-                        </a>
+                          Lembrete no WhatsApp
+                        </button>
                       )}
 
                       {onScheduleClient && (
@@ -1423,16 +1591,131 @@ export function ClientsManagementTab({
                             onScheduleClient(selectedClientModal);
                             setSelectedClientModal(null);
                           }}
-                          className="py-3 px-5 liquid-glass hover:bg-white/10 text-white font-black uppercase tracking-wider text-xs rounded-2xl flex items-center justify-center gap-2 transition-all border border-white/10"
+                          className="py-3 px-5 liquid-glass hover:bg-white/10 text-white font-black uppercase tracking-wider text-xs rounded-2xl flex items-center justify-center gap-2 transition-all border border-white/10 cursor-pointer"
                         >
                           <CalendarPlus className="w-4 h-4 text-amber-500" />
-                          Agendar Horário
+                          Agendar
                         </button>
                       )}
                     </div>
                   </>
                 );
               })()}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ============================================================== */}
+      {/* 7. MODAL DE TEMPLATES WHATSAPP DE RETORNO / RENOVAÇÃO DO CORTE */}
+      {/* ============================================================== */}
+      <AnimatePresence>
+        {whatsAppModalData && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="liquid-glass border border-emerald-500/30 bg-neutral-950/95 w-full max-w-xl rounded-[2.5rem] p-6 md:p-8 space-y-6 shadow-2xl relative"
+            >
+              <button
+                onClick={() => setWhatsAppModalData(null)}
+                className="absolute top-6 right-6 p-2 rounded-2xl liquid-glass hover:bg-neutral-800 text-neutral-400 hover:text-white transition-all cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="flex items-center gap-3 border-b border-white/5 pb-4">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
+                  <MessageSquare className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-white uppercase italic tracking-tight">
+                    Lembrete de Corte via WhatsApp
+                  </h3>
+                  <p className="text-xs text-neutral-400 font-bold">
+                    Cliente: <span className="text-white">{whatsAppModalData.client.name}</span>
+                    {whatsAppModalData.client.whatsapp && ` • ${whatsAppModalData.client.whatsapp}`}
+                  </p>
+                </div>
+              </div>
+
+              {/* Template selector pills */}
+              <div className="space-y-2">
+                <span className="text-[10px] font-black uppercase text-neutral-400 tracking-widest block">
+                  Escolha um Modelo de Mensagem:
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {getWhatsAppTemplates(whatsAppModalData.client).map((tpl, idx) => {
+                    const isSelected = whatsAppModalData.templateIndex === idx;
+                    return (
+                      <button
+                        key={tpl.id}
+                        onClick={() => {
+                          setWhatsAppModalData({
+                            ...whatsAppModalData,
+                            templateIndex: idx,
+                            customMessage: tpl.text
+                          });
+                        }}
+                        className={`p-3 rounded-2xl text-left border transition-all cursor-pointer ${
+                          isSelected
+                            ? "bg-emerald-500/20 border-emerald-500 text-white shadow-lg"
+                            : "liquid-glass border-white/5 text-neutral-400 hover:text-white"
+                        }`}
+                      >
+                        <p className="text-[10px] font-black uppercase">{tpl.title}</p>
+                        <p className="text-[8px] text-neutral-500 line-clamp-1 mt-0.5">{tpl.desc}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Editable Textarea */}
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-black uppercase text-neutral-400 tracking-widest flex items-center justify-between">
+                  <span>Mensagem (editável antes de enviar):</span>
+                  <span className="text-neutral-500 text-[9px]">WhatsApp</span>
+                </span>
+                <textarea
+                  value={whatsAppModalData.customMessage}
+                  onChange={(e) =>
+                    setWhatsAppModalData({
+                      ...whatsAppModalData,
+                      customMessage: e.target.value
+                    })
+                  }
+                  rows={5}
+                  className="w-full liquid-glass rounded-2xl p-4 text-xs text-white outline-none focus:border-emerald-500 transition-all resize-none leading-relaxed"
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-3 pt-2">
+                <a
+                  href={getWhatsAppMessageUrl(
+                    whatsAppModalData.client.whatsapp || whatsAppModalData.client.phone,
+                    whatsAppModalData.customMessage
+                  )}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => {
+                    triggerLightHaptic();
+                    setWhatsAppModalData(null);
+                  }}
+                  className="flex-1 py-3.5 bg-emerald-500 hover:bg-emerald-400 text-black font-black uppercase tracking-wider text-xs rounded-2xl flex items-center justify-center gap-2 transition-colors shadow-xl shadow-emerald-500/20 cursor-pointer"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  Abrir no WhatsApp Agora
+                </a>
+                <button
+                  onClick={() => setWhatsAppModalData(null)}
+                  className="py-3.5 px-5 liquid-glass hover:bg-white/10 text-neutral-400 hover:text-white rounded-2xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer"
+                >
+                  Cancelar
+                </button>
+              </div>
             </motion.div>
           </div>
         )}

@@ -69,6 +69,7 @@ import { PreferencesSummary } from "./PreferencesSummary";
 import { NotificationsScreen } from "../NotificationsScreen";
 import { ChatScreen } from "../ChatScreens";
 import { ReferralsScreen } from "./ReferralsScreen";
+import { HaircutRenewalModal } from "./HaircutRenewalModal";
 import { GOOGLE_REVIEW_URL, BARBERSHOP_PHONE } from "../../constants";
 import { toast } from "../ui/Toast";
 import { triggerLightHaptic } from "../../lib/haptics";
@@ -97,6 +98,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
   const [comment, setComment] = useState("");
   const [referralCode, setReferralCode] = useState(user?.referralCode || "");
   const [pushPermission, setPushPermission] = useState<NotificationPermission>(getNotificationPermissionState());
+  const [showRenewalModal, setShowRenewalModal] = useState(false);
 
   const [liveUser, setLiveUser] = useState<any>(user);
   const [selectedLookbookStyle, setSelectedLookbookStyle] = useState<{ title: string, imageUrl: string } | null>(null);
@@ -345,6 +347,29 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
 
     return { totalSpent, completedCount, upcoming, daysToReturn, nextSuggestedDate, lastAppointment };
   }, [appointments]);
+
+  const daysSinceLastCut = useMemo(() => {
+    if (!stats.lastAppointment?.date) return 0;
+    const lastDate = stats.lastAppointment.date instanceof Timestamp
+      ? stats.lastAppointment.date.toDate()
+      : parseISO(stats.lastAppointment.date);
+    return Math.max(0, Math.ceil((Date.now() - lastDate.getTime()) / (1000 * 60 * 60 * 24)));
+  }, [stats.lastAppointment]);
+
+  // Auto-trigger haircut renewal modal if in renewal window and not snoozed
+  useEffect(() => {
+    if (stats.completedCount > 0 && !stats.upcoming && stats.lastAppointment) {
+      if (daysSinceLastCut >= 21) {
+        const snoozeUntil = Number(localStorage.getItem("haircut_reminder_snooze_until") || 0);
+        if (Date.now() > snoozeUntil) {
+          const timer = setTimeout(() => {
+            setShowRenewalModal(true);
+          }, 1000);
+          return () => clearTimeout(timer);
+        }
+      }
+    }
+  }, [stats.completedCount, stats.upcoming, stats.lastAppointment, daysSinceLastCut]);
 
   useEffect(() => {
     if (user?.uid && !liveUser?.referralCode && !referralCode && stats.completedCount > 0) {
@@ -791,12 +816,20 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                        <p className="text-[10px] text-neutral-500 font-bold uppercase leading-relaxed mb-8 max-w-[200px]">
                            Baseado no seu histórico, o momento ideal para o próximo corte seria dia <span className="text-amber-500 underline decoration-amber-500/30 underline-offset-4">{format(stats.nextSuggestedDate, "dd 'de' MMMM", { locale: ptBR })}</span>.
                        </p>
-                       <button 
-                           onClick={() => setCurrentView('booking')}
-                           className="bg-amber-500 text-black text-[10px] font-black uppercase italic tracking-widest px-8 py-4 rounded-2xl shadow-lg shadow-amber-500/20 active:scale-95 transition-all"
-                       >
-                           RESERVAR AGORA
-                       </button>
+                       <div className="flex flex-wrap items-center gap-3">
+                         <button 
+                             onClick={() => setCurrentView('booking')}
+                             className="bg-amber-500 text-black text-[10px] font-black uppercase italic tracking-widest px-8 py-4 rounded-2xl shadow-lg shadow-amber-500/20 active:scale-95 transition-all"
+                         >
+                             RESERVAR AGORA
+                         </button>
+                         <button
+                             onClick={() => setShowRenewalModal(true)}
+                             className="liquid-glass hover:bg-white/10 text-white text-[10px] font-black uppercase tracking-wider px-5 py-4 rounded-2xl transition-all"
+                         >
+                             Lembrete de Corte
+                         </button>
+                       </div>
                    </div>
                 </div>
               )}
@@ -1612,6 +1645,23 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
           </div>
         )}
       </AnimatePresence>
+
+      {/* Haircut Renewal In-App Modal */}
+      <HaircutRenewalModal
+        isOpen={showRenewalModal}
+        onClose={() => setShowRenewalModal(false)}
+        onBookNow={() => {
+          setShowRenewalModal(false);
+          if (stats.lastAppointment) {
+            setInitialBookingServiceId(stats.lastAppointment.serviceId);
+            setInitialBookingBarberId(stats.lastAppointment.barberId);
+          }
+          setCurrentView("booking");
+        }}
+        clientName={liveUser?.name || user?.displayName}
+        lastAppointment={stats.lastAppointment}
+        daysSinceLastCut={daysSinceLastCut}
+      />
     </motion.div>
   );
 }

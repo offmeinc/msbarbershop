@@ -158,4 +158,80 @@ export function startAppointmentAutoUpdater() {
       console.error("[AutoUpdater] Error in auto-updater cycle:", err.message);
     }
   }, 60000);
+
+  // Check for haircut renewal reminders every 6 hours
+  setTimeout(() => {
+    checkAndSendHaircutRenewalReminders();
+  }, 10000);
+  setInterval(() => {
+    checkAndSendHaircutRenewalReminders();
+  }, 6 * 60 * 60 * 1000);
+}
+
+export async function checkAndSendHaircutRenewalReminders() {
+  console.log("[AutoUpdater] Checking clients for haircut renewal reminders...");
+  try {
+    const now = new Date();
+    const twentyOneDaysAgo = new Date(now.getTime() - 21 * 24 * 60 * 60 * 1000);
+    const fortyFiveDaysAgo = new Date(now.getTime() - 45 * 24 * 60 * 60 * 1000);
+
+    const snapshot = await getDocs(collection(db, "appointments"));
+    const clientLastCompletedMap = new Map<string, any>();
+    const clientHasUpcoming = new Set<string>();
+
+    snapshot.docs.forEach((d) => {
+      const data = d.data();
+      const rawTarget = data.clientId && data.clientId !== "guest" ? data.clientId : data.clientPhone;
+      if (!rawTarget) return;
+      const targetId = rawTarget.replace(/[\s\-\(\)\+]/g, "");
+
+      const appDate = getExactAppointmentDate(data);
+      if (data.status === "completed") {
+        const existing = clientLastCompletedMap.get(targetId);
+        if (!existing || appDate > existing.date) {
+          clientLastCompletedMap.set(targetId, {
+            date: appDate,
+            barberName: data.barberName,
+            clientName: data.clientName,
+            serviceName: data.serviceName,
+            clientId: data.clientId,
+            clientPhone: data.clientPhone
+          });
+        }
+      } else if (data.status !== "cancelled" && appDate >= now) {
+        clientHasUpcoming.add(targetId);
+      }
+    });
+
+    let sentCount = 0;
+    for (const [targetId, info] of clientLastCompletedMap.entries()) {
+      if (clientHasUpcoming.has(targetId)) continue;
+      if (info.date <= twentyOneDaysAgo && info.date >= fortyFiveDaysAgo) {
+        const daysSince = Math.round((now.getTime() - info.date.getTime()) / (1000 * 60 * 60 * 24));
+        
+        try {
+          await sendPushNotification(targetId, {
+            title: "Hora de Renovar seu Corte! 💈✂️",
+            body: `Já se passaram ${daysSince} dias desde seu último corte com ${info.barberName || "a gente"}. Mantenha o visual alinhado!`,
+            url: "/"
+          });
+
+          await addDoc(collection(db, "notifications"), {
+            title: "Hora de Renovar seu Corte! 💈✂️",
+            message: `Já faz ${daysSince} dias desde seu último atendimento. Que tal garantir seu horário para renovar o corte?`,
+            timestamp: Timestamp.now(),
+            read: false,
+            type: "haircut_renewal",
+            clientId: info.clientId || targetId
+          });
+          sentCount++;
+        } catch (e: any) {
+          console.warn("[AutoUpdater] Failed to send automated renewal to", targetId, e.message);
+        }
+      }
+    }
+    console.log(`[AutoUpdater] Haircut renewal cycle complete: ${sentCount} reminders sent.`);
+  } catch (err: any) {
+    console.error("[AutoUpdater] Error in haircut renewal cycle:", err.message);
+  }
 }

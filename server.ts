@@ -423,6 +423,54 @@ Gere um relatório de desempenho em português (pt-BR).`;
     }
   });
 
+  // Haircut Renewal Push Notification & In-App Notification Dispatcher
+  app.post("/api/push/send-haircut-reminder", async (req, res) => {
+    const { clientId, clientPhone, clientName, daysSince, barberName } = req.body;
+    if (!clientId && !clientPhone) {
+      return res.status(400).json({ error: "Missing clientId or clientPhone" });
+    }
+    const cleanId = (clientId && clientId !== "guest" ? clientId : clientPhone).replace(/[\s\-\(\)\+]/g, "");
+    const title = "Hora de Renovar seu Corte! 💈✂️";
+    const body = daysSince 
+      ? `Já se passaram ${daysSince} dias desde seu último corte com ${barberName || "a gente"}. Mantenha seu visual alinhado! Agende seu horário.`
+      : `Já está na hora de renovar seu corte na barbearia! Garanta seu horário e mantenha o visual na régua.`;
+
+    try {
+      // 1. Send PWA / WebPush notification
+      await sendPushNotification(cleanId, {
+        title,
+        body,
+        url: "/"
+      });
+
+      // 2. Also register in the Firestore notifications collection
+      try {
+        const targetUserId = clientId || cleanId;
+        await adminDb.collection("notifications").add({
+          title,
+          message: body,
+          clientId: targetUserId,
+          type: "haircut_renewal",
+          read: false,
+          createdAt: new Date().toISOString(),
+          timestamp: new Date()
+        });
+
+        // 3. Mark last reminder timestamp on user doc
+        await adminDb.collection("users").doc(targetUserId).set({
+          lastHaircutReminderSent: new Date().toISOString()
+        }, { merge: true });
+      } catch (dbErr) {
+        console.warn("[Haircut Reminder] Warning writing to notifications collection:", dbErr);
+      }
+
+      res.json({ success: true, message: "Lembrete de corte enviado com sucesso!" });
+    } catch (err: any) {
+      console.error("[Haircut Reminder Error]:", err.message);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // Mercado Pago Payment Creation API
   app.post("/api/payments/mercado-pago/create-payment", async (req, res) => {
     const { transaction_amount, appointmentId, userId } = req.body;
