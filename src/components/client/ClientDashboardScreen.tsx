@@ -1001,9 +1001,9 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                        {appointments
                         .filter(app => app.reviewPhotoUrl)
                         .slice(0, 6)
-                        .map(app => (
+                        .map((app, idx) => (
                           <motion.div 
-                            key={app.id} 
+                            key={app.id ? `${app.id}-${idx}` : `rev-${idx}`} 
                             whileTap={{ scale: 0.95 }}
                             className="flex-shrink-0 w-32 aspect-[3/4] rounded-2xl overflow-hidden border border-white/10 relative group"
                           >
@@ -1031,8 +1031,8 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {appointments.slice(0, 5).map(app => (
-                      <div key={app.id} className="p-5 liquid-glass rounded-[2rem]  flex items-center justify-between group hover:border-amber-500/20 transition-all">
+                    {appointments.slice(0, 5).map((app, idx) => (
+                      <div key={app.id ? `${app.id}-${idx}` : `hist-${idx}`} className="p-5 liquid-glass rounded-[2rem]  flex items-center justify-between group hover:border-amber-500/20 transition-all">
                         <div className="flex items-center gap-4">
                           <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border border-white/5 ${app.status === 'completed' ? 'bg-amber-500/10 text-amber-500' : 'bg-neutral-900 text-neutral-700'}`}>
                             <CheckCircle2 className="w-5 h-5" />

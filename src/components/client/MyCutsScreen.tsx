@@ -240,9 +240,9 @@ export function MyCutsScreen({ user, appointments, onBack, onBookAgain, onResche
                 <h3 className="text-[9px] font-black uppercase tracking-[0.25em] text-neutral-500">Próximos Agendamentos</h3>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {futureAppointments.map(app => (
+                {futureAppointments.map((app, idx) => (
                   <div 
-                    key={app.id} 
+                    key={app.id ? `${app.id}-${idx}` : `future-${idx}`} 
                     className="p-6 bg-gradient-to-br from-amber-500/10 to-neutral-900/40 border border-amber-500/20 rounded-[2.5rem] relative overflow-hidden group shadow-xl transition-all hover:border-amber-500/35"
                   >
                     {/* Visual Ticket Tear-lines */}
@@ -516,11 +516,11 @@ export function MyCutsScreen({ user, appointments, onBack, onBookAgain, onResche
               </div>
             ) : (
               <div className="space-y-4">
-                {pastAppointments.map(app => {
+                {pastAppointments.map((app, idx) => {
                   const isCompleted = app.status === 'completed';
                   return (
                     <div 
-                      key={app.id} 
+                      key={app.id ? `${app.id}-${idx}` : `past-${idx}`} 
                       className={`p-6 bg-[#090909] rounded-[2.5rem] border border-white/5 space-y-4 transition-all relative ${
                         !isCompleted ? 'opacity-55' : 'hover:border-white/10'
                       }`}

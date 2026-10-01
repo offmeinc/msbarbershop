@@ -776,9 +776,9 @@ export function ProfessionalClientChatsScreen({ user, onBack, initialClientId, i
               </div>
 
               <div className="flex-grow overflow-y-auto space-y-2.5 pr-1 no-scrollbar pb-10">
-                {filteredClients.map((client) => (
+                {filteredClients.map((client, idx) => (
                   <button
-                    key={client.id}
+                    key={`${client.id || 'chat-client'}-${idx}`}
                     onClick={() => {
                         setActiveClientId(client.id);
                         setActiveClientName(client.name || "Cliente");

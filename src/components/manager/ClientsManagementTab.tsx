@@ -137,6 +137,16 @@ export function ClientsManagementTab({
     return new Date(app.date);
   };
 
+  // Helper to normalize phone numbers (strip non-digits and Brazilian 55 country code)
+  const normalizePhone = (phone: any): string => {
+    if (!phone) return "";
+    let digits = String(phone).replace(/\D/g, "");
+    if (digits.length >= 12 && digits.startsWith("55")) {
+      digits = digits.slice(2);
+    }
+    return digits;
+  };
+
   // Standardized Price Parser
   const getAppPrice = (app: any): number => {
     const p = app.totalPrice || app.price || 0;
@@ -156,43 +166,115 @@ export function ClientsManagementTab({
 
   // Combine registered clients with unique clients detected in appointments
   const combinedClients = useMemo(() => {
-    const map = new Map<string, any>();
+    const clientMap = new Map<string, any>();
+    const keyToIndex = new Map<string, string>();
 
-    // 1. Registered users
+    const getExistingClientId = (phone?: string, email?: string, id?: string, uid?: string): string | null => {
+      const normPhone = normalizePhone(phone);
+      const normEmail = (email || "").trim().toLowerCase();
+      const normIdPhone = normalizePhone(id);
+      const normUidPhone = normalizePhone(uid);
+
+      const candidateKeys = [
+        normPhone ? `p_${normPhone}` : null,
+        (normIdPhone.length >= 10 && normIdPhone.length <= 13) ? `p_${normIdPhone}` : null,
+        (normUidPhone.length >= 10 && normUidPhone.length <= 13) ? `p_${normUidPhone}` : null,
+        normEmail ? `e_${normEmail}` : null,
+        id ? `id_${id}` : null,
+        uid ? `uid_${uid}` : null,
+      ].filter(Boolean) as string[];
+
+      for (const k of candidateKeys) {
+        if (keyToIndex.has(k)) {
+          return keyToIndex.get(k)!;
+        }
+      }
+      return null;
+    };
+
+    const registerClientKeys = (canonicalId: string, phone?: string, email?: string, id?: string, uid?: string) => {
+      const normPhone = normalizePhone(phone);
+      const normEmail = (email || "").trim().toLowerCase();
+      const normIdPhone = normalizePhone(id);
+      const normUidPhone = normalizePhone(uid);
+
+      const candidateKeys = [
+        normPhone ? `p_${normPhone}` : null,
+        (normIdPhone.length >= 10 && normIdPhone.length <= 13) ? `p_${normIdPhone}` : null,
+        (normUidPhone.length >= 10 && normUidPhone.length <= 13) ? `p_${normUidPhone}` : null,
+        normEmail ? `e_${normEmail}` : null,
+        id ? `id_${id}` : null,
+        uid ? `uid_${uid}` : null,
+        `canonical_${canonicalId}`
+      ].filter(Boolean) as string[];
+
+      candidateKeys.forEach((k) => keyToIndex.set(k, canonicalId));
+    };
+
+    // 1. Process registered users
     clients.forEach((c) => {
-      const cleanPhone = (c.whatsapp || c.phone || "").replace(/\D/g, "");
-      const key = cleanPhone ? `phone_${cleanPhone}` : (c.email ? `email_${c.email.toLowerCase()}` : `id_${c.id}`);
-      map.set(key, {
-        id: c.id,
-        uid: c.uid || c.id,
-        name: c.name || c.displayName || "Cliente",
-        whatsapp: c.whatsapp || c.phone || "",
-        phone: c.phone || c.whatsapp || "",
-        email: c.email || "",
-        photoURL: c.photoURL || "",
-        createdAt: c.createdAt,
-        notes: c.notes || "",
-        loyaltyPoints: c.loyaltyPoints || 0,
-        isRegistered: true
-      });
+      const normPhone = normalizePhone(c.whatsapp || c.phone);
+      const existingId = getExistingClientId(c.whatsapp || c.phone, c.email, c.id, c.uid);
+
+      if (existingId && clientMap.has(existingId)) {
+        const existing = clientMap.get(existingId);
+        existing.isRegistered = true;
+        if (!existing.name || existing.name === "Cliente") existing.name = c.name || c.displayName || existing.name;
+        if (!existing.whatsapp) existing.whatsapp = c.whatsapp || c.phone || "";
+        if (!existing.phone) existing.phone = c.phone || c.whatsapp || "";
+        if (!existing.email) existing.email = c.email || "";
+        if (!existing.photoURL && c.photoURL) existing.photoURL = c.photoURL;
+        if (c.notes) existing.notes = c.notes;
+        if (c.loyaltyPoints) existing.loyaltyPoints = c.loyaltyPoints;
+        registerClientKeys(existingId, c.whatsapp || c.phone, c.email, c.id, c.uid);
+      } else {
+        const canonicalId = c.id || c.uid || (normPhone ? `phone_${normPhone}` : `client_${clientMap.size}`);
+        const clientObj = {
+          id: canonicalId,
+          uid: c.uid || c.id || canonicalId,
+          name: c.name || c.displayName || "Cliente",
+          whatsapp: c.whatsapp || c.phone || "",
+          phone: c.phone || c.whatsapp || "",
+          email: c.email || "",
+          photoURL: c.photoURL || "",
+          createdAt: c.createdAt,
+          notes: c.notes || "",
+          loyaltyPoints: c.loyaltyPoints || 0,
+          isRegistered: true
+        };
+        clientMap.set(canonicalId, clientObj);
+        registerClientKeys(canonicalId, c.whatsapp || c.phone, c.email, c.id, c.uid);
+      }
     });
 
     // 2. Discover clients from appointments
     appointments.forEach((app) => {
-      const cleanPhone = (app.clientPhone || app.clientWhatsapp || "").replace(/\D/g, "");
-      const email = (app.clientEmail || "").toLowerCase();
-      const idKey = app.clientId ? `id_${app.clientId}` : null;
-      const phoneKey = cleanPhone ? `phone_${cleanPhone}` : null;
-      const emailKey = email ? `email_${email}` : null;
+      const normPhone = normalizePhone(app.clientPhone || app.clientWhatsapp);
+      const existingId = getExistingClientId(app.clientPhone || app.clientWhatsapp, app.clientEmail, app.clientId, undefined);
 
-      let existingKey = [phoneKey, emailKey, idKey].find((k) => k && map.has(k));
-      let currentClient = existingKey ? map.get(existingKey) : null;
-
-      if (!currentClient) {
-        const assignedKey = phoneKey || emailKey || idKey || `app_${app.id}`;
-        map.set(assignedKey, {
-          id: app.clientId || `guest_${app.id}`,
-          uid: app.clientId || `guest_${app.id}`,
+      if (existingId && clientMap.has(existingId)) {
+        const existing = clientMap.get(existingId);
+        if (!existing.whatsapp && (app.clientPhone || app.clientWhatsapp)) {
+          existing.whatsapp = app.clientPhone || app.clientWhatsapp;
+        }
+        if (!existing.phone && (app.clientPhone || app.clientWhatsapp)) {
+          existing.phone = app.clientPhone || app.clientWhatsapp;
+        }
+        if (!existing.email && app.clientEmail) {
+          existing.email = app.clientEmail;
+        }
+        if (!existing.photoURL && app.clientPhoto) {
+          existing.photoURL = app.clientPhoto;
+        }
+        if ((!existing.name || existing.name === "Cliente") && app.clientName) {
+          existing.name = app.clientName;
+        }
+        registerClientKeys(existingId, app.clientPhone || app.clientWhatsapp, app.clientEmail, app.clientId, undefined);
+      } else {
+        const canonicalId = app.clientId || (normPhone ? `phone_${normPhone}` : `guest_${app.id}`);
+        const clientObj = {
+          id: canonicalId,
+          uid: app.clientId || canonicalId,
           name: app.clientName || "Cliente",
           whatsapp: app.clientPhone || app.clientWhatsapp || "",
           phone: app.clientPhone || app.clientWhatsapp || "",
@@ -202,19 +284,29 @@ export function ClientsManagementTab({
           notes: "",
           loyaltyPoints: 0,
           isRegistered: false
-        });
-      } else {
-        // Enhance missing fields
-        if (!currentClient.whatsapp && (app.clientPhone || app.clientWhatsapp)) {
-          currentClient.whatsapp = app.clientPhone || app.clientWhatsapp;
-        }
-        if (!currentClient.email && app.clientEmail) {
-          currentClient.email = app.clientEmail;
-        }
+        };
+        clientMap.set(canonicalId, clientObj);
+        registerClientKeys(canonicalId, app.clientPhone || app.clientWhatsapp, app.clientEmail, app.clientId, undefined);
       }
     });
 
-    return Array.from(map.values());
+    // Final deduplication guaranteeing completely unique IDs
+    const result: any[] = [];
+    const usedIds = new Set<string>();
+
+    Array.from(clientMap.values()).forEach((c, idx) => {
+      let finalId = c.id;
+      if (!finalId || usedIds.has(finalId)) {
+        finalId = `${finalId || "client"}_${idx}`;
+      }
+      usedIds.add(finalId);
+      result.push({
+        ...c,
+        id: finalId
+      });
+    });
+
+    return result;
   }, [clients, appointments]);
 
   // Compute stats for each client based on their appointments
@@ -235,14 +327,14 @@ export function ClientsManagementTab({
     const now = new Date();
 
     combinedClients.forEach((client) => {
-      const cleanCliPhone = (client.whatsapp || client.phone || "").replace(/\D/g, "");
-      const cliEmail = (client.email || "").toLowerCase();
+      const cleanCliPhone = normalizePhone(client.whatsapp || client.phone || client.id || client.uid);
+      const cliEmail = (client.email || "").toLowerCase().trim();
       const cliId = client.id;
       const cliUid = client.uid;
 
       const clientApps = appointments.filter((app) => {
-        const cleanAppPhone = (app.clientPhone || app.clientWhatsapp || "").replace(/\D/g, "");
-        const appEmail = (app.clientEmail || "").toLowerCase();
+        const cleanAppPhone = normalizePhone(app.clientPhone || app.clientWhatsapp || app.clientId);
+        const appEmail = (app.clientEmail || "").toLowerCase().trim();
         const appId = app.clientId;
 
         const idMatch = (cliId && appId && cliId === appId) || (cliUid && appId && cliUid === appId);
@@ -945,7 +1037,7 @@ export function ClientsManagementTab({
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {metrics.upcoming.list.slice(0, 6).map((app) => {
+            {metrics.upcoming.list.slice(0, 6).map((app, appIdx) => {
               const appDate = getAppDate(app);
               const isAppToday = isSameDay(appDate, new Date());
               const isAppTomorrow = isSameDay(appDate, addDays(new Date(), 1));
@@ -965,7 +1057,7 @@ export function ClientsManagementTab({
 
               return (
                 <div 
-                  key={app.id}
+                  key={app.id ? `${app.id}-${appIdx}` : `upcoming-${appIdx}`}
                   className="liquid-glass p-4 rounded-3xl space-y-3 relative group hover:border-amber-500/30 transition-all flex flex-col justify-between"
                 >
                   <div className="space-y-2">
@@ -1275,7 +1367,7 @@ export function ClientsManagementTab({
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredClients.map((client) => {
+            {filteredClients.map((client, clientIdx) => {
               const st = clientStatsMap.get(client.id);
               const rank = st?.rank || { name: "Cliente", color: "bg-neutral-800 text-neutral-400", tier: 1 };
               const cutsCount = st?.completedApps.length || 0;
@@ -1292,7 +1384,7 @@ export function ClientsManagementTab({
 
               return (
                 <div
-                  key={client.id}
+                  key={`${client.id || "client"}-${clientIdx}`}
                   onClick={() => handleOpenClientDetails(client)}
                   className="liquid-glass p-5 rounded-3xl space-y-4 hover:border-amber-500/30 transition-all cursor-pointer group flex flex-col justify-between"
                 >
@@ -1535,9 +1627,9 @@ export function ClientsManagementTab({
                             Nenhum corte registrado até o momento
                           </div>
                         ) : (
-                          st?.completedApps.map((app) => (
+                          st?.completedApps.map((app, appIdx) => (
                             <div
-                              key={app.id}
+                              key={app.id ? `${app.id}-${appIdx}` : `comp-${appIdx}`}
                               className="liquid-glass p-3 rounded-2xl flex items-center justify-between text-xs"
                             >
                               <div>

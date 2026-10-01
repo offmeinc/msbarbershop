@@ -402,10 +402,10 @@ export function ClientDetailsScreen({ client, onBack, onScheduleClient, onMessag
         </div>
       ) : (
         <div className="space-y-3">
-          {sortedClientApps.map(app => {
+          {sortedClientApps.map((app, appIdx) => {
             const dateVal = getAppDate(app);
             return (
-              <div key={app.id} className=" liquid-glass p-5 rounded-[2rem]  flex flex-col sm:flex-row sm:items-center justify-between gap-4 group hover:border-amber-500/20 transition-all">
+              <div key={app.id ? `${app.id}-${appIdx}` : `app-${appIdx}`} className=" liquid-glass p-5 rounded-[2rem]  flex flex-col sm:flex-row sm:items-center justify-between gap-4 group hover:border-amber-500/20 transition-all">
                  <div className="flex items-start sm:items-center gap-4 text-left">
                     <div className="relative">
                       <div className="liquid-glass p-4 rounded-2xl text-neutral-400  group-hover:text-amber-500 transition-colors shrink-0">

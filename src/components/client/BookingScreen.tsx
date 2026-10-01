@@ -2658,9 +2658,9 @@ export function BookingScreen({
                         {/* Dropdown Options */}
                         {showDropdown && filteredClients.length > 0 && (
                           <div className=" liquid-glass/80  rounded-2xl overflow-hidden max-h-52 overflow-y-auto divide-y divide-white/5">
-                            {filteredClients.map((client) => (
+                            {filteredClients.map((client, idx) => (
                               <button
-                                key={client.id}
+                                key={`${client.id || 'client'}-${idx}`}
                                 type="button"
                                 className="liquid-glass w-full px-4 py-3 text-left  transition-all flex items-center justify-between group"
                                 onClick={() => {

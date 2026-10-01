@@ -189,7 +189,7 @@ export function ClientsScreen({ onBack, onScheduleClient, onClientClick, user, r
                 return (
                   <motion.div 
                     id={`client-card-${client.id}`}
-                    key={client.id}
+                    key={`${client.id || 'cli'}-${index}`}
                     variants={{
                       hidden: { opacity: 0, y: 15 },
                       visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
