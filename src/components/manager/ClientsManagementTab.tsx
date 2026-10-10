@@ -8,6 +8,7 @@ import {
   doc, 
   updateDoc, 
   setDoc,
+  increment,
   Timestamp 
 } from "firebase/firestore";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
@@ -33,6 +34,8 @@ import {
   ArrowUpRight, 
   ShieldAlert, 
   Ban,
+  UserX,
+  AlertTriangle,
   Filter, 
   Star, 
   Save, 
@@ -319,6 +322,9 @@ export function ClientsManagementTab({
       completedApps: any[];
       upcomingApps: any[];
       cancelledApps: any[];
+      noShowApps: any[];
+      noShowCount: number;
+      attendanceRate: number;
       totalSpent: number;
       lastVisitDate: Date | null;
       nextVisitDate: Date | null;
@@ -357,6 +363,10 @@ export function ClientsManagementTab({
         .sort((a, b) => getAppDate(a).getTime() - getAppDate(b).getTime());
 
       const cancelled = clientApps.filter((a) => a.status === "cancelled");
+      const noShowApps = clientApps.filter((a) => a.status === "no_show");
+      const noShowCount = Math.max(noShowApps.length, Number(client.noShowCount) || 0);
+      const finishedVisits = completed.length + noShowCount;
+      const attendanceRate = finishedVisits > 0 ? Math.round((completed.length / finishedVisits) * 100) : 100;
 
       const totalSpent = completed.reduce((sum, a) => sum + getAppPrice(a), 0);
 
@@ -404,6 +414,9 @@ export function ClientsManagementTab({
         completedApps: completed,
         upcomingApps: upcoming,
         cancelledApps: cancelled,
+        noShowApps,
+        noShowCount,
+        attendanceRate,
         totalSpent,
         lastVisitDate,
         nextVisitDate,
@@ -720,6 +733,23 @@ export function ClientsManagementTab({
     if (!clean) return "";
     const number = clean.startsWith("55") ? clean : `55${clean}`;
     return `https://wa.me/${number}?text=${encodeURIComponent(text)}`;
+  };
+
+  // Send WhatsApp reminder and log on appointment
+  const handleSendWhatsAppConfirmation = async (app: any, waUrl: string) => {
+    if (!waUrl) return;
+    if (app?.id) {
+      try {
+        await updateDoc(doc(db, "appointments", app.id), {
+          reminderSentAt: new Date().toISOString(),
+          reminderCount: increment(1)
+        });
+        toast.success("Lembrete registrado no sistema! Abrindo WhatsApp...");
+      } catch (err) {
+        console.warn("Error updating reminder status:", err);
+      }
+    }
+    window.open(waUrl, "_blank");
   };
 
   // Dispatch PWA push reminder to a single client
@@ -1082,8 +1112,10 @@ export function ClientsManagementTab({
               const timeFormatted = app.time || format(appDate, "HH:mm");
               const price = getAppPrice(app);
               const serviceName = app.serviceName || app.service || (Array.isArray(app.services) ? app.services[0]?.name : "Corte");
+              const cliStats = clientStatsMap.get(app.clientId);
+              const prevNoShows = cliStats?.noShowCount || 0;
 
-              const waMsg = `Olá ${app.clientName || "Cliente"}! Tudo bem? Estamos confirmando seu agendamento na barbearia para ${relativeDay} às ${timeFormatted} (${serviceName}). Podemos te aguardar? Abraço!`;
+              const waMsg = `💈 Olá ${app.clientName || "Cliente"}! Tudo bem? Passando para confirmar seu horário de ${serviceName} na barbearia ${BARBERSHOP_NAME} para ${relativeDay} às ${timeFormatted}${app.barberName ? ` com ${app.barberName}` : ""}. Podemos confirmar sua presença? Responda SIM ou nos avise caso precise reagendar. Te esperamos!`;
               const waUrl = (app.clientPhone || app.clientWhatsapp) 
                 ? getWhatsAppMessageUrl(app.clientPhone || app.clientWhatsapp, waMsg) 
                 : "";
@@ -1120,22 +1152,51 @@ export function ClientsManagementTab({
                           <span className="text-neutral-500 font-normal truncate">com {app.barberName}</span>
                         )}
                       </div>
+
+                      {/* Anti-No-Show status badges */}
+                      <div className="flex flex-wrap items-center gap-1.5 pt-1.5">
+                        {app.clientConfirmed ? (
+                          <span className="px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1">
+                            <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400" /> Presença Confirmada
+                          </span>
+                        ) : app.reminderSentAt ? (
+                          <span className="px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-wider bg-blue-500/15 text-blue-300 border border-blue-500/30 flex items-center gap-1">
+                            <Clock className="w-2.5 h-2.5 text-blue-400" /> Lembrete Enviado
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-1 animate-pulse">
+                            <AlertTriangle className="w-2.5 h-2.5 text-amber-400" /> Aguardando Confirmação
+                          </span>
+                        )}
+
+                        {prevNoShows > 0 && (
+                          <span className="px-1.5 py-0.5 rounded-md text-[7.5px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/40 flex items-center gap-1" title={`${prevNoShows} falta(s) anterior(es)`}>
+                            <UserX className="w-2.5 h-2.5 text-rose-400" /> {prevNoShows} {prevNoShows === 1 ? 'Falta' : 'Faltas'} Histórico
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
                   {/* Actions */}
                   <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/5">
                     {(app.clientPhone || app.clientWhatsapp) ? (
-                      <a
-                        href={waUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="flex-1 py-1.5 px-3 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-xl text-[9px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors border border-emerald-500/20"
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSendWhatsAppConfirmation(app, waUrl);
+                        }}
+                        className={`flex-1 py-1.5 px-3 rounded-xl text-[9px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors border cursor-pointer ${
+                          app.clientConfirmed 
+                            ? "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/20" 
+                            : app.reminderSentAt
+                              ? "bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border-blue-500/20"
+                              : "bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border-amber-500/20"
+                        }`}
                       >
                         <MessageSquare className="w-3 h-3" />
-                        Confirmar WhatsApp
-                      </a>
+                        {app.clientConfirmed ? "Conversar WhatsApp" : app.reminderSentAt ? "Reenviar Lembrete" : "Confirmar Presença"}
+                      </button>
                     ) : (
                       <span className="text-[9px] text-neutral-500 uppercase font-bold">Sem telefone</span>
                     )}
@@ -1451,6 +1512,11 @@ export function ClientsManagementTab({
                             {client.blockedFromBooking && (
                               <span className="px-1.5 py-0.5 rounded-md text-[7.5px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/40 flex items-center gap-1">
                                 <Ban className="w-2.5 h-2.5 text-rose-400" /> Impedido
+                              </span>
+                            )}
+                            {Boolean(st?.noShowCount) && (
+                              <span className="px-1.5 py-0.5 rounded-md text-[7.5px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-400 border border-rose-500/30 flex items-center gap-1" title={`${st?.noShowCount} falta(s) registrada(s) - Taxa de presença: ${st?.attendanceRate}%`}>
+                                <UserX className="w-2.5 h-2.5 text-rose-400" /> {st?.noShowCount} {st?.noShowCount === 1 ? 'Falta' : 'Faltas'} ({st?.attendanceRate}%)
                               </span>
                             )}
                           </div>

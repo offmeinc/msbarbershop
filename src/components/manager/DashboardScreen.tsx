@@ -1402,6 +1402,11 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
                                     statusText = "Faltou";
                                     borderAccent = "border-l-purple-500 shadow-[inset_1px_0_10px_rgba(168,85,247,0.05)]";
                                     badgeDot = "bg-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.5)]";
+                                  } else if (app.clientConfirmed) {
+                                    statusColor = "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30";
+                                    statusText = "Presença Confirmada";
+                                    borderAccent = "border-l-emerald-500 shadow-[inset_1px_0_10px_rgba(16,185,129,0.15)]";
+                                    badgeDot = "bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.8)]";
                                   } else if (app.status === 'confirmed') {
                                     statusColor = "bg-amber-500/10 text-amber-400 border border-amber-500/20";
                                     statusText = "Confirmado";

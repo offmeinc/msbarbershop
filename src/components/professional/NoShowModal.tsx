@@ -8,11 +8,15 @@ import {
   FileText, 
   Loader2, 
   ShieldAlert,
-  CheckCircle2
+  CheckCircle2,
+  Ban,
+  MessageCircle,
+  Phone
 } from "lucide-react";
-import { doc, updateDoc, serverTimestamp, addDoc, collection } from "firebase/firestore";
+import { doc, updateDoc, serverTimestamp, addDoc, collection, setDoc, getDoc, increment } from "firebase/firestore";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
 import { motion, AnimatePresence } from "motion/react";
+import { BARBERSHOP_NAME } from "../../constants";
 
 interface NoShowModalProps {
   isOpen: boolean;
@@ -31,8 +35,14 @@ export function NoShowModal({
   const [chargeFee, setChargeFee] = useState(false);
   const [feeAmount, setFeeAmount] = useState("15.00");
   const [reason, setReason] = useState("Cliente não compareceu e não justificou com antecedência.");
+  const [blockFromBooking, setBlockFromBooking] = useState(false);
 
   if (!isOpen || !appointment) return null;
+
+  const rawPhone = (appointment.clientPhone || appointment.clientWhatsapp || "").replace(/\D/g, "");
+  const waPhone = rawPhone.length >= 12 && rawPhone.startsWith("55") ? rawPhone : (rawPhone ? `55${rawPhone}` : "");
+  const politeWhatsAppMsg = `Olá ${appointment.clientName || "Cliente"}! Sentimos sua falta hoje no horário das ${appointment.time || ""} para ${appointment.serviceName || "seu corte"} na ${BARBERSHOP_NAME}. Aconteceu algum imprevisto? Se desejar, estamos à disposição para reagendar para outro dia que fique melhor para você! 💈`;
+  const politeWhatsAppUrl = waPhone ? `https://wa.me/${waPhone}?text=${encodeURIComponent(politeWhatsAppMsg)}` : "";
 
   const handleConfirmNoShow = async () => {
     setLoading(true);
@@ -50,6 +60,44 @@ export function NoShowModal({
       };
 
       await updateDoc(appRef, updateData);
+
+      // Update client no-show record in users collection if ID or phone available
+      const targetUserId = appointment.clientId && appointment.clientId !== "guest" ? appointment.clientId : null;
+      if (targetUserId) {
+        try {
+          const userRef = doc(db, "users", targetUserId);
+          const userSnap = await getDoc(userRef);
+          const currentNoShows = userSnap.exists() ? (userSnap.data().noShowCount || 0) : 0;
+          const nextCount = currentNoShows + 1;
+
+          await setDoc(userRef, {
+            noShowCount: increment(1),
+            lastNoShowAt: serverTimestamp(),
+            ...(blockFromBooking ? {
+              blockedFromBooking: true,
+              blockedReason: `Bloqueado após registrar falta (No-Show). Histórico: ${nextCount} falta(s).`,
+              blockedAt: serverTimestamp()
+            } : {})
+          }, { merge: true });
+        } catch (uErr) {
+          console.warn("Could not update user noShowCount:", uErr);
+        }
+      } else if (rawPhone) {
+        try {
+          const userRef = doc(db, "users", rawPhone);
+          await setDoc(userRef, {
+            noShowCount: increment(1),
+            lastNoShowAt: serverTimestamp(),
+            ...(blockFromBooking ? {
+              blockedFromBooking: true,
+              blockedReason: `Bloqueado após registrar falta (No-Show).`,
+              blockedAt: serverTimestamp()
+            } : {})
+          }, { merge: true });
+        } catch (uErr) {
+          console.warn("Could not update user by phone noShowCount:", uErr);
+        }
+      }
 
       // Notify customer if registered
       if (appointment.clientId && appointment.clientId !== "guest") {
@@ -89,7 +137,7 @@ export function NoShowModal({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
           onClick={(e) => e.stopPropagation()}
-          className="bg-neutral-950 border border-rose-500/30 rounded-[2rem] max-w-md w-full p-6 shadow-2xl space-y-5 text-left"
+          className="bg-neutral-950 border border-rose-500/30 rounded-[2rem] max-w-md w-full p-6 shadow-2xl space-y-4 text-left my-auto"
         >
           {/* Header */}
           <div className="flex items-start justify-between">
@@ -118,10 +166,10 @@ export function NoShowModal({
           <div className="p-3.5 bg-rose-950/20 border border-rose-500/20 rounded-2xl text-xs text-rose-300 space-y-1">
             <div className="flex items-center gap-1.5 font-bold">
               <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
-              <span>Controle de Assiduidade</span>
+              <span>Controle Anti-No-Show e Assiduidade</span>
             </div>
             <p className="text-[11px] text-neutral-300">
-              O agendamento será marcado como <strong>Não Compareceu</strong>. Ele não será somado nos ganhos de hoje e ajudará a manter o índice de presença dos clientes atualizado.
+              O agendamento será marcado como <strong>Não Compareceu</strong>. A falta será contabilizada na ficha do cliente para controle de assiduidade da barbearia.
             </p>
           </div>
 
@@ -139,10 +187,33 @@ export function NoShowModal({
             />
           </div>
 
+          {/* Block Client Option */}
+          <div className="bg-neutral-900/70 border border-white/5 p-3.5 rounded-2xl space-y-2">
+            <label className="flex items-start gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={blockFromBooking}
+                onChange={(e) => setBlockFromBooking(e.target.checked)}
+                className="w-4 h-4 mt-0.5 rounded accent-rose-500 cursor-pointer"
+              />
+              <div className="space-y-0.5">
+                <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <Ban className="w-3.5 h-3.5 text-rose-400" />
+                  Impedir cliente de novos agendamentos online
+                </span>
+                <p className="text-[10px] text-neutral-400 leading-snug">
+                  Se marcado, o cliente precisará entrar em contato pelo WhatsApp para agendar horários futuros.
+                </p>
+              </div>
+            </label>
+          </div>
+
           {/* Optional No-Show Fee */}
-          <div className="bg-neutral-900/60 border border-white/5 p-3.5 rounded-2xl space-y-3">
+          <div className="bg-neutral-900/60 border border-white/5 p-3 rounded-2xl space-y-2">
             <label className="flex items-center justify-between cursor-pointer">
-              <span className="text-xs font-bold text-neutral-300">Cobrar Taxa de No-Show</span>
+              <span className="text-xs font-bold text-neutral-300 flex items-center gap-1.5">
+                <DollarSign className="w-3.5 h-3.5 text-amber-500" /> Cobrar Taxa de No-Show
+              </span>
               <input
                 type="checkbox"
                 checked={chargeFee}
@@ -166,6 +237,19 @@ export function NoShowModal({
               </div>
             )}
           </div>
+
+          {/* Friendly WhatsApp Contact Button */}
+          {politeWhatsAppUrl && (
+            <a
+              href={politeWhatsAppUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full py-2.5 px-3 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all"
+            >
+              <MessageCircle className="w-3.5 h-3.5" />
+              Enviar WhatsApp de Reagendamento Amigável
+            </a>
+          )}
 
           {/* Action buttons */}
           <div className="flex gap-2.5 pt-2">

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { toast } from "react-hot-toast";
 import { motion } from "motion/react";
-import { ArrowLeft, Loader2, Calendar, Scissors, Clock, Star, MessageSquare, Repeat, Phone, Mail, Gift, DollarSign, User, Award, Zap, CalendarCheck, Edit3, Save, Ban, ShieldAlert } from "lucide-react";
+import { ArrowLeft, Loader2, Calendar, Scissors, Clock, Star, MessageSquare, Repeat, Phone, Mail, Gift, DollarSign, User, Award, Zap, CalendarCheck, Edit3, Save, Ban, ShieldAlert, UserX, CheckCircle2, AlertTriangle, MessageCircle, Percent } from "lucide-react";
 import { collection, query, onSnapshot, Timestamp, doc, updateDoc, setDoc } from "firebase/firestore";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
 import { format, parseISO, differenceInDays } from "date-fns";
@@ -137,6 +137,19 @@ export function ClientDetailsScreen({ client, onBack, onScheduleClient, onMessag
   const completedAppointments = useMemo(() => {
     return sortedClientApps.filter(a => a.status === 'completed');
   }, [sortedClientApps]);
+
+  const noShowAppointments = useMemo(() => {
+    return sortedClientApps.filter(a => a.status === 'no_show');
+  }, [sortedClientApps]);
+
+  const totalNoShows = useMemo(() => {
+    return Math.max(noShowAppointments.length, Number(client?.noShowCount) || 0);
+  }, [noShowAppointments, client]);
+
+  const totalEvaluatedVisits = completedAppointments.length + totalNoShows;
+  const attendanceRate = totalEvaluatedVisits > 0 
+    ? Math.round((completedAppointments.length / totalEvaluatedVisits) * 100) 
+    : 100;
 
   // Total investment computed dynamically
   const totalSpent = useMemo(() => {
@@ -292,7 +305,7 @@ export function ClientDetailsScreen({ client, onBack, onScheduleClient, onMessag
          </div>
 
          {/* Client quick details section with statistics grids */}
-         <div className={`grid grid-cols-2 ${(client.walletBalance !== undefined && Number(client.walletBalance) > 0) ? 'lg:grid-cols-5' : 'md:grid-cols-4'} gap-4 mt-8 pt-6 border-t border-white/5`}>
+         <div className={`grid grid-cols-2 ${(client.walletBalance !== undefined && Number(client.walletBalance) > 0) ? 'lg:grid-cols-6' : 'md:grid-cols-5'} gap-4 mt-8 pt-6 border-t border-white/5`}>
             <div className=" liquid-glass  p-4 rounded-2xl text-left space-y-1">
               <span className="text-[8px] text-neutral-500 uppercase font-black tracking-widest block">Saldo Fidelidade</span>
               <p className="text-xl font-black text-amber-500 flex items-center gap-1">
@@ -327,6 +340,29 @@ export function ClientDetailsScreen({ client, onBack, onScheduleClient, onMessag
               </p>
             </div>
 
+            <div className={`p-4 rounded-2xl text-left space-y-1 ${
+              attendanceRate >= 90 
+                ? 'liquid-glass' 
+                : attendanceRate >= 70 
+                  ? 'bg-amber-500/10 border border-amber-500/20' 
+                  : 'bg-rose-500/10 border border-rose-500/20'
+            }`}>
+              <div className="flex items-center justify-between">
+                <span className="text-[8px] text-neutral-500 uppercase font-black tracking-widest block">Assiduidade</span>
+                {totalNoShows > 0 && (
+                  <span className="text-[7.5px] font-black uppercase text-rose-400 bg-rose-500/20 px-1.5 py-0.5 rounded">
+                    {totalNoShows} {totalNoShows === 1 ? 'Falta' : 'Faltas'}
+                  </span>
+                )}
+              </div>
+              <p className={`text-xl font-black flex items-center gap-1.5 ${
+                attendanceRate >= 90 ? 'text-emerald-400' : attendanceRate >= 70 ? 'text-amber-400' : 'text-rose-400'
+              }`}>
+                <Percent className="w-4 h-4" />
+                {attendanceRate}%
+              </p>
+            </div>
+
             <div className=" liquid-glass  p-4 rounded-2xl text-left space-y-1 col-span-2 md:col-span-1">
               <span className="text-[8px] text-neutral-500 uppercase font-black tracking-widest block">Última Visita</span>
               {lastApp ? (
@@ -345,8 +381,8 @@ export function ClientDetailsScreen({ client, onBack, onScheduleClient, onMessag
          </div>
 
          {/* CRM Notifications and alert bars */}
-         {(upcomingApp || revisitRecommendation) && (
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 pt-6 border-t border-white/5">
+          {(upcomingApp || revisitRecommendation) && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 pt-6 border-t border-white/5">
               {upcomingApp && (
                 <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl flex items-center justify-between text-left">
                   <div className="space-y-1">
@@ -390,6 +426,68 @@ export function ClientDetailsScreen({ client, onBack, onScheduleClient, onMessag
                   </span>
                 </div>
               )}
+           </div>
+         )}
+
+         {/* Anti-No-Show / Assiduidade Alert Box */}
+         {totalNoShows > 0 && (
+           <div className="bg-rose-950/20 border border-rose-500/30 p-5 rounded-3xl mt-6 space-y-3 text-left">
+             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+               <div className="flex items-center gap-2.5">
+                 <div className="w-9 h-9 rounded-xl bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0">
+                   <UserX className="w-4 h-4" />
+                 </div>
+                 <div>
+                   <h4 className="text-xs font-black uppercase text-rose-300 tracking-wider">
+                     Alerta de Assiduidade: {totalNoShows} {totalNoShows === 1 ? 'Falta Registrada' : 'Faltas Registradas'} (No-Show)
+                   </h4>
+                   <p className="text-[10px] text-neutral-400">
+                     Taxa de presença atual: <strong className={attendanceRate >= 80 ? "text-amber-400 font-black" : "text-rose-400 font-black"}>{attendanceRate}%</strong> ({completedAppointments.length} atendimentos concluídos de {totalEvaluatedVisits} horários)
+                   </p>
+                 </div>
+               </div>
+
+               <div className="flex items-center gap-2">
+                 <button
+                   onClick={handleToggleBlock}
+                   disabled={isSavingBlock}
+                   className={`py-2 px-3 rounded-xl text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer ${
+                     isBlocked
+                       ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/20'
+                       : 'bg-rose-500/20 hover:bg-rose-500 hover:text-white text-rose-300 border border-rose-500/30'
+                   }`}
+                 >
+                   <Ban className="w-3 h-3" />
+                   {isBlocked ? "Cliente Bloqueado" : "Bloquear Agendamentos"}
+                 </button>
+               </div>
+             </div>
+
+             {noShowAppointments.length > 0 && (
+               <div className="bg-black/40 rounded-2xl p-3 border border-white/5 space-y-2">
+                 <span className="text-[8.5px] font-black uppercase tracking-widest text-neutral-400 block">
+                   Histórico de Faltas Registradas:
+                 </span>
+                 <div className="space-y-1.5">
+                   {noShowAppointments.slice(0, 3).map((noShow, idx) => (
+                     <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between text-[10px] text-neutral-300 bg-neutral-900/60 p-2.5 rounded-xl gap-1">
+                       <div className="flex items-center gap-2">
+                         <span className="text-rose-400 font-bold">
+                           {format(getAppDate(noShow), "dd/MM/yyyy", { locale: ptBR })} às {noShow.time || "--:--"}
+                         </span>
+                         <span className="text-neutral-500">•</span>
+                         <span className="text-neutral-300 font-medium">{noShow.serviceName || "Corte"}</span>
+                       </div>
+                       {noShow.noShowReason && (
+                         <span className="text-[9px] text-neutral-400 italic">
+                           Obs: {noShow.noShowReason}
+                         </span>
+                       )}
+                     </div>
+                   ))}
+                 </div>
+               </div>
+             )}
            </div>
          )}
 

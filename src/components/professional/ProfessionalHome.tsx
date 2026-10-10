@@ -1124,9 +1124,15 @@ export function ProfessionalHome({ user, role, setCurrentScreen, services = [] }
                           </span>
                         )}
                         {isScheduled && (
-                          <span className="px-2 py-0.5 rounded-lg bg-blue-500/10 text-blue-400 text-[9px] font-black uppercase tracking-wider border border-blue-500/20">
-                            {app.status === "confirmed" ? "Confirmado" : "Agendado"}
-                          </span>
+                          app.clientConfirmed ? (
+                            <span className="px-2 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[9px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm">
+                              <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400" /> Presença Confirmada
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-lg bg-blue-500/10 text-blue-400 text-[9px] font-black uppercase tracking-wider border border-blue-500/20">
+                              {app.status === "confirmed" ? "Confirmado" : "Agendado"}
+                            </span>
+                          )
                         )}
                       </div>
 

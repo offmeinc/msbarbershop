@@ -73,7 +73,7 @@ import { ReferralsScreen } from "./ReferralsScreen";
 import { HaircutRenewalModal } from "./HaircutRenewalModal";
 import { GOOGLE_REVIEW_URL, BARBERSHOP_PHONE, BARBERSHOP_NAME } from "../../constants";
 import { toast } from "../ui/Toast";
-import { triggerLightHaptic } from "../../lib/haptics";
+import { triggerLightHaptic, triggerSuccessHaptic } from "../../lib/haptics";
 
 interface ClientDashboardScreenProps {
   user: any;
@@ -101,9 +101,46 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
   const [pushPermission, setPushPermission] = useState<NotificationPermission>(getNotificationPermissionState());
   const [showRenewalModal, setShowRenewalModal] = useState(false);
   const [showBlockedModal, setShowBlockedModal] = useState(false);
+  const [isConfirmingPresence, setIsConfirmingPresence] = useState(false);
 
   const [liveUser, setLiveUser] = useState<any>(user);
   const [selectedLookbookStyle, setSelectedLookbookStyle] = useState<{ title: string, imageUrl: string } | null>(null);
+
+  const handleClientConfirmPresence = async (app: any) => {
+    if (!app?.id) return;
+    setIsConfirmingPresence(true);
+    try {
+      const appRef = doc(db, "appointments", app.id);
+      await updateDoc(appRef, {
+        clientConfirmed: true,
+        clientConfirmedAt: serverTimestamp(),
+        clientConfirmedMethod: "app",
+        status: "confirmed"
+      });
+
+      try {
+        await addDoc(collection(db, "notifications"), {
+          type: "client_presence_confirmed",
+          title: "Presença Confirmada! ✂️",
+          message: `${app.clientName || liveUser?.displayName || "O cliente"} confirmou que comparecerá ao agendamento de ${app.serviceName || "corte"} às ${app.time || ""}.`,
+          clientId: app.clientId || liveUser?.uid || "",
+          appointmentId: app.id,
+          timestamp: serverTimestamp(),
+          read: false
+        });
+      } catch (nErr) {
+        console.warn("Notification error:", nErr);
+      }
+
+      toast.success("Presença confirmada com sucesso! Seu barbeiro já foi notificado! 💈");
+      triggerSuccessHaptic();
+    } catch (err) {
+      console.error("Error confirming presence:", err);
+      toast.error("Erro ao confirmar presença. Tente novamente.");
+    } finally {
+      setIsConfirmingPresence(false);
+    }
+  };
 
   const handleAttemptBooking = (action?: () => void) => {
     if (liveUser?.blockedFromBooking === true) {
@@ -737,6 +774,69 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                         <div className={`w-1 h-1 rounded-full ${stats.upcoming.status === 'confirmed' ? 'bg-black' : 'bg-white/40'}`} />
                         <p>{stats.upcoming.time}</p>
                      </div>
+
+                      {/* Anti-No-Show: Presence Confirmation Banner */}
+                      {stats.upcoming.clientConfirmed ? (
+                        <div className={`p-3.5 rounded-2xl mb-4 flex items-center gap-2.5 ${
+                          stats.upcoming.status === 'confirmed'
+                            ? 'bg-black/20 border border-black/10 text-neutral-900'
+                            : 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-300'
+                        }`}>
+                          <CheckCircle2 className={`w-5 h-5 shrink-0 ${stats.upcoming.status === 'confirmed' ? 'text-black' : 'text-emerald-400'}`} />
+                          <div className="text-left">
+                            <p className="text-[10px] font-black uppercase tracking-wider">
+                              Presença Confirmada por Você!
+                            </p>
+                            <p className={`text-[9px] ${stats.upcoming.status === 'confirmed' ? 'text-black/80 font-medium' : 'text-neutral-400'}`}>
+                              O barbeiro já sabe que você vai e seu horário está garantido. 💈
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className={`p-3.5 rounded-2xl mb-4 text-left space-y-2 ${
+                          stats.upcoming.status === 'confirmed'
+                            ? 'bg-black/10 border border-black/10 text-neutral-900'
+                            : 'bg-emerald-500/10 border border-emerald-500/30 text-white'
+                        }`}>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                              <CheckCircle2 className={`w-4 h-4 ${stats.upcoming.status === 'confirmed' ? 'text-black' : 'text-emerald-400'}`} />
+                              <span className="text-[10px] font-black uppercase tracking-wider">
+                                Confirmar Presença Antecipada
+                              </span>
+                            </div>
+                            <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-md ${
+                              stats.upcoming.status === 'confirmed'
+                                ? 'bg-black text-amber-500'
+                                : 'bg-emerald-500/20 text-emerald-300'
+                            }`}>
+                              Anti-Falta
+                            </span>
+                          </div>
+                          <p className={`text-[10px] leading-relaxed ${stats.upcoming.status === 'confirmed' ? 'text-black/80 font-medium' : 'text-neutral-300'}`}>
+                            Confirme com 1 toque que você comparecerá ao horário para garantir sua vaga e agilizar seu atendimento!
+                          </p>
+                          <button
+                            onClick={() => handleClientConfirmPresence(stats.upcoming)}
+                            disabled={isConfirmingPresence}
+                            className={`w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-95 ${
+                              stats.upcoming.status === 'confirmed'
+                                ? 'bg-black text-amber-500 hover:bg-neutral-900'
+                                : 'bg-emerald-500 hover:bg-emerald-400 text-black shadow-emerald-500/20'
+                            }`}
+                          >
+                            {isConfirmingPresence ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <>
+                                <CheckCircle2 className="w-4 h-4" />
+                                SIM, CONFIRMO MINHA PRESENÇA!
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      )}
+
                       <div className="flex gap-2">
                         <button 
                           onClick={() => handleAttemptBooking(() => { setSelectedAppointment(stats.upcoming); setCurrentView('booking'); })} 
