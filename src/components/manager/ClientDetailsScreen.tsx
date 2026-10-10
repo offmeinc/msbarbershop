@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { toast } from "react-hot-toast";
 import { motion } from "motion/react";
-import { ArrowLeft, Loader2, Calendar, Scissors, Clock, Star, MessageSquare, Repeat, Phone, Mail, Gift, DollarSign, User, Award, Zap, CalendarCheck, Edit3, Save } from "lucide-react";
-import { collection, query, onSnapshot, Timestamp, doc, updateDoc } from "firebase/firestore";
+import { ArrowLeft, Loader2, Calendar, Scissors, Clock, Star, MessageSquare, Repeat, Phone, Mail, Gift, DollarSign, User, Award, Zap, CalendarCheck, Edit3, Save, Ban, ShieldAlert } from "lucide-react";
+import { collection, query, onSnapshot, Timestamp, doc, updateDoc, setDoc } from "firebase/firestore";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
 import { format, parseISO, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -14,6 +14,50 @@ export function ClientDetailsScreen({ client, onBack, onScheduleClient, onMessag
   const [loading, setLoading] = useState(true);
   const [notes, setNotes] = useState(client?.notes || "");
   const [isSavingNotes, setIsSavingNotes] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(!!client?.blockedFromBooking);
+  const [isSavingBlock, setIsSavingBlock] = useState(false);
+
+  // Sync client block status in real-time
+  useEffect(() => {
+    const clientId = client?.uid || client?.id;
+    if (!clientId) return;
+    const unsubscribeUser = onSnapshot(doc(db, "users", clientId), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setIsBlocked(data?.blockedFromBooking === true);
+      }
+    }, () => {});
+    return () => unsubscribeUser();
+  }, [client]);
+
+  const handleToggleBlock = async () => {
+    const clientId = client?.uid || client?.id;
+    if (!clientId) {
+      toast.error("Identificador do cliente não encontrado.");
+      return;
+    }
+    setIsSavingBlock(true);
+    try {
+      const nextStatus = !isBlocked;
+      await setDoc(doc(db, "users", clientId), {
+        blockedFromBooking: nextStatus,
+        blockedAt: nextStatus ? new Date().toISOString() : null,
+        updatedAt: Timestamp.now()
+      }, { merge: true });
+      setIsBlocked(nextStatus);
+      triggerLightHaptic();
+      if (nextStatus) {
+        toast.success("Cliente impedido de agendar novos horários!");
+      } else {
+        toast.success("Cliente liberado para agendar horários!");
+      }
+    } catch (err) {
+      console.error("Error toggling client booking block:", err);
+      toast.error("Erro ao alterar permissão de agendamento.");
+    } finally {
+      setIsSavingBlock(false);
+    }
+  };
 
   const handleSaveNotes = async () => {
     if (!client?.uid && !client?.id) return;
@@ -208,6 +252,11 @@ export function ClientDetailsScreen({ client, onBack, onScheduleClient, onMessag
                 <span className={`px-2.5 py-1 rounded-xl text-[8.5px] font-black uppercase tracking-wider ${rank.color} inline-block self-start sm:self-auto`}>
                   {rank.name}
                 </span>
+                {isBlocked && (
+                  <span className="px-2.5 py-1 rounded-xl text-[8.5px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/30 flex items-center gap-1 inline-block self-start sm:self-auto">
+                    <Ban className="w-3 h-3 inline text-rose-400" /> Agendamento Bloqueado
+                  </span>
+                )}
               </div>
               
               <div className="flex flex-wrap justify-center sm:justify-start gap-3 text-neutral-400 text-xs">
@@ -352,6 +401,23 @@ export function ClientDetailsScreen({ client, onBack, onScheduleClient, onMessag
               >
                   <MessageSquare className="w-4 h-4 shrink-0" /> Chat do Portal
               </button>
+              <button
+                onClick={handleToggleBlock}
+                disabled={isSavingBlock}
+                className={`flex items-center gap-2 px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 cursor-pointer border ${
+                  isBlocked
+                    ? "bg-rose-500/20 text-rose-300 border-rose-500/40 hover:bg-rose-500/30 shadow-lg shadow-rose-500/10"
+                    : "liquid-glass text-neutral-400 hover:text-rose-400 border-white/5 hover:border-rose-500/30 hover:bg-rose-500/10"
+                }`}
+                title={isBlocked ? "Permitir que este cliente agende pelo app" : "Impedir este cliente de agendar pelo app"}
+              >
+                {isSavingBlock ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-rose-400 shrink-0" />
+                ) : (
+                  <Ban className="w-4 h-4 text-rose-400 shrink-0" />
+                )}
+                {isBlocked ? "Liberar Agendamentos" : "Impedir de Agendar"}
+              </button>
               {onScheduleClient && (
                 <button 
                   onClick={() => onScheduleClient(client)}
@@ -361,6 +427,22 @@ export function ClientDetailsScreen({ client, onBack, onScheduleClient, onMessag
                 </button>
               )}
          </div>
+          {/* Blocked Client Status Warning */}
+          {isBlocked && (
+            <div className="mt-6 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-start gap-3 text-left">
+              <div className="p-2 rounded-xl bg-rose-500/20 text-rose-400 shrink-0 mt-0.5">
+                <Ban className="w-4 h-4" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs font-black text-rose-400 uppercase tracking-wide">
+                  Cliente Impedido de Agendar Horário Online
+                </p>
+                <p className="text-[11px] text-neutral-300 leading-relaxed font-medium">
+                  Quando este cliente tentar marcar um horário pelo aplicativo, o sistema bloqueará a finalização, exibirá a mensagem solicitando que entre em contato e fornecerá um botão direto para falar com a barbearia pelo WhatsApp.
+                </p>
+              </div>
+            </div>
+          )}
       </div>
 
       {/* Client Notes Section */}

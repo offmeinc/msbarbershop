@@ -54,7 +54,8 @@ import {
   Zap,
   Check,
   RotateCcw,
-  Info
+  Info,
+  Ban
 } from "lucide-react";
 import { db, handleFirestoreError, OperationType, safeStringify, cancelAppointmentAtomically } from "../../lib/firebase";
 import { setupPushSubscription, getNotificationPermissionState, queryNotificationSupport, getBackendUrl } from "../../lib/pushRegister";
@@ -70,7 +71,7 @@ import { NotificationsScreen } from "../NotificationsScreen";
 import { ChatScreen } from "../ChatScreens";
 import { ReferralsScreen } from "./ReferralsScreen";
 import { HaircutRenewalModal } from "./HaircutRenewalModal";
-import { GOOGLE_REVIEW_URL, BARBERSHOP_PHONE } from "../../constants";
+import { GOOGLE_REVIEW_URL, BARBERSHOP_PHONE, BARBERSHOP_NAME } from "../../constants";
 import { toast } from "../ui/Toast";
 import { triggerLightHaptic } from "../../lib/haptics";
 
@@ -99,9 +100,22 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
   const [referralCode, setReferralCode] = useState(user?.referralCode || "");
   const [pushPermission, setPushPermission] = useState<NotificationPermission>(getNotificationPermissionState());
   const [showRenewalModal, setShowRenewalModal] = useState(false);
+  const [showBlockedModal, setShowBlockedModal] = useState(false);
 
   const [liveUser, setLiveUser] = useState<any>(user);
   const [selectedLookbookStyle, setSelectedLookbookStyle] = useState<{ title: string, imageUrl: string } | null>(null);
+
+  const handleAttemptBooking = (action?: () => void) => {
+    if (liveUser?.blockedFromBooking === true) {
+      setShowBlockedModal(true);
+      return;
+    }
+    if (action) {
+      action();
+    } else {
+      setCurrentView("booking");
+    }
+  };
 
   useEffect(() => {
     const finalUserId = user?.uid || user?.id;
@@ -669,7 +683,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
 
               <div className="w-full space-y-4">
                 <button
-                  onClick={() => setCurrentView('booking')}
+                  onClick={() => handleAttemptBooking()}
                   className="w-full bg-amber-500 text-black py-5 rounded-[2rem] font-black italic uppercase tracking-widest text-lg shadow-[0_0_40px_rgba(245,158,11,0.3)] hover:scale-[1.02] transition-all flex items-center justify-center gap-3"
                 >
                   <CalendarCheck className="w-6 h-6" />
@@ -725,7 +739,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                      </div>
                       <div className="flex gap-2">
                         <button 
-                          onClick={() => { setSelectedAppointment(stats.upcoming); setCurrentView('booking'); }} 
+                          onClick={() => handleAttemptBooking(() => { setSelectedAppointment(stats.upcoming); setCurrentView('booking'); })} 
                           className={`flex-1 font-black uppercase italic py-4 rounded-2xl text-[10px] tracking-widest transition-colors ${
                             stats.upcoming.status === 'confirmed' 
                               ? 'bg-black text-white hover:bg-neutral-900' 
@@ -778,7 +792,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
               {/* Action Buttons */}
               <div className="flex flex-col gap-3 mb-8">
                 <button 
-                  onClick={() => setCurrentView('booking')}
+                  onClick={() => handleAttemptBooking()}
                   className="w-full py-5 bg-white text-black font-black uppercase italic tracking-widest rounded-2xl hover:bg-neutral-200 transition-colors shadow-xl"
                 >
                   NOVO AGENDAMENTO
@@ -786,9 +800,11 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                 {stats.lastAppointment && (
                   <button 
                     onClick={() => {
-                      setInitialBookingServiceId(stats.lastAppointment.serviceId);
-                      setInitialBookingBarberId(stats.lastAppointment.barberId);
-                      setCurrentView('booking');
+                      handleAttemptBooking(() => {
+                        setInitialBookingServiceId(stats.lastAppointment.serviceId);
+                        setInitialBookingBarberId(stats.lastAppointment.barberId);
+                        setCurrentView('booking');
+                      });
                     }}
                     className="w-full py-5 bg-amber-500 text-black font-black uppercase italic tracking-widest rounded-2xl hover:bg-amber-600 transition-colors shadow-lg flex items-center justify-center gap-2"
                   >
@@ -818,7 +834,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                        </p>
                        <div className="flex flex-wrap items-center gap-3">
                          <button 
-                             onClick={() => setCurrentView('booking')}
+                             onClick={() => handleAttemptBooking()}
                              className="bg-amber-500 text-black text-[10px] font-black uppercase italic tracking-widest px-8 py-4 rounded-2xl shadow-lg shadow-amber-500/20 active:scale-95 transition-all"
                          >
                              RESERVAR AGORA
@@ -1088,13 +1104,17 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
             appointments={appointments} 
             onBack={() => setCurrentView('home')} 
             onBookAgain={(serviceId, barberId) => { 
-              setInitialBookingServiceId(serviceId); 
-              setInitialBookingBarberId(barberId); 
-              setCurrentView('booking'); 
+              handleAttemptBooking(() => {
+                setInitialBookingServiceId(serviceId); 
+                setInitialBookingBarberId(barberId); 
+                setCurrentView('booking'); 
+              });
             }}
             onReschedule={(app) => {
-              setSelectedAppointment(app);
-              setCurrentView('booking');
+              handleAttemptBooking(() => {
+                setSelectedAppointment(app);
+                setCurrentView('booking');
+              });
             }}
             onCancel={handleCancelAppointment}
           />
@@ -1103,9 +1123,11 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
           <LookbookScreen 
             onBack={() => setCurrentView('home')} 
             onBook={(styleObj) => { 
-              setSelectedLookbookStyle(styleObj);
-              setInitialBookingServiceId(undefined);
-              setCurrentView('booking'); 
+              handleAttemptBooking(() => {
+                setSelectedLookbookStyle(styleObj);
+                setInitialBookingServiceId(undefined);
+                setCurrentView('booking'); 
+              });
             }} 
           />
         )}
@@ -1644,6 +1666,72 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
             </motion.div>
           </div>
         )}
+
+        {showBlockedModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className="relative w-full max-w-md p-6 sm:p-8 liquid-glass rounded-[2.5rem] border border-amber-500/30 shadow-2xl text-center space-y-6 overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute bottom-0 left-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+
+              <button
+                type="button"
+                onClick={() => setShowBlockedModal(false)}
+                className="absolute top-5 right-5 p-2 rounded-full text-neutral-400 hover:text-white bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
+                title="Fechar"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="w-16 h-16 rounded-3xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center mx-auto text-emerald-400 shadow-lg shadow-emerald-500/10">
+                <MessageCircle className="w-8 h-8 animate-pulse text-emerald-400" />
+              </div>
+
+              <div className="space-y-2">
+                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-500">
+                  Atendimento Direto
+                </span>
+                <h3 className="text-xl sm:text-2xl font-black text-white uppercase italic tracking-tight">
+                  Entre em Contato Conosco
+                </h3>
+                <p className="text-xs text-neutral-300 font-medium leading-relaxed px-2">
+                  Para realizar o seu agendamento, por favor entre em contato diretamente com a nossa equipe da <strong className="text-amber-400">{BARBERSHOP_NAME}</strong>.
+                </p>
+                <p className="text-[11px] text-neutral-400 leading-relaxed px-2">
+                  Nosso agendamento online está temporariamente indisponível para o seu cadastro. Clique no botão abaixo para conversar via WhatsApp e escolher o melhor horário!
+                </p>
+              </div>
+
+              <div className="space-y-3 pt-2">
+                <a
+                  href={`https://wa.me/${BARBERSHOP_PHONE}?text=${encodeURIComponent("Olá! Me chamo " + currentClientName + " e gostaria de agendar um horário na " + BARBERSHOP_NAME + ". Poderiam me atender por aqui?")}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => {
+                    triggerLightHaptic();
+                    setShowBlockedModal(false);
+                  }}
+                  className="w-full py-4.5 px-6 bg-emerald-500 hover:bg-emerald-400 text-black font-black uppercase tracking-wider text-xs rounded-2xl flex items-center justify-center gap-2.5 transition-all shadow-xl shadow-emerald-500/25 active:scale-95 cursor-pointer"
+                >
+                  <MessageCircle className="w-4 h-4 fill-black/20" />
+                  Entrar em Contato via WhatsApp
+                </a>
+
+                <button
+                  type="button"
+                  onClick={() => setShowBlockedModal(false)}
+                  className="w-full py-3.5 px-6 liquid-glass hover:bg-white/10 text-neutral-400 hover:text-white font-black uppercase tracking-wider text-[10px] rounded-2xl transition-colors cursor-pointer"
+                >
+                  Fechar
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
       </AnimatePresence>
 
       {/* Haircut Renewal In-App Modal */}
@@ -1652,11 +1740,13 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
         onClose={() => setShowRenewalModal(false)}
         onBookNow={() => {
           setShowRenewalModal(false);
-          if (stats.lastAppointment) {
-            setInitialBookingServiceId(stats.lastAppointment.serviceId);
-            setInitialBookingBarberId(stats.lastAppointment.barberId);
-          }
-          setCurrentView("booking");
+          handleAttemptBooking(() => {
+            if (stats.lastAppointment) {
+              setInitialBookingServiceId(stats.lastAppointment.serviceId);
+              setInitialBookingBarberId(stats.lastAppointment.barberId);
+            }
+            setCurrentView("booking");
+          });
         }}
         clientName={liveUser?.name || user?.displayName}
         lastAppointment={stats.lastAppointment}

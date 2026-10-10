@@ -34,6 +34,14 @@ function getGeminiClient(): GoogleGenAI {
   return aiClient;
 }
 
+process.on('uncaughtException', (err) => {
+  console.error('[Process Error] Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[Process Error] Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
 async function startServer() {
   const app = express();
   const portArgIndex = process.argv.indexOf('--port');

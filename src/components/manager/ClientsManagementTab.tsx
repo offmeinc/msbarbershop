@@ -7,6 +7,7 @@ import {
   limit, 
   doc, 
   updateDoc, 
+  setDoc,
   Timestamp 
 } from "firebase/firestore";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
@@ -31,6 +32,7 @@ import {
   ChevronRight, 
   ArrowUpRight, 
   ShieldAlert, 
+  Ban,
   Filter, 
   Star, 
   Save, 
@@ -226,6 +228,7 @@ export function ClientsManagementTab({
         if (!existing.photoURL && c.photoURL) existing.photoURL = c.photoURL;
         if (c.notes) existing.notes = c.notes;
         if (c.loyaltyPoints) existing.loyaltyPoints = c.loyaltyPoints;
+        if (c.blockedFromBooking !== undefined) existing.blockedFromBooking = c.blockedFromBooking === true;
         registerClientKeys(existingId, c.whatsapp || c.phone, c.email, c.id, c.uid);
       } else {
         const canonicalId = c.id || c.uid || (normPhone ? `phone_${normPhone}` : `client_${clientMap.size}`);
@@ -240,6 +243,7 @@ export function ClientsManagementTab({
           createdAt: c.createdAt,
           notes: c.notes || "",
           loyaltyPoints: c.loyaltyPoints || 0,
+          blockedFromBooking: c.blockedFromBooking === true,
           isRegistered: true
         };
         clientMap.set(canonicalId, clientObj);
@@ -678,6 +682,35 @@ export function ClientsManagementTab({
       toast.error("Não foi possível salvar as anotações.");
     } finally {
       setIsSavingNotes(false);
+    }
+  };
+
+  // Toggle client booking block status in Firestore
+  const handleToggleBlockClient = async (client: any) => {
+    const docId = client.uid || client.id;
+    if (!docId) {
+      toast.error("Identificador do cliente não encontrado.");
+      return;
+    }
+    const currentBlocked = client.blockedFromBooking === true;
+    const nextStatus = !currentBlocked;
+    try {
+      await setDoc(doc(db, "users", docId), {
+        blockedFromBooking: nextStatus,
+        blockedAt: nextStatus ? new Date().toISOString() : null,
+        updatedAt: Timestamp.now()
+      }, { merge: true });
+
+      setSelectedClientModal((prev: any) => prev ? { ...prev, blockedFromBooking: nextStatus } : null);
+      triggerLightHaptic();
+      if (nextStatus) {
+        toast.success("Cliente impedido de agendar novos horários!");
+      } else {
+        toast.success("Cliente liberado para agendar horários!");
+      }
+    } catch (err) {
+      console.error("Error toggling client block:", err);
+      toast.error("Não foi possível alterar a permissão de agendamento.");
     }
   };
 
@@ -1411,9 +1444,16 @@ export function ClientsManagementTab({
                           <h4 className="font-black text-sm text-white uppercase italic tracking-tight group-hover:text-amber-400 transition-colors leading-tight">
                             {client.name || "Cliente sem Nome"}
                           </h4>
-                          <span className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider inline-block mt-1 ${rank.color}`}>
-                            {rank.name}
-                          </span>
+                          <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                            <span className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider inline-block ${rank.color}`}>
+                              {rank.name}
+                            </span>
+                            {client.blockedFromBooking && (
+                              <span className="px-1.5 py-0.5 rounded-md text-[7.5px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/40 flex items-center gap-1">
+                                <Ban className="w-2.5 h-2.5 text-rose-400" /> Impedido
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
 
@@ -1649,8 +1689,39 @@ export function ClientsManagementTab({
                       </div>
                     </div>
 
+                    {/* Blocked Client Status Alert in Modal */}
+                    {selectedClientModal.blockedFromBooking && (
+                      <div className="bg-rose-500/10 border border-rose-500/30 p-3.5 rounded-2xl flex items-center gap-3 text-left">
+                        <div className="p-2 rounded-xl bg-rose-500/20 text-rose-400 shrink-0">
+                          <Ban className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-[11px] font-black text-rose-400 uppercase tracking-wide">
+                            Agendamento Online Bloqueado
+                          </p>
+                          <p className="text-[9.5px] text-neutral-300 font-medium leading-relaxed">
+                            Este cliente está impedido de agendar pelo aplicativo. Ao tentar marcar, receberá mensagem para entrar em contato com a barbearia e o botão de WhatsApp.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Modal Bottom Actions */}
                     <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-white/5">
+                      {/* Impedir / Liberar Agendamento */}
+                      <button
+                        onClick={() => handleToggleBlockClient(selectedClientModal)}
+                        className={`py-3 px-4 rounded-2xl font-black uppercase tracking-wider text-xs flex items-center justify-center gap-2 transition-all border cursor-pointer ${
+                          selectedClientModal.blockedFromBooking
+                            ? "bg-rose-500/20 text-rose-300 border-rose-500/40 hover:bg-rose-500/30 shadow-lg shadow-rose-500/10"
+                            : "liquid-glass text-neutral-400 hover:text-rose-400 border-white/10 hover:border-rose-500/40 hover:bg-rose-500/10"
+                        }`}
+                        title={selectedClientModal.blockedFromBooking ? "Liberar agendamento online deste cliente" : "Impedir este cliente de agendar pelo aplicativo"}
+                      >
+                        <Ban className="w-4 h-4 text-rose-400 shrink-0" />
+                        {selectedClientModal.blockedFromBooking ? "Liberar Agendamentos" : "Impedir de Agendar"}
+                      </button>
+
                       {/* Enviar Notificação PWA Push */}
                       <button
                         onClick={() => handleSendHaircutReminderPush(selectedClientModal)}

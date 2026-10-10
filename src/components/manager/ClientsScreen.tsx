@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Search, Loader2, ChevronRight, User, Phone, Mail, MessageSquare, CalendarPlus, Users, Award, Zap, CalendarCheck } from "lucide-react";
+import { Search, Loader2, ChevronRight, User, Phone, Mail, MessageSquare, CalendarPlus, Users, Award, Zap, CalendarCheck, Ban } from "lucide-react";
 import { collection, query, where, limit, onSnapshot, Timestamp } from "firebase/firestore";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
 import { format, parseISO, differenceInDays } from "date-fns";
@@ -222,10 +222,15 @@ export function ClientsScreen({ onBack, onScheduleClient, onClientClick, user, r
                             <h4 className="font-black text-sm text-white uppercase italic tracking-tight group-hover:text-amber-500 transition-colors leading-tight">
                               {client.name || "Sem Nome"}
                             </h4>
-                            <div className="flex">
+                            <div className="flex flex-wrap items-center gap-1">
                               <span className={`px-2 py-0.5 rounded-md text-[7px] font-black uppercase tracking-wider ${rank.color}`}>
                                 {rank.name}
                               </span>
+                              {client.blockedFromBooking && (
+                                <span className="px-1.5 py-0.5 rounded-md text-[7px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/40 flex items-center gap-1">
+                                  <Ban className="w-2.5 h-2.5 text-rose-400" /> Impedido
+                                </span>
+                              )}
                             </div>
                           </div>
                           {client.email && (

@@ -47,7 +47,10 @@ import {
   Mic,
   MicOff,
   X,
+  MessageCircle,
+  Ban,
 } from "lucide-react";
+import { BARBERSHOP_NAME, BARBERSHOP_PHONE } from "../../constants";
 import { db, handleFirestoreError, OperationType, safeStringify } from "../../lib/firebase";
 import { signInWithGoogleCalendar, addEventToCalendar, getCalendarAccessToken } from "../../lib/calendar";
 import { setupPushSubscription, getNotificationPermissionState, queryNotificationSupport, getBackendUrl } from "../../lib/pushRegister";
@@ -1023,6 +1026,7 @@ export function BookingScreen({
   const [showDevModal, setShowDevModal] = useState(false);
   const [pendingBarber, setPendingBarber] = useState<string | null>(null);
   const [couponSuccess, setCouponSuccess] = useState<string | null>(null);
+  const [showBlockedClientModal, setShowBlockedClientModal] = useState(false);
 
   const [voiceInput, setVoiceInput] = useState("");
   const [isListening, setIsListening] = useState(false);
@@ -1319,6 +1323,50 @@ export function BookingScreen({
     });
   }, [clients, selectedClient, guestName, guestPhone]);
 
+  // Check if current client is blocked from booking by a barber
+  const isClientBlocked = useMemo(() => {
+    const isStaff = role === "manager" || role === "barber";
+    if (isStaff) return false;
+
+    // 1. Logged in user has blocked flag
+    if (user?.blockedFromBooking === true) return true;
+    if (user) {
+      const userCleanPhone = (user.whatsapp || user.phone || "").replace(/\D/g, "");
+      const userDocMatch = clients.find((c) => {
+        if (c.id === user.uid || c.uid === user.uid) return true;
+        const cPhone = (c.whatsapp || c.phone || "").replace(/\D/g, "");
+        if (userCleanPhone && cPhone && (cPhone === userCleanPhone || cPhone.endsWith(userCleanPhone) || userCleanPhone.endsWith(cPhone))) {
+          return true;
+        }
+        return false;
+      });
+      if (userDocMatch?.blockedFromBooking === true) return true;
+    }
+
+    // 2. Explicitly selected client
+    if (selectedClient?.blockedFromBooking === true) return true;
+
+    // 3. Real-time matched client by input phone or name
+    if (currentClientMatch?.blockedFromBooking === true) return true;
+
+    // 4. Input guest phone match in clients collection
+    const cleanGuestPhone = (guestPhone || "").replace(/\D/g, "");
+    if (cleanGuestPhone && cleanGuestPhone.length >= 8) {
+      const phoneMatch = clients.find((c) => {
+        const cPhone = (c.whatsapp || c.phone || "").replace(/\D/g, "");
+        return cPhone && (cPhone === cleanGuestPhone || cPhone.endsWith(cleanGuestPhone) || cleanGuestPhone.endsWith(cPhone));
+      });
+      if (phoneMatch?.blockedFromBooking === true) return true;
+    }
+
+    return false;
+  }, [role, user, selectedClient, currentClientMatch, guestPhone, clients]);
+
+  const blockedClientDisplayName =
+    user?.displayName || user?.name || guestName || selectedClient?.name || currentClientMatch?.name || "Cliente";
+  const blockedWhatsAppMessage = `Olá! Me chamo ${blockedClientDisplayName} e gostaria de agendar um horário na ${BARBERSHOP_NAME}. Poderiam me atender por aqui?`;
+  const blockedWhatsAppUrl = `https://wa.me/${BARBERSHOP_PHONE}?text=${encodeURIComponent(blockedWhatsAppMessage)}`;
+
   useEffect(() => {
     const firestore = db || getFirestore();
     const q = query(
@@ -1522,6 +1570,13 @@ export function BookingScreen({
       return;
     }
     const isStaffBooking = role === "manager" || role === "barber";
+
+    if (isClientBlocked && !isStaffBooking) {
+      setShowBlockedClientModal(true);
+      setError("Por favor, entre em contato diretamente com a barbearia pelo WhatsApp para agendar seu horário.");
+      setIsBooking(false);
+      return;
+    }
 
     if ((!user || isStaffBooking) && (!guestName || !guestPhone)) {
       setError("Nome e WhatsApp são obrigatórios para o cliente.");
@@ -1878,6 +1933,74 @@ export function BookingScreen({
             onClose={() => setViewingPortfolio(null)} 
           />
         )}
+        {showBlockedClientModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className="relative w-full max-w-md p-6 sm:p-8 liquid-glass rounded-[2.5rem] border border-amber-500/30 shadow-2xl text-center space-y-6 overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute bottom-0 left-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+
+              <button
+                type="button"
+                onClick={() => setShowBlockedClientModal(false)}
+                className="absolute top-5 right-5 p-2 rounded-full text-neutral-400 hover:text-white bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
+                title="Fechar"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="w-16 h-16 rounded-3xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center mx-auto text-emerald-400 shadow-lg shadow-emerald-500/10">
+                <MessageCircle className="w-8 h-8 animate-pulse text-emerald-400" />
+              </div>
+
+              <div className="space-y-2">
+                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-500">
+                  Atendimento Direto
+                </span>
+                <h3 className="text-xl sm:text-2xl font-black text-white uppercase italic tracking-tight">
+                  Entre em Contato Conosco
+                </h3>
+                <p className="text-xs text-neutral-300 font-medium leading-relaxed px-2">
+                  Para realizar o seu agendamento, por favor entre em contato diretamente com a nossa equipe da <strong className="text-amber-400">{BARBERSHOP_NAME}</strong>.
+                </p>
+                <p className="text-[11px] text-neutral-400 leading-relaxed px-2">
+                  O agendamento online está temporariamente indisponível para o seu cadastro. Clique no botão abaixo para conversar via WhatsApp e escolher o melhor horário!
+                </p>
+              </div>
+
+              <div className="space-y-3 pt-2">
+                <a
+                  href={blockedWhatsAppUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => {
+                    triggerLightHaptic();
+                    setShowBlockedClientModal(false);
+                  }}
+                  className="w-full py-4.5 px-6 bg-emerald-500 hover:bg-emerald-400 text-black font-black uppercase tracking-wider text-xs rounded-2xl flex items-center justify-center gap-2.5 transition-all shadow-xl shadow-emerald-500/25 active:scale-95 cursor-pointer"
+                >
+                  <MessageCircle className="w-4 h-4 fill-black/20" />
+                  Entrar em Contato via WhatsApp
+                </a>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowBlockedClientModal(false);
+                    if (onBack) onBack();
+                  }}
+                  className="w-full py-3.5 px-6 liquid-glass hover:bg-white/10 text-neutral-400 hover:text-white font-black uppercase tracking-wider text-[10px] rounded-2xl transition-colors cursor-pointer"
+                >
+                  Voltar ao Início
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
       </AnimatePresence>
 
       <div className="min-h-[100dvh] bg-black pb-20">
@@ -1886,6 +2009,35 @@ export function BookingScreen({
           animate={{ opacity: 1, y: 0 }}
           className="max-w-xl md:max-w-4xl lg:max-w-5xl mx-auto py-8 px-6"
         >
+          {/* Top banner if client is blocked */}
+          {isClientBlocked && (
+            <div className="mb-6 p-4 rounded-2xl bg-rose-500/15 border border-rose-500/30 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-rose-500/20 text-rose-400 shrink-0">
+                  <Ban className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-black uppercase text-rose-300 tracking-wide">
+                    Agendamento via WhatsApp
+                  </h4>
+                  <p className="text-[11px] text-neutral-300 font-medium">
+                    Para agendar seu horário, por favor entre em contato diretamente com a nossa equipe.
+                  </p>
+                </div>
+              </div>
+              <a
+                href={blockedWhatsAppUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => triggerLightHaptic()}
+                className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-black font-black uppercase tracking-wider text-[10px] rounded-xl flex items-center gap-2 shrink-0 shadow-lg shadow-emerald-500/20 active:scale-95 transition-all"
+              >
+                <MessageCircle className="w-3.5 h-3.5 fill-black/20" />
+                Falar no WhatsApp
+              </a>
+            </div>
+          )}
+
           {/* Custom Sleek Step Indicator Navigation (Desktop & Tablet) */}
           <div className="hidden sm:flex items-center justify-center gap-2 mb-10 liquid-glass/40 p-2.5 rounded-[1.75rem] ">
             {[
@@ -2546,6 +2698,9 @@ export function BookingScreen({
                                     onClick={() => {
                                       triggerLightHaptic();
                                       setSelectedTime(time);
+                                      if (isClientBlocked) {
+                                        setShowBlockedClientModal(true);
+                                      }
                                       setStep(4);
                                     }}
                                     className={`relative py-3 px-2 flex flex-col items-center justify-center rounded-2xl text-[10px] font-black transition-all border group ${
@@ -2593,7 +2748,12 @@ export function BookingScreen({
                   {selectedDate.getDay() !== 0 && (
                     <button
                       disabled={!selectedTime}
-                      onClick={() => setStep(4)}
+                      onClick={() => {
+                        if (isClientBlocked) {
+                          setShowBlockedClientModal(true);
+                        }
+                        setStep(4);
+                      }}
                       className="liquid-glass w-full   disabled:text-neutral-700 hover:scale-[1.01] active:scale-95 text-black py-4.5 rounded-2xl font-black uppercase italic tracking-widest flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-amber-500/5 disabled:shadow-none"
                     >
                       Próximo Passo <ChevronRight className="w-4 h-4" />
@@ -2670,6 +2830,9 @@ export function BookingScreen({
                                   setSelectedClient(client);
                                   setSearchQuery("");
                                   setShowDropdown(false);
+                                  if (client.blockedFromBooking && role !== "manager" && role !== "barber") {
+                                    setShowBlockedClientModal(true);
+                                  }
                                 }}
                               >
                                 <div className="flex items-center gap-3">
@@ -2696,9 +2859,16 @@ export function BookingScreen({
                                     </p>
                                   </div>
                                 </div>
-                                <span className="text-[9px] text-amber-500 font-black uppercase tracking-widest shrink-0 bg-amber-500/10 px-2 py-1 rounded">
-                                  {role === "manager" || role === "barber" ? "Vincular" : "Selecionar"}
-                                </span>
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  {client.blockedFromBooking && (
+                                    <span className="text-[8px] text-rose-400 bg-rose-500/15 border border-rose-500/30 font-bold uppercase px-1.5 py-0.5 rounded flex items-center gap-1">
+                                      <Ban className="w-2.5 h-2.5" /> Impedido
+                                    </span>
+                                  )}
+                                  <span className="text-[9px] text-amber-500 font-black uppercase tracking-widest bg-amber-500/10 px-2 py-1 rounded">
+                                    {role === "manager" || role === "barber" ? "Vincular" : "Selecionar"}
+                                  </span>
+                                </div>
                               </button>
                             ))}
                           </div>
@@ -2760,6 +2930,16 @@ export function BookingScreen({
                             Desvincular
                           </button>
                         </motion.div>
+                      )}
+                      {(selectedClient?.blockedFromBooking || currentClientMatch?.blockedFromBooking) && (
+                        <div className="p-3.5 bg-rose-500/15 border border-rose-500/30 rounded-2xl flex items-center gap-2.5 text-xs text-rose-300 my-1 text-left">
+                          <Ban className="w-4 h-4 text-rose-400 shrink-0" />
+                          <span>
+                            {role === "manager" || role === "barber"
+                              ? "Aviso de restrição: Este cliente está marcado como impedido de auto-agendamento pelo app."
+                              : "Agendamento restrito: Por favor, entre em contato diretamente via WhatsApp para agendar."}
+                          </span>
+                        </div>
                       )}
                       <input
                         placeholder="Nome do Cliente"
@@ -2936,13 +3116,42 @@ export function BookingScreen({
                     )}
                   </div>
                 )}
-                <button
-                  disabled={isBooking}
-                  onClick={handleConfirmBooking}
-                  className="w-full bg-amber-500 text-black py-5 rounded-[2rem] font-black uppercase italic tracking-widest active:scale-95 disabled:opacity-50 text-xl"
-                >
-                  {isBooking ? "AGENDANDO..." : "FINALIZAR AGENDAMENTO"}
-                </button>
+                {isClientBlocked ? (
+                  <div className="p-6 bg-rose-500/10 border border-rose-500/30 rounded-[2rem] space-y-4 text-center">
+                    <div className="w-14 h-14 bg-rose-500/20 border border-rose-500/30 rounded-2xl flex items-center justify-center mx-auto text-rose-400">
+                      <MessageCircle className="w-7 h-7 animate-pulse text-emerald-400" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <h4 className="text-base font-black uppercase text-rose-400 tracking-wide">
+                        Entre em Contato Conosco
+                      </h4>
+                      <p className="text-xs text-neutral-200 font-medium leading-relaxed px-2">
+                        Para realizar o seu agendamento, por favor entre em contato diretamente com a nossa equipe da <strong>{BARBERSHOP_NAME}</strong>.
+                      </p>
+                      <p className="text-[11px] text-neutral-400 leading-relaxed px-2">
+                        Nosso agendamento online está temporariamente indisponível para o seu perfil. Clique abaixo para falar conosco no WhatsApp e escolher o melhor horário!
+                      </p>
+                    </div>
+                    <a
+                      href={blockedWhatsAppUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => triggerLightHaptic()}
+                      className="w-full py-4.5 px-6 bg-emerald-500 hover:bg-emerald-400 text-black font-black uppercase tracking-wider text-xs rounded-2xl flex items-center justify-center gap-2.5 transition-all shadow-xl shadow-emerald-500/25 active:scale-95 cursor-pointer"
+                    >
+                      <MessageCircle className="w-4 h-4 fill-black/20" />
+                      Entrar em Contato via WhatsApp
+                    </a>
+                  </div>
+                ) : (
+                  <button
+                    disabled={isBooking}
+                    onClick={handleConfirmBooking}
+                    className="w-full bg-amber-500 text-black py-5 rounded-[2rem] font-black uppercase italic tracking-widest active:scale-95 disabled:opacity-50 text-xl"
+                  >
+                    {isBooking ? "AGENDANDO..." : "FINALIZAR AGENDAMENTO"}
+                  </button>
+                )}
               </motion.div>
             )}
               </AnimatePresence>
