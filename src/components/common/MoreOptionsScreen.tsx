@@ -18,7 +18,8 @@ import {
   Package,
   Gift,
   Presentation,
-  Download
+  Download,
+  Fingerprint
 } from "lucide-react";
 import { BlockScreen } from "../manager/BlockScreen";
 import { HelpScreen, ShareScreen, RecurrenceScreen } from "../manager/OtherScreens";
@@ -102,13 +103,21 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
           onClick: () => setActiveSubScreen('pwa') 
         },
         {
-          id: 'install_pwa',
-          label: 'Instalar Aplicativo (PWA)',
-          desc: 'Instalar na tela inicial para acesso instantâneo e offline',
-          icon: <Download className="w-5 h-5 text-amber-400" />,
+          id: 'biometric',
+          label: 'Bloqueio por Biometria / Face ID',
+          desc: localStorage.getItem("ais_biometric_enabled") === "true" ? 'Ativado (Exigir ao abrir app)' : 'Desativado (Toque para ativar)',
+          icon: <Fingerprint className="w-5 h-5 text-amber-400" />,
           onClick: () => {
-            window.dispatchEvent(new CustomEvent('ais_trigger_install'));
-            toast.info("Iniciando instalador do aplicativo...");
+            const current = localStorage.getItem("ais_biometric_enabled") === "true";
+            if (current) {
+              localStorage.removeItem("ais_biometric_enabled");
+              localStorage.removeItem("ais_biometric_unlocked");
+              toast.success("Bloqueio biométrico desativado.");
+            } else {
+              localStorage.setItem("ais_biometric_enabled", "true");
+              localStorage.setItem("ais_biometric_unlocked", "true");
+              toast.success("Bloqueio biométrico ativado com sucesso! 🔒");
+            }
           }
         },
         ...(role === 'barber' || role === 'manager' ? [{ 

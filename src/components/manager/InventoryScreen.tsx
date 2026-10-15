@@ -58,6 +58,7 @@ import { triggerLightHaptic, triggerSuccessHaptic, triggerWarningHaptic } from "
 import { BARBERSHOP_NAME } from "../../constants";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { BrowserMultiFormatReader } from "@zxing/library";
 
 type ScreenTab = "catalog" | "movements" | "reorder" | "financial";
 type StockFilter = "all" | "low" | "excess" | "high_value";
@@ -196,6 +197,8 @@ export function InventoryScreen({ onBack }: { onBack: () => void }) {
     setCameraActive(false);
   };
 
+  const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null);
+
   const startCamera = async () => {
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -203,41 +206,75 @@ export function InventoryScreen({ onBack }: { onBack: () => void }) {
         return;
       }
       stopCamera();
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: "environment" } },
-        audio: false
-      });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-      }
+
+      const codeReader = new BrowserMultiFormatReader();
+      codeReaderRef.current = codeReader;
+
+      const videoElement = videoRef.current;
+      if (!videoElement) return;
+
       setCameraActive(true);
 
-      // Check native BarcodeDetector support
-      if ("BarcodeDetector" in window) {
-        const barcodeDetector = new (window as any).BarcodeDetector({
-          formats: ["qr_code", "ean_13", "ean_8", "code_128", "code_39", "upc_a", "upc_e"]
-        });
+      try {
+        const videoInputDevices = await codeReader.listVideoInputDevices();
+        let selectedDeviceId = undefined;
+        if (videoInputDevices.length > 0) {
+          // Prefer back camera on mobile devices
+          const backCamera = videoInputDevices.find(device => 
+            device.label.toLowerCase().includes('back') || 
+            device.label.toLowerCase().includes('traseira') ||
+            device.label.toLowerCase().includes('environment')
+          );
+          selectedDeviceId = backCamera ? backCamera.deviceId : videoInputDevices[videoInputDevices.length - 1].deviceId;
+        }
 
-        const scanFrame = async () => {
-          if (!videoRef.current || !streamRef.current) return;
-          try {
-            const barcodes = await barcodeDetector.detect(videoRef.current);
-            if (barcodes.length > 0) {
-              const rawVal = barcodes[0].rawValue;
-              triggerSuccessHaptic();
-              handleBarcodeDetected(rawVal);
-              return;
+        await codeReader.decodeFromVideoDevice(
+          selectedDeviceId,
+          videoElement,
+          (result, err) => {
+            if (result) {
+              const text = result.getText();
+              if (text) {
+                triggerSuccessHaptic();
+                codeReader.reset();
+                handleBarcodeDetected(text);
+              }
             }
-          } catch (e) {
-            // Frame error
           }
-          if (streamRef.current) {
-            requestAnimationFrame(scanFrame);
-          }
-        };
-        requestAnimationFrame(scanFrame);
+        );
+      } catch (zxingErr) {
+        console.warn("ZXing decode error, falling back to native detector:", zxingErr);
+        // Fallback to native BarcodeDetector or getUserMedia stream
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" } },
+          audio: false
+        });
+        streamRef.current = stream;
+        videoElement.srcObject = stream;
+        await videoElement.play();
+
+        if ("BarcodeDetector" in window) {
+          const barcodeDetector = new (window as any).BarcodeDetector({
+            formats: ["qr_code", "ean_13", "ean_8", "code_128", "code_39", "upc_a", "upc_e"]
+          });
+
+          const scanFrame = async () => {
+            if (!videoElement || !streamRef.current) return;
+            try {
+              const barcodes = await barcodeDetector.detect(videoElement);
+              if (barcodes.length > 0) {
+                const rawVal = barcodes[0].rawValue;
+                triggerSuccessHaptic();
+                handleBarcodeDetected(rawVal);
+                return;
+              }
+            } catch (e) {}
+            if (streamRef.current) {
+              requestAnimationFrame(scanFrame);
+            }
+          };
+          requestAnimationFrame(scanFrame);
+        }
       }
     } catch (err) {
       console.error("Camera error:", err);

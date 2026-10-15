@@ -162,6 +162,7 @@ import { HomeScreen } from "./components/client/HomeScreen";
 import { BottomNav } from "./components/common/BottomNav";
 import { PushPrompt } from "./components/pwa/PushPrompt";
 import { NativeInstallPrompt } from "./components/pwa/NativeInstallPrompt";
+import { BiometricLockScreen } from "./components/pwa/BiometricLockScreen";
 import { OfflineIndicator } from "./components/common/OfflineIndicator";
 import { Skeleton } from "./components/common/Skeleton";
 
@@ -1842,6 +1843,16 @@ export default function App() {
           </>
         )}
       </AnimatePresence>
+      {/* Biometric Lock Screen for PWA security */}
+      {(() => {
+        const isBiometricEnabled = typeof window !== "undefined" && localStorage.getItem("ais_biometric_enabled") === "true";
+        const isUnlocked = typeof window !== "undefined" && localStorage.getItem("ais_biometric_unlocked") === "true";
+        if (isBiometricEnabled && !isUnlocked) {
+          return <BiometricLockScreen onUnlock={() => window.location.reload()} />;
+        }
+        return null;
+      })()}
+
       <Toaster />
       
     </div>
