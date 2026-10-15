@@ -1323,13 +1323,15 @@ export function BookingScreen({
     });
   }, [clients, selectedClient, guestName, guestPhone]);
 
-  // Check if current client is blocked from booking by a barber
-  const isClientBlocked = useMemo(() => {
+  // Check if current client is blocked from booking by a barber, and retrieve the reason
+  const clientBlockedInfo = useMemo(() => {
     const isStaff = role === "manager" || role === "barber";
-    if (isStaff) return false;
+    if (isStaff) return { isBlocked: false, reason: null, details: null };
 
     // 1. Logged in user has blocked flag
-    if (user?.blockedFromBooking === true) return true;
+    if (user?.blockedFromBooking === true) {
+      return { isBlocked: true, reason: user.blockedReason || null, details: user.blockedDetails || null };
+    }
     if (user) {
       const userCleanPhone = (user.whatsapp || user.phone || "").replace(/\D/g, "");
       const userDocMatch = clients.find((c) => {
@@ -1340,14 +1342,20 @@ export function BookingScreen({
         }
         return false;
       });
-      if (userDocMatch?.blockedFromBooking === true) return true;
+      if (userDocMatch?.blockedFromBooking === true) {
+        return { isBlocked: true, reason: userDocMatch.blockedReason || user.blockedReason || null, details: userDocMatch.blockedDetails || user.blockedDetails || null };
+      }
     }
 
     // 2. Explicitly selected client
-    if (selectedClient?.blockedFromBooking === true) return true;
+    if (selectedClient?.blockedFromBooking === true) {
+      return { isBlocked: true, reason: selectedClient.blockedReason || null, details: selectedClient.blockedDetails || null };
+    }
 
     // 3. Real-time matched client by input phone or name
-    if (currentClientMatch?.blockedFromBooking === true) return true;
+    if (currentClientMatch?.blockedFromBooking === true) {
+      return { isBlocked: true, reason: currentClientMatch.blockedReason || null, details: currentClientMatch.blockedDetails || null };
+    }
 
     // 4. Input guest phone match in clients collection
     const cleanGuestPhone = (guestPhone || "").replace(/\D/g, "");
@@ -1356,11 +1364,17 @@ export function BookingScreen({
         const cPhone = (c.whatsapp || c.phone || "").replace(/\D/g, "");
         return cPhone && (cPhone === cleanGuestPhone || cPhone.endsWith(cleanGuestPhone) || cleanGuestPhone.endsWith(cPhone));
       });
-      if (phoneMatch?.blockedFromBooking === true) return true;
+      if (phoneMatch?.blockedFromBooking === true) {
+        return { isBlocked: true, reason: phoneMatch.blockedReason || null, details: phoneMatch.blockedDetails || null };
+      }
     }
 
-    return false;
+    return { isBlocked: false, reason: null, details: null };
   }, [role, user, selectedClient, currentClientMatch, guestPhone, clients]);
+
+  const isClientBlocked = clientBlockedInfo.isBlocked;
+  const clientBlockedReason = clientBlockedInfo.reason;
+  const clientBlockedDetails = clientBlockedInfo.details;
 
   const blockedClientDisplayName =
     user?.displayName || user?.name || guestName || selectedClient?.name || currentClientMatch?.name || "Cliente";
@@ -2023,6 +2037,16 @@ export function BookingScreen({
                   <p className="text-[11px] text-neutral-300 font-medium">
                     Para agendar seu horário, por favor entre em contato diretamente com a nossa equipe.
                   </p>
+                  {clientBlockedReason && (
+                    <p className="text-[10px] text-rose-200 font-bold mt-1">
+                      Motivo: <span className="text-white underline decoration-rose-500/50">{clientBlockedReason}</span>
+                    </p>
+                  )}
+                  {clientBlockedDetails && (
+                    <p className="text-[9.5px] text-neutral-400 italic mt-0.5">
+                      &quot;{clientBlockedDetails}&quot;
+                    </p>
+                  )}
                 </div>
               </div>
               <a
@@ -3128,6 +3152,21 @@ export function BookingScreen({
                       <p className="text-xs text-neutral-200 font-medium leading-relaxed px-2">
                         Para realizar o seu agendamento, por favor entre em contato diretamente com a nossa equipe da <strong>{BARBERSHOP_NAME}</strong>.
                       </p>
+                      {clientBlockedReason && (
+                        <div className="my-2 p-3 bg-black/40 border border-rose-500/30 rounded-xl text-left">
+                          <p className="text-[10px] font-black uppercase tracking-wider text-rose-400">
+                            Motivo informado:
+                          </p>
+                          <p className="text-xs text-rose-200 font-bold mt-0.5">
+                            {clientBlockedReason}
+                          </p>
+                          {clientBlockedDetails && (
+                            <p className="text-[10px] text-neutral-400 italic mt-1">
+                              &quot;{clientBlockedDetails}&quot;
+                            </p>
+                          )}
+                        </div>
+                      )}
                       <p className="text-[11px] text-neutral-400 leading-relaxed px-2">
                         Nosso agendamento online está temporariamente indisponível para o seu perfil. Clique abaixo para falar conosco no WhatsApp e escolher o melhor horário!
                       </p>

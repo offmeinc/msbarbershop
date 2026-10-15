@@ -227,8 +227,11 @@ export function ClientsScreen({ onBack, onScheduleClient, onClientClick, user, r
                                 {rank.name}
                               </span>
                               {client.blockedFromBooking && (
-                                <span className="px-1.5 py-0.5 rounded-md text-[7px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/40 flex items-center gap-1">
-                                  <Ban className="w-2.5 h-2.5 text-rose-400" /> Impedido
+                                <span 
+                                  title={`Impedido de agendar online: ${client.blockedReason || "Motivo não informado"}`}
+                                  className="px-1.5 py-0.5 rounded-md text-[7px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/40 flex items-center gap-1"
+                                >
+                                  <Ban className="w-2.5 h-2.5 text-rose-400" /> Impedido {client.blockedReason ? `• ${client.blockedReason}` : ''}
                                 </span>
                               )}
                             </div>

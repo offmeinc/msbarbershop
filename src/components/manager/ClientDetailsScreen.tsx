@@ -8,6 +8,7 @@ import { format, parseISO, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { BARBERSHOP_NAME } from "../../constants";
 import { triggerLightHaptic } from "../../lib/haptics";
+import { BlockClientModal } from "./BlockClientModal";
 
 export function ClientDetailsScreen({ client, onBack, onScheduleClient, onMessageClient }: { client: any, onBack: () => void, onScheduleClient?: (client: any) => void, onMessageClient?: (client: any) => void }) {
   const [appointments, setAppointments] = useState<any[]>([]);
@@ -15,7 +16,10 @@ export function ClientDetailsScreen({ client, onBack, onScheduleClient, onMessag
   const [notes, setNotes] = useState(client?.notes || "");
   const [isSavingNotes, setIsSavingNotes] = useState(false);
   const [isBlocked, setIsBlocked] = useState(!!client?.blockedFromBooking);
-  const [isSavingBlock, setIsSavingBlock] = useState(false);
+  const [blockedReason, setBlockedReason] = useState(client?.blockedReason || "");
+  const [blockedAt, setBlockedAt] = useState(client?.blockedAt || null);
+  const [blockedDetails, setBlockedDetails] = useState(client?.blockedDetails || "");
+  const [showBlockModal, setShowBlockModal] = useState(false);
 
   // Sync client block status in real-time
   useEffect(() => {
@@ -25,38 +29,16 @@ export function ClientDetailsScreen({ client, onBack, onScheduleClient, onMessag
       if (docSnap.exists()) {
         const data = docSnap.data();
         setIsBlocked(data?.blockedFromBooking === true);
+        setBlockedReason(data?.blockedReason || "");
+        setBlockedAt(data?.blockedAt || null);
+        setBlockedDetails(data?.blockedDetails || "");
       }
     }, () => {});
     return () => unsubscribeUser();
   }, [client]);
 
-  const handleToggleBlock = async () => {
-    const clientId = client?.uid || client?.id;
-    if (!clientId) {
-      toast.error("Identificador do cliente não encontrado.");
-      return;
-    }
-    setIsSavingBlock(true);
-    try {
-      const nextStatus = !isBlocked;
-      await setDoc(doc(db, "users", clientId), {
-        blockedFromBooking: nextStatus,
-        blockedAt: nextStatus ? new Date().toISOString() : null,
-        updatedAt: Timestamp.now()
-      }, { merge: true });
-      setIsBlocked(nextStatus);
-      triggerLightHaptic();
-      if (nextStatus) {
-        toast.success("Cliente impedido de agendar novos horários!");
-      } else {
-        toast.success("Cliente liberado para agendar horários!");
-      }
-    } catch (err) {
-      console.error("Error toggling client booking block:", err);
-      toast.error("Erro ao alterar permissão de agendamento.");
-    } finally {
-      setIsSavingBlock(false);
-    }
+  const handleToggleBlock = () => {
+    setShowBlockModal(true);
   };
 
   const handleSaveNotes = async () => {
@@ -266,9 +248,14 @@ export function ClientDetailsScreen({ client, onBack, onScheduleClient, onMessag
                   {rank.name}
                 </span>
                 {isBlocked && (
-                  <span className="px-2.5 py-1 rounded-xl text-[8.5px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/30 flex items-center gap-1 inline-block self-start sm:self-auto">
-                    <Ban className="w-3 h-3 inline text-rose-400" /> Agendamento Bloqueado
-                  </span>
+                  <button
+                    onClick={() => setShowBlockModal(true)}
+                    className="px-2.5 py-1 rounded-xl text-[8.5px] font-black uppercase tracking-wider bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 flex items-center gap-1.5 inline-block self-start sm:self-auto cursor-pointer transition-all"
+                    title={blockedReason ? `Motivo: ${blockedReason} (clique para gerenciar)` : "Agendamento bloqueado"}
+                  >
+                    <Ban className="w-3 h-3 inline text-rose-400" />
+                    <span>Bloqueado{blockedReason ? `: ${blockedReason}` : ""}</span>
+                  </button>
                 )}
               </div>
               
@@ -450,7 +437,6 @@ export function ClientDetailsScreen({ client, onBack, onScheduleClient, onMessag
                <div className="flex items-center gap-2">
                  <button
                    onClick={handleToggleBlock}
-                   disabled={isSavingBlock}
                    className={`py-2 px-3 rounded-xl text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer ${
                      isBlocked
                        ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/20'
@@ -501,20 +487,15 @@ export function ClientDetailsScreen({ client, onBack, onScheduleClient, onMessag
               </button>
               <button
                 onClick={handleToggleBlock}
-                disabled={isSavingBlock}
                 className={`flex items-center gap-2 px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 cursor-pointer border ${
                   isBlocked
                     ? "bg-rose-500/20 text-rose-300 border-rose-500/40 hover:bg-rose-500/30 shadow-lg shadow-rose-500/10"
                     : "liquid-glass text-neutral-400 hover:text-rose-400 border-white/5 hover:border-rose-500/30 hover:bg-rose-500/10"
                 }`}
-                title={isBlocked ? "Permitir que este cliente agende pelo app" : "Impedir este cliente de agendar pelo app"}
+                title={isBlocked ? "Gerenciar impedimento deste cliente" : "Impedir este cliente de agendar pelo app"}
               >
-                {isSavingBlock ? (
-                  <Loader2 className="w-4 h-4 animate-spin text-rose-400 shrink-0" />
-                ) : (
-                  <Ban className="w-4 h-4 text-rose-400 shrink-0" />
-                )}
-                {isBlocked ? "Liberar Agendamentos" : "Impedir de Agendar"}
+                <Ban className="w-4 h-4 text-rose-400 shrink-0" />
+                {isBlocked ? "Gerenciar Impedimento" : "Impedir de Agendar"}
               </button>
               {onScheduleClient && (
                 <button 
@@ -524,21 +505,51 @@ export function ClientDetailsScreen({ client, onBack, onScheduleClient, onMessag
                     <Repeat className="w-4 h-4 text-amber-500 shrink-0" /> Agendar Novo Corte
                 </button>
               )}
-         </div>
-          {/* Blocked Client Status Warning */}
+          </div>
+          {/* Blocked Client Status Warning with Motive */}
           {isBlocked && (
-            <div className="mt-6 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-start gap-3 text-left">
-              <div className="p-2 rounded-xl bg-rose-500/20 text-rose-400 shrink-0 mt-0.5">
-                <Ban className="w-4 h-4" />
+            <div className="mt-6 p-5 rounded-3xl bg-rose-950/20 border border-rose-500/30 flex flex-col sm:flex-row sm:items-start justify-between gap-4 text-left">
+              <div className="flex items-start gap-3.5">
+                <div className="p-2.5 rounded-2xl bg-rose-500/20 text-rose-400 shrink-0 mt-0.5 border border-rose-500/30">
+                  <Ban className="w-5 h-5" />
+                </div>
+                <div className="space-y-1.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-xs font-black text-rose-400 uppercase tracking-wide">
+                      Cliente Impedido de Agendar Online
+                    </p>
+                    {blockedAt && (
+                      <span className="text-[9.5px] text-neutral-400">
+                        • Bloqueado em {(() => {
+                          try {
+                            return format(parseISO(blockedAt), "dd/MM/yyyy", { locale: ptBR });
+                          } catch {
+                            return "";
+                          }
+                        })()}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-rose-300 font-extrabold uppercase">
+                    Motivo: <span className="text-white underline decoration-rose-500/50 font-black">{blockedReason || "Motivo não especificado"}</span>
+                  </p>
+                  {blockedDetails && (
+                    <p className="text-[11px] text-neutral-300 italic bg-black/40 p-2.5 rounded-xl border border-white/5 max-w-xl">
+                      &quot;{blockedDetails}&quot;
+                    </p>
+                  )}
+                  <p className="text-[10px] text-neutral-400 leading-relaxed pt-0.5">
+                    Quando este cliente tentar marcar horário pelo app, o sistema bloqueará a finalização e exibirá o botão direto para contato com a barbearia pelo WhatsApp.
+                  </p>
+                </div>
               </div>
-              <div className="space-y-1">
-                <p className="text-xs font-black text-rose-400 uppercase tracking-wide">
-                  Cliente Impedido de Agendar Horário Online
-                </p>
-                <p className="text-[11px] text-neutral-300 leading-relaxed font-medium">
-                  Quando este cliente tentar marcar um horário pelo aplicativo, o sistema bloqueará a finalização, exibirá a mensagem solicitando que entre em contato e fornecerá um botão direto para falar com a barbearia pelo WhatsApp.
-                </p>
-              </div>
+
+              <button
+                onClick={() => setShowBlockModal(true)}
+                className="py-2 px-3.5 rounded-xl bg-rose-500 hover:bg-rose-400 text-white font-black text-[9.5px] uppercase tracking-wider shrink-0 transition-all cursor-pointer shadow-lg shadow-rose-500/20 self-start sm:self-auto"
+              >
+                Editar Motivo / Liberar
+              </button>
             </div>
           )}
       </div>
@@ -647,6 +658,23 @@ export function ClientDetailsScreen({ client, onBack, onScheduleClient, onMessag
           )}
         </div>
       )}
+
+      {/* Block/Unblock Client Modal with Reason Selection */}
+      <BlockClientModal
+        isOpen={showBlockModal}
+        onClose={() => setShowBlockModal(false)}
+        client={{
+          ...client,
+          blockedFromBooking: isBlocked,
+          blockedReason,
+          blockedAt,
+          blockedDetails
+        }}
+        onSuccess={(newStatus, newReason) => {
+          setIsBlocked(newStatus);
+          if (newReason) setBlockedReason(newReason);
+        }}
+      />
     </motion.div>
   );
 }

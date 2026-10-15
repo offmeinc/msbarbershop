@@ -1,7 +1,7 @@
 {
-  "id": "https://msbarbershop.com.br/",
+  "id": "/",
   "name": "MS BARBER SHOP",
-  "short_name": "MS BARBER SHOP",
+  "short_name": "MS Barber",
   "description": "Plataforma completa de agendamento e gestão para MS BARBER SHOP.",
   "start_url": "/",
   "scope": "/",
@@ -12,19 +12,21 @@
   "gcm_sender_id": "103953800507",
   "icons": [
     {
-      "src": "/logo.jpg",
+      "src": "/pwa-192x192.png",
       "sizes": "192x192",
-      "type": "image/jpeg"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "/logo.jpg",
+      "src": "/pwa-512x512.png",
       "sizes": "512x512",
-      "type": "image/jpeg"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "/logo.jpg",
+      "src": "/pwa-maskable-512x512.png",
       "sizes": "512x512",
-      "type": "image/jpeg",
+      "type": "image/png",
       "purpose": "maskable"
     }
   ]

@@ -12,7 +12,7 @@ export default defineConfig(({ mode }) => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'logo.jpg'],
+        includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png', 'pwa-maskable-512x512.png', 'logo.jpg'],
         workbox: {
           globPatterns: ['**/*.{js,css,html,png,jpg,jpeg,svg,ico,json,woff,woff2}'],
           cleanupOutdatedCaches: true,
@@ -67,9 +67,9 @@ export default defineConfig(({ mode }) => {
           ]
         },
         manifest: {
-          id: 'https://msbarbershop.com.br/',
+          id: '/',
           name: 'MS BARBER SHOP',
-          short_name: 'MS BARBER SHOP',
+          short_name: 'MS Barber',
           description: 'Plataforma completa de agendamento e gestão para MS BARBER SHOP.',
           theme_color: '#000000',
           background_color: '#000000',
@@ -79,22 +79,27 @@ export default defineConfig(({ mode }) => {
           scope: '/',
           icons: [
             {
-              src: '/logo.jpg',
+              src: '/pwa-192x192.png',
               sizes: '192x192',
-              type: 'image/jpeg'
+              type: 'image/png',
+              purpose: 'any'
             },
             {
-              src: '/logo.jpg',
+              src: '/pwa-512x512.png',
               sizes: '512x512',
-              type: 'image/jpeg'
+              type: 'image/png',
+              purpose: 'any'
             },
             {
-              src: '/logo.jpg',
+              src: '/pwa-maskable-512x512.png',
               sizes: '512x512',
-              type: 'image/jpeg',
-              purpose: 'any maskable'
+              type: 'image/png',
+              purpose: 'maskable'
             }
           ]
+        },
+        devOptions: {
+          enabled: false
         }
       })
     ],

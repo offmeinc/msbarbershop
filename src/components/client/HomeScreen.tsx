@@ -1,12 +1,13 @@
 import { useState, useEffect, memo } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { ChevronRight, Sparkles, MapPin, Instagram, Phone, Clock, Scissors, Image as ImageIcon, Star, AlertCircle } from "lucide-react";
+import { ChevronRight, Sparkles, MapPin, Instagram, Phone, Clock, Scissors, Image as ImageIcon, Star, AlertCircle, Smartphone } from "lucide-react";
 import { BARBERSHOP_NAME, BARBERSHOP_ADDRESS, BARBERSHOP_PHONE, BARBERSHOP_INSTAGRAM, GOOGLE_REVIEW_URL } from "../../constants";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
 import { collection, query, orderBy, limit, onSnapshot, getDocs } from "firebase/firestore";
 import { Skeleton } from "../common/Skeleton";
 import { BrandLogo } from "../common/BrandLogo";
 import { StoryViewer } from "../common/StoryViewer";
+import { triggerLightHaptic } from "../../lib/haptics";
 
 const triggerBookingPreload = () => {
   if (typeof window !== "undefined" && (window as any).__pwaPreloaders?.booking) {
@@ -34,6 +35,14 @@ export const HomeScreen = memo(function HomeScreen({
   const [loadingPortfolio, setLoadingPortfolio] = useState(true);
   const [storyIndex, setStoryIndex] = useState<number | null>(null);
   const [popularServices, setPopularServices] = useState<any[]>([]);
+  const [isStandalone, setIsStandalone] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const standalone = window.matchMedia("(display-mode: standalone)").matches || (window.navigator as any).standalone === true;
+      setIsStandalone(standalone);
+    }
+  }, []);
 
   useEffect(() => {
     const fetchPopular = async () => {
@@ -131,6 +140,23 @@ export const HomeScreen = memo(function HomeScreen({
             </motion.button>
           </div>
         </div>
+
+        {/* Mobile PWA Install Quick Action */}
+        {!isStandalone && (
+          <div className="mt-4 flex justify-center">
+            <button
+              type="button"
+              onClick={() => {
+                triggerLightHaptic();
+                window.dispatchEvent(new CustomEvent('ais_trigger_install'));
+              }}
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full liquid-glass text-neutral-300 hover:text-amber-400 border border-white/10 hover:border-amber-500/30 text-[9.5px] font-bold uppercase tracking-wider transition-all cursor-pointer active:scale-95 shadow-md"
+            >
+              <Smartphone className="w-3.5 h-3.5 text-amber-500" />
+              <span>Instalar Aplicativo no Celular</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Autoestima Section */}

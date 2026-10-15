@@ -55,7 +55,9 @@ import {
   Check,
   RotateCcw,
   Info,
-  Ban
+  Ban,
+  Smartphone,
+  Download
 } from "lucide-react";
 import { db, handleFirestoreError, OperationType, safeStringify, cancelAppointmentAtomically } from "../../lib/firebase";
 import { setupPushSubscription, getNotificationPermissionState, queryNotificationSupport, getBackendUrl } from "../../lib/pushRegister";
@@ -102,6 +104,14 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
   const [showRenewalModal, setShowRenewalModal] = useState(false);
   const [showBlockedModal, setShowBlockedModal] = useState(false);
   const [isConfirmingPresence, setIsConfirmingPresence] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const standalone = window.matchMedia("(display-mode: standalone)").matches || (window.navigator as any).standalone === true;
+      setIsStandalone(standalone);
+    }
+  }, []);
 
   const [liveUser, setLiveUser] = useState<any>(user);
   const [selectedLookbookStyle, setSelectedLookbookStyle] = useState<{ title: string, imageUrl: string } | null>(null);
@@ -719,6 +729,77 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
               )}
 
               <div className="w-full space-y-4">
+                {/* Blocked Client Direct Banner */}
+                {liveUser?.blockedFromBooking && (
+                  <div className="p-5 rounded-[2rem] bg-rose-950/30 border border-rose-500/30 text-left space-y-2.5 shadow-xl">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-2 rounded-xl bg-rose-500/20 text-rose-400 shrink-0 border border-rose-500/30">
+                        <Ban className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-black uppercase text-rose-300 tracking-wider">
+                          Agendamento Online Restrito
+                        </h4>
+                        <span className="text-[9px] text-neutral-400">Atendimento direto pelo WhatsApp</span>
+                      </div>
+                    </div>
+                    {liveUser.blockedReason && (
+                      <div className="bg-black/40 border border-rose-500/20 p-3 rounded-xl text-xs text-rose-200">
+                        <span className="text-[9px] font-black uppercase tracking-wider text-rose-400 block mb-0.5">
+                          Motivo informado pela barbearia:
+                        </span>
+                        <strong className="text-white">{liveUser.blockedReason}</strong>
+                        {liveUser.blockedDetails && (
+                          <p className="text-[10px] text-neutral-300 italic mt-1">
+                            &quot;{liveUser.blockedDetails}&quot;
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    <p className="text-[10px] text-neutral-300 leading-relaxed">
+                      Para agendar seu corte com exclusividade, fale diretamente com nossa equipe no WhatsApp clicando no botão verde abaixo.
+                    </p>
+                  </div>
+                )}
+
+                {/* PWA Mobile Experience Install Card */}
+                {!isStandalone ? (
+                  <div className="liquid-glass p-4 sm:p-5 rounded-[2rem] border border-amber-500/20 text-left flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xl">
+                    <div className="flex items-center gap-3">
+                      <div className="w-11 h-11 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 shrink-0">
+                        <Smartphone className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[8px] font-black uppercase tracking-widest text-amber-500">EXPERIÊNCIA MOBILE</span>
+                          <span className="text-[7.5px] font-black bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded-md border border-amber-500/30 uppercase">PWA</span>
+                        </div>
+                        <h4 className="text-xs sm:text-sm font-black text-white uppercase italic tracking-tight">
+                          Instalar Aplicativo Oficial
+                        </h4>
+                        <p className="text-[9.5px] text-neutral-400 leading-tight mt-0.5">
+                          Adicione o app à tela inicial do celular para acesso instantâneo e offline.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerLightHaptic();
+                        window.dispatchEvent(new CustomEvent('ais_trigger_install'));
+                      }}
+                      className="w-full sm:w-auto px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-black uppercase tracking-wider text-[10px] rounded-xl flex items-center justify-center gap-1.5 shrink-0 shadow-lg shadow-amber-500/20 active:scale-95 transition-all cursor-pointer"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      Instalar App
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center gap-1.5 text-[9px] font-bold text-neutral-400 uppercase tracking-widest py-1">
+                    <Smartphone className="w-3 h-3 text-amber-500" /> App Instalado • Modo Nativo PWA
+                  </div>
+                )}
+
                 <button
                   onClick={() => handleAttemptBooking()}
                   className="w-full bg-amber-500 text-black py-5 rounded-[2rem] font-black italic uppercase tracking-widest text-lg shadow-[0_0_40px_rgba(245,158,11,0.3)] hover:scale-[1.02] transition-all flex items-center justify-center gap-3"
@@ -1801,6 +1882,21 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                 <p className="text-xs text-neutral-300 font-medium leading-relaxed px-2">
                   Para realizar o seu agendamento, por favor entre em contato diretamente com a nossa equipe da <strong className="text-amber-400">{BARBERSHOP_NAME}</strong>.
                 </p>
+                {liveUser?.blockedReason && (
+                  <div className="bg-rose-500/10 border border-rose-500/25 p-3.5 rounded-2xl text-left my-2">
+                    <p className="text-[9.5px] font-black uppercase tracking-wider text-rose-400">
+                      Motivo informado pela barbearia:
+                    </p>
+                    <p className="text-xs text-rose-200 font-bold mt-0.5">
+                      {liveUser.blockedReason}
+                    </p>
+                    {liveUser.blockedDetails && (
+                      <p className="text-[10px] text-neutral-300 italic mt-1 bg-black/30 p-2 rounded-lg border border-white/5">
+                        &quot;{liveUser.blockedDetails}&quot;
+                      </p>
+                    )}
+                  </div>
+                )}
                 <p className="text-[11px] text-neutral-400 leading-relaxed px-2">
                   Nosso agendamento online está temporariamente indisponível para o seu cadastro. Clique no botão abaixo para conversar via WhatsApp e escolher o melhor horário!
                 </p>

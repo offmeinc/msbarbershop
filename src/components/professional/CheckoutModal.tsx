@@ -274,7 +274,7 @@ export function CheckoutModal({
 
       await updateDoc(appointmentRef, updateData);
 
-      // 2. Decrement inventory stock for any physical products sold
+      // 2. Decrement inventory stock for any physical products sold and log movement
       const productItems = items.filter(i => i.type === "product" && i.inventoryId);
       for (const p of productItems) {
         if (p.inventoryId) {
@@ -284,8 +284,21 @@ export function CheckoutModal({
               quantity: increment(-p.quantity),
               updatedAt: serverTimestamp()
             });
+
+            // Log sale transaction in inventory_logs
+            await addDoc(collection(db, "inventory_logs"), {
+              productId: p.inventoryId,
+              productName: p.name,
+              type: "sale",
+              quantityChanged: -p.quantity,
+              reason: `Venda no checkout (Atendimento de ${appointment.clientName || 'Cliente'})`,
+              performedBy: appointment.barberName || "Profissional",
+              appointmentId: appointment.id || null,
+              unitPrice: p.price || 0,
+              createdAt: serverTimestamp()
+            });
           } catch (invErr) {
-            console.warn("Error updating product inventory stock:", invErr);
+            console.warn("Error updating product inventory stock / logging sale:", invErr);
           }
         }
       }

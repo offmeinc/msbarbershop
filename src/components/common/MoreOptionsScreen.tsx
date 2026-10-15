@@ -17,7 +17,8 @@ import {
   Star,
   Package,
   Gift,
-  Presentation
+  Presentation,
+  Download
 } from "lucide-react";
 import { BlockScreen } from "../manager/BlockScreen";
 import { HelpScreen, ShareScreen, RecurrenceScreen } from "../manager/OtherScreens";
@@ -99,6 +100,16 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
           desc: 'Ativar, testar e configurar alertas em segundo plano',
           icon: <Bell className="w-5 h-5 text-amber-500 animate-pulse" />, 
           onClick: () => setActiveSubScreen('pwa') 
+        },
+        {
+          id: 'install_pwa',
+          label: 'Instalar Aplicativo (PWA)',
+          desc: 'Instalar na tela inicial para acesso instantâneo e offline',
+          icon: <Download className="w-5 h-5 text-amber-400" />,
+          onClick: () => {
+            window.dispatchEvent(new CustomEvent('ais_trigger_install'));
+            toast.info("Iniciando instalador do aplicativo...");
+          }
         },
         ...(role === 'barber' || role === 'manager' ? [{ 
           id: 'earnings', 
