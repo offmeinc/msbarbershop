@@ -481,15 +481,45 @@ Gere um relatório de desempenho em português (pt-BR).`;
 
   // Mercado Pago Payment Creation API
   app.post("/api/payments/mercado-pago/create-payment", async (req, res) => {
-    const { transaction_amount, appointmentId, userId } = req.body;
+    const { transaction_amount, appointmentId, userId, email, name, description } = req.body;
     try {
+      const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
+      if (!accessToken || accessToken.trim() === "" || accessToken.includes("YOUR_TOKEN")) {
+        // Return simulated Mock Pix for testing if token is not configured
+        const mockId = "mock-pix-" + Date.now();
+        const mockQrBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+        const mockCopyPaste = "00020101021243650016BR.GOV.BCB.PIX0114+55119999999995204000053039865802BR5913MS BARBER SHOP6009SAO PAULO62070503***63041D3D";
+        
+        await setDoc(doc(db, "payments", mockId), {
+          appointmentId: appointmentId || "temp",
+          userId: userId || null,
+          status: "pending",
+          amount: Number(transaction_amount) || 10,
+          isMock: true,
+          createdAt: serverTimestamp()
+        });
+
+        return res.json({
+          success: true,
+          id: mockId,
+          qr_code_base64: mockQrBase64,
+          qr_code: mockCopyPaste,
+          ticket_url: "https://mercadopago.com.br"
+        });
+      }
+
       const mpRes = await axios.post("https://api.mercadopago.com/v1/payments", {
-        transaction_amount,
+        transaction_amount: Number(transaction_amount),
+        description: description || "Pagamento MS Barber Shop",
         payment_method_id: "pix",
-        payer: { email: "test@test.com" }
+        payer: {
+          email: email || "cliente@msbarbershop.com.br",
+          first_name: name || "Cliente"
+        }
       }, {
-        headers: { Authorization: `Bearer ${process.env.MERCADO_PAGO_ACCESS_TOKEN}` }
+        headers: { Authorization: `Bearer ${accessToken}` }
       });
+
       const paymentData = {
         appointmentId,
         userId,
@@ -498,9 +528,18 @@ Gere um relatório de desempenho em português (pt-BR).`;
         createdAt: serverTimestamp()
       };
       await setDoc(doc(db, "payments", String(mpRes.data.id)), paymentData);
-      res.json({ id: mpRes.data.id, qr_code_base64: mpRes.data.point_of_interaction.transaction_data.qr_code_base64 });
+      
+      const tData = mpRes.data.point_of_interaction?.transaction_data || {};
+      res.json({
+        success: true,
+        id: mpRes.data.id,
+        qr_code_base64: tData.qr_code_base64 || "",
+        qr_code: tData.qr_code || "",
+        ticket_url: tData.ticket_url || ""
+      });
     } catch (e: any) {
-      res.status(500).json({ error: e.message });
+      console.error("Mercado Pago API error:", e.response?.data || e.message);
+      res.status(500).json({ success: false, error: e.response?.data?.message || e.message });
     }
   });
 

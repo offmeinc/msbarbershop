@@ -32,12 +32,12 @@ console.warn = (...args) => originalConsoleWarn(...sanitizeArgs(args));
 // Automatically register service worker on load to qualify for PWA installation
 if (typeof window !== "undefined" && "serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    const swUrl = import.meta.env.DEV ? "/firebase-messaging-sw.js" : "/sw.js";
+    const swUrl = "/firebase-messaging-sw.js";
     navigator.serviceWorker
       .register(swUrl, { scope: "/" })
       .then((reg) => {
-        console.log("[PWA] Service Worker registered on load successfully:", reg.scope);
-        reg.update().catch(() => {}); // Force update to prevent old SW bugs
+        console.log("[PWA] Service Worker registered successfully:", reg.scope);
+        reg.update().catch(() => {});
       })
       .catch((err) => {
         if (err.message?.includes("Failed to fetch") || String(err).includes("Failed to fetch")) {
