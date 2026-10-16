@@ -19,7 +19,8 @@ import {
   Gift,
   Presentation,
   Download,
-  Fingerprint
+  Fingerprint,
+  ScanFace
 } from "lucide-react";
 import { BlockScreen } from "../manager/BlockScreen";
 import { HelpScreen, ShareScreen, RecurrenceScreen } from "../manager/OtherScreens";
@@ -35,6 +36,7 @@ import { GOOGLE_REVIEW_URL } from "../../constants";
 import { MyWeekScreen } from "../manager/MyWeekScreen";
 import { PWANotificationsScreen } from "../pwa/PWANotificationsScreen";
 import { PortfolioManager } from "../professional/PortfolioManager";
+import { BiometricSettingsModal } from "../pwa/BiometricSettingsModal";
 import { toast } from "../ui/Toast";
 
 // Dummy components
@@ -44,6 +46,7 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
   const [activeSubScreen, setActiveSubScreen] = useState<
     'main' | 'profile' | 'notif' | 'block' | 'share' | 'earnings' | 'week' | 'recon' | 'recurrence' | 'promotions' | 'inventory' | 'pwa' | 'portfolio'
   >('main');
+  const [showBiometricModal, setShowBiometricModal] = useState(false);
 
   const unreadCount = staffNotifications.filter(n => !n.read).length;
 
@@ -105,20 +108,11 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
         {
           id: 'biometric',
           label: 'Bloqueio por Biometria / Face ID',
-          desc: localStorage.getItem("ais_biometric_enabled") === "true" ? 'Ativado (Exigir ao abrir app)' : 'Desativado (Toque para ativar)',
-          icon: <Fingerprint className="w-5 h-5 text-amber-400" />,
-          onClick: () => {
-            const current = localStorage.getItem("ais_biometric_enabled") === "true";
-            if (current) {
-              localStorage.removeItem("ais_biometric_enabled");
-              localStorage.removeItem("ais_biometric_unlocked");
-              toast.success("Bloqueio biométrico desativado.");
-            } else {
-              localStorage.setItem("ais_biometric_enabled", "true");
-              localStorage.setItem("ais_biometric_unlocked", "true");
-              toast.success("Bloqueio biométrico ativado com sucesso! 🔒");
-            }
-          }
+          desc: localStorage.getItem("ais_biometric_enabled") === "true" 
+            ? 'Ativado • Chave Apple Face ID vinculada' 
+            : 'Desativado • Toque para configurar Face ID & PIN',
+          icon: <ScanFace className="w-5 h-5 text-amber-400" />,
+          onClick: () => setShowBiometricModal(true)
         },
         ...(role === 'barber' || role === 'manager' ? [{ 
           id: 'earnings', 
@@ -342,6 +336,13 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
           </button>
         </div>
       </div>
+
+      {/* Biometric Settings & Face ID Configuration Modal */}
+      <BiometricSettingsModal
+        isOpen={showBiometricModal}
+        onClose={() => setShowBiometricModal(false)}
+        user={user}
+      />
     </motion.div>
   );
 }

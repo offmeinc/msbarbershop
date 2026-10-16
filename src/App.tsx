@@ -266,6 +266,15 @@ function triggerLocalNotification(title: string, body: string, urlPath: string =
 export default function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [isBiometricUnlocked, setIsBiometricUnlocked] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    const isBiometricEnabled = localStorage.getItem("ais_biometric_enabled") === "true";
+    if (!isBiometricEnabled) return true;
+    return (
+      sessionStorage.getItem("ais_biometric_session_unlocked") === "true" ||
+      localStorage.getItem("ais_biometric_unlocked") === "true"
+    );
+  });
 
   useEffect(() => {
     const errorHandler = (event: ErrorEvent) => {
@@ -1846,9 +1855,14 @@ export default function App() {
       {/* Biometric Lock Screen for PWA security */}
       {(() => {
         const isBiometricEnabled = typeof window !== "undefined" && localStorage.getItem("ais_biometric_enabled") === "true";
-        const isUnlocked = typeof window !== "undefined" && localStorage.getItem("ais_biometric_unlocked") === "true";
-        if (isBiometricEnabled && !isUnlocked) {
-          return <BiometricLockScreen onUnlock={() => window.location.reload()} />;
+        if (isBiometricEnabled && !isBiometricUnlocked) {
+          return (
+            <BiometricLockScreen 
+              userEmail={user?.email || loggedInClient?.email}
+              userName={user?.displayName || loggedInClient?.name}
+              onUnlock={() => setIsBiometricUnlocked(true)} 
+            />
+          );
         }
         return null;
       })()}
