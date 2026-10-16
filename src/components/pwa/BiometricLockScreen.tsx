@@ -14,10 +14,12 @@ import {
 } from "lucide-react";
 import { toast } from "../ui/Toast";
 import { triggerLightHaptic, triggerSuccessHaptic, triggerWarningHaptic } from "../../lib/haptics";
+import { getIOSInfo } from "../../lib/iosDetection";
 
 export function BiometricLockScreen({ onUnlock }: { onUnlock: () => void }) {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const ios = getIOSInfo();
 
   const handleAuthenticate = async () => {
     setLoading(true);
@@ -90,10 +92,12 @@ export function BiometricLockScreen({ onUnlock }: { onUnlock: () => void }) {
             Segurança PWA • MS BARBER
           </span>
           <h3 className="text-xl font-black text-white uppercase italic tracking-tight">
-            Desbloquear com Biometria
+            {ios.isIOS ? "Desbloquear com Face ID" : "Desbloquear com Biometria"}
           </h3>
           <p className="text-xs text-neutral-400 font-medium leading-relaxed px-2">
-            Use sua impressão digital, reconhecimento facial (Face ID) ou senha do dispositivo para acessar o aplicativo.
+            {ios.isIOS
+              ? "Use o Face ID, Touch ID ou o código do iPhone para desbloquear o app."
+              : "Use sua impressão digital, reconhecimento facial ou senha do dispositivo para acessar o aplicativo."}
           </p>
         </div>
 
@@ -112,12 +116,12 @@ export function BiometricLockScreen({ onUnlock }: { onUnlock: () => void }) {
             {loading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin text-black" />
-                VERIFICANDO BIOMETRIA...
+                VERIFICANDO...
               </>
             ) : (
               <>
                 <Fingerprint className="w-4 h-4" />
-                TOCAR PARA DESBLOQUEAR
+                {ios.isIOS ? "AUTENTICAR COM FACE ID / DIGITAL" : "TOCAR PARA DESBLOQUEAR"}
               </>
             )}
           </button>

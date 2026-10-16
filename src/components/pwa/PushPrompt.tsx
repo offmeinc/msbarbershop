@@ -4,6 +4,8 @@ import { Bell, ShieldCheck, X, Zap, Share, Plus, Settings, AlertTriangle, Check,
 import { setupPushSubscription, getNotificationPermissionState } from '../../lib/pushRegister';
 import { toast } from 'react-hot-toast';
 
+import { getIOSInfo } from '../../lib/iosDetection';
+
 interface PushPromptProps {
   userId?: string;
   userRole?: string;
@@ -13,15 +15,14 @@ export function PushPrompt({ userId, userRole }: PushPromptProps) {
   const [showPrompt, setShowPrompt] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const [showIOSGuide, setShowIOSGuide] = useState(false);
-  const [platformInfo, setPlatformInfo] = useState({ isIOS: false, isStandalone: false });
+  const [platformInfo, setPlatformInfo] = useState(() => {
+    const info = getIOSInfo();
+    return { isIOS: info.isIOS, isStandalone: info.isStandalone };
+  });
 
   useEffect(() => {
-    // Detect platform and standalone state
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true;
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-    const isAndroid = /android/i.test(navigator.userAgent);
-    
-    setPlatformInfo({ isIOS, isStandalone });
+    const info = getIOSInfo();
+    setPlatformInfo({ isIOS: info.isIOS, isStandalone: info.isStandalone });
 
     if (!userId) return;
 
@@ -40,8 +41,8 @@ export function PushPrompt({ userId, userRole }: PushPromptProps) {
 
     // iOS check: If not standalone, they need PWA installation.
     // If standalone, they need push permission.
-    if (isIOS) {
-      if (!isStandalone) {
+    if (info.isIOS) {
+      if (!info.isStandalone) {
         // Show PWA install prompt for iOS
         setShowPrompt(true);
       } else {

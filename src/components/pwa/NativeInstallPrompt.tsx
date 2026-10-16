@@ -1,21 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Download, X, Smartphone, Share, PlusSquare, ArrowRight, Check } from 'lucide-react';
+import { Download, X, Smartphone, Share, PlusSquare, ArrowRight, Check, Compass, AlertCircle } from 'lucide-react';
+import { getIOSInfo, getIOSInstallInstructions } from '../../lib/iosDetection';
 
 export function NativeInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showPrompt, setShowPrompt] = useState(false);
-  const [isIOS, setIsIOS] = useState(false);
+  const [iosInfo, setIosInfo] = useState(() => getIOSInfo());
   const [showIOSModal, setShowIOSModal] = useState(false);
 
   useEffect(() => {
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true;
-    if (isStandalone) return;
+    const info = getIOSInfo();
+    setIosInfo(info);
 
-    // Detect iOS
-    const ua = window.navigator.userAgent.toLowerCase();
-    const isIOSDevice = /iphone|ipad|ipod/.test(ua);
-    setIsIOS(isIOSDevice);
+    // If already installed and running standalone, do not show prompts
+    if (info.isStandalone) return;
 
     const handler = (e: any) => {
       e.preventDefault();
@@ -28,8 +27,8 @@ export function NativeInstallPrompt() {
       }
     };
 
-    // If on iOS and not dismissed recently, show the prompt
-    if (isIOSDevice) {
+    // If on iOS and not dismissed recently, show prompt
+    if (info.isIOS) {
       const dismissedAt = localStorage.getItem('ais_install_dismissed_at');
       const isRecentlyDismissed = dismissedAt && (Date.now() - parseInt(dismissedAt) < 7 * 24 * 60 * 60 * 1000);
       if (!isRecentlyDismissed) {
@@ -37,9 +36,11 @@ export function NativeInstallPrompt() {
       }
     }
 
-    // Listen for manual trigger from settings or header
+    // Listen for manual trigger from settings or dashboard button
     const handleManualTrigger = () => {
-      if (isIOSDevice) {
+      const currentInfo = getIOSInfo();
+      setIosInfo(currentInfo);
+      if (currentInfo.isIOS) {
         setShowIOSModal(true);
       } else if (deferredPrompt) {
         handleInstallClick();
@@ -58,7 +59,7 @@ export function NativeInstallPrompt() {
   }, [deferredPrompt]);
 
   const handleInstallClick = async () => {
-    if (isIOS) {
+    if (iosInfo.isIOS) {
       setShowIOSModal(true);
       setShowPrompt(false);
       return;
@@ -78,6 +79,8 @@ export function NativeInstallPrompt() {
     localStorage.setItem('ais_install_dismissed_at', Date.now().toString());
   };
 
+  const instructions = getIOSInstallInstructions(iosInfo);
+
   return (
     <>
       <AnimatePresence>
@@ -96,16 +99,25 @@ export function NativeInstallPrompt() {
               <button
                 onClick={handleDismiss}
                 className="p-1.5 hover:bg-white/5 rounded-xl text-neutral-500 hover:text-white transition-colors cursor-pointer"
+                title="Fechar"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <h3 className="text-lg font-black text-white uppercase italic tracking-tight mb-1">
-              Instalar Aplicativo PWA
-            </h3>
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="text-lg font-black text-white uppercase italic tracking-tight">
+                Instalar Aplicativo PWA
+              </h3>
+              {iosInfo.isIOS && (
+                <span className="text-[7.5px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded border border-amber-500/30">
+                  iOS {iosInfo.versionString ? `v${iosInfo.versionString}` : "Compatível"}
+                </span>
+              )}
+            </div>
+
             <p className="text-xs text-neutral-400 leading-relaxed mb-5">
-              Instale o app oficial da MS Barber Shop para acesso instantâneo na tela inicial, funcionamento ultra-rápido e lembretes de corte.
+              Instale o app oficial da MS Barber Shop para acesso instantâneo na tela inicial, funcionamento ultra-rápido e notificações em segundo plano.
             </p>
 
             <div className="flex flex-col gap-2">
@@ -114,7 +126,7 @@ export function NativeInstallPrompt() {
                 className="w-full bg-amber-500 hover:bg-amber-400 text-black py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-[0_4px_20px_rgba(245,158,11,0.25)] active:scale-95 cursor-pointer"
               >
                 <Smartphone className="w-4 h-4" />
-                {isIOS ? "COMO INSTALAR NO IPHONE" : "INSTALAR AGORA NO CELULAR"}
+                {iosInfo.isIOS ? "COMO INSTALAR NO IPHONE / IPAD" : "INSTALAR AGORA NO CELULAR"}
               </button>
               <button
                 onClick={handleDismiss}
@@ -131,7 +143,7 @@ export function NativeInstallPrompt() {
       <AnimatePresence>
         {showIOSModal && (
           <div 
-            className="fixed inset-0 z-[10000] bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-3 sm:p-4"
+            className="fixed inset-0 z-[10000] bg-black/85 backdrop-blur-md flex items-end sm:items-center justify-center p-3 sm:p-4"
             onClick={() => setShowIOSModal(false)}
           >
             <motion.div
@@ -147,9 +159,14 @@ export function NativeInstallPrompt() {
                     <Smartphone className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-base font-black text-white uppercase italic tracking-tight">
-                      Instalar no iPhone / iPad
-                    </h3>
+                    <div className="flex items-center gap-1.5">
+                      <h3 className="text-base font-black text-white uppercase italic tracking-tight">
+                        Instalar no iOS
+                      </h3>
+                      <span className="text-[7.5px] font-black uppercase tracking-wider bg-neutral-800 text-neutral-300 px-1.5 py-0.5 rounded">
+                        PWA Oficial
+                      </span>
+                    </div>
                     <p className="text-[10px] text-neutral-400">Em 3 passos rápidos pelo Safari</p>
                   </div>
                 </div>
@@ -161,17 +178,30 @@ export function NativeInstallPrompt() {
                 </button>
               </div>
 
-              <div className="space-y-3 pt-2 text-xs">
+              {/* In-App Browser Warning */}
+              {iosInfo.isInAppBrowser && (
+                <div className="p-3 bg-amber-500/10 border border-amber-500/25 rounded-2xl flex items-start gap-2.5 text-xs text-amber-300">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-amber-400 mt-0.5" />
+                  <div>
+                    <strong className="block font-bold">Abra no Safari!</strong>
+                    <span className="text-[10.5px] text-neutral-300 leading-tight block mt-0.5">
+                      Você está em um navegador interno (Instagram/WhatsApp). Toque no menu (...) e selecione <strong>&quot;Abrir no Safari&quot;</strong> para instalar.
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-3 pt-1 text-xs">
                 <div className="flex items-start gap-3 bg-neutral-900/80 p-3 rounded-2xl border border-white/5">
                   <span className="w-6 h-6 rounded-full bg-amber-500 text-black font-black flex items-center justify-center text-xs shrink-0 mt-0.5">
                     1
                   </span>
                   <div>
                     <p className="font-bold text-white flex items-center gap-1.5">
-                      Toque em Compartilhar <Share className="w-3.5 h-3.5 text-blue-400 inline" />
+                      Toque em Compartilhar <Share className="w-3.5 h-3.5 text-sky-400 inline" />
                     </p>
                     <p className="text-neutral-400 text-[11px] leading-tight mt-0.5">
-                      No menu inferior do Safari, clique no ícone quadrado com a seta para cima.
+                      Na barra inferior (ou superior no iPad) do Safari, clique no ícone quadrado com a seta para cima.
                     </p>
                   </div>
                 </div>
@@ -185,7 +215,7 @@ export function NativeInstallPrompt() {
                       Adicionar à Tela de Início <PlusSquare className="w-3.5 h-3.5 text-amber-400 inline" />
                     </p>
                     <p className="text-neutral-400 text-[11px] leading-tight mt-0.5">
-                      Role a lista de ações para baixo e toque em &quot;Adicionar à Tela de Início&quot;.
+                      Role o menu para baixo e toque em &quot;Adicionar à Tela de Início&quot;.
                     </p>
                   </div>
                 </div>
@@ -205,9 +235,16 @@ export function NativeInstallPrompt() {
                 </div>
               </div>
 
+              <div className="p-3 bg-black/40 rounded-2xl border border-white/5 text-[10px] text-neutral-400 space-y-1">
+                <span className="font-bold text-neutral-300 block">💡 Dica Pro no iOS:</span>
+                <p>
+                  Ao abrir pela Tela de Início, o aplicativo funciona em tela cheia nativa, com suporte a notificações e carregamento instantâneo.
+                </p>
+              </div>
+
               <button
                 onClick={() => setShowIOSModal(false)}
-                className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-black uppercase text-xs tracking-wider transition-all cursor-pointer mt-2"
+                className="w-full py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-black uppercase text-xs tracking-wider transition-all cursor-pointer mt-1 active:scale-95 shadow-lg shadow-amber-500/20"
               >
                 Entendi, Vou Adicionar!
               </button>

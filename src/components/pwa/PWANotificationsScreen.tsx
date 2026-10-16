@@ -19,6 +19,7 @@ import {
   Lock
 } from "lucide-react";
 import { setupPushSubscription, getNotificationPermissionState, queryNotificationSupport } from "../../lib/pushRegister";
+import { getIOSInfo } from "../../lib/iosDetection";
 import { toast } from "react-hot-toast";
 
 interface PWANotificationsScreenProps {
@@ -31,6 +32,7 @@ export function PWANotificationsScreen({ user, role, onBack }: PWANotificationsS
   const [permission, setPermission] = useState<NotificationPermission>("default");
   const [isStandalone, setIsStandalone] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
+  const [iosVersion, setIosVersion] = useState<string>("");
   const [isAndroid, setIsAndroid] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
@@ -38,15 +40,20 @@ export function PWANotificationsScreen({ user, role, onBack }: PWANotificationsS
 
   useEffect(() => {
     // Basic checks
+    const info = getIOSInfo();
     setPermission(getNotificationPermissionState());
-    setIsStandalone(window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true);
-    setIsIOS(/iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream);
+    setIsStandalone(info.isStandalone);
+    setIsIOS(info.isIOS);
+    setIosVersion(info.versionString);
     setIsAndroid(/android/i.test(navigator.userAgent));
   }, []);
 
   const refreshStatus = () => {
+    const info = getIOSInfo();
     setPermission(getNotificationPermissionState());
-    setIsStandalone(window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true);
+    setIsStandalone(info.isStandalone);
+    setIsIOS(info.isIOS);
+    setIosVersion(info.versionString);
     toast.success("Status atualizado!");
   };
 
@@ -172,7 +179,7 @@ export function PWANotificationsScreen({ user, role, onBack }: PWANotificationsS
             <div className="flex items-center justify-between p-3.5 bg-black/40 rounded-xl border border-white/5">
               <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">Sistema Operacional</span>
               <span className="text-xs text-white font-black uppercase">
-                {isIOS ? " iPhone / iOS" : isAndroid ? "🤖 Android" : "🖥️ Desktop / Computador"}
+                {isIOS ? ` Apple iOS ${iosVersion ? `(v${iosVersion})` : ""}` : isAndroid ? "🤖 Android" : "🖥️ Desktop / Computador"}
               </span>
             </div>
 

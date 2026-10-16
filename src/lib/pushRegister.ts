@@ -1,6 +1,7 @@
 import { getToken } from "firebase/messaging";
 import { messaging, db } from "./firebase";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { getIOSInfo } from "./iosDetection";
 
 // Helper to convert VAPID key
 function urlBase64ToUint8Array(base64String: string) {
@@ -42,8 +43,13 @@ export function getBackendUrl(path: string): string {
 
 // Check compatibility
 export function queryNotificationSupport(): boolean {
+  if (typeof window === "undefined") return false;
+  const ios = getIOSInfo();
+  if (ios.isIOS) {
+    // On iOS 16.4+ through 27+, Web Push requires standalone mode
+    return ios.isStandalone && "serviceWorker" in navigator && "PushManager" in window;
+  }
   return (
-    typeof window !== "undefined" &&
     "Notification" in window &&
     "serviceWorker" in navigator &&
     "PushManager" in window
@@ -52,6 +58,10 @@ export function queryNotificationSupport(): boolean {
 
 // Check current state of permission
 export function getNotificationPermissionState(): NotificationPermission {
+  const ios = getIOSInfo();
+  if (ios.isIOS && !ios.isStandalone) {
+    return "default";
+  }
   if (!queryNotificationSupport()) return "denied";
   return Notification.permission;
 }
@@ -62,6 +72,15 @@ export async function setupPushSubscription(
   userRole: string,
   onStepChange?: (msg: string) => void
 ): Promise<boolean> {
+  const ios = getIOSInfo();
+  if (ios.isIOS && !ios.isStandalone) {
+    onStepChange?.("No iPhone/iPad, adicione o app à Tela de Início primeiro!");
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("ais_trigger_install"));
+    }
+    return false;
+  }
+
   if (!queryNotificationSupport()) {
     console.warn("Notifications or PushManager not supported.");
     onStepChange?.("Notificações ativadas com sucesso! ✨");
