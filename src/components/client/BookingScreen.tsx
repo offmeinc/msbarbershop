@@ -278,21 +278,37 @@ function ConfirmationModal({
           userId: userId !== "guest" ? userId : null,
         }),
       });
-      console.log("Response status:", res.status);
-      if (!res.ok) {
-        const errText = await res.text();
-        console.error("Payment API Error:", errText);
-        throw new Error(`Erro de processamento da API de Pagamentos: ${res.statusText}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && (data.qr_code || data.qr_code_base64)) {
+          setMpData(data);
+          return;
+        }
       }
-      const data = await res.json();
-      if (data.success) {
-        setMpData(data);
-      } else {
-        throw new Error(data.error || "Falha desconhecida");
-      }
+      // If server returned non-OK or empty QR, fallback immediately to official direct Barbearia PIX
+      console.warn("Mercado Pago API returned non-OK or missing QR, using direct Barbearia Pix fallback");
+      const fallbackPix = generatePixString("51992590046", "MS BARBER SHOP", "CACHOEIRINHA", remainder);
+      setMpData({
+        success: true,
+        id: "pix-" + Date.now(),
+        payment_id: "pix-" + Date.now(),
+        qr_code: fallbackPix,
+        qr_code_base64: "",
+        status: "pending",
+        isDirectPix: true
+      });
     } catch (e: any) {
-      console.error(e);
-      setMpError(e.message || "Erro desconhecido ao processar pagamento.");
+      console.warn("Payment fetch error, falling back to direct Barbearia Pix:", e);
+      const fallbackPix = generatePixString("51992590046", "MS BARBER SHOP", "CACHOEIRINHA", remainder);
+      setMpData({
+        success: true,
+        id: "pix-" + Date.now(),
+        payment_id: "pix-" + Date.now(),
+        qr_code: fallbackPix,
+        qr_code_base64: "",
+        status: "pending",
+        isDirectPix: true
+      });
     } finally {
       setMpLoading(false);
     }
@@ -575,26 +591,78 @@ function ConfirmationModal({
                     Tentar Novamente
                   </button>
                 </div>
-              ) : mpData?.qr_code_base64 && mpData?.qr_code ? (
-                <div className="space-y-6">
-                  <div className="bg-white p-4 rounded-3xl mx-auto w-fit shadow-xl shadow-amber-500/10">
-                    <img
-                      src={`data:image/png;base64,${mpData.qr_code_base64}`}
-                      alt="QR Code Pix"
-                      className="w-[180px] h-[180px] rounded-xl"
-                    />
+              ) : (mpData?.qr_code || mpData?.qr_code_base64) ? (
+                <div className="space-y-4">
+                  <div className="bg-white p-4 rounded-3xl mx-auto w-fit shadow-xl shadow-amber-500/10 flex items-center justify-center">
+                    {mpData.qr_code_base64 ? (
+                      <img
+                        src={`data:image/png;base64,${mpData.qr_code_base64}`}
+                        alt="QR Code Pix"
+                        className="w-[180px] h-[180px] rounded-xl object-contain"
+                      />
+                    ) : (
+                      <QRCodeCanvas
+                        value={mpData.qr_code}
+                        size={180}
+                        className="rounded-xl"
+                      />
+                    )}
                   </div>
+
+                  {mpData.qr_code && (
+                    <button
+                      type="button"
+                      onClick={() => handleCopyPix(mpData.qr_code)}
+                      className="liquid-glass w-full py-4 rounded-[1.2rem] text-[10px] font-black uppercase text-white transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-lg active:scale-95"
+                    >
+                      {copiedPix ? (
+                        <CheckCircle2 className="w-4 h-4 text-green-500" />
+                      ) : (
+                        <Copy className="w-4 h-4 text-amber-400" />
+                      )}
+                      {copiedPix ? "Código Copiado!" : "Copiar Código Pix Copia e Cola"}
+                    </button>
+                  )}
+
+                  <div className="p-3 bg-white/5 border border-white/10 rounded-2xl text-[9.5px] text-neutral-400 font-medium text-center space-y-1">
+                    <p className="text-white font-bold">Chave Pix (Celular): (51) 99259-0046</p>
+                    <p className="text-[8.5px] text-neutral-500">MS BARBER SHOP • Cachoeirinha/RS</p>
+                  </div>
+
                   <button
                     type="button"
-                    onClick={() => handleCopyPix(mpData.qr_code)}
-                    className="liquid-glass w-full py-4 rounded-[1.2rem] text-[10px] font-black uppercase text-white  transition-colors flex items-center justify-center gap-2"
+                    onClick={async () => {
+                      try {
+                        setMpLoading(true);
+                        if (appointmentId) {
+                          await updateDoc(doc(db, "appointments", appointmentId), {
+                            paymentStatus: "paid",
+                            paidVia: "pix",
+                            updatedAt: serverTimestamp()
+                          });
+                        }
+                        if (mpData?.id || mpData?.payment_id) {
+                          await fetch(getBackendUrl("/api/payments/mercado-pago/confirm"), {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              paymentId: mpData?.id || mpData?.payment_id,
+                              appointmentId: appointmentId
+                            })
+                          }).catch(() => {});
+                        }
+                        setPaymentSuccess(true);
+                        toast.success("Pagamento via Pix confirmado! 🎉");
+                      } catch (e: any) {
+                        toast.error("Erro ao confirmar pagamento.");
+                      } finally {
+                        setMpLoading(false);
+                      }
+                    }}
+                    className="w-full py-3.5 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 rounded-2xl text-[9.5px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 shadow-md"
                   >
-                    {copiedPix ? (
-                      <CheckCircle2 className="w-4 h-4 text-green-500" />
-                    ) : (
-                      <Copy className="w-4 h-4" />
-                    )}
-                    {copiedPix ? "Código Copiado!" : "Copiar Código Pix Copia e Cola"}
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    Já Realizei o Pagamento via Pix
                   </button>
                 </div>
               ) : (

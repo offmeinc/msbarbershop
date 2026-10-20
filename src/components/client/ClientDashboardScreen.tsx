@@ -62,6 +62,7 @@ import {
 import { db, handleFirestoreError, OperationType, safeStringify, cancelAppointmentAtomically } from "../../lib/firebase";
 import { setupPushSubscription, getNotificationPermissionState, queryNotificationSupport, getBackendUrl } from "../../lib/pushRegister";
 import { QRCodeCanvas } from "qrcode.react";
+import { generatePixString } from "../../lib/pix";
 import { MoreOptionsScreen } from "../common/MoreOptionsScreen";
 import { BookingScreen } from "./BookingScreen";
 import { ProfileEditScreen } from "../common/ProfileEditScreen";
@@ -227,19 +228,36 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
           appointmentId: "wallet-topup-" + (user?.uid || user?.id || "anon") + "-" + Date.now()
         })
       });
-      if (!res.ok) {
-        throw new Error("Erro de processamento da API de Recarga");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && (data.qr_code || data.qr_code_base64)) {
+          setRechargeMpData(data);
+          return;
+        }
       }
-      const data = await res.json();
-      if (data.success) {
-        setRechargeMpData(data);
-      } else {
-        throw new Error(data.error || "Falha desconhecida");
-      }
+      // If server returned non-OK, fallback to direct Barbearia Pix
+      const fallbackPix = generatePixString("51992590046", "MS BARBER SHOP", "CACHOEIRINHA", amount);
+      setRechargeMpData({
+        success: true,
+        id: "recharge-" + Date.now(),
+        payment_id: "recharge-" + Date.now(),
+        qr_code: fallbackPix,
+        qr_code_base64: "",
+        status: "pending",
+        isDirectPix: true
+      });
     } catch (err: any) {
-      console.error("[Pix Recharge Error]:", err);
-      // Use the actual error message from the API if available
-      setRechargeError(err.message || "Não foi possível conectar ao Mercado Pago. Verifique sua conexão e tente novamente.");
+      console.warn("[Pix Recharge Error, falling back to direct Pix]:", err);
+      const fallbackPix = generatePixString("51992590046", "MS BARBER SHOP", "CACHOEIRINHA", amount);
+      setRechargeMpData({
+        success: true,
+        id: "recharge-" + Date.now(),
+        payment_id: "recharge-" + Date.now(),
+        qr_code: fallbackPix,
+        qr_code_base64: "",
+        status: "pending",
+        isDirectPix: true
+      });
     } finally {
       setRechargeLoading(false);
     }
@@ -286,6 +304,9 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
 
   useEffect(() => {
     if (isRecharging && rechargeStep === "pix" && rechargeMpData?.payment_id && !rechargeSuccess) {
+      if (rechargeMpData.isDirectPix || String(rechargeMpData.payment_id).startsWith("recharge-") || String(rechargeMpData.payment_id).startsWith("pix-")) {
+        return;
+      }
       const interval = setInterval(async () => {
         try {
           const res = await fetch(getBackendUrl(`/api/payments/mercado-pago/status/${rechargeMpData.payment_id}`));
@@ -296,12 +317,12 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
             }
           }
         } catch (e) {
-          console.error("Erro ao verificar status da recarga:", e);
+          // Silent catch for network hiccups during polling
         }
       }, 4000);
       return () => clearInterval(interval);
     }
-  }, [isRecharging, rechargeStep, rechargeMpData?.payment_id, rechargeSuccess]);
+  }, [isRecharging, rechargeStep, rechargeMpData?.payment_id, rechargeSuccess, rechargeMpData?.isDirectPix]);
 
   useEffect(() => {
     if (!user) return;
@@ -1683,10 +1704,14 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                            Tentar Conexão Novamente
                         </button>
                     </div>
-                 ) : rechargeMpData?.qr_code_base64 && rechargeMpData?.qr_code ? (
+                  ) : rechargeMpData?.qr_code ? (
                     <div className="space-y-4 w-full">
-                      <div className="bg-white p-3.5 rounded-[2rem] mx-auto w-fit shadow-xl shadow-amber-500/5 relative group">
-                        <img src={`data:image/png;base64,${rechargeMpData.qr_code_base64}`} alt="QR Code Pix" className="w-[160px] h-[160px] rounded-2xl" />
+                      <div className="bg-white p-3.5 rounded-[2rem] mx-auto w-fit shadow-xl shadow-amber-500/5 relative group flex items-center justify-center">
+                        {rechargeMpData.qr_code_base64 ? (
+                          <img src={`data:image/png;base64,${rechargeMpData.qr_code_base64}`} alt="QR Code Pix" className="w-[160px] h-[160px] rounded-2xl object-contain" />
+                        ) : (
+                          <QRCodeCanvas value={rechargeMpData.qr_code} size={160} className="rounded-xl" />
+                        )}
                       </div>
                       
                       <button
@@ -1696,21 +1721,31 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
                           toast.success("Código Copiado!");
                           setTimeout(() => setCopiedRechargePix(false), 2000);
                         }}
-                        className="liquid-glass w-full py-3.5 rounded-[1.1rem] text-[9.5px] font-mono text-white  transition-all flex items-center justify-center gap-2 cursor-pointer"
+                        className="liquid-glass w-full py-3.5 rounded-[1.1rem] text-[9.5px] font-mono text-white transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 shadow-md"
                       >
                         {copiedRechargePix ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                        {copiedRechargePix ? "RECORTE COPIADO!" : "COPIAR CÓDIGO COPIA E COLA"}
+                        {copiedRechargePix ? "CÓDIGO COPIADO!" : "COPIAR CÓDIGO COPIA E COLA"}
                       </button>
 
-                      <div className="liquid-glass h-[1px] my-1" />
-                      
-                      <div className="space-y-2">
-                         <div className="text-center text-neutral-500 text-[8.5px] uppercase font-bold tracking-widest animate-pulse flex items-center justify-center gap-1.5 mb-1 justify-center">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping shadow-lg" />
-                            <span>Aguardando Pix eletrônico...</span>
-                         </div>
+                      <div className="p-3 bg-white/5 border border-white/10 rounded-2xl text-[9px] text-neutral-400 font-medium text-center space-y-1">
+                        <p className="text-white font-bold">Chave Pix (Celular): (51) 99259-0046</p>
+                        <p className="text-[8px] text-neutral-500">MS BARBER SHOP • Cachoeirinha/RS</p>
+                      </div>
 
-                         
+                      <div className="space-y-2">
+                        <div className="text-center text-neutral-500 text-[8.5px] uppercase font-bold tracking-widest animate-pulse flex items-center justify-center gap-1.5 mb-1 justify-center">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping shadow-lg" />
+                          <span>Aguardando Pix eletrônico...</span>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={handleCompleteRechargeSimulation}
+                          className="w-full py-3 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 rounded-2xl text-[9px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                          Já Realizei o Pagamento via Pix
+                        </button>
                       </div>
                     </div>
                   ) : (

@@ -10,8 +10,9 @@ import FormData from "form-data";
 import { GoogleGenAI, Type } from "@google/genai";
 import { initVapid, startAppointmentsListener, startChatsListener, notifyUserAccess, sendPushNotification, sendNotificationToCollaborators } from "./src/server/pushNotificationService";
 import { startAppointmentAutoUpdater } from "./src/server/appointmentAutoUpdater";
-import { adminMessaging, adminDb, db } from "./src/server/firebaseAdmin";
-import { doc, getDoc, updateDoc, setDoc, runTransaction, serverTimestamp, increment, deleteDoc } from "firebase/firestore";
+import { adminMessaging, adminDb } from "./src/server/firebaseAdmin";
+import { FieldValue } from "firebase-admin/firestore";
+import { generatePixString } from "./src/lib/pix";
 
 const _filename = typeof __filename !== 'undefined' ? __filename : fileURLToPath(import.meta.url);
 const _dirname = typeof __dirname !== 'undefined' ? __dirname : path.dirname(_filename);
@@ -169,33 +170,54 @@ Gere um relatório de desempenho em português (pt-BR).`;
   app.get("/api/payments/mercado-pago/status/:paymentId", async (req, res) => {
     try {
       const { paymentId } = req.params;
-      const paymentRef = doc(db, "payments", paymentId);
-      const paymentSnap = await getDoc(paymentRef);
-
-      if (!paymentSnap.exists()) {
-        return res.status(404).json({ error: "Payment not found" });
+      if (String(paymentId).startsWith("recharge-") || String(paymentId).startsWith("pix-")) {
+        return res.json({ status: "pending" });
       }
+      try {
+        const paymentRef = adminDb.collection("payments").doc(String(paymentId));
+        const paymentSnap = await paymentRef.get();
 
-      const paymentData = paymentSnap.data() || {};
-      if (paymentData.status === "approved" || paymentData.status === "completed") {
-        return res.json({ status: "approved" });
-      }
+        if (!paymentSnap.exists) {
+          try {
+            await paymentRef.set({
+              id: paymentId,
+              status: "pending",
+              isDirectPix: true,
+              createdAt: FieldValue.serverTimestamp()
+            }, { merge: true });
+          } catch (err) {}
+          return res.json({ status: "pending" });
+        }
 
-      if (!paymentData.isMock && process.env.MERCADO_PAGO_ACCESS_TOKEN) {
-        try {
-          const mpResponse = await axios.get(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-            headers: { "Authorization": `Bearer ${process.env.MERCADO_PAGO_ACCESS_TOKEN}` }
-          });
-          if (mpResponse.data.status === "approved") {
-            await updateDoc(paymentRef, { status: "approved", updatedAt: serverTimestamp() });
-            await processApprovedPayment({ id: paymentId, ...paymentData, status: "approved" });
-            return res.json({ status: "approved" });
-          }
-        } catch (e) {}
+        const paymentData = paymentSnap.data() || {};
+        if (paymentData.status === "approved" || paymentData.status === "completed") {
+          return res.json({ status: "approved" });
+        }
+
+        const accessToken = (process.env.MERCADO_PAGO_ACCESS_TOKEN || "").trim();
+        const isPublicKey = /^APP_USR-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(accessToken);
+        if (!paymentData.isDirectPix && accessToken && !isPublicKey && accessToken.length > 50) {
+          try {
+            const mpResponse = await axios.get(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+              headers: { "Authorization": `Bearer ${accessToken}` },
+              timeout: 5000
+            });
+            if (mpResponse.data?.status === "approved") {
+              await paymentRef.update({ 
+                status: "approved", 
+                updatedAt: FieldValue.serverTimestamp() 
+              });
+              await processApprovedPayment({ id: paymentId, ...paymentData, status: "approved" });
+              return res.json({ status: "approved" });
+            }
+          } catch (e) {}
+        }
+        return res.json({ status: paymentData.status || "pending" });
+      } catch (dbErr) {
+        return res.json({ status: "pending" });
       }
-      res.json({ status: paymentData.status });
     } catch (e: any) {
-      res.status(500).json({ error: e.message });
+      return res.json({ status: "pending" });
     }
   });
 
@@ -205,32 +227,49 @@ Gere um relatório de desempenho em português (pt-BR).`;
       const parsedUserId = userId || appointmentId.split("-")[2];
       if (parsedUserId) {
         try {
-          const userRef = doc(db, "users", parsedUserId);
-          const paymentRef = doc(db, "payments", String(paymentId));
-          await runTransaction(db, async (t) => {
+          const userRef = adminDb.collection("users").doc(parsedUserId);
+          const paymentRef = adminDb.collection("payments").doc(String(paymentId));
+          await adminDb.runTransaction(async (t) => {
             const pSnap = await t.get(paymentRef);
-            if (!pSnap.exists() || pSnap.data()?.processedWallet) return;
+            if (!pSnap.exists || pSnap.data()?.processedWallet) return;
             const uSnap = await t.get(userRef);
-            if (!uSnap.exists()) return;
+            if (!uSnap.exists) return;
             const currentBalance = Number(uSnap.data()?.walletBalance || 0);
-            t.update(userRef, { walletBalance: currentBalance + amount, updatedAt: serverTimestamp() });
-            t.update(paymentRef, { processedWallet: true, updatedAt: serverTimestamp() });
+            t.update(userRef, { 
+              walletBalance: currentBalance + amount, 
+              updatedAt: FieldValue.serverTimestamp() 
+            });
+            t.update(paymentRef, { 
+              processedWallet: true, 
+              updatedAt: FieldValue.serverTimestamp() 
+            });
           });
-        } catch (e) {}
+        } catch (e) {
+          console.error("[Process Wallet Payment Error]:", e);
+        }
       }
     } else if (appointmentId) {
       try {
-        const appointmentRef = doc(db, "appointments", appointmentId);
-        const paymentRef = doc(db, "payments", String(paymentId));
-        await runTransaction(db, async (t) => {
+        const appointmentRef = adminDb.collection("appointments").doc(String(appointmentId));
+        const paymentRef = adminDb.collection("payments").doc(String(paymentId));
+        await adminDb.runTransaction(async (t) => {
           const pSnap = await t.get(paymentRef);
           if (pSnap.data()?.processedAppointment) return;
           const appSnap = await t.get(appointmentRef);
-          if (!appSnap.exists()) return;
-          t.update(appointmentRef, { status: "confirmed", paymentStatus: "paid", updatedAt: serverTimestamp() });
-          t.update(paymentRef, { processedAppointment: true, updatedAt: serverTimestamp() });
+          if (!appSnap.exists) return;
+          t.update(appointmentRef, { 
+            status: "confirmed", 
+            paymentStatus: "paid", 
+            updatedAt: FieldValue.serverTimestamp() 
+          });
+          t.update(paymentRef, { 
+            processedAppointment: true, 
+            updatedAt: FieldValue.serverTimestamp() 
+          });
         });
-      } catch (e) {}
+      } catch (e) {
+        console.error("[Process Appointment Payment Error]:", e);
+      }
     }
   }
 
@@ -248,11 +287,11 @@ Gere um relatório de desempenho em português (pt-BR).`;
       let cancelledBy: "client" | "professional" = "client";
 
       console.log(`[API] Starting transaction for appointment: ${appointmentId}`);
-      await runTransaction(db, async (t) => {
-        const appointmentRef = doc(db, "appointments", appointmentId);
+      await adminDb.runTransaction(async (t) => {
+        const appointmentRef = adminDb.collection("appointments").doc(String(appointmentId));
         const appSnap = await t.get(appointmentRef);
         
-        if (!appSnap.exists()) {
+        if (!appSnap.exists) {
            console.warn(`[API] Appointment ${appointmentId} not found`);
            throw new Error("Agendamento não encontrado");
         }
@@ -272,21 +311,21 @@ Gere um relatório de desempenho em português (pt-BR).`;
         const updates: any = { 
           status: "cancelled", 
           cancelledBy, 
-          updatedAt: serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
           cancellationReason: reason || ""
         };
 
         if (appData.paymentStatus === "paid" && appData.totalPrice > 0 && appData.clientId && appData.clientId !== "guest") {
           const priceToRefund = Number(appData.totalPrice) || 0;
           console.log(`[API] Refunding R$ ${priceToRefund} to user: ${appData.clientId}`);
-          const userRef = doc(db, "users", appData.clientId);
+          const userRef = adminDb.collection("users").doc(String(appData.clientId));
           const userSnap = await t.get(userRef);
           
-          if (userSnap.exists()) {
+          if (userSnap.exists) {
             const currentBalance = Number(userSnap.data()?.walletBalance) || 0;
             t.update(userRef, { 
               walletBalance: currentBalance + priceToRefund, 
-              updatedAt: serverTimestamp() 
+              updatedAt: FieldValue.serverTimestamp() 
             });
             updates.refundedToWallet = true;
             refundedAmount = priceToRefund;
@@ -320,8 +359,8 @@ Gere um relatório de desempenho em português (pt-BR).`;
     try {
       // Security check: only managers or barbers can purge records
       console.log(`[API] Checking permissions for user: ${userId}`);
-      const userRef = doc(db, "users", userId);
-      const userSnap = await getDoc(userRef);
+      const userRef = adminDb.collection("users").doc(String(userId));
+      const userSnap = await userRef.get();
       const userData = userSnap.data();
       
       if (!userData || (userData.role !== 'manager' && userData.role !== 'barber')) {
@@ -330,13 +369,13 @@ Gere um relatório de desempenho em português (pt-BR).`;
       }
 
       console.log("[API] Deleting appointment document: ", appointmentId);
-      const appRef = doc(db, "appointments", appointmentId);
-      const appSnap = await getDoc(appRef);
-      if (!appSnap.exists()) {
+      const appRef = adminDb.collection("appointments").doc(String(appointmentId));
+      const appSnap = await appRef.get();
+      if (!appSnap.exists) {
         console.log("[API] Document not found: ", appointmentId);
         return res.status(404).json({ error: "Agendamento não encontrado" });
       }
-      await deleteDoc(appRef);
+      await appRef.delete();
       console.log("[API] Deletion successful for: ", appointmentId);
       res.json({ success: true });
     } catch (e: any) {
@@ -483,63 +522,165 @@ Gere um relatório de desempenho em português (pt-BR).`;
   app.post("/api/payments/mercado-pago/create-payment", async (req, res) => {
     const { transaction_amount, appointmentId, userId, email, name, description } = req.body;
     try {
-      const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
-      if (!accessToken || accessToken.trim() === "" || accessToken.includes("YOUR_TOKEN")) {
-        // Return simulated Mock Pix for testing if token is not configured
-        const mockId = "mock-pix-" + Date.now();
-        const mockQrBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
-        const mockCopyPaste = "00020101021243650016BR.GOV.BCB.PIX0114+55119999999995204000053039865802BR5913MS BARBER SHOP6009SAO PAULO62070503***63041D3D";
-        
-        await setDoc(doc(db, "payments", mockId), {
-          appointmentId: appointmentId || "temp",
-          userId: userId || null,
-          status: "pending",
-          amount: Number(transaction_amount) || 10,
-          isMock: true,
-          createdAt: serverTimestamp()
-        });
+      const amount = Number(transaction_amount);
+      if (isNaN(amount) || amount <= 0) {
+        return res.status(400).json({ success: false, error: "Valor de transação inválido" });
+      }
+
+      const accessToken = (process.env.MERCADO_PAGO_ACCESS_TOKEN || "").trim();
+      const isPublicKey = Boolean(
+        accessToken && /^APP_USR-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(accessToken)
+      );
+      const hasValidToken = Boolean(
+        accessToken &&
+        accessToken !== "" &&
+        !accessToken.includes("YOUR_TOKEN") &&
+        !isPublicKey &&
+        accessToken.length > 50
+      );
+
+      // Helper to generate official Barbearia PIX Copia-e-Cola (EMVCo)
+      const generateDirectPixResponse = async (fallbackReason?: string) => {
+        const directId = "pix-" + Date.now();
+        const pixPayload = generatePixString("51992590046", "MS BARBER SHOP", "CACHOEIRINHA", amount);
+
+        try {
+          await adminDb.collection("payments").doc(directId).set({
+            id: directId,
+            appointmentId: appointmentId || "temp",
+            userId: userId || null,
+            status: "pending",
+            amount: amount,
+            isDirectPix: true,
+            pixPayload: pixPayload,
+            fallbackReason: fallbackReason || null,
+            createdAt: FieldValue.serverTimestamp()
+          });
+        } catch (dbErr) {
+          console.warn("[Payments] Failed to save payment record to adminDb, returning direct PIX payload anyway:", dbErr);
+        }
 
         return res.json({
           success: true,
-          id: mockId,
-          qr_code_base64: mockQrBase64,
-          qr_code: mockCopyPaste,
-          ticket_url: "https://mercadopago.com.br"
+          id: directId,
+          payment_id: directId,
+          qr_code: pixPayload,
+          qr_code_base64: "", // frontend QRCodeCanvas renders qr_code directly
+          status: "pending",
+          isDirectPix: true,
+          ticket_url: "https://pix.bcb.gov.br",
+          chave_pix: "(51) 99259-0046",
+          beneficiario: "MS BARBER SHOP"
         });
+      };
+
+      if (!hasValidToken) {
+        console.warn(`[Mercado Pago] Access Token is not set or Public Key was configured instead (isPublicKey: ${isPublicKey}). Falling back to direct Barbearia PIX Copia-e-Cola.`);
+        return await generateDirectPixResponse(isPublicKey ? "Chave Pública configurada no lugar do Access Token" : "Token não configurado");
       }
 
-      const mpRes = await axios.post("https://api.mercadopago.com/v1/payments", {
-        transaction_amount: Number(transaction_amount),
-        description: description || "Pagamento MS Barber Shop",
-        payment_method_id: "pix",
-        payer: {
-          email: email || "cliente@msbarbershop.com.br",
-          first_name: name || "Cliente"
-        }
-      }, {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      });
+      try {
+        const idempotencyKey = "mp-pix-" + Math.random().toString(36).substring(2) + Date.now().toString();
+        const mpRes = await axios.post("https://api.mercadopago.com/v1/payments", {
+          transaction_amount: amount,
+          description: description || "Pagamento MS Barber Shop",
+          payment_method_id: "pix",
+          external_reference: appointmentId || userId || "guest",
+          payer: {
+            email: email || "cliente@msbarbershop.com.br",
+            first_name: name || "Cliente"
+          }
+        }, {
+          headers: {
+            "Authorization": `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+            "X-Idempotency-Key": idempotencyKey
+          },
+          timeout: 12000
+        });
 
-      const paymentData = {
-        appointmentId,
-        userId,
-        status: mpRes.data.status,
-        amount: transaction_amount,
-        createdAt: serverTimestamp()
-      };
-      await setDoc(doc(db, "payments", String(mpRes.data.id)), paymentData);
-      
-      const tData = mpRes.data.point_of_interaction?.transaction_data || {};
-      res.json({
-        success: true,
-        id: mpRes.data.id,
-        qr_code_base64: tData.qr_code_base64 || "",
-        qr_code: tData.qr_code || "",
-        ticket_url: tData.ticket_url || ""
-      });
+        const mpPaymentId = String(mpRes.data.id);
+        const paymentData = {
+          id: mpPaymentId,
+          appointmentId: appointmentId || "temp",
+          userId: userId || null,
+          status: mpRes.data.status || "pending",
+          amount: amount,
+          isMock: false,
+          createdAt: FieldValue.serverTimestamp()
+        };
+        try {
+          await adminDb.collection("payments").doc(mpPaymentId).set(paymentData);
+        } catch (dbErr) {
+          console.warn("[Payments] Failed to save mp payment to adminDb:", dbErr);
+        }
+        
+        const tData = mpRes.data.point_of_interaction?.transaction_data || {};
+        return res.json({
+          success: true,
+          id: mpPaymentId,
+          payment_id: mpPaymentId,
+          qr_code_base64: tData.qr_code_base64 || "",
+          qr_code: tData.qr_code || "",
+          ticket_url: tData.ticket_url || ""
+        });
+      } catch (mpErr: any) {
+        console.error("Mercado Pago API error:", mpErr.response?.data || mpErr.message);
+        // Fallback to direct PIX so client is never blocked!
+        return await generateDirectPixResponse(mpErr.response?.data?.message || mpErr.message);
+      }
     } catch (e: any) {
-      console.error("Mercado Pago API error:", e.response?.data || e.message);
-      res.status(500).json({ success: false, error: e.response?.data?.message || e.message });
+      console.error("[Create Payment Fatal Error]:", e);
+      // Graceful fallback to direct Pix so user is NEVER blocked
+      try {
+        const amount = Number(transaction_amount) || 10;
+        const directId = "pix-fallback-" + Date.now();
+        const pixPayload = generatePixString("51992590046", "MS BARBER SHOP", "CACHOEIRINHA", amount);
+        return res.json({
+          success: true,
+          id: directId,
+          payment_id: directId,
+          qr_code: pixPayload,
+          qr_code_base64: "",
+          status: "pending",
+          isDirectPix: true,
+          ticket_url: "https://pix.bcb.gov.br",
+          chave_pix: "(51) 99259-0046"
+        });
+      } catch (fallbackErr) {
+        return res.status(500).json({ success: false, error: e.message || "Erro ao processar pagamento Pix." });
+      }
+    }
+  });
+
+  // Manual payment confirmation endpoint
+  app.post("/api/payments/mercado-pago/confirm", async (req, res) => {
+    const { paymentId, appointmentId } = req.body;
+    try {
+      if (paymentId) {
+        const paymentRef = adminDb.collection("payments").doc(String(paymentId));
+        await paymentRef.set({
+          status: "approved",
+          updatedAt: FieldValue.serverTimestamp()
+        }, { merge: true }).catch(() => {});
+        const pSnap = await paymentRef.get();
+        if (pSnap.exists) {
+          await processApprovedPayment({ id: paymentId, ...pSnap.data(), status: "approved" });
+        }
+      }
+      if (appointmentId) {
+        const appointmentRef = adminDb.collection("appointments").doc(String(appointmentId));
+        await appointmentRef.set({
+          status: "confirmed",
+          paymentStatus: "paid",
+          paidVia: "pix",
+          updatedAt: FieldValue.serverTimestamp()
+        }, { merge: true });
+      }
+      res.json({ success: true, message: "Pagamento confirmado com sucesso!" });
+    } catch (err: any) {
+      console.error("[Confirm Payment Error]:", err);
+      res.status(500).json({ success: false, error: err.message });
     }
   });
 
