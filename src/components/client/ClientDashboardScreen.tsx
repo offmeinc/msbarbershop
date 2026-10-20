@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { 
   format, 
@@ -116,6 +116,7 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
 
   const [liveUser, setLiveUser] = useState<any>(user);
   const [selectedLookbookStyle, setSelectedLookbookStyle] = useState<{ title: string, imageUrl: string } | null>(null);
+  const notifLoadedRef = useRef(false);
 
   const handleClientConfirmPresence = async (app: any) => {
     if (!app?.id) return;
@@ -578,12 +579,18 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
           return prev;
         }
         
-        // Trigger toast for new unread notifications if they were added
-        if (prev.length > 0 && merged.length > prev.length) {
-          const latest = merged[0];
-          if (!latest.read) {
-            setTimeout(() => toast.success(latest.message), 0);
-          }
+        // Only trigger toast for genuinely new unread notifications added AFTER initial load
+        if (notifLoadedRef.current) {
+          const prevIds = new Set(prev.map(p => p.id));
+          const newlyAdded = merged.filter(m => !prevIds.has(m.id) && !m.read);
+          newlyAdded.forEach(newItem => {
+            const timeVal = newItem.timestamp instanceof Timestamp ? newItem.timestamp.toDate().getTime() : (newItem.timestamp ? new Date(newItem.timestamp).getTime() : Date.now());
+            if (Date.now() - timeVal < 15000) {
+              setTimeout(() => toast.success(newItem.message), 0);
+            }
+          });
+        } else {
+          notifLoadedRef.current = true;
         }
         return merged;
       });
