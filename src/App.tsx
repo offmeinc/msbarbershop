@@ -443,10 +443,6 @@ export default function App() {
           } else if (!notifiedIdsRef.current.has(docData.id)) {
             notifiedIdsRef.current.add(docData.id);
             
-            // FCM backend handles background pushes. Only show in-app toast if visible.
-            if (typeof document !== "undefined" && document.visibilityState === "visible") {
-              toast.info(docData.message || "Nova atualização recebida!");
-            }
           }
         });
       }
@@ -479,11 +475,7 @@ export default function App() {
               
               const title = docData.title || "Alerta de Agendamento 📅";
               const message = docData.message || "Você tem uma nova reserva ou cancelamento.";
-              // FCM backend handles background pushes.
               
-              if (typeof document !== "undefined" && document.visibilityState === "visible") {
-                toast.success(`${title}: ${message}`);
-              }
             }
           }
         });
@@ -699,9 +691,6 @@ export default function App() {
             const title = nData.title || "Atualização da Reserva 💈";
             const message = nData.message || "Você tem uma nova atualização.";
             triggerOsPushNotification(title, message, nData.url || "/");
-            if (typeof document !== "undefined" && document.visibilityState === "visible") {
-              toast.success(`${title}: ${message}`);
-            }
           }
         }
       });

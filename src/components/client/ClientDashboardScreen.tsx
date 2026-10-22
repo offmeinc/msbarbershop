@@ -578,20 +578,6 @@ export function ClientDashboardScreen({ user, onBack }: ClientDashboardScreenPro
         if (prev.length === merged.length && prev.every((v, i) => v.id === merged[i].id && v.read === merged[i].read)) {
           return prev;
         }
-        
-        // Only trigger toast for genuinely new unread notifications added AFTER initial load
-        if (notifLoadedRef.current) {
-          const prevIds = new Set(prev.map(p => p.id));
-          const newlyAdded = merged.filter(m => !prevIds.has(m.id) && !m.read);
-          newlyAdded.forEach(newItem => {
-            const timeVal = newItem.timestamp instanceof Timestamp ? newItem.timestamp.toDate().getTime() : (newItem.timestamp ? new Date(newItem.timestamp).getTime() : Date.now());
-            if (Date.now() - timeVal < 15000) {
-              setTimeout(() => toast.success(newItem.message), 0);
-            }
-          });
-        } else {
-          notifLoadedRef.current = true;
-        }
         return merged;
       });
     };
