@@ -35,7 +35,19 @@ export const HomeScreen = memo(function HomeScreen({
   const [loadingPortfolio, setLoadingPortfolio] = useState(true);
   const [storyIndex, setStoryIndex] = useState<number | null>(null);
   const [popularServices, setPopularServices] = useState<any[]>([]);
+  const [publicReviews, setPublicReviews] = useState<any[]>([]);
   const [isStandalone, setIsStandalone] = useState(false);
+
+  useEffect(() => {
+    const qReviews = query(collection(db, "appointments"), orderBy("timestamp", "desc"), limit(20));
+    const unsub = onSnapshot(qReviews, (snap) => {
+      const revs = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter((r: any) => r.rating && Number(r.rating) >= 4 && r.comment);
+      setPublicReviews(revs.slice(0, 6));
+    });
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -358,6 +370,37 @@ export const HomeScreen = memo(function HomeScreen({
            })()}
         </div>
       </div>
+
+      {/* Public Reviews & Testimonials Showcase */}
+      {publicReviews.length > 0 && (
+        <div className="px-6 my-12 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="text-amber-500 font-black uppercase tracking-[0.25em] text-[9px] block mb-1">⭐ AVALIAÇÕES REAIS</span>
+              <h3 className="text-2xl font-black uppercase italic tracking-tight text-white">O Que Nossos Clientes Dizem</h3>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {publicReviews.map((rev) => (
+              <div key={rev.id} className="liquid-glass p-6 rounded-[2.2rem] border border-white/5 space-y-3 text-left relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-2xl pointer-events-none" />
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black uppercase text-white tracking-wide">{rev.clientName || "Cliente Verificado"}</span>
+                  <div className="flex items-center gap-1 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20 text-amber-500">
+                    <Star className="w-3 h-3 fill-amber-500" />
+                    <span className="text-[10px] font-black">{rev.rating}.0</span>
+                  </div>
+                </div>
+                <p className="text-xs text-neutral-300 font-medium italic leading-relaxed">&quot;{rev.comment}&quot;</p>
+                <div className="flex items-center justify-between pt-2 border-t border-white/5 text-[9px] text-neutral-500 font-bold uppercase tracking-wider">
+                  <span>✂️ {rev.serviceName}</span>
+                  <span>{rev.barberName ? `Com ${rev.barberName}` : ""}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Footer Info */}
       <div className="px-6 grid grid-cols-2 gap-4">
