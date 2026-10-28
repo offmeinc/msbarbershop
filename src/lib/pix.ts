@@ -4,6 +4,13 @@ export function generatePixString(
   merchantCity: string = "Cidade",
   amount?: number
 ): string {
+  let formattedKey = pixKey.trim();
+  const rawDigits = formattedKey.replace(/\D/g, "");
+  if (!formattedKey.startsWith("+") && (rawDigits.length === 10 || rawDigits.length === 11)) {
+    formattedKey = `+55${rawDigits}`;
+  } else if (!formattedKey.startsWith("+") && rawDigits.length === 12 && rawDigits.startsWith("55")) {
+    formattedKey = `+${rawDigits}`;
+  }
   // Format generic string helper
   const format = (id: string, value: string) => {
     const length = value.length.toString().padStart(2, "0");
@@ -13,7 +20,7 @@ export function generatePixString(
   const payloadFormatIndicator = format("00", "01");
   const merchantAccountInfo = format(
     "26",
-    format("00", "br.gov.bcb.pix") + format("01", pixKey)
+    format("00", "br.gov.bcb.pix") + format("01", formattedKey)
   );
   const merchantCategoryCode = format("52", "0000");
   const transactionCurrency = format("53", "986");
