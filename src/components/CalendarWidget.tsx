@@ -38,7 +38,9 @@ import {
   parseISO 
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Timestamp } from "firebase/firestore";
+import { Timestamp, collection, query, onSnapshot, getFirestore } from "firebase/firestore";
+import { db } from "../lib/firebase";
+import { WorkingHourRule, timeToMinutes } from "../lib/workingHours";
 import { triggerSuccessHaptic, triggerWarningHaptic, triggerLightHaptic } from "../lib/haptics";
 
 // Premium Barber Colors scheme resembling Google Calendar blocks
@@ -198,6 +200,16 @@ export function CalendarWidget({
   const [now, setNow] = useState(new Date());
   const [miniMonth, setMiniMonth] = useState(() => startOfMonth(currentDate));
   const [selectedBlock, setSelectedBlock] = useState<any | null>(null);
+  const [workingHours, setWorkingHours] = useState<WorkingHourRule[]>([]);
+
+  useEffect(() => {
+    const firestore = db || getFirestore();
+    const q = query(collection(firestore, "workingHours"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setWorkingHours(snapshot.docs.map(d => ({ id: d.id, ...(d.data() as any) })) as WorkingHourRule[]);
+    }, () => {});
+    return () => unsubscribe();
+  }, []);
 
   const getLockDateObj = (lock: any) => {
     if (!lock.date) return new Date(0);
@@ -297,8 +309,41 @@ export function CalendarWidget({
     return map;
   }, [uniqueBarbers]);
 
-  // Timeline Hour constants
-  const hours = useMemo(() => Array.from({ length: 15 }, (_, i) => i + 8), []); // 8:00 AM to 10:00 PM
+  // Timeline Hour constants (dynamically expands if extended workingHours or appointments exist outside 08:00-22:00)
+  const { timelineStartHour, timelineEndHour, hours } = useMemo(() => {
+    let minH = 8;
+    let maxH = 22;
+
+    workingHours.forEach((rule) => {
+      if (rule.isActive === false) return;
+      if (rule.startTime) {
+        const sH = Math.floor(timeToMinutes(rule.startTime, 540) / 60);
+        if (sH < minH) minH = sH;
+      }
+      if (rule.endTime) {
+        const eH = Math.ceil(timeToMinutes(rule.endTime, 1200) / 60);
+        if (eH > maxH) maxH = eH;
+      }
+    });
+
+    appointments.forEach((app) => {
+      if (app.status === "cancelled") return;
+      const d = app.date instanceof Timestamp ? app.date.toDate() : (typeof app.date === "string" ? parseISO(app.date) : app.date);
+      if (d instanceof Date && !isNaN(d.getTime())) {
+        const h = d.getHours();
+        if (h < minH) minH = h;
+        const dur = app.serviceDuration || 30;
+        const endH = Math.ceil((h * 60 + d.getMinutes() + dur) / 60);
+        if (endH > maxH) maxH = endH;
+      }
+    });
+
+    minH = Math.max(0, minH);
+    maxH = Math.min(24, Math.max(minH + 1, maxH));
+    const list = Array.from({ length: maxH - minH + 1 }, (_, i) => i + minH);
+    return { timelineStartHour: minH, timelineEndHour: maxH, hours: list };
+  }, [workingHours, appointments]);
+
   const ROW_HEIGHT = 120; // Height in pixels for a single hour block - increased to allow full details on 30m slots
 
   // Calculate live red line height position inside the timeline canvas
@@ -306,14 +351,14 @@ export function CalendarWidget({
     const hrs = now.getHours();
     const mins = now.getMinutes();
     const totalMins = hrs * 60 + mins;
-    const startMins = 8 * 60; // 8:20
-    const endMins = 22 * 60; // 22:00
+    const startMins = timelineStartHour * 60;
+    const endMins = timelineEndHour * 60;
     
     if (totalMins < startMins || totalMins > endMins) return null;
     
     const minutesSinceStart = totalMins - startMins;
     return (minutesSinceStart / 60) * ROW_HEIGHT;
-  }, [now, ROW_HEIGHT]);
+  }, [now, ROW_HEIGHT, timelineStartHour, timelineEndHour]);
 
   // Overlap placement solver for multiple bookings in the hourly timeline matching Google Calendar columns
   const getPositionedEventsForDay = (day: Date, dayAppointments: any[]) => {
@@ -683,8 +728,8 @@ export function CalendarWidget({
                         const startMins = sh * 60 + sm;
                         const [eh, em] = block.endTime.split(':').map(Number);
                         const endMins = eh * 60 + em;
-                        const dayStartMins = 8 * 60;
-                        const dayEndMins = 22 * 60;
+                        const dayStartMins = timelineStartHour * 60;
+                        const dayEndMins = timelineEndHour * 60;
                         
                         if (startMins < dayEndMins && endMins > dayStartMins) {
                           const visibleStartMins = Math.max(startMins, dayStartMins);
@@ -725,7 +770,7 @@ export function CalendarWidget({
                       })}
 
                       {positionedApps.map((app, appIdx) => {
-                        const startOffset = ((app.start - (8 * 60)) / 60) * ROW_HEIGHT;
+                        const startOffset = ((app.start - (timelineStartHour * 60)) / 60) * ROW_HEIGHT;
                         const duration = app.actualDuration;
                         const heightPixels = (duration / 60) * ROW_HEIGHT;
                         const colorObj = barberColorMap.get(app.barberId) || BARBER_COLORS[appIdx % BARBER_COLORS.length];
@@ -920,8 +965,8 @@ export function CalendarWidget({
                 const startMins = sh * 60 + sm;
                 const [eh, em] = block.endTime.split(':').map(Number);
                 const endMins = eh * 60 + em;
-                const dayStartMins = 8 * 60;
-                const dayEndMins = 22 * 60;
+                const dayStartMins = timelineStartHour * 60;
+                const dayEndMins = timelineEndHour * 60;
                 
                 if (startMins < dayEndMins && endMins > dayStartMins) {
                   const visibleStartMins = Math.max(startMins, dayStartMins);
@@ -984,7 +1029,7 @@ export function CalendarWidget({
               })}
 
               {positionedApps.map((app, idx) => {
-                const startOffset = ((app.start - (8 * 60)) / 60) * ROW_HEIGHT;
+                const startOffset = ((app.start - (timelineStartHour * 60)) / 60) * ROW_HEIGHT;
                 const duration = app.actualDuration;
                 const heightPixels = (duration / 60) * ROW_HEIGHT;
                 const colorObj = barberColorMap.get(app.barberId) || BARBER_COLORS[idx % BARBER_COLORS.length];

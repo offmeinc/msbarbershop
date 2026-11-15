@@ -52,6 +52,7 @@ import {
 } from "lucide-react";
 import { BARBERSHOP_NAME, BARBERSHOP_PHONE } from "../../constants";
 import { db, handleFirestoreError, OperationType, safeStringify } from "../../lib/firebase";
+import { WorkingHourRule, getEffectiveHoursForBarberDate } from "../../lib/workingHours";
 import { signInWithGoogleCalendar, addEventToCalendar, getCalendarAccessToken } from "../../lib/calendar";
 import { setupPushSubscription, getNotificationPermissionState, queryNotificationSupport, getBackendUrl } from "../../lib/pushRegister";
 import { toast } from "../ui/Toast";
@@ -1067,6 +1068,7 @@ export function BookingScreen({
   const [showCustomTimeForm, setShowCustomTimeForm] = useState(false);
   const [barberAppointments, setBarberAppointments] = useState<any[]>([]);
   const [blockedTimes, setBlockedTimes] = useState<any[]>([]);
+  const [workingHours, setWorkingHours] = useState<WorkingHourRule[]>([]);
   const [recurrence, setRecurrence] = useState<
     "none" | "weekly" | "biweekly" | "monthly"
   >(editAppointment?.recurrence || "none");
@@ -1492,6 +1494,23 @@ export function BookingScreen({
   }, []);
 
   useEffect(() => {
+    const firestore = db || getFirestore();
+    const q = query(collection(firestore, "workingHours"));
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        setWorkingHours(
+          snapshot.docs.map((doc) => ({ id: doc.id, ...(doc.data() as any) })) as WorkingHourRule[],
+        );
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, "workingHours");
+      },
+    );
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
     if (!selectedBarber) return;
     setLoadingSlots(true);
     const start = startOfDay(selectedDate);
@@ -1520,34 +1539,29 @@ export function BookingScreen({
     return () => unsubscribe();
   }, [selectedBarber, selectedDate]);
 
+  const effectiveDayHours = useMemo(
+    () => getEffectiveHoursForBarberDate(workingHours, selectedBarber, selectedDate),
+    [workingHours, selectedBarber, selectedDate],
+  );
+
   const timeSlots = useMemo(() => {
     const slots = [];
-    const day = selectedDate.getDay();
-    let startHour = 9;
-    let endHour = 0;
-
-    if (day >= 1 && day <= 5) {
-      // Seg-Sex
-      endHour = 20;
-    } else if (day === 6) {
-      // Sáb
-      endHour = 19.5; // Até 19:30
-    } else {
-      // Dom
-      endHour = 0;
-    }
-
-    if (endHour === 0) return [];
+    if (!effectiveDayHours.isOpen) return [];
 
     const endHourDate = new Date(selectedDate);
-    const endCloseInt = Math.floor(endHour);
-    const endCloseMin = Math.round((endHour % 1) * 60);
+    const endCloseInt = Math.floor(effectiveDayHours.endMinutes / 60);
+    const endCloseMin = effectiveDayHours.endMinutes % 60;
     endHourDate.setHours(endCloseInt, endCloseMin, 0, 0);
 
-    for (let h = startHour; h < Math.ceil(endHour); h++) {
+    const startH = Math.floor(effectiveDayHours.startMinutes / 60);
+    const endH = Math.ceil(effectiveDayHours.endMinutes / 60);
+
+    for (let h = startH; h < endH; h++) {
       for (let m = 0; m < 60; m += 30) {
-        const slotTimeInHours = h + m / 60;
-        if (slotTimeInHours >= endHour) break;
+        const slotMinutes = h * 60 + m;
+        if (slotMinutes < effectiveDayHours.startMinutes || slotMinutes >= effectiveDayHours.endMinutes) {
+          continue;
+        }
 
         const time = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
         const slotDate = new Date(selectedDate);
@@ -1643,7 +1657,7 @@ export function BookingScreen({
       }
     }
     return slots;
-  }, [selectedDate, barberAppointments, blockedTimes, customDuration, role, forceEncaixe]);
+  }, [selectedDate, barberAppointments, blockedTimes, customDuration, role, forceEncaixe, effectiveDayHours, editAppointment, services, selectedBarber]);
 
   const handleConfirmBooking = async () => {
     triggerSuccessHaptic();
@@ -1671,20 +1685,30 @@ export function BookingScreen({
     const finalDateEnd = new Date(finalDate.getTime() + duration * 60000);
 
     // Business hours boundary on submission logic
-    const closeDay = selectedDate.getDay();
-    let dayEndHour = 0;
-    if (closeDay >= 1 && closeDay <= 5) {
-      dayEndHour = 20;
-    } else if (closeDay === 6) {
-      dayEndHour = 19.5;
+    if (!effectiveDayHours.isOpen && !isStaffBooking) {
+      setError("O profissional selecionado não possui atendimento nesta data.");
+      setIsBooking(false);
+      return;
     }
-    if (dayEndHour > 0) {
+    if (effectiveDayHours.isOpen && !isStaffBooking) {
+      const startLimitDate = new Date(selectedDate);
+      startLimitDate.setHours(
+        Math.floor(effectiveDayHours.startMinutes / 60),
+        effectiveDayHours.startMinutes % 60,
+        0,
+        0,
+      );
       const endLimitDate = new Date(selectedDate);
-      const closeLimitH = Math.floor(dayEndHour);
-      const closeLimitM = Math.round((dayEndHour % 1) * 60);
-      endLimitDate.setHours(closeLimitH, closeLimitM, 0, 0);
-      if (finalDateEnd > endLimitDate && !isStaffBooking) {
-        setError("Este horário ultrapassa o período de funcionamento da barbearia.");
+      endLimitDate.setHours(
+        Math.floor(effectiveDayHours.endMinutes / 60),
+        effectiveDayHours.endMinutes % 60,
+        0,
+        0,
+      );
+      if (finalDate < startLimitDate || finalDateEnd > endLimitDate) {
+        setError(
+          `Este horário está fora do funcionamento desta data (${effectiveDayHours.startTime} às ${effectiveDayHours.endTime}).`,
+        );
         setIsBooking(false);
         return;
       }
@@ -2711,6 +2735,7 @@ export function BookingScreen({
                         const active = isSameDay(day, selectedDate);
                         const isToday = isSameDay(day, new Date());
                         const isWeekend = day.getDay() === 6; // Sábado
+                        const dayEff = getEffectiveHoursForBarberDate(workingHours, selectedBarber, day);
                         
                         return (
                           <motion.button
@@ -2725,15 +2750,21 @@ export function BookingScreen({
                             className={`flex flex-col items-center min-w-[70px] py-4 rounded-3xl transition-all border relative overflow-hidden select-none shrink-0 cursor-pointer ${
                               active 
                                 ? "bg-amber-500 border-amber-500 text-black shadow-lg shadow-amber-500/15" 
-                                : "bg-neutral-900/60 border-white/5 text-neutral-400 hover:border-neutral-500/20 hover:bg-neutral-900"
+                                : !dayEff.isOpen
+                                  ? "bg-neutral-900/25 border-white/5 text-neutral-600 hover:bg-neutral-900/50"
+                                  : "bg-neutral-900/60 border-white/5 text-neutral-400 hover:border-neutral-500/20 hover:bg-neutral-900"
                             }`}
                           >
-                            {isToday && (
+                            {isToday ? (
                               <span className={`absolute top-1 text-[6.5px] font-black uppercase tracking-widest ${active ? 'text-black/80' : 'text-amber-500'}`}>
                                 Hoje
                               </span>
-                            )}
-                            <span className={`text-[8.5px] font-black uppercase ${isToday ? 'mt-1.5' : ''} ${isWeekend && !active ? 'text-neutral-500 font-extrabold' : ''}`}>
+                            ) : dayEff.isExtended && dayEff.isOpen ? (
+                              <span className={`absolute top-1 text-[6.5px] font-black uppercase tracking-widest ${active ? 'text-black/80' : 'text-emerald-400'}`}>
+                                Estendido
+                              </span>
+                            ) : null}
+                            <span className={`text-[8.5px] font-black uppercase ${(isToday || (dayEff.isExtended && dayEff.isOpen)) ? 'mt-1.5' : ''} ${isWeekend && !active ? 'text-neutral-500 font-extrabold' : ''}`}>
                               {format(day, "EEE", { locale: ptBR }).replace(".", "")}
                             </span>
                             <span className="text-lg font-black tracking-tight leading-none mt-1">
@@ -2745,8 +2776,25 @@ export function BookingScreen({
                     </div>
                   </div>
 
+                  {/* Extended / Special Hours Indicator */}
+                  {effectiveDayHours.isOpen && effectiveDayHours.isExtended && (
+                    <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex items-center gap-3 text-left">
+                      <div className="w-9 h-9 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
+                        <Sparkles className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-black uppercase tracking-wider text-amber-400">
+                          {effectiveDayHours.note || "Horário Especial / Estendido"}
+                        </p>
+                        <p className="text-[11px] font-bold text-neutral-300 mt-0.5">
+                          Atendimento ampliado das {effectiveDayHours.startTime} às {effectiveDayHours.endTime}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Categorized Slots Grid */}
-                  {selectedDate.getDay() === 0 ? (
+                  {!effectiveDayHours.isOpen ? (
                     <motion.div 
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
@@ -2756,9 +2804,13 @@ export function BookingScreen({
                         <XCircle className="w-6 h-6" />
                       </div>
                       <div>
-                        <h4 className="text-sm font-black uppercase text-amber-500 tracking-wider">Barbearia Fechada</h4>
+                        <h4 className="text-sm font-black uppercase text-amber-500 tracking-wider">Agenda Fechada</h4>
                         <p className="text-xs text-neutral-400 mt-2 font-bold leading-relaxed px-4">
-                          Não temos funcionamento aos domingos. Que tal escolher outro dia maravilhoso para cuidar do seu estilo?
+                          {effectiveDayHours.note
+                            ? `${effectiveDayHours.note}. Por favor, escolha outro dia para agendar seu horário.`
+                            : selectedDate.getDay() === 0
+                              ? "Não temos funcionamento neste domingo. Que tal escolher outro dia maravilhoso para cuidar do seu estilo?"
+                              : "Este profissional não está atendendo nesta data. Escolha outro dia disponível."}
                         </p>
                       </div>
                     </motion.div>
@@ -2837,7 +2889,7 @@ export function BookingScreen({
                     setRecurrence={setRecurrence}
                   />
 
-                  {selectedDate.getDay() !== 0 && (
+                  {effectiveDayHours.isOpen && (
                     <button
                       disabled={!selectedTime}
                       onClick={() => {

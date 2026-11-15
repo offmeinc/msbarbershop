@@ -30,6 +30,7 @@ import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { auth, db, handleFirestoreError, OperationType } from "../../lib/firebase";
 import { toast } from "../ui/Toast";
 import { BrandLogo } from "../common/BrandLogo";
+import { WorkingHoursScreen } from "../professional/WorkingHoursScreen";
 
 export function CollaboratorsManager() {
   const [barbers, setBarbers] = useState<any[]>([]);
@@ -187,115 +188,8 @@ export function CollaboratorsManager() {
   );
 }
 
-export function WorkingHoursManager() {
-  const [barbers, setBarbers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const q = query(collection(db, "users"), where("role", "in", ["barber", "manager"]));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const barbersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setBarbers(barbersData);
-      setLoading(false);
-    }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, "users");
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  if (loading) return <div className="p-12 text-center flex flex-col items-center justify-center gap-4">
-    <Loader2 className="animate-spin text-amber-500 w-8 h-8" />
-    <span className="text-[10px] font-black uppercase text-neutral-500 tracking-widest">Carregando profissionais...</span>
-  </div>;
-
-  return (
-    <div className="space-y-8 max-w-4xl mx-auto pb-20">
-      <div className="flex flex-col gap-2 px-4">
-        <h3 className="text-2xl font-black uppercase italic tracking-tighter text-white">Horários <span className="text-amber-500">Operacionais</span></h3>
-        <p className="text-[10px] text-neutral-500 uppercase tracking-widest font-bold">Configure a disponibilidade dos profissionais</p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 px-4 md:px-0">
-        {barbers.map(barber => (
-          <BarberHoursItem key={barber.id} barber={barber} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function BarberHoursItem({ barber }: { barber: any; key?: any }) {
-  const [hours, setHours] = useState<any[]>([]);
-  
-  useEffect(() => {
-    const q = query(collection(db, "workingHours"), where("barberId", "==", barber.id));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setHours(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, "workingHours");
-    });
-    return () => unsubscribe();
-  }, [barber.id]);
-
-  const saveHours = async (dayOfWeek: number, startTime: string, endTime: string) => {
-    try {
-      const existing = hours.find(h => h.dayOfWeek === dayOfWeek);
-      if (existing) {
-        await updateDoc(doc(db, "workingHours", existing.id), { startTime, endTime });
-      } else {
-        await addDoc(collection(db, "workingHours"), {
-          barberId: barber.id,
-          dayOfWeek,
-          startTime,
-          endTime,
-        });
-      }
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
-  return (
-    <div className=" liquid-glass p-6 rounded-[2.5rem]  shadow-2xl space-y-6">
-      <div className="flex items-center gap-4 border-b border-white/5 pb-4">
-        <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
-            <Clock className="w-6 h-6" />
-        </div>
-        <div>
-            <h4 className="font-bold text-white leading-none mb-1">{barber.name}</h4>
-            <p className="text-[10px] text-neutral-500 font-black uppercase tracking-widest">Jornada de Trabalho</p>
-        </div>
-      </div>
-
-      <div className="space-y-3">
-        {[1, 2, 3, 4, 5, 6, 0].map(day => {
-          const dayName = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"][day];
-          const workingDay = hours.find(h => h.dayOfWeek === day);
-          return (
-            <div key={day} className=" liquid-glass p-4 rounded-2xl flex items-center justify-between  group hover:border-amber-500/20 transition-all">
-              <span className="text-xs font-black uppercase text-neutral-500 w-10">{dayName}</span>
-              <div className="flex gap-4 items-center">
-                <input 
-                  type="time" 
-                  defaultValue={workingDay?.startTime || (day === 0 ? "" : "09:00")}
-                  onBlur={(e) => saveHours(day, e.target.value, workingDay?.endTime || (day === 6 ? "19:30" : (day === 0 ? "" : "20:00")))}
-                  className="bg-transparent text-sm font-bold text-neutral-300 outline-none focus:text-amber-500 transition-colors"
-                />
-                <span className="text-neutral-800">|</span>
-                <input 
-                  type="time" 
-                  defaultValue={workingDay?.endTime || (day === 6 ? "19:30" : (day === 0 ? "" : "20:00"))}
-                  onBlur={(e) => saveHours(day, workingDay?.startTime || (day === 0 ? "" : "09:00"), e.target.value)}
-                  className="bg-transparent text-sm font-bold text-neutral-300 outline-none focus:text-amber-500 transition-colors"
-                />
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
+export function WorkingHoursManager({ user, role = "manager" }: { user?: any; role?: string }) {
+  return <WorkingHoursScreen user={user} role={role} embedded={true} />;
 }
 
 export function ServicesManagement({ services }: { services: any[] }) {

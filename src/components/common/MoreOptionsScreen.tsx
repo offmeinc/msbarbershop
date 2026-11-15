@@ -36,15 +36,17 @@ import { GOOGLE_REVIEW_URL } from "../../constants";
 import { MyWeekScreen } from "../manager/MyWeekScreen";
 import { PWANotificationsScreen } from "../pwa/PWANotificationsScreen";
 import { PortfolioManager } from "../professional/PortfolioManager";
+import { WorkingHoursScreen } from "../professional/WorkingHoursScreen";
 import { BiometricSettingsModal } from "../pwa/BiometricSettingsModal";
 import { toast } from "../ui/Toast";
+import { CalendarClock } from "lucide-react";
 
 // Dummy components
 const DarkScreen = ({ onBack }: { onBack: () => void }) => <div className="p-4">Dark Screen <button onClick={onBack}>Voltar</button></div>;
 
 export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotifications, appointments, onClearNotifications, onToggleTheme, isDarkMode, onReferrals }: { user: any, role: string, onLogout: () => void, onBack: () => void, key?: any, staffNotifications: any[], appointments: any[], onClearNotifications: () => void, onToggleTheme: () => void, isDarkMode: boolean, onReferrals?: () => void }) {
   const [activeSubScreen, setActiveSubScreen] = useState<
-    'main' | 'profile' | 'notif' | 'block' | 'share' | 'earnings' | 'week' | 'recon' | 'recurrence' | 'promotions' | 'inventory' | 'pwa' | 'portfolio'
+    'main' | 'profile' | 'notif' | 'block' | 'share' | 'earnings' | 'week' | 'recon' | 'recurrence' | 'promotions' | 'inventory' | 'pwa' | 'portfolio' | 'working-hours'
   >('main');
   const [showBiometricModal, setShowBiometricModal] = useState(false);
 
@@ -133,6 +135,13 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
       title: "Agenda e Operação",
       items: [
         { 
+          id: 'working-hours', 
+          label: 'Horários & Fim de Ano', 
+          desc: 'Abrir mais cedo, fechar mais tarde ou abrir datas especiais',
+          icon: <CalendarClock className="w-5 h-5 text-amber-500" />, 
+          onClick: () => setActiveSubScreen('working-hours') 
+        },
+        { 
           id: 'week', 
           label: 'Minha Semana', 
           desc: 'Visão geral, escala do time e relatórios IA',
@@ -199,6 +208,7 @@ export function MoreOptionsScreen({ user, role, onLogout, onBack, staffNotificat
   if (activeSubScreen === 'week') return <MyWeekScreen user={user} appointments={appointments} onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'pwa') return <PWANotificationsScreen user={user} role={role} onBack={() => setActiveSubScreen('main')} />;
   if (activeSubScreen === 'portfolio') return <PortfolioManager onBack={() => setActiveSubScreen('main')} user={user} role={role} />;
+  if (activeSubScreen === 'working-hours') return <WorkingHoursScreen user={user} role={role} onBack={() => setActiveSubScreen('main')} />;
 
 
   return (

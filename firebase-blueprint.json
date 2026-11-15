@@ -69,13 +69,18 @@
     },
     "WorkingHours": {
       "title": "WorkingHours",
-      "description": "Definition of working hours for a barber.",
+      "description": "Definition of working hours and seasonal/date extensions for a barber.",
       "type": "object",
       "properties": {
+        "barberId": { "type": "string" },
+        "type": { "type": "string", "enum": ["weekly", "date"] },
         "dayOfWeek": { "type": "number", "description": "0 = Sunday, 1 = Monday, ..., 6 = Saturday" },
+        "date": { "type": "string", "description": "YYYY-MM-DD for special date overrides" },
         "startTime": { "type": "string", "description": "HH:MM format" },
         "endTime": { "type": "string", "description": "HH:MM format" },
-        "isActive": { "type": "boolean" }
+        "isActive": { "type": "boolean" },
+        "note": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["dayOfWeek", "startTime", "endTime"]
     },

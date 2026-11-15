@@ -139,6 +139,7 @@ const PortfolioManager = makePreloadableLazy(() => import("./components/professi
 const DashboardScreen = makePreloadableLazy(() => import("./components/manager/DashboardScreen").then(m => ({ default: m.DashboardScreen })));
 const ProfessionalClientChatsScreen = makePreloadableLazy(() => import("./components/ChatScreens").then(m => ({ default: m.ProfessionalClientChatsScreen })));
 const BarbershopManagement = makePreloadableLazy(() => import("./components/manager/BarbershopManagement").then(m => ({ default: m.BarbershopManagement })));
+const WorkingHoursScreen = makePreloadableLazy(() => import("./components/professional/WorkingHoursScreen").then(m => ({ default: m.WorkingHoursScreen })));
 
 if (typeof window !== "undefined") {
   (window as any).__pwaPreloaders = {
@@ -155,6 +156,7 @@ if (typeof window !== "undefined") {
     portfolio: () => PortfolioManager.preload(),
     "professional-chat": () => ProfessionalClientChatsScreen.preload(),
     "barber-management": () => BarbershopManagement.preload(),
+    "working-hours": () => WorkingHoursScreen.preload(),
   };
 }
 
@@ -230,7 +232,7 @@ import {
 } from "firebase/auth";
 
 
-type Screen = "home" | "booking" | "agenda" | "clients" | "client-details" | "more" | "login" | "collaborators" | "services" | "client-login" | "client-dashboard" | "earnings" | "promotions" | "portfolio" | "professional-chat" | "barber-management";
+type Screen = "home" | "booking" | "agenda" | "clients" | "client-details" | "more" | "login" | "collaborators" | "services" | "client-login" | "client-dashboard" | "earnings" | "promotions" | "portfolio" | "professional-chat" | "barber-management" | "working-hours";
 
 
 function triggerLocalNotification(title: string, body: string, urlPath: string = "/") {
@@ -331,7 +333,7 @@ export default function App() {
   const [hidden, setHidden] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
-  const validScreens = ["home", "booking", "agenda", "clients", "client-details", "more", "login", "collaborators", "services", "client-login", "client-dashboard", "earnings", "promotions", "portfolio", "professional-chat", "barber-management", "checkout"];
+  const validScreens = ["home", "booking", "agenda", "clients", "client-details", "more", "login", "collaborators", "services", "client-login", "client-dashboard", "earnings", "promotions", "portfolio", "professional-chat", "barber-management", "working-hours", "checkout"];
   const displayScreen = validScreens.includes(currentScreen as string) ? currentScreen : "home";
 
   useMotionValueEvent(scrollY, "change", (latest) => {
@@ -1505,6 +1507,7 @@ export default function App() {
               {displayScreen === "client-details" && selectedClient && <ClientDetailsScreen client={selectedClient} onBack={() => { setCurrentScreen("clients"); setSelectedClient(null); }} onScheduleClient={(client) => { setClientToSchedule(client); setCurrentScreen("booking"); }} onMessageClient={(client) => { setSelectedClient(client); setCurrentScreen("professional-chat"); }} />}
               {displayScreen === "portfolio" && <PortfolioManager onBack={() => setCurrentScreen("home")} user={effectiveUser || user} role={userRole} />}
               {displayScreen === "barber-management" && <BarbershopManagement user={effectiveUser || user} role={userRole} onBack={() => setCurrentScreen("home")} />}
+              {displayScreen === "working-hours" && <WorkingHoursScreen user={effectiveUser || user} role={userRole} onBack={() => setCurrentScreen("home")} />}
               {displayScreen === "professional-chat" && (
                 <ProfessionalClientChatsScreen 
                   user={effectiveUser || user} 

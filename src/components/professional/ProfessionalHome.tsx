@@ -61,6 +61,7 @@ import {
   Filter
 } from "lucide-react";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
+import { WorkingHourRule, getEffectiveHoursForDayScope } from "../../lib/workingHours";
 import { FutureEarningsModal } from "./FutureEarningsModal";
 import { CheckoutModal } from "./CheckoutModal";
 import { NoShowModal } from "./NoShowModal";
@@ -88,6 +89,7 @@ export function ProfessionalHome({ user, role, setCurrentScreen, services = [] }
 
   const [gridDate, setGridDate] = useState<Date>(new Date());
   const [gridBarberId, setGridBarberId] = useState<string>("all");
+  const [workingHours, setWorkingHours] = useState<WorkingHourRule[]>([]);
 
   const handleStartService = async (app: any) => {
     if (!app?.id) return;
@@ -201,12 +203,29 @@ export function ProfessionalHome({ user, role, setCurrentScreen, services = [] }
 
   const gridSlots = useMemo(() => {
     const slots = [];
-    const startHour = 8;
-    const endHour = 20;
+    const targetBarberScope = gridBarberId === "all" ? (role === "manager" ? "all" : user?.uid) : gridBarberId;
+    const effective = getEffectiveHoursForDayScope(
+      workingHours,
+      targetBarberScope,
+      gridDate,
+      barbersInApps.map(b => b.id)
+    );
+
+    let earliestAppHour = 24;
+    let latestAppEndHour = 0;
+    gridConflicts.forEach(app => {
+      if (gridBarberId !== "all" && app.barberId !== gridBarberId) return;
+      earliestAppHour = Math.min(earliestAppHour, app.parsedDate.getHours());
+      const endMins = app.parsedEndDate.getHours() * 60 + app.parsedEndDate.getMinutes();
+      latestAppEndHour = Math.max(latestAppEndHour, Math.ceil(endMins / 60));
+    });
+
+    const startHour = Math.max(0, Math.min(8, Math.floor(effective.startMinutes / 60), earliestAppHour));
+    const endHour = Math.min(23, Math.max(20, Math.ceil(effective.endMinutes / 60), latestAppEndHour));
 
     for (let h = startHour; h <= endHour; h++) {
       for (const m of [0, 30]) {
-        if (h === endHour && m === 30) break; // limit to 20:00
+        if (h === endHour && m === 30 && effective.endMinutes <= endHour * 60) break;
         const timeStr = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
         
         // For this slot, check which parsed appointments intersect this time slot
@@ -242,7 +261,18 @@ export function ProfessionalHome({ user, role, setCurrentScreen, services = [] }
       }
     }
     return slots;
-  }, [gridConflicts, gridDate, gridBarberId]);
+  }, [gridConflicts, gridDate, gridBarberId, workingHours, role, user?.uid, barbersInApps]);
+
+  useEffect(() => {
+    const firestore = db || getFirestore();
+    const q = query(collection(firestore, "workingHours"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setWorkingHours(snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) })) as WorkingHourRule[]);
+    }, (error) => {
+      console.warn("workingHours snapshot error", error);
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const firestore = db || getFirestore();
@@ -628,6 +658,25 @@ export function ProfessionalHome({ user, role, setCurrentScreen, services = [] }
               </span>
               <span className="text-[8px] sm:text-[9px] text-neutral-500 group-hover:text-neutral-400 font-semibold leading-snug block line-clamp-2">
                 Visualizar compromissos, agendamentos e horários em tempo real
+              </span>
+            </div>
+          </button>
+
+          {/* Extended & End-of-Year Working Hours Configuration */}
+          <button 
+            onClick={() => setCurrentScreen("working-hours")}
+            className="bg-neutral-900/30  liquid-glass/80  hover:border-amber-500/20 p-5 rounded-[1.75rem] flex flex-col justify-between min-h-[145px] sm:min-h-[160px] transition-all group active:scale-95 text-left cursor-pointer relative overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-amber-500/[0.04] pointer-events-none" />
+            <div className="w-10 h-10 rounded-xl bg-black border border-white/5 group-hover:border-amber-500/20 flex items-center justify-center text-amber-400 group-hover:bg-amber-500 group-hover:text-black transition-all relative">
+              <CalendarClock className="w-5 h-5" />
+            </div>
+            <div className="space-y-0.5 mt-4">
+              <span className="text-[11px] sm:text-xs font-black text-white group-hover:text-amber-400 uppercase tracking-wider transition-colors block leading-tight">
+                Meus Horários & Fim de Ano
+              </span>
+              <span className="text-[8px] sm:text-[9px] text-neutral-500 group-hover:text-neutral-400 font-semibold leading-snug block line-clamp-2">
+                Abrir agenda mais cedo, fechar mais tarde ou liberar domingos
               </span>
             </div>
           </button>

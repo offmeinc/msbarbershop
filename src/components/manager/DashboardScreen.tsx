@@ -1656,7 +1656,7 @@ export function DashboardScreen({ user, role, services, dashboardView, onBack, o
               )}
               {currentView === 'services' && <ServicesManagement services={services} />}
               {currentView === 'collaborators' && <CollaboratorsManager />}
-              {currentView === 'hours' && <WorkingHoursManager />}
+              {currentView === 'hours' && <WorkingHoursManager user={user} role={role} />}
               {reviewAppointment && <ReviewModal appointment={reviewAppointment} onClose={() => setReviewAppointment(null)} />}
               {checkoutAppointment && (
                 <CheckoutModal

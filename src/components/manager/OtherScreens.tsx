@@ -37,6 +37,7 @@ import {
   serverTimestamp 
 } from "firebase/firestore";
 import { db, handleFirestoreError, OperationType } from "../../lib/firebase";
+import { WorkingHourRule, getEffectiveHoursForDayScope } from "../../lib/workingHours";
 import { BARBERSHOP_NAME, BARBERSHOP_ADDRESS } from "../../constants";
 import { toPng } from 'html-to-image';
 import { motion, AnimatePresence } from "motion/react";
@@ -63,6 +64,7 @@ export function ShareScreen({ onBack }: { onBack: () => void }) {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [blockedTimes, setBlockedTimes] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
+  const [workingHours, setWorkingHours] = useState<WorkingHourRule[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const posterRef = useRef<HTMLDivElement>(null);
 
@@ -184,6 +186,23 @@ export function ShareScreen({ onBack }: { onBack: () => void }) {
     return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    const q = query(collection(db, "workingHours"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setWorkingHours(snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) })) as WorkingHourRule[]);
+    }, (err) => console.error("Error loading workingHours:", err));
+    return () => unsubscribe();
+  }, []);
+
+  const effectiveShareHours = useMemo(() => {
+    return getEffectiveHoursForDayScope(
+      workingHours,
+      selectedBarberId,
+      selectedDate,
+      barbers.map(b => b.id)
+    );
+  }, [workingHours, selectedBarberId, selectedDate, barbers]);
+
   // Compute average service price for idle opportunity forecasting
   const avgServicePrice = useMemo(() => {
     if (services.length === 0) return 55;
@@ -193,28 +212,23 @@ export function ShareScreen({ onBack }: { onBack: () => void }) {
 
   const getAvailableSlots = () => {
     const slots = [];
-    const day = selectedDate.getDay();
-    let startHour = 9;
-    let endHour = 0;
-
-    if (day >= 1 && day <= 5) { endHour = 20; }
-    else if (day === 6) { endHour = 19.5; }
-    else { endHour = 0; }
-
-    if (endHour === 0) return [];
+    if (!effectiveShareHours.isOpen) return [];
 
     const now = new Date();
     const isToday = isSameDay(selectedDate, now);
 
     const endHourDate = new Date(selectedDate);
-    const endCloseInt = Math.floor(endHour);
-    const endCloseMin = Math.round((endHour % 1) * 60);
+    const endCloseInt = Math.floor(effectiveShareHours.endMinutes / 60);
+    const endCloseMin = effectiveShareHours.endMinutes % 60;
     endHourDate.setHours(endCloseInt, endCloseMin, 0, 0);
 
-    for (let h = startHour; h < Math.ceil(endHour); h++) {
+    const startH = Math.floor(effectiveShareHours.startMinutes / 60);
+    const endH = Math.ceil(effectiveShareHours.endMinutes / 60);
+
+    for (let h = startH; h < endH; h++) {
       for (let m = 0; m < 60; m += 30) {
-        const slotTimeInHours = h + (m / 60);
-        if (slotTimeInHours >= endHour) break;
+        const slotMins = h * 60 + m;
+        if (slotMins < effectiveShareHours.startMinutes || slotMins >= effectiveShareHours.endMinutes) continue;
 
         const time = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
         const slotDate = new Date(selectedDate);
@@ -570,7 +584,7 @@ export function ShareScreen({ onBack }: { onBack: () => void }) {
                   <div className="text-center py-8 space-y-1">
                     <Clock className="w-8 h-8 text-neutral-600 mx-auto" />
                     <p className="text-[9px] font-black text-rose-500 uppercase tracking-widest leading-relaxed">
-                      {selectedDate.getDay() === 0 ? "Não aberto aos domingos!" : "Sem horários livres..."}
+                      {!effectiveShareHours.isOpen ? (effectiveShareHours.note || "Agenda fechada nesta data!") : "Sem horários livres..."}
                     </p>
                   </div>
                 ) : (
