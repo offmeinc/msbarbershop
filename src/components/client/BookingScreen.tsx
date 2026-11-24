@@ -1112,14 +1112,13 @@ export function BookingScreen({
     return null;
   };
 
-  const initialHolidayMode = useMemo<"normal" | "christmas" | "newyear">(() => {
+  const initialHolidayMode = useMemo<"normal" | "holiday">(() => {
     const festive = getFestivePeriodInfo(selectedDate);
-    if (festive?.type === "christmas") return "christmas";
-    if (festive?.type === "newyear") return "newyear";
+    if (festive) return "holiday";
     return "normal";
   }, []);
 
-  const [calendarMode, setCalendarMode] = useState<"normal" | "christmas" | "newyear">(initialHolidayMode);
+  const [calendarMode, setCalendarMode] = useState<"normal" | "holiday">(initialHolidayMode);
 
   const decemberMonthDate = useMemo(() => {
     const now = startOfDay(new Date());
@@ -1154,7 +1153,7 @@ export function BookingScreen({
     setSelectedTime(null);
   };
 
-  const handleSwitchCalendarMode = (mode: "normal" | "christmas" | "newyear") => {
+  const handleSwitchCalendarMode = (mode: "normal" | "holiday") => {
     triggerLightHaptic();
     setCalendarMode(mode);
     const today = startOfDay(new Date());
@@ -1168,7 +1167,7 @@ export function BookingScreen({
       return;
     }
 
-    const defaultDay = mode === "christmas" ? 21 : 28;
+    const defaultDay = 21;
     const target = new Date(decemberMonthDate.getFullYear(), 11, defaultDay);
     const chosen = isBefore(target, today) ? today : target;
     setSelectedDate(chosen);
@@ -2873,25 +2872,14 @@ export function BookingScreen({
                         </button>
                         <button
                           type="button"
-                          onClick={() => handleSwitchCalendarMode("christmas")}
+                          onClick={() => handleSwitchCalendarMode("holiday")}
                           className={`px-3 py-1.5 rounded-xl border text-[9px] font-black uppercase tracking-wider transition-colors flex items-center gap-1 cursor-pointer ${
-                            calendarMode === "christmas"
-                              ? "bg-emerald-500 border-emerald-300 text-black shadow-md shadow-emerald-500/25"
-                              : "bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-400/30 text-emerald-300"
+                            calendarMode === "holiday"
+                              ? "bg-gradient-to-r from-emerald-500 to-amber-500 border-amber-300 text-black shadow-md shadow-amber-500/25 font-black"
+                              : "bg-neutral-900 border-emerald-500/30 text-emerald-300 hover:border-amber-400/50"
                           }`}
                         >
-                          <span>🎄</span> Natal
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleSwitchCalendarMode("newyear")}
-                          className={`px-3 py-1.5 rounded-xl border text-[9px] font-black uppercase tracking-wider transition-colors flex items-center gap-1 cursor-pointer ${
-                            calendarMode === "newyear"
-                              ? "bg-amber-400 border-amber-200 text-black shadow-md shadow-amber-400/25"
-                              : "bg-amber-500/10 hover:bg-amber-500/20 border-amber-400/35 text-amber-300"
-                          }`}
-                        >
-                          <span>✨</span> Ano Novo
+                          <span>🎄✨</span> Agenda Fim de Ano
                         </button>
                       </div>
                     </div>
@@ -2959,32 +2947,22 @@ export function BookingScreen({
                           {/* Ambient festive header glow */}
                           <div
                             aria-hidden="true"
-                            className={`pointer-events-none absolute -top-16 right-0 w-56 h-32 blur-2xl ${
-                              calendarMode === "christmas"
-                                ? "bg-gradient-to-bl from-emerald-500/20 via-red-500/10 to-transparent"
-                                : "bg-gradient-to-bl from-amber-500/25 via-yellow-500/10 to-transparent"
-                            }`}
+                            className="pointer-events-none absolute -top-16 right-0 w-56 h-32 bg-gradient-to-bl from-amber-500/25 via-emerald-500/20 to-transparent blur-2xl"
                           />
 
                           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 relative z-10">
                             <div>
                               <h4 className="text-sm font-black uppercase tracking-wider text-white flex items-center gap-2">
-                                <span>{calendarMode === "christmas" ? "🎄" : "✨"}</span>
+                                <span>🎄✨</span>
                                 <span className="capitalize">
                                   {format(decemberMonthDate, "MMMM yyyy", { locale: ptBR })}
                                 </span>
-                                <span
-                                  className={`text-[9px] font-black uppercase tracking-widest ${
-                                    calendarMode === "christmas" ? "text-emerald-400" : "text-amber-400"
-                                  }`}
-                                >
-                                  • {calendarMode === "christmas" ? "Natal" : "Ano Novo"}
+                                <span className="text-[9px] font-black uppercase tracking-widest text-amber-400">
+                                  • Agenda Fim de Ano
                                 </span>
                               </h4>
                               <p className="text-[11px] text-neutral-400 font-semibold mt-0.5">
-                                {calendarMode === "christmas"
-                                  ? "Semana do Natal (20 a 25/12) em destaque — escolha seu dia para agendar."
-                                  : "Semana de Ano Novo (27 a 31/12) em destaque — garanta seu horário de Réveillon."}
+                                Semanas de Natal e Ano Novo em destaque para agendamento antecipado de fim de ano.
                               </p>
                             </div>
                           </div>
