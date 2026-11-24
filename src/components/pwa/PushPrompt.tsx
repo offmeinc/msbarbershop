@@ -26,35 +26,52 @@ export function PushPrompt({ userId, userRole }: PushPromptProps) {
 
     if (!userId) return;
 
-    const permission = getNotificationPermissionState();
-    const dismissedAt = localStorage.getItem('ais_push_dismissed_at');
-    const isRecentlyDismissed = dismissedAt && (Date.now() - parseInt(dismissedAt) < 7 * 24 * 60 * 60 * 1000); // 7 days dismissal
+    // Never duplicate PWA install prompts on iOS browsers (handled quietly by NativeInstallPrompt / manual buttons)
+    if (info.isIOS && !info.isStandalone) {
+      setShowPrompt(false);
+      return;
+    }
 
+    const permission = getNotificationPermissionState();
     if (permission === 'granted') {
       setShowPrompt(false);
       return;
     }
 
-    if (isRecentlyDismissed) {
-      return;
+    const PUSH_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+    let isRecentlyPrompted = false;
+    try {
+      if (sessionStorage.getItem('ais_pwa_prompt_shown_session') === '1') {
+        isRecentlyPrompted = true;
+      }
+      const dismissedAt = localStorage.getItem('ais_push_dismissed_at');
+      const autoShownAt = localStorage.getItem('ais_push_auto_shown_at');
+      const lastTimestamp = Math.max(
+        dismissedAt ? parseInt(dismissedAt, 10) || 0 : 0,
+        autoShownAt ? parseInt(autoShownAt, 10) || 0 : 0,
+      );
+      if (lastTimestamp > 0 && Date.now() - lastTimestamp < PUSH_COOLDOWN_MS) {
+        isRecentlyPrompted = true;
+      }
+    } catch {
+      // ignore storage errors
     }
 
-    // iOS check: If not standalone, they need PWA installation.
-    // If standalone, they need push permission.
-    if (info.isIOS) {
-      if (!info.isStandalone) {
-        // Show PWA install prompt for iOS
-        setShowPrompt(true);
-      } else {
-        if (permission === 'default' || permission === 'denied') {
-          setShowPrompt(true);
+    if (isRecentlyPrompted) return;
+
+    if (permission === 'default') {
+      const timer = setTimeout(() => {
+        try {
+          if (sessionStorage.getItem('ais_pwa_prompt_shown_session') === '1') return;
+          localStorage.setItem('ais_push_auto_shown_at', Date.now().toString());
+          sessionStorage.setItem('ais_pwa_prompt_shown_session', '1');
+        } catch {
+          // ignore storage errors
         }
-      }
-    } else {
-      // Android / Desktop standard prompt
-      if (permission === 'default' || permission === 'denied') {
         setShowPrompt(true);
-      }
+      }, 12000);
+
+      return () => clearTimeout(timer);
     }
   }, [userId]);
 

@@ -1,10 +1,31 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Download, X, Smartphone, Share, PlusSquare, ArrowRight, Check, Compass, AlertCircle } from 'lucide-react';
-import { getIOSInfo, getIOSInstallInstructions } from '../../lib/iosDetection';
+import { Download, X, Smartphone, Share, PlusSquare, Check, AlertCircle } from 'lucide-react';
+import { getIOSInfo } from '../../lib/iosDetection';
+
+const INSTALL_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+const INSTALL_AUTO_DELAY_MS = 20000; // 20s calm delay so it never bombards on launch
+
+function hasRecentInstallCooldown(): boolean {
+  try {
+    if (sessionStorage.getItem('ais_pwa_prompt_shown_session') === '1') {
+      return true;
+    }
+    const dismissedAt = localStorage.getItem('ais_install_dismissed_at');
+    const autoShownAt = localStorage.getItem('ais_install_auto_shown_at');
+    const lastTimestamp = Math.max(
+      dismissedAt ? parseInt(dismissedAt, 10) || 0 : 0,
+      autoShownAt ? parseInt(autoShownAt, 10) || 0 : 0,
+    );
+    return lastTimestamp > 0 && Date.now() - lastTimestamp < INSTALL_COOLDOWN_MS;
+  } catch {
+    return false;
+  }
+}
 
 export function NativeInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const deferredPromptRef = useRef<any>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [iosInfo, setIosInfo] = useState(() => getIOSInfo());
   const [showIOSModal, setShowIOSModal] = useState(false);
@@ -16,34 +37,49 @@ export function NativeInstallPrompt() {
     // If already installed and running standalone, do not show prompts
     if (info.isStandalone) return;
 
-    const handler = (e: any) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      const dismissedAt = localStorage.getItem('ais_install_dismissed_at');
-      const isRecentlyDismissed = dismissedAt && (Date.now() - parseInt(dismissedAt) < 7 * 24 * 60 * 60 * 1000);
-      
-      if (!isRecentlyDismissed) {
+    let autoTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const scheduleAutoPrompt = () => {
+      if (hasRecentInstallCooldown() || autoTimer) return;
+      autoTimer = setTimeout(() => {
+        if (hasRecentInstallCooldown()) return;
+        try {
+          localStorage.setItem('ais_install_auto_shown_at', Date.now().toString());
+          sessionStorage.setItem('ais_pwa_prompt_shown_session', '1');
+        } catch {
+          // ignore storage errors
+        }
         setShowPrompt(true);
-      }
+      }, INSTALL_AUTO_DELAY_MS);
     };
 
-    // If on iOS and not dismissed recently, show prompt
+    const handler = (e: any) => {
+      e.preventDefault();
+      deferredPromptRef.current = e;
+      setDeferredPrompt(e);
+      scheduleAutoPrompt();
+    };
+
+    // On iOS Safari, gently schedule only once per 30 days after initial delay
     if (info.isIOS) {
-      const dismissedAt = localStorage.getItem('ais_install_dismissed_at');
-      const isRecentlyDismissed = dismissedAt && (Date.now() - parseInt(dismissedAt) < 7 * 24 * 60 * 60 * 1000);
-      if (!isRecentlyDismissed) {
-        setShowPrompt(true);
-      }
+      scheduleAutoPrompt();
     }
 
-    // Listen for manual trigger from settings or dashboard button
-    const handleManualTrigger = () => {
+    // Listen for manual trigger from settings, home pill, or dashboard button
+    const handleManualTrigger = async () => {
       const currentInfo = getIOSInfo();
       setIosInfo(currentInfo);
       if (currentInfo.isIOS) {
         setShowIOSModal(true);
-      } else if (deferredPrompt) {
-        handleInstallClick();
+        setShowPrompt(false);
+      } else if (deferredPromptRef.current) {
+        const promptEvent = deferredPromptRef.current;
+        setShowPrompt(false);
+        promptEvent.prompt();
+        const { outcome } = await promptEvent.userChoice;
+        console.log(`User response to install: ${outcome}`);
+        deferredPromptRef.current = null;
+        setDeferredPrompt(null);
       } else {
         setShowPrompt(true);
       }
@@ -53,10 +89,11 @@ export function NativeInstallPrompt() {
     window.addEventListener('ais_trigger_install', handleManualTrigger);
 
     return () => {
+      if (autoTimer) clearTimeout(autoTimer);
       window.removeEventListener('beforeinstallprompt', handler);
       window.removeEventListener('ais_trigger_install', handleManualTrigger);
     };
-  }, [deferredPrompt]);
+  }, []);
 
   const handleInstallClick = async () => {
     if (iosInfo.isIOS) {
@@ -65,21 +102,28 @@ export function NativeInstallPrompt() {
       return;
     }
 
-    if (!deferredPrompt) return;
+    const promptEvent = deferredPromptRef.current || deferredPrompt;
+    if (!promptEvent) {
+      setShowPrompt(false);
+      return;
+    }
     setShowPrompt(false);
-    
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
+
+    promptEvent.prompt();
+    const { outcome } = await promptEvent.userChoice;
     console.log(`User response to install: ${outcome}`);
+    deferredPromptRef.current = null;
     setDeferredPrompt(null);
   };
 
   const handleDismiss = () => {
     setShowPrompt(false);
-    localStorage.setItem('ais_install_dismissed_at', Date.now().toString());
+    try {
+      localStorage.setItem('ais_install_dismissed_at', Date.now().toString());
+    } catch {
+      // ignore storage errors
+    }
   };
-
-  const instructions = getIOSInstallInstructions(iosInfo);
 
   return (
     <>

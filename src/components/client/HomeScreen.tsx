@@ -306,7 +306,7 @@ export const HomeScreen = memo(function HomeScreen({
                    onMouseEnter={triggerBookingPreload}
                    onTouchStart={triggerBookingPreload}
                    className={`${
-                     isSelected ? 'w-64 md:w-full border-amber-500 bg-neutral-900 shadow-amber-500/10' : 'w-40 sm:w-48 md:w-full border-white/5 bg-neutral-900/50'
+                     isSelected ? 'w-64 md:w-full border-amber-500 bg-neutral-900 shadow-amber-500/10' : 'w-44 sm:w-52 md:w-full border-white/5 bg-neutral-900/50'
                    } flex-shrink-0 md:flex-shrink min-h-[14rem] rounded-[2.5rem] border backdrop-blur-xl p-5 sm:p-6 flex flex-col justify-between group cursor-pointer transition-all duration-500 shadow-2xl relative overflow-hidden`}
                  >
                     <div className={`absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-3xl rounded-full transition-opacity ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} />
@@ -323,15 +323,17 @@ export const HomeScreen = memo(function HomeScreen({
                         )}
                      </div>
 
-                    <div className="relative z-10 mt-4">
-                       <h4 className={`font-black uppercase italic tracking-tighter text-sm sm:text-base mb-2 line-clamp-2 transition-all duration-300 ${isSelected ? 'text-amber-500 scale-105 origin-left' : 'text-white'}`}>
+                    <div className="relative z-10 mt-4 min-w-0">
+                       <h4 className={`font-black uppercase italic tracking-tighter mb-2 leading-snug break-words [overflow-wrap:anywhere] transition-all duration-300 ${
+                         (displayName || "").length > 18 ? 'text-xs sm:text-sm' : 'text-sm sm:text-base'
+                       } ${isSelected ? 'text-amber-500' : 'text-white'}`}>
                          {displayName}
                        </h4>
                        
                        <div className="flex flex-col gap-1">
                           <div className="flex items-center gap-2">
                              <div className={`h-px bg-amber-500/30 transition-all ${isSelected ? 'w-12' : 'w-4 group-hover:w-8'}`} />
-                             <p className={`text-amber-500 font-extrabold tracking-tight transition-all duration-500 ${isSelected ? 'text-xl scale-110' : 'text-xs sm:text-sm'}`}>
+                             <p className={`text-amber-500 font-extrabold tracking-tight transition-all duration-500 whitespace-nowrap ${isSelected ? 'text-xl scale-105 origin-left' : 'text-xs sm:text-sm'}`}>
                                R$ {Number(service.price || 0).toFixed(2)}
                              </p>
                           </div>

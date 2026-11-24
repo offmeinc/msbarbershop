@@ -152,16 +152,13 @@ export function getEffectiveHoursForBarberDate(
 ): EffectiveHours {
   const dayOfWeek = date.getDay();
   const dateStr = format(date, "yyyy-MM-dd");
+  const monthDay = format(date, "MM-dd");
   const def = getDefaultHoursForDay(dayOfWeek);
-
-  if (!barberId) {
-    return buildEffectiveHours(def.startTime, def.endTime, def.isOpen, dayOfWeek, "default");
-  }
 
   // 1. Specific date override for this barber
   const dateRule = rules.find(
     (r) =>
-      r.barberId === barberId &&
+      (!barberId || r.barberId === barberId) &&
       (r.type === "date" || Boolean(r.date)) &&
       r.date === dateStr
   );
@@ -176,6 +173,18 @@ export function getEffectiveHoursForBarberDate(
       "date",
       dateRule.note
     );
+  }
+
+  // Default national holidays: Dec 25 (Christmas) & Jan 1 (New Year) are closed
+  if (monthDay === "12-25") {
+    return buildEffectiveHours(def.startTime, def.endTime, false, dayOfWeek, "date", "Fechado — Feriado de Natal (25/12)");
+  }
+  if (monthDay === "01-01") {
+    return buildEffectiveHours(def.startTime, def.endTime, false, dayOfWeek, "date", "Fechado — Feriado de Ano Novo (01/01)");
+  }
+
+  if (!barberId) {
+    return buildEffectiveHours(def.startTime, def.endTime, def.isOpen, dayOfWeek, "default");
   }
 
   // 2. Weekly schedule rule for this barber

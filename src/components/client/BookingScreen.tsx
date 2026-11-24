@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import {
   format,
   addDays,
@@ -7,6 +7,11 @@ import {
   startOfDay,
   endOfDay,
   parseISO,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+  getDay,
+  isBefore,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -1067,6 +1072,8 @@ export function BookingScreen({
       setAnimatingBarberId(null);
     }, 240);
   };
+  const shouldReduceMotion = useReducedMotion();
+
   const [barbers, setBarbers] = useState<any[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(
     editAppointment?.date
@@ -1080,6 +1087,93 @@ export function BookingScreen({
   const [selectedTime, setSelectedTime] = useState<string | null>(
     editAppointment?.time || null,
   );
+
+  const getFestivePeriodInfo = (date: Date) => {
+    if (date.getMonth() !== 11) return null;
+    const d = date.getDate();
+    if (d >= 20 && d <= 25) {
+      return {
+        type: "christmas" as const,
+        icon: "🎄",
+        shortTag: "Natal",
+        bannerTitle: d === 24 ? "Véspera de Natal" : d === 25 ? "Natal" : "Semana do Natal",
+        bannerSub: "Agenda especial de Natal — garanta seu horário antes que as vagas acabem!",
+      };
+    }
+    if (d >= 27 && d <= 31) {
+      return {
+        type: "newyear" as const,
+        icon: "✨",
+        shortTag: "Ano Novo",
+        bannerTitle: d === 31 ? "Véspera de Ano Novo" : "Semana de Ano Novo",
+        bannerSub: "Prepare o visual para a virada — reserve seu corte de fim de ano agora!",
+      };
+    }
+    return null;
+  };
+
+  const initialHolidayMode = useMemo<"normal" | "christmas" | "newyear">(() => {
+    const festive = getFestivePeriodInfo(selectedDate);
+    if (festive?.type === "christmas") return "christmas";
+    if (festive?.type === "newyear") return "newyear";
+    return "normal";
+  }, []);
+
+  const [calendarMode, setCalendarMode] = useState<"normal" | "christmas" | "newyear">(initialHolidayMode);
+
+  const decemberMonthDate = useMemo(() => {
+    const now = startOfDay(new Date());
+    return new Date(now.getFullYear(), 11, 1);
+  }, []);
+
+  const normalDays = useMemo(() => {
+    const today = startOfDay(new Date());
+    return Array.from({ length: 14 }, (_, i) => addDays(today, i));
+  }, []);
+
+  const decemberCalendarDays = useMemo(
+    () =>
+      eachDayOfInterval({
+        start: startOfMonth(decemberMonthDate),
+        end: endOfMonth(decemberMonthDate),
+      }),
+    [decemberMonthDate],
+  );
+
+  const decemberLeadingEmptyCount = useMemo(
+    () => getDay(startOfMonth(decemberMonthDate)),
+    [decemberMonthDate],
+  );
+
+  const selectedFestiveInfo = getFestivePeriodInfo(selectedDate);
+
+  const handleSelectBookingDate = (day: Date) => {
+    triggerLightHaptic();
+    const normalized = startOfDay(day);
+    setSelectedDate(normalized);
+    setSelectedTime(null);
+  };
+
+  const handleSwitchCalendarMode = (mode: "normal" | "christmas" | "newyear") => {
+    triggerLightHaptic();
+    setCalendarMode(mode);
+    const today = startOfDay(new Date());
+
+    if (mode === "normal") {
+      const isInNormalRange = normalDays.some((d) => isSameDay(d, selectedDate));
+      if (!isInNormalRange) {
+        setSelectedDate(today);
+        setSelectedTime(null);
+      }
+      return;
+    }
+
+    const defaultDay = mode === "christmas" ? 21 : 28;
+    const target = new Date(decemberMonthDate.getFullYear(), 11, defaultDay);
+    const chosen = isBefore(target, today) ? today : target;
+    setSelectedDate(chosen);
+    setSelectedTime(null);
+  };
   const [forceEncaixe, setForceEncaixe] = useState(false);
   const [customTime, setCustomTime] = useState("");
   const [showCustomTimeForm, setShowCustomTimeForm] = useState(false);
@@ -2392,12 +2486,18 @@ export function BookingScreen({
                             )}
                           </AnimatePresence>
                           
-                          <div className="flex justify-between items-start w-full relative z-10 mb-5">
-                            <div className="space-y-1 max-w-[70%]">
-                              <span className="text-[7.5px] font-black uppercase text-amber-500/95 tracking-[0.22em] block">
+                          <div className="flex justify-between items-start gap-3 w-full relative z-10 mb-5">
+                            <div className="space-y-1 flex-1 min-w-0">
+                              <span className="text-[7.5px] font-black uppercase text-amber-500/95 tracking-[0.22em] block truncate">
                                 {s.category || "Corte & Estilo"}
                               </span>
-                              <h4 className="font-sans font-black text-white text-base sm:text-lg uppercase italic tracking-tight group-hover:text-amber-400 transition-colors leading-snug">
+                              <h4
+                                className={`font-sans font-black text-white uppercase italic tracking-tight group-hover:text-amber-400 transition-colors leading-snug break-words [overflow-wrap:anywhere] ${
+                                  (s.name || "").length > 18
+                                    ? "text-sm sm:text-[15px]"
+                                    : "text-base sm:text-lg"
+                                }`}
+                              >
                                 {s.name}
                               </h4>
                             </div>
@@ -2405,7 +2505,7 @@ export function BookingScreen({
                             <motion.div 
                               animate={{ scale: isSelected ? 1.04 : 1 }}
                               transition={{ type: "spring", stiffness: 450, damping: 22 }}
-                              className={`px-4 py-2 rounded-2xl transition-all border shrink-0 flex items-center gap-1.5 ${
+                              className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-2xl transition-all border shrink-0 flex items-center gap-1.5 whitespace-nowrap ${
                                 isSelected 
                                   ? "bg-amber-500 border-amber-400 text-black shadow-lg shadow-amber-500/20" 
                                   : "bg-amber-500/5 border-amber-500/10 text-amber-500"
@@ -2424,7 +2524,7 @@ export function BookingScreen({
                                   </motion.span>
                                 )}
                               </AnimatePresence>
-                              <span className="text-sm font-black italic">
+                              <span className="text-xs sm:text-sm font-black italic">
                                 R${s.price}
                               </span>
                             </motion.div>
@@ -2503,9 +2603,17 @@ export function BookingScreen({
                             )}
                           </AnimatePresence>
 
-                          <button
+                          <div
+                            role="button"
+                            tabIndex={0}
                             onClick={() => handleBarberSelect(b)}
-                            className={`w-full p-6 py-7 rounded-[2.2rem] border flex items-center justify-between transition-all duration-300 group text-left relative overflow-hidden cursor-pointer ${
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                handleBarberSelect(b);
+                              }
+                            }}
+                            className={`w-full p-4 sm:p-6 rounded-[2.2rem] border flex items-center justify-between gap-3 transition-all duration-300 group text-left relative overflow-hidden cursor-pointer ${
                               isSelected 
                                 ? "border-amber-500 bg-neutral-900/95 shadow-2xl shadow-amber-500/20 ring-1 ring-amber-500/40" 
                                 : "border-white/5 bg-neutral-900/40 hover:border-white/10 hover:bg-neutral-900/60"
@@ -2524,7 +2632,7 @@ export function BookingScreen({
                               )}
                             </AnimatePresence>
 
-                            <div className="flex items-center gap-5 relative z-10">
+                            <div className="flex items-center gap-3.5 sm:gap-5 relative z-10 flex-1 min-w-0">
                               <motion.div 
                                 animate={{ scale: isSelected ? 1.05 : 1 }}
                                 transition={{ type: "spring", stiffness: 450, damping: 22 }}
@@ -2558,57 +2666,60 @@ export function BookingScreen({
                                 </AnimatePresence>
                               </motion.div>
                               
-                              <div className="text-left space-y-1">
+                              <div className="text-left space-y-1 flex-1 min-w-0">
                                 <span className={`text-[7.5px] font-black uppercase tracking-[0.25em] px-2 py-0.5 rounded leading-none inline-block transition-colors ${
                                   isSelected ? "text-black bg-amber-500 font-bold" : "text-amber-500 bg-amber-500/10"
                                 }`}>
                                   {b.role === "manager" ? "Barbeiro" : "Especialista"}
                                 </span>
-                                <h4 className="font-sans font-black text-white text-base sm:text-lg uppercase italic tracking-tight group-hover:text-amber-400 transition-colors leading-none">
+                                <h4 className="font-sans font-black text-white text-base sm:text-lg uppercase italic tracking-tight group-hover:text-amber-400 transition-colors leading-tight truncate">
                                   {b.name}
                                 </h4>
-                                <div className="flex items-center gap-2">
-                                  <p className="text-[9.5px] text-neutral-500 font-extrabold uppercase">Atendimento Premium</p>
-                                  {b.portfolio && b.portfolio.length > 0 && (
-                                    <>
-                                      <span className="liquid-glass w-1 h-1 rounded-full" />
-                                      <p className="text-[9px] text-neutral-400 font-black uppercase tracking-tight flex items-center gap-1">
-                                        📸 {b.portfolio.length} Trabalhos
-                                      </p>
-                                    </>
-                                  )}
-                                </div>
+                                <p className="text-[9.5px] text-neutral-400 font-extrabold uppercase tracking-wide leading-tight">
+                                  Atendimento Premium
+                                </p>
+                                {b.portfolio && b.portfolio.length > 0 && (
+                                  <p className="text-[9.5px] text-amber-400/90 font-black uppercase tracking-wide leading-tight flex items-center gap-1 pt-0.5">
+                                    <span>📸</span> {b.portfolio.length} Trabalhos
+                                  </p>
+                                )}
                               </div>
                             </div>
 
-                            <div className="relative z-10 shrink-0">
-                              {isSelected ? (
-                                <motion.div
-                                  initial={{ scale: 0 }}
-                                  animate={{ scale: 1 }}
-                                  transition={{ type: "spring", stiffness: 500, damping: 22 }}
-                                  className="w-8 h-8 rounded-full bg-amber-500 text-black flex items-center justify-center shadow-md shadow-amber-500/30"
+                            <div className="relative z-10 shrink-0 flex items-center gap-2.5">
+                              {b.portfolio && b.portfolio.length > 0 && (
+                                <button 
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setViewingPortfolio(b);
+                                  }}
+                                  className="w-11 h-11 liquid-glass rounded-2xl flex flex-col items-center justify-center gap-0.5 text-neutral-300 hover:text-amber-400 hover:border-amber-500/40 active:scale-95 transition-all shadow-inner cursor-pointer shrink-0"
+                                  title="Ver Portfólio de Trabalhos"
                                 >
-                                  <CheckCircle2 className="w-4 h-4 text-black fill-black" />
-                                </motion.div>
-                              ) : (
-                                <ChevronRight className="w-5 h-5 text-neutral-700 group-hover:text-amber-500 group-hover:translate-x-1 transition-all" />
+                                  <ImageIcon className="w-4 h-4" />
+                                  <span className="text-[7px] font-black uppercase tracking-wider leading-none">
+                                    Fotos
+                                  </span>
+                                </button>
                               )}
-                            </div>
-                          </button>
 
-                          {b.portfolio && b.portfolio.length > 0 && (
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setViewingPortfolio(b);
-                              }}
-                              className="absolute right-14 top-1/2 -translate-y-1/2 p-3 liquid-glass rounded-2xl text-neutral-400 hover:text-amber-500 hover:border-amber-500/30 active:scale-95 transition-all shadow-inner cursor-pointer z-10"
-                              title="Ver Portfólio de Trabalhos"
-                            >
-                              <ImageIcon className="w-5 h-5" />
-                            </button>
-                          )}
+                              <div className="w-8 h-8 flex items-center justify-center shrink-0">
+                                {isSelected ? (
+                                  <motion.div
+                                    initial={{ scale: 0 }}
+                                    animate={{ scale: 1 }}
+                                    transition={{ type: "spring", stiffness: 500, damping: 22 }}
+                                    className="w-8 h-8 rounded-full bg-amber-500 text-black flex items-center justify-center shadow-md shadow-amber-500/30"
+                                  >
+                                    <CheckCircle2 className="w-4 h-4 text-black fill-black" />
+                                  </motion.div>
+                                ) : (
+                                  <ChevronRight className="w-5 h-5 text-neutral-700 group-hover:text-amber-500 group-hover:translate-x-1 transition-all" />
+                                )}
+                              </div>
+                            </div>
+                          </div>
                         </motion.div>
                       );
                     })
@@ -2741,57 +2852,350 @@ export function BookingScreen({
                     </div>
                   )}
 
-                  {/* Horizontal Elegant Date Slider */}
-                  <div className="space-y-3 text-left">
-                    <span className="text-[8.5px] font-black uppercase text-neutral-500 tracking-[0.2em] pl-1">
-                      Selecione um Dia
-                    </span>
-                    <div className="flex gap-2 overflow-x-auto no-scrollbar py-2">
-                      {Array.from({ length: 14 }).map((_, i) => {
-                        const day = addDays(new Date(), i);
-                        const active = isSameDay(day, selectedDate);
-                        const isToday = isSameDay(day, new Date());
-                        const isWeekend = day.getDay() === 6; // Sábado
-                        const dayEff = getEffectiveHoursForBarberDate(workingHours, selectedBarber, day);
-                        
-                        return (
-                          <motion.button
-                            key={i}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            type="button"
-                            onClick={() => {
-                              setSelectedDate(day);
-                              setSelectedTime(null);
-                            }}
-                            className={`flex flex-col items-center min-w-[70px] py-4 rounded-3xl transition-all border relative overflow-hidden select-none shrink-0 cursor-pointer ${
-                              active 
-                                ? "bg-amber-500 border-amber-500 text-black shadow-lg shadow-amber-500/15" 
-                                : !dayEff.isOpen
-                                  ? "bg-neutral-900/25 border-white/5 text-neutral-600 hover:bg-neutral-900/50"
-                                  : "bg-neutral-900/60 border-white/5 text-neutral-400 hover:border-neutral-500/20 hover:bg-neutral-900"
-                            }`}
-                          >
-                            {isToday ? (
-                              <span className={`absolute top-1 text-[6.5px] font-black uppercase tracking-widest ${active ? 'text-black/80' : 'text-amber-500'}`}>
-                                Hoje
-                              </span>
-                            ) : dayEff.isExtended && dayEff.isOpen ? (
-                              <span className={`absolute top-1 text-[6.5px] font-black uppercase tracking-widest ${active ? 'text-black/80' : 'text-emerald-400'}`}>
-                                Estendido
-                              </span>
-                            ) : null}
-                            <span className={`text-[8.5px] font-black uppercase ${(isToday || (dayEff.isExtended && dayEff.isOpen)) ? 'mt-1.5' : ''} ${isWeekend && !active ? 'text-neutral-500 font-extrabold' : ''}`}>
-                              {format(day, "EEE", { locale: ptBR }).replace(".", "")}
-                            </span>
-                            <span className="text-lg font-black tracking-tight leading-none mt-1">
-                              {format(day, "d")}
-                            </span>
-                          </motion.button>
-                        );
-                      })}
+                  {/* Separated Calendars: Normal Days Slider vs Natal & Ano Novo Calendar */}
+                  <div className="space-y-4 text-left">
+                    <div className="flex flex-wrap items-center justify-between gap-2 pl-1">
+                      <span className="text-[8.5px] font-black uppercase text-neutral-500 tracking-[0.2em]">
+                        Selecione um Dia
+                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={() => handleSwitchCalendarMode("normal")}
+                          className={`px-3 py-1.5 rounded-xl border text-[9px] font-black uppercase tracking-wider transition-colors flex items-center gap-1.5 cursor-pointer ${
+                            calendarMode === "normal"
+                              ? "bg-amber-500 border-amber-400 text-black shadow-md shadow-amber-500/20"
+                              : "bg-neutral-900 border-white/10 text-neutral-400 hover:text-white"
+                          }`}
+                        >
+                          <CalendarIcon className="w-3 h-3" />
+                          Dias Normais
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSwitchCalendarMode("christmas")}
+                          className={`px-3 py-1.5 rounded-xl border text-[9px] font-black uppercase tracking-wider transition-colors flex items-center gap-1 cursor-pointer ${
+                            calendarMode === "christmas"
+                              ? "bg-emerald-500 border-emerald-300 text-black shadow-md shadow-emerald-500/25"
+                              : "bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-400/30 text-emerald-300"
+                          }`}
+                        >
+                          <span>🎄</span> Natal
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSwitchCalendarMode("newyear")}
+                          className={`px-3 py-1.5 rounded-xl border text-[9px] font-black uppercase tracking-wider transition-colors flex items-center gap-1 cursor-pointer ${
+                            calendarMode === "newyear"
+                              ? "bg-amber-400 border-amber-200 text-black shadow-md shadow-amber-400/25"
+                              : "bg-amber-500/10 hover:bg-amber-500/20 border-amber-400/35 text-amber-300"
+                          }`}
+                        >
+                          <span>✨</span> Ano Novo
+                        </button>
+                      </div>
                     </div>
+
+                    <AnimatePresence mode="wait" initial={false}>
+                      {calendarMode === "normal" ? (
+                        <motion.div
+                          key="normal-calendar"
+                          initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: 6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -6 }}
+                          transition={{ duration: 0.18 }}
+                          className="flex gap-2 overflow-x-auto no-scrollbar py-2"
+                        >
+                          {normalDays.map((day) => {
+                            const dateKey = format(day, "yyyy-MM-dd");
+                            const active = isSameDay(day, selectedDate);
+                            const isToday = isSameDay(day, new Date());
+                            const isWeekend = day.getDay() === 6; // Sábado
+                            const dayEff = getEffectiveHoursForBarberDate(workingHours, selectedBarber, day);
+
+                            return (
+                              <motion.button
+                                key={dateKey}
+                                whileHover={shouldReduceMotion ? undefined : { scale: 1.05 }}
+                                whileTap={shouldReduceMotion ? undefined : { scale: 0.95 }}
+                                type="button"
+                                onClick={() => handleSelectBookingDate(day)}
+                                className={`flex flex-col items-center min-w-[70px] py-4 rounded-3xl transition-all border relative overflow-hidden select-none shrink-0 cursor-pointer ${
+                                  active
+                                    ? "bg-amber-500 border-amber-500 text-black shadow-lg shadow-amber-500/15"
+                                    : !dayEff.isOpen
+                                      ? "bg-neutral-900/25 border-white/5 text-neutral-600 hover:bg-neutral-900/50"
+                                      : "bg-neutral-900/60 border-white/5 text-neutral-400 hover:border-neutral-500/20 hover:bg-neutral-900"
+                                }`}
+                              >
+                                {isToday ? (
+                                  <span className={`absolute top-1 text-[6.5px] font-black uppercase tracking-widest ${active ? "text-black/80" : "text-amber-500"}`}>
+                                    Hoje
+                                  </span>
+                                ) : dayEff.isExtended && dayEff.isOpen ? (
+                                  <span className={`absolute top-1 text-[6.5px] font-black uppercase tracking-widest ${active ? "text-black/80" : "text-emerald-400"}`}>
+                                    Estendido
+                                  </span>
+                                ) : null}
+                                <span className={`text-[8.5px] font-black uppercase ${(isToday || (dayEff.isExtended && dayEff.isOpen)) ? "mt-1.5" : ""} ${isWeekend && !active ? "text-neutral-500 font-extrabold" : ""}`}>
+                                  {format(day, "EEE", { locale: ptBR }).replace(".", "")}
+                                </span>
+                                <span className="text-lg font-black tracking-tight leading-none mt-1">
+                                  {format(day, "d")}
+                                </span>
+                              </motion.button>
+                            );
+                          })}
+                        </motion.div>
+                      ) : (
+                        <motion.div
+                          key="holiday-calendar"
+                          initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -6 }}
+                          transition={{ duration: 0.22 }}
+                          className="rounded-[2rem] bg-neutral-950/90 border border-white/10 p-4 sm:p-5 space-y-4 relative overflow-hidden"
+                        >
+                          {/* Ambient festive header glow */}
+                          <div
+                            aria-hidden="true"
+                            className={`pointer-events-none absolute -top-16 right-0 w-56 h-32 blur-2xl ${
+                              calendarMode === "christmas"
+                                ? "bg-gradient-to-bl from-emerald-500/20 via-red-500/10 to-transparent"
+                                : "bg-gradient-to-bl from-amber-500/25 via-yellow-500/10 to-transparent"
+                            }`}
+                          />
+
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 relative z-10">
+                            <div>
+                              <h4 className="text-sm font-black uppercase tracking-wider text-white flex items-center gap-2">
+                                <span>{calendarMode === "christmas" ? "🎄" : "✨"}</span>
+                                <span className="capitalize">
+                                  {format(decemberMonthDate, "MMMM yyyy", { locale: ptBR })}
+                                </span>
+                                <span
+                                  className={`text-[9px] font-black uppercase tracking-widest ${
+                                    calendarMode === "christmas" ? "text-emerald-400" : "text-amber-400"
+                                  }`}
+                                >
+                                  • {calendarMode === "christmas" ? "Natal" : "Ano Novo"}
+                                </span>
+                              </h4>
+                              <p className="text-[11px] text-neutral-400 font-semibold mt-0.5">
+                                {calendarMode === "christmas"
+                                  ? "Semana do Natal (20 a 25/12) em destaque — escolha seu dia para agendar."
+                                  : "Semana de Ano Novo (27 a 31/12) em destaque — garanta seu horário de Réveillon."}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Weekday Headers */}
+                          <div className="grid grid-cols-7 gap-1.5 text-center relative z-10">
+                            {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((wd) => (
+                              <span
+                                key={wd}
+                                className="text-[9px] font-black uppercase tracking-widest text-neutral-500 py-1"
+                              >
+                                {wd}
+                              </span>
+                            ))}
+                          </div>
+
+                          {/* December Days Grid */}
+                          <div className="grid grid-cols-7 gap-1.5 relative z-10">
+                            {Array.from({ length: decemberLeadingEmptyCount }).map((_, idx) => (
+                              <div key={`empty-${idx}`} className="min-h-[46px]" />
+                            ))}
+
+                            {decemberCalendarDays.map((day, idx) => {
+                              const dateKey = format(day, "yyyy-MM-dd");
+                              const todayStart = startOfDay(new Date());
+                              const isPastDay = isBefore(startOfDay(day), todayStart);
+                              const active = isSameDay(day, selectedDate);
+                              const isToday = isSameDay(day, todayStart);
+                              const dayEff = getEffectiveHoursForBarberDate(workingHours, selectedBarber, day);
+                              const festive = getFestivePeriodInfo(day);
+                              const isChristmas = festive?.type === "christmas";
+                              const isNewYear = festive?.type === "newyear";
+                              const isFocusedHoliday =
+                                (calendarMode === "christmas" && isChristmas) ||
+                                (calendarMode === "newyear" && isNewYear);
+
+                              return (
+                                <motion.button
+                                  key={dateKey}
+                                  type="button"
+                                  disabled={isPastDay}
+                                  whileHover={!isPastDay && !shouldReduceMotion ? { scale: 1.06 } : undefined}
+                                  whileTap={!isPastDay && !shouldReduceMotion ? { scale: 0.94 } : undefined}
+                                  onClick={() => !isPastDay && handleSelectBookingDate(day)}
+                                  aria-label={format(day, "dd 'de' MMMM", { locale: ptBR })}
+                                  className={`relative min-h-[46px] rounded-2xl border flex flex-col items-center justify-center transition-all overflow-hidden select-none ${
+                                    isPastDay
+                                      ? "opacity-30 cursor-not-allowed bg-neutral-900/20 border-white/5 text-neutral-600"
+                                      : active
+                                        ? isChristmas
+                                          ? "bg-emerald-500 border-emerald-200 text-black shadow-lg shadow-emerald-500/35 cursor-pointer"
+                                          : isNewYear
+                                            ? "bg-amber-400 border-amber-200 text-black shadow-lg shadow-amber-400/35 cursor-pointer"
+                                            : "bg-amber-500 border-amber-300 text-black shadow-lg shadow-amber-500/25 cursor-pointer"
+                                        : isChristmas
+                                          ? dayEff.isOpen
+                                            ? `bg-gradient-to-br from-emerald-950/90 via-neutral-900 to-red-950/70 border-emerald-400/60 text-white hover:border-emerald-300 cursor-pointer ${
+                                                isFocusedHoliday ? "ring-1 ring-emerald-400/35" : "opacity-80"
+                                              }`
+                                            : "bg-emerald-950/30 border-emerald-500/25 text-neutral-500 hover:border-emerald-400/40 cursor-pointer"
+                                          : isNewYear
+                                            ? dayEff.isOpen
+                                              ? `bg-gradient-to-br from-amber-500/25 via-neutral-900 to-yellow-950/70 border-amber-400/65 text-amber-50 hover:border-amber-300 cursor-pointer ${
+                                                  isFocusedHoliday ? "ring-1 ring-amber-400/40" : "opacity-80"
+                                                }`
+                                              : "bg-amber-950/25 border-amber-500/25 text-neutral-500 hover:border-amber-400/40 cursor-pointer"
+                                            : dayEff.isOpen
+                                              ? "bg-neutral-900/70 border-white/10 text-neutral-200 hover:border-white/25 hover:bg-neutral-800/80 cursor-pointer"
+                                              : "bg-neutral-900/25 border-white/5 text-neutral-600 hover:bg-neutral-900/45 cursor-pointer"
+                                  }`}
+                                >
+                                  {/* Animated Breathing Aura Border for Christmas & New Year weeks */}
+                                  {festive && !isPastDay && !active && dayEff.isOpen && !shouldReduceMotion && (
+                                    <motion.span
+                                      aria-hidden="true"
+                                      animate={{ opacity: isFocusedHoliday ? [0.35, 0.95, 0.35] : [0.2, 0.5, 0.2] }}
+                                      transition={{
+                                        duration: 2.2,
+                                        repeat: Infinity,
+                                        delay: (idx % 6) * 0.18,
+                                        ease: "easeInOut",
+                                      }}
+                                      className={`pointer-events-none absolute inset-0 rounded-2xl border ${
+                                        isChristmas
+                                          ? "border-emerald-300/75 shadow-[inset_0_0_12px_rgba(52,211,153,0.3)]"
+                                          : "border-amber-300/80 shadow-[inset_0_0_12px_rgba(251,191,36,0.35)]"
+                                      }`}
+                                    />
+                                  )}
+
+                                  {/* Diagonal Shimmer Wave across Festive Weeks */}
+                                  {festive && !isPastDay && !active && dayEff.isOpen && !shouldReduceMotion && (
+                                    <motion.span
+                                      aria-hidden="true"
+                                      initial={{ x: "-140%" }}
+                                      animate={{ x: ["-140%", "240%"] }}
+                                      transition={{
+                                        duration: 2.6,
+                                        repeat: Infinity,
+                                        repeatDelay: 1.6,
+                                        delay: (idx % 7) * 0.14,
+                                        ease: "easeInOut",
+                                      }}
+                                      className={`pointer-events-none absolute inset-y-0 w-1/2 -skew-x-12 ${
+                                        isChristmas
+                                          ? "bg-gradient-to-r from-transparent via-emerald-200/25 to-transparent"
+                                          : "bg-gradient-to-r from-transparent via-amber-200/30 to-transparent"
+                                      }`}
+                                    />
+                                  )}
+
+                                  {/* Festive Micro Icon */}
+                                  {festive && !isPastDay && (
+                                    <motion.span
+                                      aria-hidden="true"
+                                      animate={
+                                        shouldReduceMotion || !dayEff.isOpen
+                                          ? undefined
+                                          : { scale: [1, 1.22, 1], rotate: isNewYear ? [0, 8, -8, 0] : [0, -6, 6, 0] }
+                                      }
+                                      transition={{
+                                        duration: 2.4,
+                                        repeat: Infinity,
+                                        delay: (idx % 5) * 0.2,
+                                      }}
+                                      className={`absolute top-1 right-1 text-[8.5px] leading-none ${
+                                        dayEff.isOpen ? "opacity-100" : "opacity-50"
+                                      }`}
+                                    >
+                                      {festive.icon}
+                                    </motion.span>
+                                  )}
+
+                                  <span
+                                    className={`text-xs font-black leading-none relative z-10 ${
+                                      isToday && !active ? "text-amber-400" : ""
+                                    }`}
+                                  >
+                                    {format(day, "d")}
+                                  </span>
+
+                                  {/* Subtle status dot: Extended hours or Closed indicator */}
+                                  {!isPastDay && (
+                                    <span className="mt-1 h-1 flex items-center justify-center relative z-10">
+                                      {dayEff.isOpen && dayEff.isExtended ? (
+                                        <span
+                                          className={`w-1.5 h-1.5 rounded-full ${
+                                            active ? "bg-black" : "bg-emerald-400"
+                                          }`}
+                                        />
+                                      ) : !dayEff.isOpen ? (
+                                        <span className="w-2 h-[1.5px] rounded-full bg-neutral-700" />
+                                      ) : null}
+                                    </span>
+                                  )}
+                                </motion.button>
+                              );
+                            })}
+                          </div>
+
+                          {/* Compact Legend */}
+                          <div className="pt-2 border-t border-white/5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[10px] font-bold text-neutral-400 relative z-10">
+                            <span className="flex items-center gap-1.5 text-emerald-300">
+                              <span>🎄</span> Semana de Natal (20–25/12)
+                            </span>
+                            <span className="flex items-center gap-1.5 text-amber-300">
+                              <span>✨</span> Semana de Ano Novo (27–31/12)
+                            </span>
+                            <span className="flex items-center gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" /> Horário Estendido
+                            </span>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
+
+                  {/* Festive Christmas / New Year Callout Banner */}
+                  {selectedFestiveInfo && (
+                    <motion.div
+                      initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className={`p-4 rounded-2xl border flex items-center gap-3 text-left relative overflow-hidden ${
+                        selectedFestiveInfo.type === "christmas"
+                          ? "bg-gradient-to-r from-emerald-500/15 via-emerald-950/30 to-red-500/10 border-emerald-400/35"
+                          : "bg-gradient-to-r from-amber-500/20 via-amber-950/30 to-yellow-500/10 border-amber-400/40"
+                      }`}
+                    >
+                      <div
+                        className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0 ${
+                          selectedFestiveInfo.type === "christmas"
+                            ? "bg-emerald-500/20 border border-emerald-400/30"
+                            : "bg-amber-500/20 border border-amber-400/30"
+                        }`}
+                      >
+                        {selectedFestiveInfo.icon}
+                      </div>
+                      <div className="min-w-0">
+                        <p
+                          className={`text-[10px] font-black uppercase tracking-wider ${
+                            selectedFestiveInfo.type === "christmas" ? "text-emerald-300" : "text-amber-300"
+                          }`}
+                        >
+                          {selectedFestiveInfo.bannerTitle} • {format(selectedDate, "dd/MM")}
+                        </p>
+                        <p className="text-[11px] font-bold text-neutral-200 mt-0.5 leading-snug">
+                          {selectedFestiveInfo.bannerSub}
+                        </p>
+                      </div>
+                    </motion.div>
+                  )}
 
                   {/* Extended / Special Hours Indicator */}
                   {effectiveDayHours.isOpen && effectiveDayHours.isExtended && (
@@ -3215,11 +3619,11 @@ export function BookingScreen({
                 </div>
 
                 <div className=" liquid-glass p-8 rounded-[2.5rem]  space-y-6">
-                  <div className="flex justify-between items-center border-b border-white/5 pb-4">
-                    <span className="text-neutral-500 font-bold uppercase text-[10px]">
+                  <div className="flex justify-between items-center gap-4 border-b border-white/5 pb-4">
+                    <span className="text-neutral-500 font-bold uppercase text-[10px] shrink-0">
                       Procedimento
                     </span>
-                    <span className="font-black text-white italic uppercase">
+                    <span className="font-black text-white italic uppercase text-right text-sm break-words min-w-0">
                       {services.find((s) => s.id === selectedService)?.name}
                     </span>
                   </div>
