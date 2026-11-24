@@ -167,6 +167,7 @@ import { NativeInstallPrompt } from "./components/pwa/NativeInstallPrompt";
 import { BiometricLockScreen } from "./components/pwa/BiometricLockScreen";
 import { OfflineIndicator } from "./components/common/OfflineIndicator";
 import { Skeleton } from "./components/common/Skeleton";
+import { BlackFridayModal } from "./components/common/BlackFridayModal";
 
 // Dummy components
 const DarkScreen = ({ onBack }: { onBack: () => void }) => <div className="p-4">Dark Screen <button onClick={onBack}>Voltar</button></div>;
@@ -355,6 +356,8 @@ export default function App() {
   const [requestedRole, setRequestedRole] = useState<string>("client");
   const [loading, setLoading] = useState(true);
   const [services, setServices] = useState<any[]>([]);
+  const [showBlackFridayModal, setShowBlackFridayModal] = useState(true);
+  const [isBlackFridayBooking, setIsBlackFridayBooking] = useState(false);
   const [appointments, setAppointments] = useState<any[]>([]);
   const [staffNotifications, setStaffNotifications] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -1008,9 +1011,38 @@ export default function App() {
   }, [loggedInClient?.id]);
 
   useEffect(() => {
-    const unsubscribeServices = onSnapshot(collection(db, "services"), (snapshot) => {
+    const unsubscribeServices = onSnapshot(collection(db, "services"), async (snapshot) => {
       const servicesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setServices(servicesData);
+
+      // Auto-seed Black Friday services if not present
+      const hasPlatinado = servicesData.some((s: any) => (s.name || "").toLowerCase().includes("platinado"));
+      const hasLuzes = servicesData.some((s: any) => (s.name || "").toLowerCase().includes("luzes"));
+
+      try {
+        if (!hasPlatinado) {
+          await addDoc(collection(db, "services"), {
+            name: "Platinado com o Corte",
+            description: "Black Friday MS Barber Shop: Platinado completo com o corte incluso!",
+            price: 90.00,
+            duration: 60,
+            active: true,
+            createdAt: serverTimestamp()
+          });
+        }
+        if (!hasLuzes) {
+          await addDoc(collection(db, "services"), {
+            name: "Luzes com o Corte",
+            description: "Black Friday MS Barber Shop: Luzes de destaque com o corte incluso!",
+            price: 80.00,
+            duration: 60,
+            active: true,
+            createdAt: serverTimestamp()
+          });
+        }
+      } catch (e) {
+        console.warn("Auto-seed Black Friday services error:", e);
+      }
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, "services");
     });
@@ -1497,7 +1529,22 @@ export default function App() {
               {displayScreen === "login" && <CollaboratorLoginScreen onLogin={handleLogin} setCurrentScreen={setCurrentScreen} setRequestedRole={setRequestedRole} />}
               {displayScreen === "client-login" && <ClientPortalScreen onLogin={handleClientLogin} onBack={() => setCurrentScreen("home")} />}
               {(displayScreen === "client-dashboard" || displayScreen === "checkout") && <ClientDashboardScreen user={loggedInClient} onBack={() => setCurrentScreen("home")} />}
-              {displayScreen === "booking" && <BookingScreen user={effectiveUser || user} role={userRole} services={services} onBack={() => { setCurrentScreen("home"); setAppointmentToEdit(null); setClientToSchedule(null); }} editAppointment={appointmentToEdit} initialClient={clientToSchedule} />}
+              {displayScreen === "booking" && (
+                <BookingScreen 
+                  user={effectiveUser || user} 
+                  role={userRole} 
+                  services={services} 
+                  blackFridayOnly={isBlackFridayBooking}
+                  onBack={() => { 
+                    setCurrentScreen("home"); 
+                    setAppointmentToEdit(null); 
+                    setClientToSchedule(null); 
+                    setIsBlackFridayBooking(false); 
+                  }} 
+                  editAppointment={appointmentToEdit} 
+                  initialClient={clientToSchedule} 
+                />
+              )}
               {displayScreen === "agenda" && <DashboardScreen user={effectiveUser || user} role={userRole} services={services} dashboardView={dashboardView} onBack={() => setCurrentScreen("home")} onNewBooking={() => setCurrentScreen("booking")} onEditBooking={(app) => { setAppointmentToEdit(app); setCurrentScreen("booking"); }} />}
               {displayScreen === "collaborators" && <DashboardScreen user={effectiveUser || user} role={userRole} services={services} dashboardView="collaborators" onBack={() => setCurrentScreen("home")} onNewBooking={() => setCurrentScreen("booking")} onEditBooking={(app) => { setAppointmentToEdit(app); setCurrentScreen("booking"); }} />}
               {displayScreen === "services" && <DashboardScreen user={effectiveUser || user} role={userRole} services={services} dashboardView="services" onBack={() => setCurrentScreen("home")} onNewBooking={() => setCurrentScreen("booking")} onEditBooking={(app) => { setAppointmentToEdit(app); setCurrentScreen("booking"); }} />}
@@ -1858,6 +1905,15 @@ export default function App() {
         }
         return null;
       })()}
+
+      <BlackFridayModal 
+        isOpen={showBlackFridayModal} 
+        onClose={() => setShowBlackFridayModal(false)} 
+        onBook={() => {
+          setIsBlackFridayBooking(true);
+          setCurrentScreen("booking");
+        }} 
+      />
 
       <Toaster />
       

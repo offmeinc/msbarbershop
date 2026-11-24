@@ -971,6 +971,7 @@ interface BookingScreenProps {
   initialServiceId?: string;
   initialBarberId?: string;
   initialStyle?: { title: string, imageUrl: string } | null;
+  blackFridayOnly?: boolean;
 }
 
 export function BookingScreen({
@@ -983,6 +984,7 @@ export function BookingScreen({
   initialServiceId,
   initialBarberId,
   initialStyle,
+  blackFridayOnly = false,
 }: BookingScreenProps) {
   const [step, setStep] = useState(
     editAppointment ? 3 : initialServiceId && initialBarberId ? 3 : initialServiceId ? 2 : 1,
@@ -998,19 +1000,34 @@ export function BookingScreen({
   const [selectedAddon, setSelectedAddon] = useState<{name: string, price: number, accepted: boolean} | null>(null);
 
   const categories = useMemo(() => {
-    const raw = services.filter(s => s.active !== false).map((s) => s.category || "Corte & Barba");
+    const raw = services
+      .filter(s => {
+        if (s.active === false) return false;
+        if (blackFridayOnly) {
+          const nameLower = (s.name || "").toLowerCase();
+          return nameLower.includes("platinado") || nameLower.includes("luzes");
+        }
+        return true;
+      })
+      .map((s) => s.category || "Corte & Barba");
     return ["todos", ...Array.from(new Set(raw))];
-  }, [services]);
+  }, [services, blackFridayOnly]);
 
   const filteredServicesList = useMemo(() => {
     return services.filter((s) => {
       if (s.active === false) return false;
+      const nameLower = (s.name || "").toLowerCase();
+      if (blackFridayOnly) {
+        if (!nameLower.includes("platinado") && !nameLower.includes("luzes")) {
+          return false;
+        }
+      }
       const matchesSearch = s.name.toLowerCase().includes(serviceSearchQuery.toLowerCase());
       const serviceCat = s.category || "Corte & Barba";
       const matchesCategory = selectedCategory === "todos" || serviceCat === selectedCategory;
       return matchesSearch && matchesCategory;
     });
-  }, [services, serviceSearchQuery, selectedCategory]);
+  }, [services, serviceSearchQuery, selectedCategory, blackFridayOnly]);
   const [selectedBarber, setSelectedBarber] = useState<string | null>(
     editAppointment?.barberId || initialBarberId || null,
   );
